@@ -4,7 +4,7 @@ from __future__ import division
 from nose.tools import eq_, assert_equal, raises
 
 # Import the module to test
-from adaptive_scheduler.availability import Availability
+from adaptive_scheduler.domain.availability import Availability
 
 
 class test_availability(object):

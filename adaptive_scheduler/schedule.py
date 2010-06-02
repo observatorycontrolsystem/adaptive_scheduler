@@ -1,6 +1,6 @@
 '''schedule.py - When and where an object will be (re)-scheduled.
 
-This package provides the Schedule class, which is an enhanced version of the
+This module provides the Schedule class, which is an enhanced version of the
 Availability matrix, with support for rescheduling.
 
 
