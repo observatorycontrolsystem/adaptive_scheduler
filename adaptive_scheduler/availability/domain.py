@@ -14,20 +14,32 @@ from __future__ import division
 
 
 
+class Slot(object):
+
+    def __init__(self, tel, start_time, end_time, **kwargs):
+        self.tel        = tel
+        self.start_time = start_time
+        self.end_time   = end_time
+        self.metadata   = kwargs
+
+
+
 class Availability(object):
     
-    def __init__(self, ordering=None):
+    def __init__(self, name, priority=None, ordering=None):
         '''Constructor.
             'ordering' is a class that specifies the order in which to provide
             slots. The default is arbitrary.
         '''
         
+        self.name     = name
+        self.priority = priority
         self.matrix = {}
         
 
-    def add_slot(self, tel, start_time, end_time):
-        self.matrix.setdefault(tel, [])
-        self.matrix[tel].append((start_time, end_time)) 
+    def add_slot(self, slot):
+        self.matrix.setdefault(slot.tel, [])
+        self.matrix[slot.tel].append(slot) 
 
 
     def __repr__(self):
@@ -36,11 +48,13 @@ class Availability(object):
 
     def __str__(self):
         string = ''
+        string = string + 'Target: %s\n' % self.name
+        string = string + 'Priority: %d\n' % self.priority
         for tel in sorted(self.matrix):
             string = string + "%s\n" % tel
             
-            for start, end in self.matrix[tel]:
-                string = string + "    %s -> %s \n" % (start, end)
-
+            for slot in self.matrix[tel]:
+                string = string + "    %s -> %s \n" % (slot.start_time, 
+                                                       slot.end_time)
 
         return string

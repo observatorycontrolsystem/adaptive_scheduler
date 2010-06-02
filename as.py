@@ -15,12 +15,17 @@ from adaptive_scheduler.kernel import Kernel
 plan_source = HardCodedClient()
 plan        = plan_source.get_current_plan()
 
+print repr(plan)
 
-print str(plan)
+print 'here'
+
+
+for a in plan:
+    print str(a)
 
 
 # Construct the new schedule for each site
-#kernel   = Kernel()
+kernel   = Kernel()
 #schedule = kernel.construct_schedule(plan)
 
 # Send the schedule to each site
