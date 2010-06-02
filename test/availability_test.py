@@ -41,6 +41,17 @@ class test_availability(object):
     
     def test_slot_iterator_can_exhaust(self):
         pass
+
+
+
+    def test_has_space_for_tel_not_defined(self):
+        start_time = datetime(year=2010, month=1, day=1, 
+                              hour=3, minute=0, second=0),
+        end_time   = datetime(year=2010, month=1, day=1, 
+                              hour=4, minute=0, second=0),
+        new_slot = Slot('Poo',start_time, end_time)
+    
+        eq_(self.availability.has_space_for(new_slot), False)
         
     
 class test_slots(object):
@@ -54,8 +65,8 @@ class test_slots(object):
 
         self.target_name = 'Eta Carina'
                                    
-        self.slot = Slot(start_time=self.start_time, end_time=self.end_time,
-                         target_name=self.target_name)
+        self.slot = Slot(tel='FTN', start_time=self.start_time, 
+                         end_time=self.end_time, target_name=self.target_name)
 
 
     def teardown(self):

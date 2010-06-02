@@ -33,3 +33,21 @@ class Schedule(object):
         
         # Otherwise, move on to the next slot
         # Complain if it can't fit anywhere
+
+
+    def slot_fits(self, slot):
+        # Check whether the proposed slot overlaps an existing slot
+        # If there is no overlap, place the slot
+        if self.matrix.has_space_for(slot):
+            self.matrix.add_slot(slot)
+        
+        # Otherwise, compare priorities
+            # If the original slot priority is higher, give up
+
+            # Otherwise
+                # Remove the old slot
+                # Insert the new slot
+                # Add the removed target back to the list of targets to add
+
+
+        

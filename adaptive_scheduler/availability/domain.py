@@ -17,10 +17,10 @@ from __future__ import division
 class Slot(object):
 
     def __init__(self, tel, start_time, end_time, **kwargs):
-        self.tel        = tel
-        self.start_time = start_time
-        self.end_time   = end_time
-        self.metadata   = kwargs
+        self.tel      = tel
+        self.start    = start_time
+        self.end      = end_time
+        self.metadata = kwargs
 
 
 
@@ -34,12 +34,37 @@ class Availability(object):
         
         self.name     = name
         self.priority = priority
-        self.matrix = {}
+        self.matrix   = {}
         
 
     def add_slot(self, slot):
         self.matrix.setdefault(slot.tel, [])
         self.matrix[slot.tel].append(slot) 
+
+
+    def has_space_for(self, new_slot):
+
+        # TODO: Deal with reverse case - new slot bigger than existing slots
+
+        # Check for a clash with each existing slot in turn
+        for old_slot in self.matrix[new_slot.tel]:
+            # If a new slot time falls between the old slot boundaries
+            if ( ( 
+                    ( new_slot.start > old_slot.start )
+                      and
+                    ( new_slot.start < old_slot.end ) 
+                  )
+                  or
+                    ( new_slot.end > old_slot.start )
+                      and
+                    ( new_slot.end < old_slot.end)            
+                ):
+                # They overlap - so the new slot clashes
+                return False
+                
+
+        # If no existing slots clashed, then there is space for this new slot
+        return True
 
 
     def __repr__(self):
@@ -54,7 +79,6 @@ class Availability(object):
             string = string + "%s\n" % tel
             
             for slot in self.matrix[tel]:
-                string = string + "    %s -> %s \n" % (slot.start_time, 
-                                                       slot.end_time)
+                string = string + "    %s -> %s \n" % (slot.start, slot.end)
 
         return string
