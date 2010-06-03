@@ -46,6 +46,13 @@ class Availability(object):
 
         # TODO: Deal with reverse case - new slot bigger than existing slots
 
+
+        # Verify the slot's telescope is present in this matrix
+        if not new_slot.tel in self.matrix: 
+            msg = ('Telescope %s required by slot but is not present in matrix' 
+                    % new_slot.tel)
+            raise TelescopeNotFoundError(msg)
+
         # Check for a clash with each existing slot in turn
         for old_slot in self.matrix[new_slot.tel]:
             # If a new slot time falls between the old slot boundaries
@@ -57,7 +64,7 @@ class Availability(object):
                   or
                     ( new_slot.end > old_slot.start )
                       and
-                    ( new_slot.end < old_slot.end)            
+                    ( new_slot.end < old_slot.end )            
                 ):
                 # They overlap - so the new slot clashes
                 return False
@@ -82,3 +89,12 @@ class Availability(object):
                 string = string + "    %s -> %s \n" % (slot.start, slot.end)
 
         return string
+
+
+class TelescopeNotFoundError(Exception):
+
+    def __init__(self, value):
+        self.value = value
+        
+    def __str__(self):
+        return self.value

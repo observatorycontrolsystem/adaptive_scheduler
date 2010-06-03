@@ -4,7 +4,8 @@ from __future__ import division
 from nose.tools import eq_, assert_equal, raises
 
 # Import the module to test
-from adaptive_scheduler.availability.domain import Slot, Availability
+from adaptive_scheduler.availability.domain import (Slot, Availability, 
+                                                    TelescopeNotFoundError)
 
 from datetime import datetime
 
@@ -44,6 +45,7 @@ class test_availability(object):
 
 
 
+    @raises(TelescopeNotFoundError)
     def test_has_space_for_tel_not_defined(self):
         start_time = datetime(year=2010, month=1, day=1, 
                               hour=3, minute=0, second=0),
@@ -52,6 +54,9 @@ class test_availability(object):
         new_slot = Slot('Poo',start_time, end_time)
     
         eq_(self.availability.has_space_for(new_slot), False)
+
+
+
         
     
 class test_slots(object):
