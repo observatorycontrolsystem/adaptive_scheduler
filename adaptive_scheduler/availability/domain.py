@@ -24,6 +24,12 @@ class Slot(object):
 
 
 
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)
+
+
+
 class Availability(object):
     
     def __init__(self, name, priority=None, ordering=None):
