@@ -12,6 +12,7 @@ May 2010
 # Required for true (non-integer) division
 from __future__ import division     
 
+from adaptive_scheduler.utils import dt_windows_intersect
 
 
 class Slot(object):
@@ -23,6 +24,17 @@ class Slot(object):
         self.metadata = kwargs
 
 
+    def clashes_with(self, slot):
+    
+        # There's no clash if the slots are for different telescopes
+        if ( self.tel != slot.tel ):
+            return False
+
+        # If the slots overlap, there's a clash
+        if dt_windows_intersect(self.start, self.end, slot.start, slot.end):
+            return True
+
+        return False
 
 
     def __repr__(self):
@@ -43,41 +55,31 @@ class Availability(object):
         self.matrix   = {}
         
 
-    def add_slot(self, slot):
-        self.matrix.setdefault(slot.tel, [])
-        self.matrix[slot.tel].append(slot) 
+    def add_slot(self, new_slot):
+    
+        # Create a new entry for the slot's telescope, if not already present
+        self.matrix.setdefault(new_slot.tel, [])
+
+        # Don't add the slot if it clashes
+        if self.slot_clashes(new_slot):
+            return False
+
+        # There's no clash - add the slot
+        self.matrix[new_slot.tel].append(new_slot)
+        return True
 
 
-    def has_space_for(self, new_slot):
-
-        # TODO: Deal with reverse case - new slot bigger than existing slots
-
-
-        # Verify the slot's telescope is present in this matrix
-        if not new_slot.tel in self.matrix: 
-            msg = ('Telescope %s required by slot but is not present in matrix' 
-                    % new_slot.tel)
-            raise TelescopeNotFoundError(msg)
+    def slot_clashes(self, new_slot):
+        '''Returns true if the proposed slot clashes with an existing slot.'''        
 
         # Check for a clash with each existing slot in turn
         for old_slot in self.matrix[new_slot.tel]:
-            # If a new slot time falls between the old slot boundaries
-            if ( ( 
-                    ( new_slot.start > old_slot.start )
-                      and
-                    ( new_slot.start < old_slot.end ) 
-                  )
-                  or
-                    ( new_slot.end > old_slot.start )
-                      and
-                    ( new_slot.end < old_slot.end )            
-                ):
-                # They overlap - so the new slot clashes
-                return False
-                
+            if old_slot.clashes_with(new_slot):
+                return True
+            
 
         # If no existing slots clashed, then there is space for this new slot
-        return True
+        return False
 
 
     def __repr__(self):
@@ -96,11 +98,3 @@ class Availability(object):
 
         return string
 
-
-class TelescopeNotFoundError(Exception):
-
-    def __init__(self, value):
-        self.value = value
-        
-    def __str__(self):
-        return self.value
