@@ -13,6 +13,7 @@ May 2010
 from __future__ import division     
 
 from adaptive_scheduler.utils import dt_windows_intersect
+from adaptive_scheduler.maxheap import heappush, heappop
 
 
 class Slot(object):
@@ -70,7 +71,7 @@ class Availability(object):
 
 
     def slot_clashes(self, new_slot):
-        '''Returns true if the proposed slot clashes with an existing slot.'''        
+        '''Return true if the proposed slot clashes with an existing slot.'''
 
         # Check for a clash with each existing slot in turn
         for old_slot in self.matrix[new_slot.tel]:
@@ -80,6 +81,7 @@ class Availability(object):
 
         # If no existing slots clashed, then there is space for this new slot
         return False
+
 
 
     def __repr__(self):
@@ -98,3 +100,26 @@ class Availability(object):
 
         return string
 
+
+class Plan(object):
+
+    def __init__(self):
+        self.targets = []
+
+
+    def add_target(self, target):
+        heappush(self.targets, (target.priority, target))
+
+    def pop(self):
+        '''Return the highest priority target, deleting it from the plan.'''
+        return heappop(self.targets)[1]
+
+    def has_targets(self):
+        if len(self.targets):
+            return True
+
+        return False
+
+
+    def __repr__(self):
+        return "%s(%r)" % (self.__class__, self.__dict__)

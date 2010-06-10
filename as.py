@@ -15,14 +15,15 @@ from adaptive_scheduler.kernel import Kernel
 plan_source = HardCodedClient()
 plan        = plan_source.get_current_plan()
 
-print repr(plan)
+#print repr(plan)
 
 print 'here'
 
 
-for a in plan:
-    print str(a)
-
+while plan.has_targets():
+    target = plan.pop()
+    print str(target)
+plan = plan_source.get_current_plan()
 
 # Construct the new schedule for each site
 kernel   = Kernel()

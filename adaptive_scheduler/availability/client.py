@@ -14,7 +14,7 @@ from __future__ import division
 
 from datetime import datetime
 
-from adaptive_scheduler.availability.domain import Slot, Availability
+from adaptive_scheduler.availability.domain import Slot, Availability, Plan
 
 
 
@@ -28,11 +28,11 @@ class HardCodedClient(IClient):
 
     def __init__(self):
         
-        self.plan = []        
+        self.plan = Plan()
         target1 = self.construct_target1()
         target2 = self.construct_target2()
-        self.plan.append(target1)
-        self.plan.append(target2)
+        self.plan.add_target(target1)
+        self.plan.add_target(target2)
 
 
 

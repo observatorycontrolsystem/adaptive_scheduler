@@ -12,7 +12,7 @@ May 2010
 # Required for true (non-integer) division
 from __future__ import division     
 
-from adaptive_scheduler.schedule import Schedule
+from adaptive_scheduler.availability.domain import Availability
 
 
 class Kernel(object):
@@ -23,11 +23,23 @@ class Kernel(object):
 
     def construct_schedule(self, plan):
 
-        schedule = Schedule()
+        schedule = Availability()
 
-        # Find the highest priority observation
-        for next_target in plan:
-        
-            # Schedule it in the first valid slot
-            schedule.add_target(next_target)
-        
+        while plan.has_targets():
+            # Pop the next highest priority observation from the Plan        
+            next = plan.pop()
+
+            # Schedule it in its first valid slot
+            result = schedule.add_target(next)
+            
+            # TODO: If there was something less important there, reschedule that            
+            # (Note - this only happens on reschedule, not initial construction)
+            if result.bumped_target():
+                pass
+            
+            # If it can't be scheduled, make a note and drop it
+            if result.cant_be_scheduled():
+                print "Target", next, "can't be scheduled."
+
+        # Return the completed Schedule
+        return schedule
