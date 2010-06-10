@@ -35,6 +35,8 @@ class Slot(object):
         if dt_windows_intersect(self.start, self.end, slot.start, slot.end):
             return True
 
+        # TODO:If the original slot priority is higher, Fail
+
         return False
 
 
@@ -81,6 +83,28 @@ class Availability(object):
 
         # If no existing slots clashed, then there is space for this new slot
         return False
+
+
+    def get_slots(self):
+        # TODO: Turn this into an iterator
+        return self.matrix
+
+
+    def add_target(self, target):
+
+        # Iterate through the slots
+        matrix = target.get_slots()
+        for tel in matrix:
+            for slot in matrix[tel]:
+
+                # Place the slot if it doesn't clash
+                if self.add_slot(slot):
+                    return Status()
+
+        # All slots clash - give up
+        return False
+
+
 
 
 

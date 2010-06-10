@@ -12,6 +12,7 @@ May 2010
 # Required for true (non-integer) division
 from __future__ import division     
 
+from adaptive_scheduler.availability.domain import Availability
 
 
 class Schedule(object):

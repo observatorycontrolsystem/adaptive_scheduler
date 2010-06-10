@@ -27,6 +27,6 @@ plan = plan_source.get_current_plan()
 
 # Construct the new schedule for each site
 kernel   = Kernel()
-#schedule = kernel.construct_schedule(plan)
+schedule = kernel.construct_schedule(plan)
 
 # Send the schedule to each site
