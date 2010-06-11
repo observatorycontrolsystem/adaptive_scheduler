@@ -23,22 +23,22 @@ class Kernel(object):
 
     def construct_schedule(self, plan):
 
-        schedule = Availability()
+        schedule = Availability(name='Schedule')
 
         while plan.has_targets():
             # Pop the next highest priority observation from the Plan        
             next = plan.pop()
 
             # Schedule it in its first valid slot
-            result = schedule.add_target(next)
+            if schedule.add_target(next):
             
-            # TODO: If there was something less important there, reschedule that            
-            # (Note - this only happens on reschedule, not initial construction)
-            if result.bumped_target():
-                pass
+                # Queue bumped targets for rescheduling
+                # (Note - only happens on reschedule, not initial construction)
+                while schedule.has_bumped_targets():
+                    plan.add_target(schedule.pop_bumped_target())
             
-            # If it can't be scheduled, make a note and drop it
-            if result.cant_be_scheduled():
+            else:
+                # If it can't be scheduled, make a note and drop it
                 print "Target", next, "can't be scheduled."
 
         # Return the completed Schedule

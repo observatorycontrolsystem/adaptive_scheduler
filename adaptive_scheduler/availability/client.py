@@ -15,7 +15,7 @@ from __future__ import division
 from datetime import datetime
 
 from adaptive_scheduler.availability.domain import Slot, Availability, Plan
-
+from adaptive_scheduler.comparator import SimplePriorityComparator
 
 
 class IClient(object):
@@ -103,9 +103,10 @@ class HardCodedClient(IClient):
 
     def construct_target(self, name, priority, slots):
         target = Availability(name=name, priority=priority)
-                        
+        comparator = SimplePriorityComparator()
+        
         for slot in slots:        
-           target.add_slot(slot)
+           target.add_slot(slot, comparator)
                 
         return target
 

@@ -13,16 +13,19 @@ May 2010
 from __future__ import division     
 
 from adaptive_scheduler.utils import dt_windows_intersect
-from adaptive_scheduler.maxheap import heappush, heappop
+from adaptive_scheduler.comparator import AlwaysTrueComparator
+
+# Standard library imports
+from heapq import heappush, heappop
 
 
 class Slot(object):
 
-    def __init__(self, tel, start_time, end_time, **kwargs):
+    def __init__(self, tel, start_time, end_time, priority=None):
         self.tel      = tel
         self.start    = start_time
         self.end      = end_time
-        self.metadata = kwargs
+        self.priority = priority
 
 
     def clashes_with(self, slot):
@@ -34,8 +37,6 @@ class Slot(object):
         # If the slots overlap, there's a clash
         if dt_windows_intersect(self.start, self.end, slot.start, slot.end):
             return True
-
-        # TODO:If the original slot priority is higher, Fail
 
         return False
 
@@ -56,41 +57,54 @@ class Availability(object):
         self.name     = name
         self.priority = priority
         self.matrix   = {}
+        self.bumped_list = []
+        self.comparator = AlwaysTrueComparator()
         
 
-    def add_slot(self, new_slot):
+    def add_slot(self, new_slot, comparator=None):
+        if comparator:
+            self.comparator = comparator
+    
     
         # Create a new entry for the slot's telescope, if not already present
         self.matrix.setdefault(new_slot.tel, [])
 
-        # Don't add the slot if it clashes
-        if self.slot_clashes(new_slot):
-            return False
 
-        # There's no clash - add the slot
+        # Determine how many slots on this telescope overlap in time, if any
+        clashes = []
+        for old_slot in self.matrix[new_slot.tel]:        
+            # If the slot overlaps
+            if old_slot.clashes_with(new_slot):
+                # Add the old slot to a temporary clash list
+                clashes.append(old_slot)
+
+        # For each existing slot which clashes
+        for old_slot in clashes:
+            # Check if the old slot takes priority
+            if self.comparator.compare(old_slot, new_slot):
+                # If so, the new slot can't be scheduled here - give up
+                return False
+            
+        # If we get here, the new slot takes priority over all clashing slots
+        # Move the existing slots to a bumped list
+        self.bumped_list.extend(clashes)
+
+        # Schedule the new slot
         self.matrix[new_slot.tel].append(new_slot)
+
         return True
 
 
-    def slot_clashes(self, new_slot):
-        '''Return true if the proposed slot clashes with an existing slot.'''
-
-        # Check for a clash with each existing slot in turn
-        for old_slot in self.matrix[new_slot.tel]:
-            if old_slot.clashes_with(new_slot):
-                return True
-            
-
-        # If no existing slots clashed, then there is space for this new slot
-        return False
-
+    def has_bumped_targets(self):
+        return len(self.bumped_list) > 0
+        
 
     def get_slots(self):
         # TODO: Turn this into an iterator
         return self.matrix
 
 
-    def add_target(self, target):
+    def add_target(self, target, comparator):
 
         # Iterate through the slots
         matrix = target.get_slots()
@@ -98,14 +112,11 @@ class Availability(object):
             for slot in matrix[tel]:
 
                 # Place the slot if it doesn't clash
-                if self.add_slot(slot):
-                    return Status()
+                if self.add_slot(slot, comparator):
+                    return True
 
         # All slots clash - give up
         return False
-
-
-
 
 
     def __repr__(self):
@@ -114,8 +125,10 @@ class Availability(object):
 
     def __str__(self):
         string = ''
-        string = string + 'Target: %s\n' % self.name
-        string = string + 'Priority: %d\n' % self.priority
+        string = string + 'Name: %s\n' % self.name
+        if self.priority:
+            string = string + 'Priority: %d\n' % self.priority
+    
         for tel in sorted(self.matrix):
             string = string + "%s\n" % tel
             

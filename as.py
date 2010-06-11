@@ -29,4 +29,5 @@ plan = plan_source.get_current_plan()
 kernel   = Kernel()
 schedule = kernel.construct_schedule(plan)
 
+print schedule
 # Send the schedule to each site
