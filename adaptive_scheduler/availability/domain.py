@@ -13,7 +13,6 @@ May 2010
 from __future__ import division     
 
 from adaptive_scheduler.utils import dt_windows_intersect
-from adaptive_scheduler.comparator import AlwaysTrueComparator
 
 # Standard library imports
 from heapq import heappush, heappop
@@ -48,23 +47,20 @@ class Slot(object):
 
 class Availability(object):
     
-    def __init__(self, name, priority=None, ordering=None):
+    def __init__(self, name, comparator, priority=None, ordering=None):
         '''Constructor.
             'ordering' is a class that specifies the order in which to provide
             slots. The default is arbitrary.
         '''
         
         self.name     = name
+        self.comparator = comparator
         self.priority = priority
         self.matrix   = {}
         self.bumped_list = []
-        self.comparator = AlwaysTrueComparator()
         
 
-    def add_slot(self, new_slot, comparator=None):
-        if comparator:
-            self.comparator = comparator
-    
+    def add_slot(self, new_slot):    
     
         # Create a new entry for the slot's telescope, if not already present
         self.matrix.setdefault(new_slot.tel, [])
@@ -72,10 +68,12 @@ class Availability(object):
 
         # Determine how many slots on this telescope overlap in time, if any
         clashes = []
-        for old_slot in self.matrix[new_slot.tel]:        
+        clash_idx = []
+        for n, old_slot in enumerate(self.matrix[new_slot.tel]):
             # If the slot overlaps
             if old_slot.clashes_with(new_slot):
                 # Add the old slot to a temporary clash list
+                clash_idx.append(n)
                 clashes.append(old_slot)
 
         # For each existing slot which clashes
@@ -88,6 +86,9 @@ class Availability(object):
         # If we get here, the new slot takes priority over all clashing slots
         # Move the existing slots to a bumped list
         self.bumped_list.extend(clashes)
+        for idx in reversed(clash_idx):
+            print 'idx', idx
+            del self.matrix[new_slot.tel][idx]
 
         # Schedule the new slot
         self.matrix[new_slot.tel].append(new_slot)
@@ -104,7 +105,7 @@ class Availability(object):
         return self.matrix
 
 
-    def add_target(self, target, comparator):
+    def add_target(self, target):
 
         # Iterate through the slots
         matrix = target.get_slots()
@@ -112,7 +113,7 @@ class Availability(object):
             for slot in matrix[tel]:
 
                 # Place the slot if it doesn't clash
-                if self.add_slot(slot, comparator):
+                if self.add_slot(slot):
                     return True
 
         # All slots clash - give up
