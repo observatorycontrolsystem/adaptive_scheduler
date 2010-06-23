@@ -27,12 +27,7 @@ class IClient(object):
 class HardCodedClient(IClient):
 
     def __init__(self):
-        
-        self.plan = Plan()
-        target1 = self.construct_target1()
-        target2 = self.construct_target2()
-        self.plan.add_target(target1)
-        self.plan.add_target(target2)
+        self.comparator = SimplePriorityComparator()
 
 
 
@@ -102,15 +97,20 @@ class HardCodedClient(IClient):
 
 
     def construct_target(self, name, priority, slots):
-        target = Availability(name=name, priority=priority)
-        comparator = SimplePriorityComparator()
+        target = Availability(name, self.comparator, priority=priority)
         
-        for slot in slots:        
-           target.add_slot(slot, comparator)
-                
+        for slot in slots:
+            target.add_slot(slot)
+
         return target
 
 
-
     def get_current_plan(self):
+        '''Ensure a new plan is created each call.'''
+        self.plan = Plan()
+        target1 = self.construct_target1()
+        target2 = self.construct_target2()
+        self.plan.add_target(target1)
+        self.plan.add_target(target2)
+        
         return self.plan

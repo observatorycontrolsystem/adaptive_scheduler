@@ -247,6 +247,7 @@ class test_availability_use_as_a_schedule(object):
         expected_matrix = dict(FTN = [self.slot1])
         assert_equal(self.schedule.matrix, expected_matrix)
 
+
 class test_slots(object):
 
     def setup(self):

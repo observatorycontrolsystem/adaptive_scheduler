@@ -47,7 +47,7 @@ class Slot(object):
 
 class Availability(object):
     
-    def __init__(self, name, comparator, priority=None, ordering=None):
+    def __init__(self, name, comparator, priority=None):
         '''Constructor.
             'ordering' is a class that specifies the order in which to provide
             slots. The default is arbitrary.
@@ -109,7 +109,9 @@ class Availability(object):
 
         # Iterate through the slots
         matrix = target.get_slots()
+
         for tel in matrix:
+            print 'Considering telescope:', tel
             for slot in matrix[tel]:
 
                 # Place the slot if it doesn't clash

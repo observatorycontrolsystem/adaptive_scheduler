@@ -13,22 +13,23 @@ May 2010
 from __future__ import division     
 
 from adaptive_scheduler.availability.domain import Availability
-
+from adaptive_scheduler.comparator import SimplePriorityComparator
 
 class Kernel(object):
     
     def __init__(self):
-        pass
+        self.comparator = SimplePriorityComparator()
 
 
     def construct_schedule(self, plan):
 
-        schedule = Availability(name='Schedule')
+        schedule = Availability(name='Schedule', comparator=self.comparator)
 
         while plan.has_targets():
             # Pop the next highest priority observation from the Plan        
             next = plan.pop()
 
+            print 'Popped target', next
             # Schedule it in its first valid slot
             if schedule.add_target(next):
             
