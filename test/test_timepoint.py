@@ -9,7 +9,7 @@ August 2011
 
 from nose.tools import assert_equal
 
-from kernel.timepoint import *
+from adaptive_scheduler.kernel.timepoint import *
 
 class TestTimepoint(object):
     def setup(self):
@@ -22,12 +22,12 @@ class TestTimepoint(object):
         assert_equal(self.tp1.time, 10)
         assert_equal(self.tp1.type, 'start')
 
-    
+
     def test_create_end(self):
         assert_equal(self.tp2.time, 10)
         assert_equal(self.tp2.type, 'end')
-        
-        
+
+
     def test_sort_unequal_time(self):
         l1 = [self.tp1, self.tp3]
         l1.sort()
