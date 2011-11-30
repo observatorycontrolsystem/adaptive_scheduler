@@ -13,6 +13,9 @@ from adaptive_scheduler.model import Telescope, Target
 from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle           import Angle
 
+from adaptive_scheduler.kernel.timepoint import Timepoint
+from adaptive_scheduler.kernel.intervals import Intervals
+
 import ast
 
 
@@ -72,3 +75,18 @@ def telescope_to_rise_set_telescope(telescope):
                       }
 
     return telescope_dict
+
+
+def rise_set_to_kernel_intervals(intervals):
+    '''
+        Convert rise_set intervals (a list of (start, end) datetime tuples) to
+        kernel Intervals (an object that stores Timepoints).
+    '''
+
+    timepoints = []
+    for (start, end) in intervals:
+        timepoints.append(Timepoint(start, 'start'))
+        timepoints.append(Timepoint(end, 'end'))
+
+
+    return Intervals(timepoints)
