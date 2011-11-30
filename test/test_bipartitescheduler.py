@@ -9,8 +9,8 @@ November 2011
 
 from nose.tools import assert_equal
 
-from fullscheduler_v1 import *
-from bipartitescheduler import *
+from adaptive_scheduler.kernel.fullscheduler_v1 import *
+from adaptive_scheduler.kernel.bipartitescheduler import *
 
 class TestFullScheduler_v1(object):
 
@@ -20,7 +20,7 @@ class TestFullScheduler_v1(object):
 
         self.r1 = Reservation_v2(1, 1, [self.s1,self.s2])
         self.r2 = Reservation_v2(2, 2, [self.s1,self.s2])
-    
+
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r1, self.r2], 'and')
         self.cr3 = CompoundReservation_v2([self.r1], 'nof', 2)
@@ -28,12 +28,12 @@ class TestFullScheduler_v1(object):
 
         self.gpw = {}
         self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        
+
         self.gpw2 = {}
         self.gpw2['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
         self.gpw2['bar'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        
-        self.fs1 = FullScheduler_v1([self.cr1, self.cr2, self.cr3], 
+
+        self.fs1 = FullScheduler_v1([self.cr1, self.cr2, self.cr3],
                                     self.gpw, [])
         self.fs2 = FullScheduler_v1([self.cr1, self.cr4],
                                     self.gpw2, [])
@@ -58,8 +58,8 @@ class TestFullScheduler_v1(object):
         assert_equal(resource, 'foo')
         assert_equal(start, 2)
         assert_equal(quantum, 1)
-       
- 
+
+
     def test_quantize_windows_1(self):
         qs = self.bs.quantize_windows(self.r1, 1)
         [resource, start, quantum] = self.bs.unhash_quantum_start(qs[0])
@@ -82,12 +82,12 @@ class TestFullScheduler_v1(object):
         assert_equal(resource, 'bar')
         assert_equal(start, 3)
         assert_equal(quantum, 1)
-        
+
 
     def test_schedule_contended_reservations_pass_1(self):
         self.r1.order = 1
         self.r2.order = 2
-        bs2 = BipartiteScheduler([self.r1], ['foo']) 
+        bs2 = BipartiteScheduler([self.r1], ['foo'])
         sr = bs2.schedule()
         assert_equal(sr, [self.r1])
 

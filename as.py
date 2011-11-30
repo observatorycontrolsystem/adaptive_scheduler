@@ -57,4 +57,4 @@ intersection = dark_intervals.intersect([up_intervals])
 print "Calculated intersections are:"
 
 for i in intersection.timepoints:
-    print "%s (%s)" % (i.time, i.type)
+    print "    %s (%s)" % (i.time, i.type)
