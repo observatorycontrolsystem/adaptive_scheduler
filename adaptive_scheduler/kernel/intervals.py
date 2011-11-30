@@ -4,13 +4,13 @@
 intervals.py - Class for specifying and manipulating lists of intervals.
 
 Methods that alter self:
-complement(), 
-clean_up(), 
+complement(),
+clean_up(),
 trim_to_time(),
 add() -- November 2011
 
 Methods that return a new Intervals object:
-subtract(), 
+subtract(),
 intersect()
 
 Author: Sotiria Lampoudi
@@ -23,17 +23,17 @@ from timepoint import *
 import math
 
 class Intervals(object):
-	
+
     IntervalsID = 0
     def __init__(self, timepoints, type=None):
         # type should be 'busy' or 'free'
         self.timepoints       = timepoints
-	self.timepoints.sort()
-	self.clean_up()
+        self.timepoints.sort()
+        self.clean_up()
         self.type             = type
         Intervals.IntervalsID = Intervals.IntervalsID+1
         self.IntervalsID      = Intervals.IntervalsID
-        
+
 
     def __str__(self):
         string = ""
@@ -61,12 +61,12 @@ class Intervals(object):
         ''' Returns the total amount of time in the intervals '''
         sum   = 0
         start = 0
-	self.clean_up()
+        self.clean_up()
         if self.timepoints:
             for t in self.timepoints:
                 if t.type == 'start':
                     start = t.time
-                else: 
+                else:
                     sum = sum + (t.time - start)
         return sum
 
@@ -81,10 +81,10 @@ class Intervals(object):
                 if duration >= length:
                     return start
         return -1
-    
+
 
     def trim_to_time(self, total_time):
-        ''' Trims the intervals from the beginning, so they sum up to 
+        ''' Trims the intervals from the beginning, so they sum up to
         total_time. Alters the Intervals object itself, returns nothing.'''
         sum         = 0
         start       = 0
@@ -94,7 +94,7 @@ class Intervals(object):
             if t.type == 'start':
                 start = t.time
                 trimmed_tps.append(t)
-            else: 
+            else:
                 sum = sum + (t.time - start)
                 if sum > total_time:
                     trim_time = sum-total_time
@@ -119,13 +119,13 @@ class Intervals(object):
             clean_tps     = []
             for t in self.timepoints:
                 if (previous_tp and
-                    (previous_tp.time == t.time) and 
+                    (previous_tp.time == t.time) and
                     (previous_tp.type == 'end') and
                     (t.type == 'start')):
                     clean_tps.pop()
                     if clean_tps:
                         previous_tp = clean_tps[-1]
-                    else: 
+                    else:
                         previous_tp = None
                 else:
                     clean_tps.append(t)
@@ -147,13 +147,13 @@ class Intervals(object):
             # # remove first tp if it's an end
             # if self.timepoints[0].type == 'end':
             #     self.timepoints.pop(0)
-        
+
 
     def complement(self, absolute_start, absolute_end):
         ''' Turns a list of intervals denoting free times
-        into a list denoting busy times and vice versa. 
+        into a list denoting busy times and vice versa.
         Replaces self.timepoints and returns nothing.
-        absolute_start and absolute_end must be defined, so we know 
+        absolute_start and absolute_end must be defined, so we know
         how to close off the ends. '''
         if self.timepoints:
             self.timepoints.sort()
@@ -162,14 +162,14 @@ class Intervals(object):
                 start = self.timepoints[1].time
                 self.timepoints.pop(0)
                 self.timepoints.pop(0)
-            else: 
+            else:
                 start = absolute_start
             complemented_tps = [Timepoint(start, 'start')]
             for t in self.timepoints:
                 if t.type == 'start':
                     complemented_tps.append(Timepoint(t.time, 'end'))
                 else:
-                    complemented_tps.append(Timepoint(t.time, 'start')) 
+                    complemented_tps.append(Timepoint(t.time, 'start'))
             if complemented_tps[-1].type == 'start':
                 if complemented_tps[-1].time == absolute_end:
                     complemented_tps.pop()
@@ -189,7 +189,7 @@ class Intervals(object):
 
     def intersect(self, list_of_others):
         ''' Intersects Intervals in list_of_others with self. Returns
-        a new Intervals object containing only those intervals that 
+        a new Intervals object containing only those intervals that
         were in the intersection of everything. If the intersection
         was empty, it returns None.'''
         intersection = []
