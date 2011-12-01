@@ -9,40 +9,23 @@ November 2011
 
 from timepoint import *
 from intervals import *
-
-class Slot(object):
-
-    def __init__(self, start, length, resource):
-        self.start      = start
-        self.end        = start + length
-        self.length     = length
-        self.resource   = resource
-        self.timepoints = [Timepoint(start, 'start'), Timepoint(start+length, 'end')]
-
+import copy
 
 class Reservation_v2(object):
 
     resID = 0
 
-    def __init__(self, priority, duration, slots_arg):
+    def __init__(self, priority, duration, tp_list):
         self.priority = priority
         self.duration = duration
-        self.slots    = []
-        # check that at least one slot is >= duration
-        # & drop slots < duration
-        for slot in slots_arg:
-            if slot.length >= duration:
-                self.slots.append(slot)
-        if len(self.slots) == 0:
-            print "error: reservation with no feasible slots\n"
         # possible_windows_dict is a dictionary mapping
         # resource -> intervals
-        self.possible_windows_dict     = self.convert_slots_to_intervals()
+        self.possible_windows_dict = self.populate_possible_windows_dict(tp_list)
         # free_windows_dict keeps track of which of the possible_windows 
         # are free
-        self.free_windows_dict         = self.possible_windows_dict
-        Reservation_v2.resID          += 1
-        self.resID                     = Reservation_v2.resID
+        self.free_windows_dict    = copy.copy(self.possible_windows_dict)
+        Reservation_v2.resID     += 1
+        self.resID                = Reservation_v2.resID
         # these fields are defined when the reservation is ultimately scheduled
         self.scheduled_start      = None
         self.scheduled_resource   = None
@@ -71,20 +54,20 @@ class Reservation_v2(object):
 
 
     def __lt__(self, other):
-        return self.duration < other.duration
+        return self.priority < other.priority
 
     
     def get_ID(self):
         return self.resID
 
 
-    def convert_slots_to_intervals(self):
+    def populate_possible_windows_dict(self, tp_list):
         tmpdict = {}
-        for slot in self.slots:
-            if slot.resource in tmpdict:
-                tmpdict[slot.resource].extend(slot.timepoints)
+        for tp in tp_list:
+            if tp.resource in tmpdict:
+                tmpdict[tp.resource].append(tp)
             else: 
-                tmpdict[slot.resource] = slot.timepoints
+                tmpdict[tp.resource] = [tp]
         for key in tmpdict.keys():
             tmpdict[key] = Intervals(tmpdict[key])
         return tmpdict

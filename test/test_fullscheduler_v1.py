@@ -14,12 +14,17 @@ from fullscheduler_v1 import *
 class TestFullScheduler_v1(object):
 
     def setup(self):
-        self.s1 = Slot(1,1,'foo')
-        self.s2 = Slot(2,2,'bar')
+        s1 = [Timepoint(1, 'start', 'foo'),
+              Timepoint(2, 'end', 'foo')] # 1-2
 
-        self.r1 = Reservation_v2(1, 1, [self.s1,self.s2])
-        self.r2 = Reservation_v2(2, 2, [self.s1,self.s2])
-    
+        s2 = [Timepoint(2, 'start', 'bar'),
+              Timepoint(4, 'end', 'bar')] # --2--4
+
+        s1.extend(s2)
+
+        self.r1 = Reservation_v2(1, 1, s1)
+        self.r2 = Reservation_v2(2, 2, s1)
+
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r1, self.r2], 'and')
         self.cr3 = CompoundReservation_v2([self.r1], 'nof', 2)

@@ -14,13 +14,16 @@ from uncontendedscheduler import *
 class TestUncontendedScheduler_v1(object):
 
     def setup(self):
-        self.s1 = Slot(1,1, 'foo') # 1-2
-        self.s2 = Slot(2,2, 'foo') # --2--4
-        self.s3 = Slot(1,2, 'foo') # 1--3
+        s1 = [Timepoint(1, 'start', 'foo'), 
+              Timepoint(2, 'end', 'foo')] # 1-2
+        s2 = [Timepoint(2, 'start', 'foo'), 
+              Timepoint(4, 'end', 'foo')] # --2--4
+        s3 = [Timepoint(1, 'start', 'foo'), 
+              Timepoint(3, 'end', 'foo')] # 1--3
 
-        self.r1 = Reservation_v2(1, 1, [self.s1])
-        self.r2 = Reservation_v2(1, 2, [self.s2])
-        self.r3 = Reservation_v2(1, 1, [self.s3])
+        self.r1 = Reservation_v2(1, 1, s1)
+        self.r2 = Reservation_v2(1, 2, s2)
+        self.r3 = Reservation_v2(1, 1, s3)
 
         
     def test_create(self):

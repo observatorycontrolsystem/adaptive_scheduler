@@ -14,18 +14,20 @@ from adaptive_scheduler.kernel.timepoint import *
 class TestTimepoint(object):
     def setup(self):
         self.tp1 = Timepoint(10, 'start')
-        self.tp2 = Timepoint(10, 'end')
+        self.tp2 = Timepoint(10, 'end', 'foo')
         self.tp3 = Timepoint(20, 'start')
 
-
+        
     def test_create_start(self):
         assert_equal(self.tp1.time, 10)
         assert_equal(self.tp1.type, 'start')
+        assert_equal(self.tp1.resource, None)
 
 
     def test_create_end(self):
         assert_equal(self.tp2.time, 10)
         assert_equal(self.tp2.type, 'end')
+        assert_equal(self.tp1.resource, 'foo')
 
 
     def test_sort_unequal_time(self):

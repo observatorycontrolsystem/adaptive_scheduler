@@ -10,6 +10,7 @@ November 2011
 from reservation_v2 import *
 import sys
 import math
+import heapq
 
 class Clustering(object):
 
@@ -19,7 +20,7 @@ class Clustering(object):
 
     def cluster_and_order(self, n=3):
         # must return number of clusters
-        number_of_clusters = self.cluster_into_n_by_priority(n)
+        number_of_clusters = self.cut_into_n_by_priority(n)
         return number_of_clusters
 
 
@@ -39,7 +40,7 @@ class Clustering(object):
         return priority
         
 
-    def cluster_into_n_by_priority(self, n):
+    def cut_into_n_by_priority(self, n):
         if len(self.reservation_list) < n:
             print "error: fewer elements in the list than requested clusters\n"
             return
@@ -50,4 +51,32 @@ class Clustering(object):
             for i in range(1,n):
                 if r.priority >= min_p + i*interval:
                     r.order = i+1
+        return n
+
+
+    def cluster_into_n_by_priority(self, n):
+        if len(self.reservation_list) < n:
+            print "error: fewer elements in the list than requested clusters\n"
+            return
+        distances = []
+        self.reservation_list.sort()
+        # calculate distances between consecutive (in order of prio.) res's
+        for i in range(1,n-1):
+            distances.append(self.reservation_list[i+1].priority - 
+                             self.reservation_list[i].priority)
+        # find cut-points
+        cutpoints = heapq.nlargest(n, distances)
+        order    = 1
+        previous = 1
+        for cp in cutpoints:
+            i = distances.index(cp)
+            distances[i] = 0
+            # fix the order of reservations to the left of i+1
+            for j in range(previous, i+1):
+                self.reservation_list[j].order = order
+            order   += 1
+            previous = i + 1
+        # fix the order of the rightmost cluster of reservations
+        for j in range(previous, len(self.reservation_list)):
+            self.reservation_list[j].order = order
         return n

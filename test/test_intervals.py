@@ -10,18 +10,18 @@ edited November 2011: added test_add_1(), test_add_2()
 
 from nose.tools import assert_equal
 
-from adaptive_scheduler.kernel.timepoint import *
-from adaptive_scheduler.kernel.intervals import *
+from timepoint import *
+from intervals import *
 
 class TestIntervals(object):
-
+    
     def setup(self):
-        # t1(1) ----  t2(3)
-        #       t3(2) ----- t4(4)
+        # t1(1) ----  t2(3) 
+        #       t3(2) ----- t4(4) 
         #                   t5(4) t6(5)
         t1=Timepoint(1,'start');
         t2=Timepoint(3, 'end');
-
+        
         t3=Timepoint(2, 'start');
         t4=Timepoint(4, 'end');
 
@@ -35,7 +35,7 @@ class TestIntervals(object):
         self.i5=Intervals([t1, t6])
         self.i6=Intervals([t1, t2, t5, t6, Timepoint(2, 'start'), Timepoint(2,'end')])
         self.i8=Intervals([])
-
+    
 
     def test_create(self):
         assert_equal(self.i1.timepoints[0].time, 1)
@@ -105,7 +105,7 @@ class TestIntervals(object):
         assert_equal(self.i1.timepoints[4].type, 'start')
         assert_equal(self.i1.timepoints[5].time, 10)
         assert_equal(self.i1.timepoints[5].type, 'end')
-
+        
 
     def test_subtract_1(self):
         i = self.i1.subtract(self.i2)
@@ -126,7 +126,7 @@ class TestIntervals(object):
         assert_equal(i.timepoints[0].type, 'start')
         assert_equal(i.timepoints[1].time, 5)
         assert_equal(i.timepoints[1].type, 'end')
-
+        
 
     def test_subtract_empty(self):
         i = self.i1.subtract(Intervals([]))
@@ -138,7 +138,7 @@ class TestIntervals(object):
         assert_equal(i.timepoints[2].type, 'start')
         assert_equal(i.timepoints[3].time, 5)
         assert_equal(i.timepoints[3].type, 'end')
-
+        
 
     def test_subtract_from_empty(self):
         i = self.i8.subtract(self.i1)
@@ -146,8 +146,8 @@ class TestIntervals(object):
 
 
     def test_clean_up_1(self):
-        '''
-        Nested interval clean up
+        ''' 
+        Nested interval clean up 
         '''
         self.i3.clean_up()
         assert_equal(self.i3.timepoints[0].time, 1)
