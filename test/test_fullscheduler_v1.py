@@ -9,7 +9,7 @@ November 2011
 
 from nose.tools import assert_equal
 
-from fullscheduler_v1 import *
+from adaptive_scheduler.kernel.fullscheduler_v1 import *
 
 class TestFullScheduler_v1(object):
 

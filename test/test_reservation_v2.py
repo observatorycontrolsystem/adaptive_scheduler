@@ -9,9 +9,9 @@ November 2011
 
 from nose.tools import assert_equal
 
-from timepoint import *
-from intervals import *
-from reservation_v2 import *
+from adaptive_scheduler.kernel.timepoint import *
+from adaptive_scheduler.kernel.intervals import *
+from adaptive_scheduler.kernel.reservation_v2 import *
 
 class TestReservation_v2(object):
     

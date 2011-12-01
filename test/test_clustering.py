@@ -9,8 +9,8 @@ November 2011
 
 from nose.tools import assert_equal
 
-from clustering import *
-from reservation_v2 import *
+from adaptive_scheduler.kernel.clustering import *
+from adaptive_scheduler.kernel.reservation_v2 import *
 
 class TestClustering(object):
 

@@ -9,7 +9,7 @@ November 2011
 
 from nose.tools import assert_equal
 
-from uncontendedscheduler import *
+from adaptive_scheduler.kernel.uncontendedscheduler import *
 
 class TestUncontendedScheduler_v1(object):
 

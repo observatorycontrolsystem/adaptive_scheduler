@@ -27,7 +27,7 @@ class TestTimepoint(object):
     def test_create_end(self):
         assert_equal(self.tp2.time, 10)
         assert_equal(self.tp2.type, 'end')
-        assert_equal(self.tp1.resource, 'foo')
+        assert_equal(self.tp2.resource, 'foo')
 
 
     def test_sort_unequal_time(self):

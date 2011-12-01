@@ -10,8 +10,8 @@ edited November 2011: added test_add_1(), test_add_2()
 
 from nose.tools import assert_equal
 
-from timepoint import *
-from intervals import *
+from adaptive_scheduler.kernel.timepoint import *
+from adaptive_scheduler.kernel.intervals import *
 
 class TestIntervals(object):
     

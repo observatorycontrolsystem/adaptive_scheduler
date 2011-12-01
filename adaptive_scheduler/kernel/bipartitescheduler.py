@@ -8,7 +8,6 @@ November 2011
 '''
 
 from reservation_v2 import *
-#from bipartite_matching import *
 
 class BipartiteScheduler(object):
 
