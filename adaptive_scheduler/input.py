@@ -88,5 +88,62 @@ def rise_set_to_kernel_intervals(intervals):
         timepoints.append(Timepoint(start, 'start'))
         timepoints.append(Timepoint(end, 'end'))
 
-
     return Intervals(timepoints)
+
+
+
+def dt_to_epoch_timepoints(timepoints, earliest, latest):
+    # Convert into epoch time for a consistent linear scale
+    earliest = datetime_to_epoch(earliest)
+    latest   = datetime_to_epoch(latest)
+
+    epoch_timepoints = []
+    for tp in timepoints:
+        epoch_time = datetime_to_epoch(tp.time)
+        epoch_timepoints.append(Timepoint(epoch_time, tp.type, tp.resource))
+
+    return epoch_timepoints
+
+
+
+def construct_compound_reservation(request, dt_timepoints, sem_start, sem_end):
+    # Convert timepoints into normalised epoch time
+    epoch_timepoints = dt_to_epoch_timepoints(dt_timepoints, sem_start, sem_end)
+
+    # Construct Reservations
+    # Each Reservation represents the set of available windows of opportunity
+    # The resource is governed by the timepoint.resource attribute
+    res = Reservation(self, request.priority, request.duration, epoch_timepoints)
+
+    # Combine Reservations into CompoundReservations
+    # Each CompoundReservation represents an actual request to do something
+
+
+# TODO: Remove this
+def django_to_sched_args(req, earliest, latest):
+    '''Convert stored requests into input the scheduler can use.'''
+
+    # Convert into epoch time for a consistent linear scale
+    earliest = datetime_to_epoch(earliest)
+    latest   = datetime_to_epoch(latest)
+
+    # Duration: minutes->seconds
+    duration_in_s = req.duration * 60
+
+    # Normalisation isn't necessary, but makes the numbers much nicer to inspect
+    duration      = normalise(earliest + duration_in_s, earliest, latest)
+    start         = normalise(datetime_to_epoch(req.start), earliest, latest)
+    latest_start  = normalise(datetime_to_epoch(req.end) - duration_in_s,
+                              earliest, latest)
+
+    return duration, start, latest_start
+
+
+def datetime_to_epoch(dt):
+    return calendar.timegm(dt.timetuple())
+
+
+def normalise(value, start, end):
+    '''Normalise any value to a positive range, starting at zero.'''
+
+    return value - start

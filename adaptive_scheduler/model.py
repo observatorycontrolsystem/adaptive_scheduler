@@ -11,6 +11,8 @@ November 2011
 # Required for true (non-integer) division
 from __future__ import division
 
+from adaptive_scheduler.exceptions import InvalidRequestError
+
 
 class DataContainer(object):
     def __init__(self, *initial_data, **kwargs):
@@ -27,3 +29,56 @@ class Target(DataContainer):
 
 class Telescope(DataContainer):
     pass
+
+
+class Request(object):
+    '''
+        A user-level request for an observation. This will be translated into the
+        Reservation/CompoundReservation of the scheduling kernel.
+
+        duration - exposure time of each observation. TODO: Clarify what this means.
+        windows  - a list of start/end datetimes, representing when this observation
+                   is eligible to be performed. For user observations with no
+                   time constraints, this should be the planning window of the
+                   scheduler (e.g. the semester bounds).
+
+    '''
+
+    # TODO: Add sanity checking, e.g. requiring windows for AND blocks, etc.
+    # TODO: Introspect CompoundReservation class to find these names.
+    valid_types = {
+                    'single' : 'A single block of *duration* is to be scheduled',
+                    'nof'    : 'n blocks of *duration* are to be scheduled',
+                    'and'    : 'All of the provided blocks are to be scheduled',
+                  }
+
+    def __init__(self, target, telescope, priority, duration, res_type, windows):
+        self.target    = target
+        self.telescope = telescope
+        self.priority  = priority
+        self.duration  = duration
+        self.res_type  = self._validate_type(res_type)
+
+        if len(windows) % 2 > 0:
+            error_msg = ("You must provide a start and end for each window "
+                         "(you provided an odd number of window edges)")
+            raise InvalidRequestError(error_msg)
+
+        self.windows = windows
+
+
+    def _validate_type(self, provided_type):
+        '''Check the type being asked for matches a valid type
+           of CompoundObservation.'''
+
+        if provided_type not in Request.valid_types:
+
+            error_msg = ("You've asked for a type of request that doesn't exist. "
+                         "Valid types are:\n")
+
+            for res_type, help_txt in Request.valid_types.iteritems():
+                error_msg += "    %9s - %s\n" % (res_type, help_txt)
+
+            raise InvalidRequestError(error_msg)
+
+

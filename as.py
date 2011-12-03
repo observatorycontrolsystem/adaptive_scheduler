@@ -7,6 +7,9 @@ Author: Eric Saunders
 November 2011
 '''
 
+# Required for true (non-integer) division
+from __future__ import division
+
 from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       target_to_rise_set_target,
                                       telescope_to_rise_set_telescope,
@@ -58,3 +61,11 @@ print "Calculated intersections are:"
 
 for i in intersection.timepoints:
     print "    %s (%s)" % (i.time, i.type)
+
+# Make up an example observation to schedule
+# TODO: Generalise and remove this
+request = Request(targets[0], tels[0], priority=1, duration=60, res_type='single',
+                  windows=[semester_start, semester_end])
+
+construct_compound_reservation(request, intersection.timepoints,
+                               semester_start, semester_end)
