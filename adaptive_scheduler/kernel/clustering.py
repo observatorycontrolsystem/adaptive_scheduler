@@ -42,7 +42,7 @@ class Clustering(object):
 
     def cut_into_n_by_priority(self, n):
         if len(self.reservation_list) < n:
-            print "error: fewer elements in the list than requested clusters\n"
+            print "ERROR: fewer elements in the list (%d) than requested clusters (%d)\n" % (len(self.reservation_list), n)
             return
         max_p    = self.max_priority()
         min_p    = self.min_priority()

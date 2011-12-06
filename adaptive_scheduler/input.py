@@ -9,14 +9,17 @@ Author: Eric Saunders
 November 2011
 '''
 
-from adaptive_scheduler.model import Telescope, Target
+from adaptive_scheduler.model import Telescope, Target, Request
 from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle           import Angle
 
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
+from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 
 import ast
+import calendar
 
 
 def file_to_dicts(filename):
@@ -27,24 +30,45 @@ def file_to_dicts(filename):
 
 
 def build_telescopes(filename):
-    telescopes = []
+    telescopes = {}
     tel_dicts  = file_to_dicts(filename)
 
     for d in tel_dicts:
-        telescopes.append(Telescope(d))
+        telescopes[ d['name'] ] = Telescope(d)
 
     return telescopes
 
 
 def build_targets(filename):
-    targets = []
+    targets = {}
     target_dicts  = file_to_dicts(filename)
 
     for d in target_dicts:
-        targets.append(Target(d))
+        targets[ d['name'] ] = Target(d)
 
     return targets
 
+
+def build_requests(filename, targets, telescopes, semester_start, semester_end):
+    # TODO: Currently we assume all windows are the width of the semester. Allow
+    # user-specified windows.
+    requests = []
+    request_dicts = file_to_dicts(filename)
+
+    for d in request_dicts:
+
+        requests.append(
+                         Request(
+                                  target    = targets[ d['target_name'] ],
+                                  telescope = telescopes[ d['telescope'] ],
+                                  priority  = d['priority'],
+                                  duration  = d['duration'],
+                                  res_type  = d['res_type'],
+                                  windows   = [semester_start, semester_end],
+                                )
+                       )
+
+    return requests
 
 
 def target_to_rise_set_target(target):
@@ -77,6 +101,7 @@ def telescope_to_rise_set_telescope(telescope):
     return telescope_dict
 
 
+
 def rise_set_to_kernel_intervals(intervals):
     '''
         Convert rise_set intervals (a list of (start, end) datetime tuples) to
@@ -92,58 +117,42 @@ def rise_set_to_kernel_intervals(intervals):
 
 
 
-def dt_to_epoch_timepoints(timepoints, earliest, latest):
+def dt_to_epoch_timepoints(timepoints, earliest):
     # Convert into epoch time for a consistent linear scale
     earliest = datetime_to_epoch(earliest)
-    latest   = datetime_to_epoch(latest)
 
     epoch_timepoints = []
     for tp in timepoints:
-        epoch_time = datetime_to_epoch(tp.time)
+        epoch_time = normalise(datetime_to_epoch(tp.time), earliest)
         epoch_timepoints.append(Timepoint(epoch_time, tp.type, tp.resource))
 
     return epoch_timepoints
 
 
 
-def construct_compound_reservation(request, dt_timepoints, sem_start, sem_end):
+def construct_compound_reservation(request, dt_timepoints, sem_start):
     # Convert timepoints into normalised epoch time
-    epoch_timepoints = dt_to_epoch_timepoints(dt_timepoints, sem_start, sem_end)
+    epoch_timepoints = dt_to_epoch_timepoints(dt_timepoints, sem_start)
 
     # Construct Reservations
     # Each Reservation represents the set of available windows of opportunity
     # The resource is governed by the timepoint.resource attribute
-    res = Reservation(self, request.priority, request.duration, epoch_timepoints)
+    res = Reservation(request.priority, request.duration, epoch_timepoints)
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something
+    compound_res = CompoundReservation([res], request.res_type)
 
+    return compound_res
 
-# TODO: Remove this
-def django_to_sched_args(req, earliest, latest):
-    '''Convert stored requests into input the scheduler can use.'''
-
-    # Convert into epoch time for a consistent linear scale
-    earliest = datetime_to_epoch(earliest)
-    latest   = datetime_to_epoch(latest)
-
-    # Duration: minutes->seconds
-    duration_in_s = req.duration * 60
-
-    # Normalisation isn't necessary, but makes the numbers much nicer to inspect
-    duration      = normalise(earliest + duration_in_s, earliest, latest)
-    start         = normalise(datetime_to_epoch(req.start), earliest, latest)
-    latest_start  = normalise(datetime_to_epoch(req.end) - duration_in_s,
-                              earliest, latest)
-
-    return duration, start, latest_start
 
 
 def datetime_to_epoch(dt):
     return calendar.timegm(dt.timetuple())
 
 
-def normalise(value, start, end):
+
+def normalise(value, start):
     '''Normalise any value to a positive range, starting at zero.'''
 
     return value - start

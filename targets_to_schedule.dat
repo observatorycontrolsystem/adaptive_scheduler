@@ -1,4 +1,4 @@
-# List of targets to schedule.
+# List of targets available to schedule.
 [
     {
         'name'  : 'deneb',

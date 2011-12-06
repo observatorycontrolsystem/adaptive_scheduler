@@ -10,6 +10,7 @@ November 2011
 
 from reservation_v2 import *
 from bipartitescheduler import *
+from uncontendedscheduler import *
 #from contracts_v2 import *
 from clustering import *
 import copy
