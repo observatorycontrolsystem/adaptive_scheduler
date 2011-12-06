@@ -61,7 +61,7 @@ class Clustering(object):
         distances = []
         self.reservation_list.sort()
         # calculate distances between consecutive (in order of prio.) res's
-        for i in range(1,n-1):
+        for i in range(0,n-1):
             distances.append(self.reservation_list[i+1].priority - 
                              self.reservation_list[i].priority)
         # find cut-points

@@ -66,4 +66,25 @@ class TestClustering(object):
         assert_equal(self.c1.reservation_list[0].order, 1)
         assert_equal(self.c1.reservation_list[1].order, 2)
         assert_equal(self.c1.reservation_list[2].order, 3)
+
+
+    def test_cluster_into_n_by_prio_1(self):
+        self.c1.cluster_into_n_by_priority(1)
+        assert_equal(self.c1.reservation_list[0].order, 1)
+        assert_equal(self.c1.reservation_list[1].order, 1)
+        assert_equal(self.c1.reservation_list[2].order, 1)
+
+
+    def test_cluster_into_n_by_prio_2(self):
+        self.c1.cluster_into_n_by_priority(2)
+        assert_equal(self.c1.reservation_list[0].order, 1)
+        assert_equal(self.c1.reservation_list[1].order, 2)
+        assert_equal(self.c1.reservation_list[2].order, 2)
+
+
+    def test_cluster_into_n_by_prio_3(self):
+        self.c1.cluster_into_n_by_priority(3)
+        assert_equal(self.c1.reservation_list[0].order, 1)
+        assert_equal(self.c1.reservation_list[1].order, 2)
+        assert_equal(self.c1.reservation_list[2].order, 3)
         

@@ -8,6 +8,7 @@ complement(),
 clean_up(),
 trim_to_time(),
 add() -- November 2011
+remove_intervals_smaller_than() -- December 2011
 
 Methods that return a new Intervals object:
 subtract(),
@@ -110,6 +111,22 @@ class Intervals(object):
             # TODO: this should be an exception
             print "error: asked me to trim intervals to more than their total time\n"
 
+
+    def remove_intervals_smaller_than(self, duration):
+        ''' Filters out intervals that are smaller than a threshold'''
+        self.clean_up()
+        toremove = []
+        for tp in self.timepoints:
+            if tp.type == 'start':
+                previous = tp
+            else:
+                d = tp.time - previous.time
+                if d < duration:
+                    toremove.append(previous)
+                    toremove.append(tp)
+        for tp in toremove:
+            self.timepoints.remove(tp)
+        
 
     def clean_up(self):
         if self.timepoints:
@@ -275,8 +292,9 @@ class Intervals(object):
                 start = int(math.ceil(float(t.time)/float(quantum_length))*quantum_length)
             else:
                 tmp = range(start, t.time, quantum_length)
-                # figure out whether the last quantum is whole
-                if tmp[-1] + quantum_length > t.time:
-                    tmp.pop()
-                quantum_starts.extend(tmp)
+                if tmp:
+                    # figure out whether the last quantum is whole
+                    if tmp[-1] + quantum_length > t.time:
+                        tmp.pop()
+                    quantum_starts.extend(tmp)
         return quantum_starts

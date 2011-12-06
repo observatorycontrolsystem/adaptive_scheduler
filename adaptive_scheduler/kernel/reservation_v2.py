@@ -22,8 +22,11 @@ class Reservation_v2(object):
         # resource -> intervals
         self.possible_windows_dict = self.populate_possible_windows_dict(tp_list)
         # free_windows_dict keeps track of which of the possible_windows 
-        # are free
+        # are free.
         self.free_windows_dict    = copy.copy(self.possible_windows_dict)
+        # clean up free windows by removing ones that are too small:
+#        for resource in self.free_windows_dict.keys():
+#            self.clean_up_free_windows(resource)
         Reservation_v2.resID     += 1
         self.resID                = Reservation_v2.resID
         # these fields are defined when the reservation is ultimately scheduled
@@ -34,6 +37,15 @@ class Reservation_v2(object):
         self.scheduled_timepoints = None
         # order is the parameter used for grouping & ordering in scheduling
         self.order                = 1
+
+
+    def schedule_anywhere(self):
+        # find the first available spot & stick it there
+        for resource in self.free_windows_dict.keys():
+            start = self.free_windows_dict[resource].find_interval_of_length(self.duration)
+            if start >= 0:
+                break
+        self.schedule(start, resource, self.duration)
 
     
     def schedule(self, start, resource, quantum):
@@ -71,6 +83,17 @@ class Reservation_v2(object):
         for key in tmpdict.keys():
             tmpdict[key] = Intervals(tmpdict[key])
         return tmpdict
+
+
+    def remove_from_free_windows(self, resource, interval):
+        self.free_windows_dict[resource] = self.free_windows_dict[resource].subtract(interval)
+        self.clean_up_free_windows(resource)
+
+        
+    def clean_up_free_windows(self, resource):
+        self.free_windows_dict[resource].remove_intervals_smaller_than(self.duration)
+        if self.free_windows_dict[resource].is_empty():
+            del self.free_windows_dict[resource]
 
 
 class CompoundReservation_v2(object):

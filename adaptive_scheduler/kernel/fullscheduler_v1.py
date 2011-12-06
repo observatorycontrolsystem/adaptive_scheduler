@@ -93,19 +93,32 @@ class FullScheduler_v1(object):
 
 
     def schedule_contended_reservations(self):
-        # break reservations into classes according to some criterion
-        # find the max order and iterate until max_order
-        max_order = self.cluster_and_order_reservations()
-        for current_order in range(1, max_order+1):
-        # foreach class do:
-            self.schedule_contended_reservations_pass(current_order)
+        # first check that the unscheduled reservation list is not empty
+        if self.unscheduled_reservation_list:
+            # then check that there are enough unscheduled reservations
+            # to make it worth it to cluster them. This threshold is 
+            # arbitrary and is currently set to: 10
+            if len(self.unscheduled_reservation_list) > 10:
+                # break reservations into classes according to some criterion
+                # find the max order and iterate until max_order
+                max_order = self.cluster_and_order_reservations()
+            else:
+                max_order = 1
+            for current_order in range(1, max_order+1):
+                # foreach class do:
+                self.schedule_contended_reservations_pass(current_order)
+        return
 
 
     def schedule_contended_reservations_pass(self, current_order):
         self.current_order = current_order
         reservation_list   = filter(self.order_equals, self.unscheduled_reservation_list)
-        bs = BipartiteScheduler(reservation_list, self.resource_list)
-        scheduled_reservations = bs.schedule()
+        if len(reservation_list) > 1:
+            bs = BipartiteScheduler(reservation_list, self.resource_list)
+            scheduled_reservations = bs.schedule()
+        else:
+            reservation_list[0].schedule_anywhere()
+            scheduled_reservations = reservation_list
         for r in scheduled_reservations:
             self.commit_reservation_to_schedule(r)
 
@@ -135,6 +148,9 @@ class FullScheduler_v1(object):
             resource = r.scheduled_resource
             quantum  = r.scheduled_quantum
             interval = Intervals(r.scheduled_timepoints, 'busy')
+            if resource not in self.resource_list:
+                print "error: trying to commit reservation on a resource not in the resource list\n"
+                return
             self.schedule_dict[resource].append(r)
             # add interval & remove free time
             self.schedule_dict_busy[resource].add(r.scheduled_timepoints)
@@ -148,7 +164,7 @@ class FullScheduler_v1(object):
                 if r == reservation:
                     continue
                 else:
-                    reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].subtract(interval)
+                    reservation.remove_from_free_windows(resource, interval)
         else:
             print "error: trying to commit unscheduled reservation"
 
@@ -189,4 +205,4 @@ class FullScheduler_v1(object):
         self.enforce_all_constraints()
         self.schedule_contractual_obligations()
         
-        return
+        return self.schedule_dict

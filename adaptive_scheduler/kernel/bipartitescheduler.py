@@ -70,7 +70,7 @@ class BipartiteScheduler(object):
         for r in self.reservation_list:
             if r.get_ID() == ID:
                 return r
-            return Null
+        return None
 
 
 # Hopcroft-Karp bipartite max-cardinality matching and max independent set

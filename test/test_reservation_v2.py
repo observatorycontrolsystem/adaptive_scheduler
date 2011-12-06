@@ -55,6 +55,21 @@ class TestReservation_v2(object):
         assert_equal(self.r1.free_windows_dict['bar'].timepoints[1].type, 'end')
 
 
+    def test_remove_from_free_windows_1(self):
+        self.r1.remove_from_free_windows('foo', Intervals([Timepoint(1, 'start'), Timepoint(2, 'end')]))
+        assert 'foo' not in self.r1.free_windows_dict
+        self.r1.remove_from_free_windows('bar', Intervals([Timepoint(3, 'start'), Timepoint(4, 'end')]))
+        assert_equal(self.r1.free_windows_dict['bar'].timepoints[0].time, 2)
+        assert_equal(self.r1.free_windows_dict['bar'].timepoints[0].type, 'start')
+        assert_equal(self.r1.free_windows_dict['bar'].timepoints[1].time, 3)
+        assert_equal(self.r1.free_windows_dict['bar'].timepoints[1].type, 'end')
+
+
+    def test_remove_from_free_windows_2(self):
+        self.r2.remove_from_free_windows('bar', Intervals([Timepoint(3, 'start'), Timepoint(4, 'end')]))
+        assert 'bar' not in self.r2.free_windows_dict
+
+
     def test_lt(self):
         '''Sorting is now by priority'''
         assert self.r1 < self.r3

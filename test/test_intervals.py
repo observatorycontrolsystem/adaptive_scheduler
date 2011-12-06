@@ -35,7 +35,21 @@ class TestIntervals(object):
         self.i5=Intervals([t1, t6])
         self.i6=Intervals([t1, t2, t5, t6, Timepoint(2, 'start'), Timepoint(2,'end')])
         self.i8=Intervals([])
-    
+
+
+    def test_remove_intervals_smaller_than_1(self):
+        self.i1.remove_intervals_smaller_than(2)
+        assert_equal(self.i1.timepoints[0].time, 1)
+        assert_equal(self.i1.timepoints[0].type, 'start')
+        assert_equal(self.i1.timepoints[1].time, 3)
+        assert_equal(self.i1.timepoints[1].type, 'end')
+        assert_equal(len(self.i1.timepoints), 2)
+
+
+    def test_remove_intervals_smaller_than_2(self):
+        self.i1.remove_intervals_smaller_than(3)
+        assert_equal(len(self.i1.timepoints), 0)
+            
 
     def test_create(self):
         assert_equal(self.i1.timepoints[0].time, 1)
