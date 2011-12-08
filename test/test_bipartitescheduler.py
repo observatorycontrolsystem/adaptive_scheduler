@@ -12,36 +12,18 @@ from nose.tools import assert_equal
 from adaptive_scheduler.kernel.fullscheduler_v1 import *
 from adaptive_scheduler.kernel.bipartitescheduler import *
 
-class TestFullScheduler_v1(object):
+class TestBipartiteScheduler(object):
 
     def setup(self):
-        s1 = [Timepoint(1, 'start', 'foo'),
-              Timepoint(2, 'end', 'foo')] # 1-2
+        s1 = Intervals([Timepoint(1, 'start'),
+                        Timepoint(2, 'end')]) # 1-2
 
-        s2 = [Timepoint(2, 'start', 'bar'),
-              Timepoint(4, 'end', 'bar')] # --2--4
+        s2 = Intervals([Timepoint(2, 'start'),
+                        Timepoint(4, 'end')]) # --2--4
 
-        s1.extend(s2)
-
-        self.r1 = Reservation_v2(1, 1, s1)
-        self.r2 = Reservation_v2(2, 2, s1)
+        self.r1 = Reservation_v2(1, 1, 'foo', s1)
+        self.r2 = Reservation_v2(2, 2, 'bar', s2)
     
-        self.cr1 = CompoundReservation_v2([self.r1])
-        self.cr2 = CompoundReservation_v2([self.r1, self.r2], 'and')
-        self.cr3 = CompoundReservation_v2([self.r1], 'nof', 2)
-        self.cr4 = CompoundReservation_v2([self.r2])
-
-        self.gpw = {}
-        self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        
-        self.gpw2 = {}
-        self.gpw2['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        self.gpw2['bar'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        
-        self.fs1 = FullScheduler_v1([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw, [])
-        self.fs2 = FullScheduler_v1([self.cr1, self.cr4],
-                                    self.gpw2, [])
         self.bs = BipartiteScheduler([self.r1, self.r2], ['foo', 'bar'])
 
 
@@ -79,19 +61,9 @@ class TestFullScheduler_v1(object):
         assert_equal(resource, 'foo')
         assert_equal(start, 1)
         assert_equal(quantum, 1)
-        [resource, start, quantum] = self.bs.unhash_quantum_start(qs[1])
-        assert_equal(resource, 'bar')
-        assert_equal(start, 2)
-        assert_equal(quantum, 1)
-        [resource, start, quantum] = self.bs.unhash_quantum_start(qs[2])
-        assert_equal(resource, 'bar')
-        assert_equal(start, 3)
-        assert_equal(quantum, 1)
         
 
-    def test_schedule_contended_reservations_pass_1(self):
-        self.r1.order = 1
-        self.r2.order = 2
+    def test_schedule(self):
         bs2 = BipartiteScheduler([self.r1], ['foo']) 
         sr = bs2.schedule()
         assert_equal(sr, [self.r1])

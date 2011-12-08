@@ -15,31 +15,40 @@ class BipartiteScheduler(object):
         self.reservation_list       = reservation_list
         self.scheduled_reservations = []
         self.resource_list          = resource_list
+        self.reservations_by_resource_dict = {}
+        for resource in resource_list:
+            self.reservations_by_resource_dict[resource] = []
+        for reservation in reservation_list:
+            if reservation.resource in resource_list:
+                self.reservations_by_resource_dict[reservation.resource].append(reservation)
+            else: 
+                print "what's this reservation doing here?"
 
 
     def schedule(self):
-        # calculate quantum as max of all request lengths
-        quantum = self.max_duration(self.reservation_list)
         constraint_graph = {}
-        for r in self.reservation_list:
-            # quantize free windows of opportunity for each reservation 
-            # (first checks which windows of opportunity are still free)
-            quantum_starts = self.quantize_windows(r, quantum)
-            # add to graph
-            constraint_graph[r.get_ID()] = quantum_starts
+        # calculate quantum as max of all request lengths, per resource
+        for resource in self.resource_list:
+            quantum = self.max_duration(self.reservations_by_resource_dict[resource])
+            for r in self.reservations_by_resource_dict[resource]:
+                # quantize free windows of opportunity for each reservation 
+                # (first checks which windows of opportunity are still free)
+                quantum_starts = self.quantize_windows(r, quantum)
+                # add to graph
+                constraint_graph[r.get_ID()] = quantum_starts
         # run bipartitematch on graph
         output = bipartiteMatch(constraint_graph)
         matching = output[0]
         for quantum_start, reservation_ID in matching.iteritems():
             r = self.get_reservation_by_ID(reservation_ID)
             [resource, start, quantum] = self.unhash_quantum_start(quantum_start)
-            r.schedule(start, resource, quantum)
+            r.schedule(start, quantum)
             self.scheduled_reservations.append(r)
         return self.scheduled_reservations
 
 
     def max_duration(self, reservation_list):
-        duration = 0
+        duration = -1
         for r in reservation_list:
             if r.duration > duration:
                 duration = r.duration
@@ -48,11 +57,10 @@ class BipartiteScheduler(object):
 
     def quantize_windows(self, reservation, quantum):
         quantum_starts = []
-        for resource in reservation.free_windows_dict.keys():
-            if resource in self.resource_list:
-                qss = reservation.free_windows_dict[resource].get_quantum_starts(quantum)
-                for qs in qss:
-                    quantum_starts.append(self.hash_quantum_start(resource, qs, quantum))
+        resource = reservation.resource
+        qss = reservation.free_windows.get_quantum_starts(quantum)
+        for qs in qss:
+            quantum_starts.append(self.hash_quantum_start(resource, qs, quantum))
         return quantum_starts
 
 

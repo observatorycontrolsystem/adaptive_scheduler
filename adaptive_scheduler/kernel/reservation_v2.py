@@ -5,6 +5,8 @@ Reservation_v2 and CompoundReservation_v2 classes for scheduling.
 
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
+edited Dec 2011: added resource to res. constructor, 
+removed by-resource dicts, added oneof to comp. res.
 '''
 
 from timepoint import *
@@ -15,23 +17,20 @@ class Reservation_v2(object):
 
     resID = 0
 
-    def __init__(self, priority, duration, tp_list):
+    def __init__(self, priority, duration, resource, possible_windows):
         self.priority = priority
         self.duration = duration
-        # possible_windows_dict is a dictionary mapping
-        # resource -> intervals
-        self.possible_windows_dict = self.populate_possible_windows_dict(tp_list)
-        # free_windows_dict keeps track of which of the possible_windows 
+        self.resource = resource
+        self.possible_windows = possible_windows
+        # free_windows keeps track of which of the possible_windows 
         # are free.
-        self.free_windows_dict    = copy.copy(self.possible_windows_dict)
+        self.free_windows    = copy.copy(self.possible_windows)
         # clean up free windows by removing ones that are too small:
-#        for resource in self.free_windows_dict.keys():
-#            self.clean_up_free_windows(resource)
+        #            self.clean_up_free_windows()
         Reservation_v2.resID     += 1
         self.resID                = Reservation_v2.resID
         # these fields are defined when the reservation is ultimately scheduled
         self.scheduled_start      = None
-        self.scheduled_resource   = None
         self.scheduled_quantum    = None
         self.scheduled            = False
         self.scheduled_timepoints = None
@@ -41,16 +40,16 @@ class Reservation_v2(object):
 
     def schedule_anywhere(self):
         # find the first available spot & stick it there
-        for resource in self.free_windows_dict.keys():
-            start = self.free_windows_dict[resource].find_interval_of_length(self.duration)
-            if start >= 0:
-                break
-        self.schedule(start, resource, self.duration)
+        start = self.free_windows.find_interval_of_length(self.duration)
+        if start >=0:
+            self.schedule(start, self.duration)
+            return True
+        else:
+            return False
 
     
-    def schedule(self, start, resource, quantum):
+    def schedule(self, start, quantum):
         self.scheduled_start    = start
-        self.scheduled_resource = resource
         self.scheduled_quantum  = quantum
         self.scheduled          = True
         self.scheduled_timepoints = [Timepoint(start, 'start'), 
@@ -59,7 +58,6 @@ class Reservation_v2(object):
 
     def unschedule(self):
         self.scheduled_start    = None
-        self.scheduled_resource = None
         self.scheduled_quantum  = None
         self.scheduled          = False
         self.scheduled_timepoints = None
@@ -73,40 +71,31 @@ class Reservation_v2(object):
         return self.resID
 
 
-    def populate_possible_windows_dict(self, tp_list):
-        tmpdict = {}
-        for tp in tp_list:
-            if tp.resource in tmpdict:
-                tmpdict[tp.resource].append(tp)
-            else: 
-                tmpdict[tp.resource] = [tp]
-        for key in tmpdict.keys():
-            tmpdict[key] = Intervals(tmpdict[key])
-        return tmpdict
-
-
-    def remove_from_free_windows(self, resource, interval):
-        self.free_windows_dict[resource] = self.free_windows_dict[resource].subtract(interval)
-        self.clean_up_free_windows(resource)
+    def remove_from_free_windows(self, interval):
+        self.free_windows = self.free_windows.subtract(interval)
+        self.clean_up_free_windows()
 
         
-    def clean_up_free_windows(self, resource):
-        self.free_windows_dict[resource].remove_intervals_smaller_than(self.duration)
-        if self.free_windows_dict[resource].is_empty():
-            del self.free_windows_dict[resource]
+    def clean_up_free_windows(self):
+        self.free_windows.remove_intervals_smaller_than(self.duration)
 
 
 class CompoundReservation_v2(object):
 
-    def __init__(self, reservation_list, type='single', repeats=1):
+    valid_types = {
+        'single' : 'A single one of the provided blocks is to be scheduled',
+        'oneof'  : 'One of the provided blocks are to be scheduled',
+        'and'    : 'All of the provided blocks are to be scheduled',
+        }
+
+    def __init__(self, reservation_list, type='single'):
         self.reservation_list = reservation_list
         self.type = type
         # allowed types are:
         # single
-        # nof
+        # oneof
         # and
         self.size       = len(reservation_list)
-        self.repeats    = repeats
         if type == 'single' and self.size > 1:
             msg = ( "Initializing a CompoundReservation as 'single' but with %d "
                     "individual reservations. Ignoring all but the first."
@@ -114,12 +103,16 @@ class CompoundReservation_v2(object):
             print msg
             self.size = 1
             self.reservation_list = [reservation_list.pop(0)]
-        if type == 'and' and self.repeats > 1:
-            msg = ("Initializing a CompoundReservation as 'and' but with repeats=%d"
-                    ". Resetting repeats to 1."
-                    % self.repeats )
+        if (type == 'and') and (self.size == 1):
+            msg = ( "Initializing a CompoundReservation as 'and' but with %d "
+                    "individual reservation."
+                    % self.size )
             print msg
-            self.repeats = 1
+        if type == 'oneof' and self.size == 1:
+            msg = ( "Initializing a CompoundReservation as 'oneof' but with %d "
+                    "individual reservation."
+                    % self.size )
+            print msg
 
 
     def issingle(self):
@@ -129,8 +122,8 @@ class CompoundReservation_v2(object):
             return False
 
 
-    def isnof(self):
-        if self.type == "nof":
+    def isoneof(self):
+        if self.type == "oneof":
             return True
         else:
             return False

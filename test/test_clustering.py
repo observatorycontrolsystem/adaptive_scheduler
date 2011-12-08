@@ -15,17 +15,15 @@ from adaptive_scheduler.kernel.reservation_v2 import *
 class TestClustering(object):
 
     def setup(self):
-        s1 = [Timepoint(1, 'start', 'foo'),
-              Timepoint(2, 'end', 'foo')] # 1-2
+        s1 = Intervals([Timepoint(1, 'start'),
+                        Timepoint(2, 'end')]) # 1-2
 
-        s2 = [Timepoint(2, 'start', 'bar'),
-              Timepoint(4, 'end', 'bar')] # --2--4
+        s2 = Intervals([Timepoint(2, 'start'),
+                        Timepoint(4, 'end')]) # --2--4
 
-        s1.extend(s2)
-
-        self.r1 = Reservation_v2(1, 1, s1)
-        self.r2 = Reservation_v2(2, 2, s1)
-        self.r3 = Reservation_v2(3, 1, s1)
+        self.r1 = Reservation_v2(1, 1, 'foo', s1)
+        self.r2 = Reservation_v2(2, 2, 'foo', s1)
+        self.r3 = Reservation_v2(3, 1, 'foo', s1)
         
         self.c1 = Clustering([self.r1, self.r2, self.r3])
 

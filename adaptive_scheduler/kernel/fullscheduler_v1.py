@@ -4,6 +4,8 @@
 FullScheduler_v1 class for co-scheduling reservations & contractual obligations
 across multiple resources using bipartite matching. 
 
+It handles 'and' and 'oneof' compound reservations using constraints.
+
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
 '''
@@ -46,11 +48,12 @@ class FullScheduler_v1(object):
             self.schedule_dict_busy[resource] = Intervals([], 'busy')
             # free intervals
             self.schedule_dict_free[resource] = Intervals(globally_possible_windows_dict[resource], 'free')
-        self.constraints      = []        
-        self.reservation_list = self.convert_compound_to_simple()
+        self.and_constraints   = []        
+        self.oneof_constraints = []
+        self.reservation_list  = self.convert_compound_to_simple()
         self.unscheduled_reservation_list = copy.copy(self.reservation_list)
-        self.current_order    = 1
-        self.current_resource = None
+        self.current_order     = 1
+        self.current_resource  = None
 
 
     def check_window_consistency(self):
@@ -65,13 +68,13 @@ class FullScheduler_v1(object):
         for cr in self.compound_reservation_list:
             if cr.issingle():
                 reservation_list.append(cr.reservation_list[0])
-            elif cr.isnof():
-                for i in range(0,cr.repeats):
-                    reservation_list.append(cr.reservation_list[0])
+            elif cr.isoneof():
+                reservation_list.extend(cr.reservation_list)
+                self.oneof_constraints.append(cr.reservation_list)
             elif cr.isand():
                 reservation_list.extend(cr.reservation_list)
                 # add the constraint to the list of constraints
-                self.constraints.append(cr.reservation_list)
+                self.and_constraints.append(cr.reservation_list)
         return reservation_list
 
 
@@ -85,7 +88,7 @@ class FullScheduler_v1(object):
     def schedule_uncontended_reservations(self):
         for resource in self.resource_list:
             self.current_resource = resource
-            reservation_list = filter(self.resources_include, self.unscheduled_reservation_list)
+            reservation_list = filter(self.resource_equals, self.unscheduled_reservation_list)
             us = UncontendedScheduler(reservation_list, resource)
             scheduled_reservations = us.schedule()
             for r in scheduled_reservations:
@@ -117,8 +120,8 @@ class FullScheduler_v1(object):
             bs = BipartiteScheduler(reservation_list, self.resource_list)
             scheduled_reservations = bs.schedule()
         else:
-            reservation_list[0].schedule_anywhere()
-            scheduled_reservations = reservation_list
+            if reservation_list[0].schedule_anywhere():
+                scheduled_reservations = reservation_list
         for r in scheduled_reservations:
             self.commit_reservation_to_schedule(r)
 
@@ -135,8 +138,8 @@ class FullScheduler_v1(object):
             return False
 
 
-    def resources_include(self, x):
-        if (self.current_resource in x.possible_windows_dict.keys()):
+    def resource_equals(self, x):
+        if (self.current_resource == x.resource):
             return True
         else:
             return False
@@ -145,12 +148,9 @@ class FullScheduler_v1(object):
     def commit_reservation_to_schedule(self, r):
         if r.scheduled:
             start    = r.scheduled_start
-            resource = r.scheduled_resource
             quantum  = r.scheduled_quantum
+            resource = r.resource
             interval = Intervals(r.scheduled_timepoints, 'busy')
-            if resource not in self.resource_list:
-                print "error: trying to commit reservation on a resource not in the resource list\n"
-                return
             self.schedule_dict[resource].append(r)
             # add interval & remove free time
             self.schedule_dict_busy[resource].add(r.scheduled_timepoints)
@@ -159,18 +159,18 @@ class FullScheduler_v1(object):
             self.unscheduled_reservation_list.remove(r)
             # remove scheduled time from free windows of other reservations
             self.current_resource = resource
-            reservation_list = filter(self.resources_include, self.reservation_list)
+            reservation_list = filter(self.resource_equals, self.reservation_list)
             for reservation in reservation_list:
                 if r == reservation:
                     continue
                 else:
-                    reservation.remove_from_free_windows(resource, interval)
+                    reservation.remove_from_free_windows(interval)
         else:
             print "error: trying to commit unscheduled reservation"
 
 
     def uncommit_reservation_from_schedule(self, r):
-        resource = r.scheduled_resource
+        resource = r.resource
         self.schedule_dict[resource].remove(r)
         # remove interval & add back free time
         self.schedule_dict_free[resource].add(r.scheduled_timepoints)
@@ -183,8 +183,8 @@ class FullScheduler_v1(object):
         # this that could benefit from this information. 
         
 
-    def enforce_all_constraints(self):
-        for c in self.constraints:
+    def enforce_and_constraints(self):
+        for c in self.and_constraints:
             counter = 0
             size    = len(c)
             for r in c:
@@ -197,12 +197,24 @@ class FullScheduler_v1(object):
                 for r in c:
                     if r.scheduled:
                         self.uncommit_reservation_from_schedule(r)
+
+
+    def enforce_oneof_constraints(self):
+        for c in self.oneof_constraints:
+            counter = 0
+            size    = len(c)
+            for r in c:
+                if r.scheduled:
+                    counter += 1
+                if counter > 1:
+                    r.uncommit_reservation_from_schedule(r)
               
 
     def schedule_all(self):
         self.schedule_uncontended_reservations()
         self.schedule_contended_reservations()
-        self.enforce_all_constraints()
+        self.enforce_and_constraints()
+        self.enforce_oneof_constraints()
         self.schedule_contractual_obligations()
         
         return self.schedule_dict

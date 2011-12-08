@@ -3,19 +3,17 @@
 '''
 timepoint.py - Class for specifying generic timepoints.
 
-
-
 Author: Sotiria Lampoudi
 August 2011
 edited November 2011: added resource field
+edited December 2011: removed resource field
 '''
 
 class Timepoint(object):
-   def __init__(self, time, type, resource=None):
+   def __init__(self, time, type):
       # type should be 'start' or 'end'
       self.time     = time
       self.type     = type
-      self.resource = resource
 
 
    def __lt__(self, other):
