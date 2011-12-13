@@ -81,4 +81,6 @@ class Request(object):
 
             raise InvalidRequestError(error_msg)
 
+        return provided_type
+
 

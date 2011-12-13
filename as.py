@@ -19,6 +19,7 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       construct_compound_reservation)
 
 from adaptive_scheduler.model import Request
+from adaptive_scheduler.printing import print_compound_reservation, print_req_summary
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
 
 from rise_set.astrometry import calc_rise_set
@@ -26,21 +27,6 @@ from rise_set.visibility import Visibility
 
 from datetime import datetime
 
-
-def print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection):
-    print "Target %s, observed from %s, between %s and %s" % (req.target.name,
-                                                              req.telescope.name,
-                                                              req.windows[0],
-                                                              req.windows[1])
-    for interval in rs_dark_intervals:
-        print "Darkness from %s to %s" % (interval[0], interval[1])
-    for interval in rs_up_intervals:
-        print "Target above horizon from %s to %s" % (interval[0], interval[1])
-
-    print "Calculated intersections are:"
-
-    for i in intersection.timepoints:
-        print "    %s (%s)" % (i.time, i.type)
 
 
 # Configuration files
@@ -70,20 +56,27 @@ for tel_name, visibility in visibility_from.iteritems():
     ep_dark_intervals = dt_to_epoch_timepoints(dark_intervals.timepoints, semester_start)
     resource_windows[tel_name] = ep_dark_intervals
 
+for resource in resource_windows:
+    print resource
+    for i in resource_windows[resource]:
+        print i.time, i.type
+
+exit()
 
 to_schedule = []
 for req in requests:
-    rs_target    = target_to_rise_set_target(req.target)
-    visibility   = visibility_from[req.telescope.name]
+    rs_target  = target_to_rise_set_target(req.target)
+    visibility = visibility_from[req.telescope.name]
 
+    # Find when it's dark, and when the target is up
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals   = visibility.get_target_intervals(rs_target)
 
-    # Find the available set of observing windows
+    # Convert the rise_set intervals into kernel speak
     dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
     up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
 
-    # Construct the intersection of both interval lists
+    # Construct the intersection (dark AND up) reprsenting actual visibility
     intersection = dark_intervals.intersect([up_intervals])
 
     # Print some summary info
@@ -98,9 +91,17 @@ for req in requests:
 
 print "Finished constructing compound reservations..."
 print "There are %d CompoundReservations to schedule:" % (len(to_schedule))
+for compound_res in to_schedule:
+    print_compound_reservation(compound_res)
+
 
 
 scheduler = FullScheduler(to_schedule, resource_windows,
                           contractual_obligation_list=[])
 
-scheduler.schedule_all()
+schedule = scheduler.schedule_all()
+
+print "Scheduling completed. Final schedule:"
+
+for k, v in schedule.iteritems():
+    print "%s -> %s" % (k, v)

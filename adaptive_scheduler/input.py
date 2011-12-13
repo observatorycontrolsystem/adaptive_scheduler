@@ -124,7 +124,7 @@ def dt_to_epoch_timepoints(timepoints, earliest):
     epoch_timepoints = []
     for tp in timepoints:
         epoch_time = normalise(datetime_to_epoch(tp.time), earliest)
-        epoch_timepoints.append(Timepoint(epoch_time, tp.type, tp.resource))
+        epoch_timepoints.append(Timepoint(epoch_time, tp.type))
 
     return epoch_timepoints
 
@@ -133,11 +133,14 @@ def dt_to_epoch_timepoints(timepoints, earliest):
 def construct_compound_reservation(request, dt_timepoints, sem_start):
     # Convert timepoints into normalised epoch time
     epoch_timepoints = dt_to_epoch_timepoints(dt_timepoints, sem_start)
+    for e in epoch_timepoints:
+        print "    ",e.time
 
     # Construct Reservations
     # Each Reservation represents the set of available windows of opportunity
     # The resource is governed by the timepoint.resource attribute
-    res = Reservation(request.priority, request.duration, epoch_timepoints)
+    res = Reservation(request.priority, request.duration,
+                      request.telescope.name, epoch_timepoints)
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something
