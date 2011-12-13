@@ -38,8 +38,8 @@ class TestFullScheduler_v1(object):
         self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
         
         self.gpw2 = {}
-        self.gpw2['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        self.gpw2['bar'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
+        self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
+        self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
         
         self.fs1 = FullScheduler_v1([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [])

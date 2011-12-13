@@ -25,7 +25,7 @@ class FullScheduler_v1(object):
         self.compound_reservation_list   = compound_reservation_list
         self.contractual_obligation_list = contractual_obligation_list
         # globally_possible_windows_dict is a dictionary mapping:
-        # resource -> globally possible windows on that resource. 
+        # resource -> globally possible windows (Intervals) on that resource. 
         self.globally_possible_windows_dict   = globally_possible_windows_dict
         # these dictionaries hold:
         # scheduled reservations
@@ -46,8 +46,9 @@ class FullScheduler_v1(object):
             self.schedule_dict[resource]      = []
             # busy intervals
             self.schedule_dict_busy[resource] = Intervals([], 'busy')
-            # free intervals
-            self.schedule_dict_free[resource] = Intervals(globally_possible_windows_dict[resource], 'free')
+        # free intervals
+        self.schedule_dict_free = copy.copy(globally_possible_windows_dict)
+        
         self.and_constraints   = []        
         self.oneof_constraints = []
         self.reservation_list  = self.convert_compound_to_simple()
