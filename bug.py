@@ -10,7 +10,7 @@ from adaptive_scheduler.kernel.intervals import Intervals
 
 start = 'start'
 end   = 'end'
-windows = [
+windows = Intervals([
             Timepoint(13813, start),
             Timepoint(43128, end),
             Timepoint(100180, start),
@@ -25,10 +25,10 @@ windows = [
             Timepoint(473949, end),
             Timepoint(532035, start),
             Timepoint(560113, end),
-           ]
+           ])
 
 resource_windows = {
-      'maui' : [
+      'maui' : Intervals([
                     Timepoint(13813, start),
                     Timepoint(59238, end),
                     Timepoint(100180, start),
@@ -43,12 +43,12 @@ resource_windows = {
                     Timepoint(491390, end),
                     Timepoint(532035, start),
                     Timepoint(577822, end),
-                ],
+                ]),
         }
 
 
 
-res = Reservation(priority=1, duration=60, resource='maui', possible_windows=Intervals(windows))
+res = Reservation(priority=1, duration=60, resource='maui', possible_windows=windows)
 compound_res = CompoundReservation([res], 'single')
 
 print_compound_reservation(compound_res)

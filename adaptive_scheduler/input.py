@@ -117,30 +117,28 @@ def rise_set_to_kernel_intervals(intervals):
 
 
 
-def dt_to_epoch_timepoints(timepoints, earliest):
+def dt_to_epoch_intervals(dt_intervals, earliest):
     # Convert into epoch time for a consistent linear scale
     earliest = datetime_to_epoch(earliest)
 
     epoch_timepoints = []
-    for tp in timepoints:
+    for tp in dt_intervals.timepoints:
         epoch_time = normalise(datetime_to_epoch(tp.time), earliest)
         epoch_timepoints.append(Timepoint(epoch_time, tp.type))
 
-    return epoch_timepoints
+    return Intervals(epoch_timepoints)
 
 
 
-def construct_compound_reservation(request, dt_timepoints, sem_start):
+def construct_compound_reservation(request, dt_intervals, sem_start):
     # Convert timepoints into normalised epoch time
-    epoch_timepoints = dt_to_epoch_timepoints(dt_timepoints, sem_start)
-    for e in epoch_timepoints:
-        print "    ",e.time
+    epoch_intervals = dt_to_epoch_intervals(dt_intervals, sem_start)
 
     # Construct Reservations
     # Each Reservation represents the set of available windows of opportunity
     # The resource is governed by the timepoint.resource attribute
     res = Reservation(request.priority, request.duration,
-                      request.telescope.name, epoch_timepoints)
+                      request.telescope.name, epoch_intervals)
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something

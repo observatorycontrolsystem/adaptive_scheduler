@@ -15,7 +15,7 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       target_to_rise_set_target,
                                       telescope_to_rise_set_telescope,
                                       rise_set_to_kernel_intervals,
-                                      dt_to_epoch_timepoints,
+                                      dt_to_epoch_intervals,
                                       construct_compound_reservation)
 
 from adaptive_scheduler.model import Request
@@ -53,15 +53,14 @@ resource_windows = {}
 for tel_name, visibility in visibility_from.iteritems():
     rs_dark_intervals = visibility.get_dark_intervals()
     dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
-    ep_dark_intervals = dt_to_epoch_timepoints(dark_intervals.timepoints, semester_start)
+    ep_dark_intervals = dt_to_epoch_intervals(dark_intervals, semester_start)
     resource_windows[tel_name] = ep_dark_intervals
 
 for resource in resource_windows:
     print resource
-    for i in resource_windows[resource]:
+    for i in resource_windows[resource].timepoints:
         print i.time, i.type
 
-exit()
 
 to_schedule = []
 for req in requests:
@@ -82,8 +81,7 @@ for req in requests:
     # Print some summary info
     print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection)
 
-    compound_res = construct_compound_reservation(req, intersection.timepoints,
-                                                  semester_start)
+    compound_res = construct_compound_reservation(req, intersection, semester_start)
 
     to_schedule.append(compound_res)
 
