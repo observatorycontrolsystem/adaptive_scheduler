@@ -6,7 +6,7 @@ from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullS
 from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 
 from adaptive_scheduler.printing import print_compound_reservation
-
+from adaptive_scheduler.kernel.intervals import Intervals
 
 start = 'start'
 end   = 'end'
@@ -48,7 +48,7 @@ resource_windows = {
 
 
 
-res = Reservation(priority=1, duration=60, resource='maui', possible_windows=windows)
+res = Reservation(priority=1, duration=60, resource='maui', possible_windows=Intervals(windows))
 compound_res = CompoundReservation([res], 'single')
 
 print_compound_reservation(compound_res)
