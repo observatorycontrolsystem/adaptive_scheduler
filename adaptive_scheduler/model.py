@@ -12,6 +12,7 @@ November 2011
 from __future__ import division
 
 from adaptive_scheduler.exceptions import InvalidRequestError
+from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 
 
 class DataContainer(object):
@@ -31,7 +32,17 @@ class Telescope(DataContainer):
     pass
 
 
-class Request(object):
+class Request(DataContainer):
+    '''
+        Represents a single valid configuration where an observation could take
+        place. These are combined within a CompoundRequest to allow AND and OR
+        semantics ("do this and this and this", "do this or this").
+    '''
+
+    pass
+
+
+class CompoundRequest(object):
     '''
         A user-level request for an observation. This will be translated into the
         Reservation/CompoundReservation of the scheduling kernel.
@@ -41,16 +52,10 @@ class Request(object):
                    is eligible to be performed. For user observations with no
                    time constraints, this should be the planning window of the
                    scheduler (e.g. the semester bounds).
-
     '''
 
     # TODO: Add sanity checking, e.g. requiring windows for AND blocks, etc.
-    # TODO: Introspect CompoundReservation class to find these names.
-    valid_types = {
-                    'single' : 'A single block of *duration* is to be scheduled',
-                    'nof'    : 'n blocks of *duration* are to be scheduled',
-                    'and'    : 'All of the provided blocks are to be scheduled',
-                  }
+    valid_types = CompoundReservation.valid_types
 
     def __init__(self, target, telescope, priority, duration, res_type, windows):
         self.target    = target
@@ -71,12 +76,12 @@ class Request(object):
         '''Check the type being asked for matches a valid type
            of CompoundObservation.'''
 
-        if provided_type not in Request.valid_types:
+        if provided_type not in CompoundRequest.valid_types:
 
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid types are:\n")
 
-            for res_type, help_txt in Request.valid_types.iteritems():
+            for res_type, help_txt in CompoundRequest.valid_types.iteritems():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise InvalidRequestError(error_msg)

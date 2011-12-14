@@ -1,35 +1,54 @@
 # List of requests to schedule
 [
+
     {
-        'target_name' : 'deneb',
-        'telescope'   : 'maui',
-        'priority'    : 1,
-        'duration'    : 60,
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
+        'reservations : [
+                            {
+                                'target_name' : 'deneb',
+                                'telescope'   : 'maui',
+                                'priority'    : 1,
+                                'duration'    : 60,
+                            },
+                        ],
     },
     {
-        'target_name' : 'canopus',
-        'telescope'   : 'maui',
-        'priority'    : 1,
-        'duration'    : 60,
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
+        'reservations : [
+                            {
+                                'target_name' : 'canopus',
+                                'telescope'   : 'maui',
+                                'priority'    : 1,
+                                'duration'    : 60,
+                            },
+                        ],
     },
     {
-        'target_name' : 'deneb',
-        'telescope'   : 'maui',
-        'priority'    : 1,
-        'duration'    : 120,
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
+        'reservations : [
+                            {
+                                'target_name' : 'deneb',
+                                'telescope'   : 'maui',
+                                'priority'    : 1,
+                                'duration'    : 120,
+                            },
+                        ],
     },
     {
-        'target_name' : 'canopus',
-        'telescope'   : 'maui',
-        'priority'    : 1,
-        'duration'    : 120,
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
+        'reservations : [
+                            {
+                                'target_name' : 'canopus',
+                                'telescope'   : 'maui',
+                                'priority'    : 1,
+                                'duration'    : 120,
+                            },
+                        ],
     },
+
+
 ]

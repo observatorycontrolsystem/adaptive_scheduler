@@ -11,16 +11,7 @@ December 2011
 INDENT = "    "
 
 def print_reservation(res):
-    print "        %s on %s (%d)" % ( 'TODO:NAME',
-                                       res.resource,
-                                       res.duration, )
-    iprint("Windows in this reservation:", 2)
-    x = 0
-    while x < len(res.possible_windows.timepoints):
-        print "            %s <-> %s" % ( res.possible_windows.timepoints[x+0].time,
-                                          res.possible_windows.timepoints[x+1].time )
-        x += 2
-#    print("Possible windows:", res.possible_windows)
+    print res
 
 
 def print_compound_reservation(compound_res):
