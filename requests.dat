@@ -8,4 +8,28 @@
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
     },
+    {
+        'target_name' : 'canopus',
+        'telescope'   : 'maui',
+        'priority'    : 1,
+        'duration'    : 60,
+        'pi'          : 'Eric Saunders',
+        'res_type'    : 'single',
+    },
+    {
+        'target_name' : 'deneb',
+        'telescope'   : 'maui',
+        'priority'    : 1,
+        'duration'    : 120,
+        'pi'          : 'Eric Saunders',
+        'res_type'    : 'single',
+    },
+    {
+        'target_name' : 'canopus',
+        'telescope'   : 'maui',
+        'priority'    : 1,
+        'duration'    : 120,
+        'pi'          : 'Eric Saunders',
+        'res_type'    : 'single',
+    },
 ]

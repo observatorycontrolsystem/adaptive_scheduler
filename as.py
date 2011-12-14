@@ -19,7 +19,9 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       construct_compound_reservation)
 
 from adaptive_scheduler.model import Request
-from adaptive_scheduler.printing import print_compound_reservation, print_req_summary
+from adaptive_scheduler.printing import ( print_reservation,
+                                          print_compound_reservation,
+                                          print_req_summary )
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
 
 from rise_set.astrometry import calc_rise_set
@@ -101,5 +103,6 @@ schedule = scheduler.schedule_all()
 
 print "Scheduling completed. Final schedule:"
 
-for k, v in schedule.iteritems():
-    print "%s -> %s" % (k, v)
+for resource_reservations in schedule.values():
+    for res in resource_reservations:
+        print_reservation(res)
