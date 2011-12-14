@@ -34,6 +34,7 @@ class Reservation_v2(object):
         self.scheduled_quantum    = None
         self.scheduled            = False
         self.scheduled_timepoints = None
+        self.scheduled_by         = None
         # order is the parameter used for grouping & ordering in scheduling
         self.order                = 1
 
@@ -42,18 +43,19 @@ class Reservation_v2(object):
         # find the first available spot & stick it there
         start = self.free_windows.find_interval_of_length(self.duration)
         if start >=0:
-            self.schedule(start, self.duration)
+            self.schedule(start, self.duration, 'reservation_v2.schedule_anywhere()')
             return True
         else:
             return False
 
     
-    def schedule(self, start, quantum):
+    def schedule(self, start, quantum, scheduler_description=None):
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
         self.scheduled          = True
         self.scheduled_timepoints = [Timepoint(start, 'start'), 
         Timepoint(start+quantum, 'end')]
+        self.scheduled_by       = scheduler_description
 
 
     def unschedule(self):
@@ -61,19 +63,20 @@ class Reservation_v2(object):
         self.scheduled_quantum  = None
         self.scheduled          = False
         self.scheduled_timepoints = None
+        self.scheduled_by       = None
 
 
-    def __repr__(self):
+    def __str__(self):
         str = "Reservation ID: {0} \
         \n\tpriority: {1} \
         \n\tduration: {2} \
         \n\tresource: {3} \
         \n\tpossible windows: {4}\
-        \n\tis_scheduled: {5}\n".format(self.resID, self.priority, 
+        \n\tis scheduled: {5}\n".format(self.resID, self.priority, 
                                         self.duration, self.resource, 
                                         self.possible_windows, self.scheduled)
         if self.scheduled:
-            str += "\t\tscheduled start: {0}\n\t\tscheduled_quantum: {1}\n". format(self.scheduled_start, self.scheduled_quantum)
+            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled by: {2}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_by)
         return str
                     
 

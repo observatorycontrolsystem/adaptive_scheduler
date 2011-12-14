@@ -42,7 +42,7 @@ class BipartiteScheduler(object):
         for quantum_start, reservation_ID in matching.iteritems():
             r = self.get_reservation_by_ID(reservation_ID)
             [resource, start, quantum] = self.unhash_quantum_start(quantum_start)
-            r.schedule(start, quantum)
+            r.schedule(start, quantum, 'bipartite scheduler')
             self.scheduled_reservations.append(r)
         return self.scheduled_reservations
 

@@ -101,7 +101,7 @@ class TestFullScheduler_v1(object):
 
     def test_uncommit_reservation_from_schedule(self):
         assert self.r1 in self.fs2.unscheduled_reservation_list
-	self.r1.schedule(1, 1)
+	self.r1.schedule(1, 1, 'test')
         self.fs2.commit_reservation_to_schedule(self.r1)
         assert self.r1 not in self.fs2.unscheduled_reservation_list
         self.fs2.uncommit_reservation_from_schedule(self.r1)
@@ -113,15 +113,15 @@ class TestFullScheduler_v1(object):
 
         
     def test_enforce_and_constraints_2(self):
-	self.r3.schedule(1, 1)
+	self.r3.schedule(1, 1, 'test')
         self.fs1.commit_reservation_to_schedule(self.r3)
         self.fs1.enforce_and_constraints()
         assert_equal(self.fs1.schedule_dict['foo'], [])
 
 
     def test_enforce_and_constraints_3(self):
-	self.r3.schedule(1, 1)
-	self.r2.schedule(2, 2)
+	self.r3.schedule(1, 1, 'test')
+	self.r2.schedule(2, 2, 'test')
         self.fs1.commit_reservation_to_schedule(self.r3)
         self.fs1.commit_reservation_to_schedule(self.r2)
         self.fs1.enforce_and_constraints()
@@ -130,7 +130,7 @@ class TestFullScheduler_v1(object):
 
 
     def test_commit_reservation_to_schedule_1(self):
-        self.r1.schedule(1, 1)
+        self.r1.schedule(1, 1, 'test')
         self.fs2.commit_reservation_to_schedule(self.r1)
         assert_equal(self.fs2.schedule_dict['foo'][0].scheduled_start, 1)
         assert_equal(self.fs2.schedule_dict_busy['foo'].timepoints[0].time, 1)
