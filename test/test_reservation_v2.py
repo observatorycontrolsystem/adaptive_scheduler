@@ -33,6 +33,22 @@ class TestReservation_v2(object):
         assert_equal(self.r1.duration, 1)
         assert_equal(self.r1.resource, 'foo')
 
+    def test_print(self):
+        print self.r1
+
+    
+    def test_print_2(self):
+        self.r1.schedule(1, 1)
+        assert_equal(self.r1.scheduled_start, 1)
+        assert_equal(self.r1.scheduled_quantum, 1)
+        assert_equal(self.r1.scheduled, True)
+        assert_equal(self.r1.scheduled_timepoints[0].time, 1)
+        assert_equal(self.r1.scheduled_timepoints[0].type, 'start')
+        assert_equal(self.r1.scheduled_timepoints[1].time, 2)
+        assert_equal(self.r1.scheduled_timepoints[1].type, 'end')
+        print self.r1
+
+
     def test_remove_from_free_windows_1(self):
         self.r1.remove_from_free_windows(Intervals([Timepoint(1, 'start'), Timepoint(2, 'end')]))
         assert_equal(self.r1.free_windows.timepoints, [])

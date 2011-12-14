@@ -63,6 +63,20 @@ class Reservation_v2(object):
         self.scheduled_timepoints = None
 
 
+    def __repr__(self):
+        str = "Reservation ID: {0} \
+        \n\tpriority: {1} \
+        \n\tduration: {2} \
+        \n\tresource: {3} \
+        \n\tpossible windows: {4}\
+        \n\tis_scheduled: {5}\n".format(self.resID, self.priority, 
+                                        self.duration, self.resource, 
+                                        self.possible_windows, self.scheduled)
+        if self.scheduled:
+            str += "\t\tscheduled start: {0}\n\t\tscheduled_quantum: {1}\n". format(self.scheduled_start, self.scheduled_quantum)
+        return str
+                    
+
     def __lt__(self, other):
         return self.priority < other.priority
 
