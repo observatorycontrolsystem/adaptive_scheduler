@@ -27,12 +27,10 @@ def print_compound_reservation(compound_res):
 
 
 def print_request(req):
-    print "REQUEST: target %s (%s), observed from %s, between %s and %s" % (
-                                                              req.target.name,
-                                                              req.res_type,
-                                                              req.telescope.name,
-                                                              req.windows[0],
-                                                              req.windows[1])
+    print "REQUEST: target %s, observed from %s" % (
+                                                          req.target.name,
+                                                          req.telescope.name,
+                                                          )
 
 
 

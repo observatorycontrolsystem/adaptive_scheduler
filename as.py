@@ -11,10 +11,11 @@ November 2011
 from __future__ import division
 
 from adaptive_scheduler.input import (build_telescopes, build_targets,
-                                      build_requests,
+                                      build_compound_requests,
                                       target_to_rise_set_target,
                                       telescope_to_rise_set_telescope,
                                       rise_set_to_kernel_intervals,
+                                      make_dark_up_kernel_interval,
                                       dt_to_epoch_intervals,
                                       construct_compound_reservation)
 
@@ -41,9 +42,10 @@ semester_start = datetime(2011, 11, 1, 0, 0, 0)
 semester_end   = datetime(2011, 11, 8, 0, 0, 0)
 
 # Create telescopes, targets, and requests
-tels     = build_telescopes(tel_file)
-targets  = build_targets(target_file)
-requests = build_requests(request_file, targets, tels, semester_start, semester_end)
+tels              = build_telescopes(tel_file)
+targets           = build_targets(target_file)
+compound_requests = build_compound_requests(request_file, targets, tels,
+                                            semester_start, semester_end)
 
 visibility_from = {}
 for tel_name, tel in tels.iteritems():
@@ -65,26 +67,15 @@ for resource in resource_windows:
 
 
 to_schedule = []
-for req in requests:
-    rs_target  = target_to_rise_set_target(req.target)
-    visibility = visibility_from[req.telescope.name]
+for c_req in compound_requests:
 
-    # Find when it's dark, and when the target is up
-    rs_dark_intervals = visibility.get_dark_intervals()
-    rs_up_intervals   = visibility.get_target_intervals(rs_target)
+    # Find the dark/up intervals for each Request in this CompoundRequest
+    dark_ups = []
+    for req in c_req.requests:
+        dark_ups.append( make_dark_up_kernel_interval(req, visibility_from) )
 
-    # Convert the rise_set intervals into kernel speak
-    dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
-    up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
-
-    # Construct the intersection (dark AND up) reprsenting actual visibility
-    intersection = dark_intervals.intersect([up_intervals])
-
-    # Print some summary info
-    print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection)
-
-    compound_res = construct_compound_reservation(req, intersection, semester_start)
-
+    # Make and store the CompoundReservation
+    compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)
     to_schedule.append(compound_res)
 
 

@@ -4,7 +4,7 @@
     {
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
-        'reservations : [
+        'requests'    : [
                             {
                                 'target_name' : 'deneb',
                                 'telescope'   : 'maui',
@@ -16,7 +16,7 @@
     {
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
-        'reservations : [
+        'requests'    : [
                             {
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
@@ -28,7 +28,7 @@
     {
         'pi'          : 'Eric Saunders',
         'res_type'    : 'single',
-        'reservations : [
+        'requests'    : [
                             {
                                 'target_name' : 'deneb',
                                 'telescope'   : 'maui',
@@ -39,13 +39,19 @@
     },
     {
         'pi'          : 'Eric Saunders',
-        'res_type'    : 'single',
-        'reservations : [
+        'res_type'    : 'and',
+        'requests'    : [
                             {
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
                                 'priority'    : 1,
                                 'duration'    : 120,
+                            },
+                            {
+                                'target_name' : 'canopus',
+                                'telescope'   : 'maui',
+                                'priority'    : 1,
+                                'duration'    : 500,
                             },
                         ],
     },

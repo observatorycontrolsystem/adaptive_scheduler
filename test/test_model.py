@@ -36,20 +36,20 @@ class TestRequest(object):
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
         windows = [self.semester_start, self.semester_end]
-        request = CompoundRequest(self.target, self.telescope, self.priority,
-                          self.duration, junk_res_type, windows)
+        request = Request(self.target, self.telescope, self.priority, self.duration)
+        compound_request = CompoundRequest([request], junk_res_type, windows)
 
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
         windows = [self.semester_start, self.semester_end]
-        request = CompoundRequest(self.target, self.telescope, self.priority,
-                          self.duration, valid_res_type, windows)
+        request = Request(self.target, self.telescope, self.priority, self.duration)
+        compound_request = CompoundRequest([request], valid_res_type, windows)
 
 
     @raises(InvalidRequestError)
     def test_odd_number_of_window_bounds_raises_exception(self):
         res_type = 'and'
         windows = [self.semester_start, self.semester_end, self.semester_end]
-        request = CompoundRequest(self.target, self.telescope, self.priority,
-                          self.duration, res_type, windows)
+        request = Request(self.target, self.telescope, self.priority, self.duration)
+        compound_request = CompoundRequest([request], res_type, windows)
