@@ -25,7 +25,6 @@ from adaptive_scheduler.printing import ( print_reservation,
                                           print_req_summary )
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
 
-from rise_set.astrometry import calc_rise_set
 from rise_set.visibility import Visibility
 
 from datetime import datetime
@@ -50,7 +49,8 @@ compound_requests = build_compound_requests(request_file, targets, tels,
 visibility_from = {}
 for tel_name, tel in tels.iteritems():
     rs_telescope = telescope_to_rise_set_telescope(tel)
-    visibility_from[tel_name] = Visibility(rs_telescope, semester_start, semester_end)
+    visibility_from[tel_name] = Visibility(rs_telescope, semester_start, semester_end,
+                                           tel.horizon, twilight='nautical')
 
 # Construct resource windows for the kernel
 resource_windows = {}
