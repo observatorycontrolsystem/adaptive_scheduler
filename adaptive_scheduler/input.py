@@ -211,18 +211,19 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 def datetime_to_epoch(dt):
     return calendar.timegm(dt.timetuple())
 
+def datetime_to_normalised_epoch(dt, dt_start):
+    return normalise(datetime_to_epoch(dt), datetime_to_epoch(dt_start))
 
-def epoch_to_datetime(epoch_time, start):
-    epoch_time = unnormalise(epoch_time, start)
-    return datetime.fromtimestamp(epoch_time)
+def epoch_to_datetime(epoch_time):
+    return datetime.utcfromtimestamp(epoch_time)
 
+def normalised_epoch_to_datetime(epoch_time, epoch_start):
+    unnormed_epoch = unnormalise(epoch_time, epoch_start)
+    return epoch_to_datetime(unnormed_epoch)
 
 def normalise(value, start):
     '''Normalise any value to a positive range, starting at zero.'''
-
     return value - start
 
-
 def unnormalise(value, start):
-
     return value + start
