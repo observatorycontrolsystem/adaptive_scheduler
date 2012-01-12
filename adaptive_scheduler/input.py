@@ -22,6 +22,7 @@ from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as C
 
 import ast
 import calendar
+from datetime import datetime
 
 
 def file_to_dicts(filename):
@@ -176,6 +177,7 @@ def make_dark_up_kernel_interval(req, visibility_from):
     return intersection
 
 
+
 def construct_compound_reservation(compound_request, dt_intervals_list, sem_start):
 
     idx = 0
@@ -191,11 +193,16 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         reservations.append( Reservation(request.priority, request.duration,
                                          request.telescope.name, epoch_intervals) )
 
+        # Store the original request for recovery after scheduling
+        # TODO: Do this with a field provided for this purpose, not this hack
+        reservations[-1].original_request = compound_request
+
         idx += 1
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something
     compound_res = CompoundReservation(reservations, compound_request.res_type)
+
 
     return compound_res
 
@@ -205,8 +212,17 @@ def datetime_to_epoch(dt):
     return calendar.timegm(dt.timetuple())
 
 
+def epoch_to_datetime(epoch_time, start):
+    epoch_time = unnormalise(epoch_time, start)
+    return datetime.fromtimestamp(epoch_time)
+
 
 def normalise(value, start):
     '''Normalise any value to a positive range, starting at zero.'''
 
     return value - start
+
+
+def unnormalise(value, start):
+
+    return value + start

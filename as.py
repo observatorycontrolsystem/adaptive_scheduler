@@ -17,6 +17,8 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       rise_set_to_kernel_intervals,
                                       make_dark_up_kernel_interval,
                                       dt_to_epoch_intervals,
+                                      datetime_to_epoch,
+                                      epoch_to_datetime,
                                       construct_compound_reservation)
 
 from adaptive_scheduler.model import Request
@@ -97,3 +99,32 @@ print "Scheduling completed. Final schedule:"
 for resource_reservations in schedule.values():
     for res in resource_reservations:
         print_reservation(res)
+
+
+# Test pond sending
+to_send = schedule.values()[0][0]
+
+epoch_start = datetime_to_epoch(semester_start)
+
+
+to_send_start = epoch_to_datetime(to_send.scheduled_start, epoch_start)
+scheduled_end = to_send.scheduled_start + to_send.scheduled_quantum
+to_send_end   = epoch_to_datetime(scheduled_end, epoch_start) 
+
+print "***Going to send this***"
+print_reservation(res)
+
+from lcogt.pond import pond_client
+pond_client.configure_service('localhost', 12345)
+
+block = pond_client.ScheduledBlock(
+                                    start = to_send_start,
+                                    end   = to_send_end,
+                                    site  = to_send.resource,
+                                    observatory = to_send.resource,
+                                    telescope = to_send.resource,
+                                    priority = to_send.priority
+                                   )
+block.save()
+
+#send_to_pond(schedule)
