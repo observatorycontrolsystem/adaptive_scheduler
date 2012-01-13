@@ -16,6 +16,7 @@ class BipartiteScheduler(object):
         self.scheduled_reservations = []
         self.resource_list          = resource_list
         self.reservations_by_resource_dict = {}
+        self.constraint_graph       = None
         for resource in resource_list:
             self.reservations_by_resource_dict[resource] = []
         for reservation in reservation_list:
@@ -23,9 +24,10 @@ class BipartiteScheduler(object):
                 self.reservations_by_resource_dict[reservation.resource].append(reservation)
             else: 
                 print "what's this reservation doing here?"
+        self.create_constraint_graph()
 
 
-    def schedule(self):
+    def create_constraint_graph(self):
         constraint_graph = {}
         # calculate quantum as max of all request lengths, per resource
         for resource in self.resource_list:
@@ -36,13 +38,22 @@ class BipartiteScheduler(object):
                 quantum_starts = self.quantize_windows(r, quantum)
                 # add to graph
                 constraint_graph[r.get_ID()] = quantum_starts
+        self.constraint_graph = constraint_graph
+
+
+    def merge_constraints(self, resid1, resid2):
+        self.constraint_graph[resid1].extend(self.constraint_graph[resid2])
+        del self.constraint_graph[resid2]
+
+
+    def schedule(self):
         # run bipartitematch on graph
-        output = bipartiteMatch(constraint_graph)
+        output = bipartiteMatch(self.constraint_graph)
         matching = output[0]
         for quantum_start, reservation_ID in matching.iteritems():
             r = self.get_reservation_by_ID(reservation_ID)
             [resource, start, quantum] = self.unhash_quantum_start(quantum_start)
-            r.schedule(start, quantum, 'bipartite scheduler')
+            r.schedule(start, quantum, resource, 'bipartite scheduler')
             self.scheduled_reservations.append(r)
         return self.scheduled_reservations
 
@@ -71,7 +82,6 @@ class BipartiteScheduler(object):
     def unhash_quantum_start(self, mystr):
         l = mystr.split("_")
         return [l[1], int(l[3]), int(l[5])]
-
 
 
     def get_reservation_by_ID(self, ID):

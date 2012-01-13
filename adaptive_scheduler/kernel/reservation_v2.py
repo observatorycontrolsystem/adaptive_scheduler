@@ -32,6 +32,7 @@ class Reservation_v2(object):
         # these fields are defined when the reservation is ultimately scheduled
         self.scheduled_start      = None
         self.scheduled_quantum    = None
+        self.scheduled_resource   = None
         self.scheduled            = False
         self.scheduled_timepoints = None
         self.scheduled_by         = None
@@ -43,15 +44,16 @@ class Reservation_v2(object):
         # find the first available spot & stick it there
         start = self.free_windows.find_interval_of_length(self.duration)
         if start >=0:
-            self.schedule(start, self.duration, 'reservation_v2.schedule_anywhere()')
+            self.schedule(start, self.duration, self.resource, 'reservation_v2.schedule_anywhere()')
             return True
         else:
             return False
 
     
-    def schedule(self, start, quantum, scheduler_description=None):
+    def schedule(self, start, quantum, resource, scheduler_description=None):
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
+        self.scheduled_resource = resource
         self.scheduled          = True
         self.scheduled_timepoints = [Timepoint(start, 'start'), 
         Timepoint(start+quantum, 'end')]
@@ -61,6 +63,7 @@ class Reservation_v2(object):
     def unschedule(self):
         self.scheduled_start    = None
         self.scheduled_quantum  = None
+        self.scheduled_resource = None
         self.scheduled          = False
         self.scheduled_timepoints = None
         self.scheduled_by       = None
@@ -76,7 +79,21 @@ class Reservation_v2(object):
                                         self.duration, self.resource, 
                                         self.possible_windows, self.scheduled)
         if self.scheduled:
-            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled by: {2}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_by)
+            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
+        return str
+
+
+    def __repr__(self):
+        str = "Reservation ID: {0} \
+        \n\tpriority: {1} \
+        \n\tduration: {2} \
+        \n\tresource: {3} \
+        \n\tpossible windows: {4}\
+        \n\tis scheduled: {5}\n".format(self.resID, self.priority, 
+                                        self.duration, self.resource, 
+                                        self.possible_windows, self.scheduled)
+        if self.scheduled:
+            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
         return str
                     
 

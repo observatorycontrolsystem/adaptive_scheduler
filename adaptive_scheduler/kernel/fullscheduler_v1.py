@@ -150,7 +150,7 @@ class FullScheduler_v1(object):
         if r.scheduled:
             start    = r.scheduled_start
             quantum  = r.scheduled_quantum
-            resource = r.resource
+            resource = r.scheduled_resource
             interval = Intervals(r.scheduled_timepoints, 'busy')
             self.schedule_dict[resource].append(r)
             # add interval & remove free time
@@ -171,7 +171,7 @@ class FullScheduler_v1(object):
 
 
     def uncommit_reservation_from_schedule(self, r):
-        resource = r.resource
+        resource = r.scheduled_resource
         self.schedule_dict[resource].remove(r)
         # remove interval & add back free time
         self.schedule_dict_free[resource].add(r.scheduled_timepoints)

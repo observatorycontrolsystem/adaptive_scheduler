@@ -68,3 +68,9 @@ class TestBipartiteScheduler(object):
         sr = bs2.schedule()
         assert_equal(sr, [self.r1])
 
+
+    def test_merge_constraints(self):
+        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 1)
+        self.bs.merge_constraints(self.r1.get_ID(), self.r2.get_ID())
+        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 2)
+        assert not self.r2.get_ID() in self.bs.constraint_graph.keys()
