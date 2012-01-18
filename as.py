@@ -17,9 +17,8 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       rise_set_to_kernel_intervals,
                                       make_dark_up_kernel_interval,
                                       dt_to_epoch_intervals,
-                                      datetime_to_epoch,
                                       epoch_to_datetime,
-                                      normalised_epoch_to_datetime,
+                                      get_block_datetimes,
                                       construct_compound_reservation)
 
 from adaptive_scheduler.model import Request
@@ -31,6 +30,46 @@ from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullS
 from rise_set.visibility import Visibility
 
 from datetime import datetime
+
+from lcogt.pond import pond_client
+pond_client.configure_service('localhost', 12345)
+
+
+def make_pond_block(block, semester_start):
+    dt_start, dt_end = get_block_datetimes(block, semester_start)
+
+    print "***Going to send this***"
+    print_reservation(block)
+
+    pond_block = pond_client.ScheduledBlock(
+                                             start       = dt_start,
+                                             end         = dt_end,
+                                             site        = block.resource,
+                                             observatory = block.resource,
+                                             telescope   = block.resource,
+                                             priority    = block.priority
+                                            )
+    return pond_block
+
+
+
+def make_pond_schedule(schedule, semester_start):
+
+    pond_blocks = []
+
+    for resource_reservations in schedule.values():
+        for res in resource_reservations:
+            pond_block = make_pond_block(res, semester_start)
+            pond_blocks.append(pond_block)
+
+# TODO:Talk to Zach - Schedule doesn't appear to have a .save() method
+#    pond_schedule        = pond_client.Schedule()
+#    pond_schedule.blocks.extend(pond_blocks)
+#    return pond_schedule
+
+    for block in pond_blocks:
+        block.save()
+
 
 
 
@@ -103,29 +142,11 @@ for resource_reservations in schedule.values():
 
 
 # Test pond sending
-to_send = schedule.values()[0][0]
+#to_send      = schedule.values()[0][0]
+#pond_block   = make_pond_block(to_send, semester_start)
+#pond_block.save()
 
-epoch_start = datetime_to_epoch(semester_start)
+#pond_schedule = make_pond_schedule(schedule, semester_start)
+#pond_schedule.save()
+make_pond_schedule(schedule, semester_start)
 
-
-to_send_start = normalised_epoch_to_datetime(to_send.scheduled_start, epoch_start)
-scheduled_end = to_send.scheduled_start + to_send.scheduled_quantum
-to_send_end   = normalised_epoch_to_datetime(scheduled_end, epoch_start)
-
-print "***Going to send this***"
-print_reservation(res)
-
-from lcogt.pond import pond_client
-pond_client.configure_service('localhost', 12345)
-
-block = pond_client.ScheduledBlock(
-                                    start       = to_send_start,
-                                    end         = to_send_end,
-                                    site        = to_send.resource,
-                                    observatory = to_send.resource,
-                                    telescope   = to_send.resource,
-                                    priority    = to_send.priority
-                                   )
-block.save()
-
-#send_to_pond(schedule)

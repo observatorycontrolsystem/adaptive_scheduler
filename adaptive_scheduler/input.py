@@ -208,6 +208,17 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 
 
 
+def get_block_datetimes(block, semester_start):
+
+    epoch_start   = datetime_to_epoch(semester_start)
+    dt_start      = normalised_epoch_to_datetime(block.scheduled_start, epoch_start)
+    scheduled_end = block.scheduled_start + block.scheduled_quantum
+    dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
+
+    return dt_start, dt_end
+
+
+
 def datetime_to_epoch(dt):
     return calendar.timegm(dt.timetuple())
 
