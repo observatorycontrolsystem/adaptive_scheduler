@@ -17,6 +17,7 @@ from adaptive_scheduler.input import (build_telescopes, build_targets,
                                       rise_set_to_kernel_intervals,
                                       make_dark_up_kernel_interval,
                                       dt_to_epoch_intervals,
+                                      datetime_to_normalised_epoch,
                                       epoch_to_datetime,
                                       get_block_datetimes,
                                       construct_compound_reservation)
@@ -72,6 +73,13 @@ def make_pond_schedule(schedule, semester_start):
 
 
 
+def dump_requests_to_python(filename, requests):
+    # TODO: In progress
+
+    out_fh = open(filename, 'w')
+
+    print out_fh, '#!/usr/bin/env/python'
+    print out_fh, ''
 
 # Configuration files
 tel_file     = 'telescopes.dat'
@@ -128,17 +136,30 @@ for compound_res in to_schedule:
     print_compound_reservation(compound_res)
 
 
+#dump_requests_to_python(filename='scheduling_clashes.py', to_schedule)
+
+
+
+
 
 scheduler = FullScheduler(to_schedule, resource_windows,
                           contractual_obligation_list=[])
 
 schedule = scheduler.schedule_all()
 
+epoch_start = datetime_to_normalised_epoch(semester_start, semester_start)
+epoch_end   = datetime_to_normalised_epoch(semester_end, semester_start)
+
 print "Scheduling completed. Final schedule:"
 
+print "Scheduling for semester %s to %s" % (semester_start, semester_end)
+print "Scheduling for normalised epoch %s to %s" % (epoch_start, epoch_end)
 for resource_reservations in schedule.values():
     for res in resource_reservations:
         print_reservation(res)
+
+
+
 
 
 # Test pond sending
