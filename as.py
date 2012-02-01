@@ -169,5 +169,9 @@ for resource_reservations in schedule.values():
 
 #pond_schedule = make_pond_schedule(schedule, semester_start)
 #pond_schedule.save()
-make_pond_schedule(schedule, semester_start)
+
+
+
+# make_pond_schedule(schedule, semester_start)
+
 
