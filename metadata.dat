@@ -1,0 +1,13 @@
+# List of metadata (user/tag/project combinations) available for making blocks.
+[
+    {
+        'user'     : 'Eric Saunders',
+        'proposal' : 'Scheduler Testing',
+        'tag'      : 'admin',
+    },
+    {
+        'user'     : 'Sotiria Lampoudi',
+        'proposal' : 'Kernel Testing',
+        'tag'      : 'admin',
+    },
+]
