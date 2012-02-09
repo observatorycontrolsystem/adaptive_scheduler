@@ -63,23 +63,10 @@ def make_pond_schedule(schedule, semester_start):
             pond_block = make_pond_block(res, semester_start)
             pond_blocks.append(pond_block)
 
-# TODO:Talk to Zach - Schedule doesn't appear to have a .save() method
-#    pond_schedule        = pond_client.Schedule()
-#    pond_schedule.blocks.extend(pond_blocks)
-#    return pond_schedule
-
     for block in pond_blocks:
         block.save()
 
 
-
-def dump_requests_to_python(filename, requests):
-    # TODO: In progress
-
-    out_fh = open(filename, 'w')
-
-    print out_fh, '#!/usr/bin/env/python'
-    print out_fh, ''
 
 # Configuration files
 tel_file     = 'telescopes.dat'

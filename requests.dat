@@ -9,7 +9,7 @@
                                 'target_name' : 'deneb',
                                 'telescope'   : 'maui',
                                 'priority'    : 1,
-                                'duration'    : 60,
+                                'duration'    : 30,
                             },
                         ],
     },
@@ -45,7 +45,7 @@
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
                                 'priority'    : 1,
-                                'duration'    : 120,
+                                'duration'    : 150,
                             },
                             {
                                 'target_name' : 'canopus',
