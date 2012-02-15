@@ -1,0 +1,10 @@
+# List of molecule configurations available for making blocks.
+[
+    {
+        'type'            : 'expose_n',
+        'count'           : 1,
+        'binning'         : 2,
+        'instrument_name' : 'KB12',
+        'filter'          : 'BSSL-UX-020',
+    },
+]
