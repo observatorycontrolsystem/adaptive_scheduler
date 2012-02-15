@@ -20,8 +20,7 @@ It maps objects across domains from 1) -> 2) (described below).
             * A set of Observation-specific parameters
             * A Pointing, if applicable
 
-
-Meta information about Observations is added by means of Group objects.
+   Meta information about Observations is added by means of Group objects.
 
 Author: Eric Saunders
 February 2012
@@ -30,20 +29,49 @@ February 2012
 from adaptive_scheduler.model import DataContainer
 
 
-def ScheduledBlock(object):
+class ScheduledBlock(object):
 
-    def __init__(self, location, start, end):
-        self.location = location
-
+    def __init__(self, location, start, end, priority=0):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
-        self.start    = start
-        self.end      = end
+        self.location  = location
+        self.start     = start
+        self.end       = end
+        self.priority  = priority
 
+        self.metadata  = Metadata()
         self.molecules = []
+        self.target    = Target()
 
 
-    def is_complete(self):
-        pass
+    def list_missing_fields(self):
+        # Find the list of missing metadata fields
+        meta_missing = self.metadata.list_missing_fields()
+
+        # Find the list of missing molecule fields
+        molecule_missing = ['[No molecules specified]']
+        if len(self.molecules) > 0:
+            molecule_missing = []
+            for molecule in self.molecules:
+                molecule_missing.extend(molecule.list_missing_fields())
+
+        # Find the list of missing target fields
+        target_missing = self.target.list_missing_fields()
+
+        # Aggregate the missing fields to return
+        missing_fields = {}
+
+        if len(meta_missing) > 0:
+            missing_fields['metadata'] = meta_missing
+
+        if len(molecule_missing) > 0:
+            missing_fields['molecule'] = molecule_missing
+
+        if len(target_missing) > 0:
+            missing_fields['target'] = target_missing
+
+
+        return missing_fields
+
 
     def add_metadata(self, metadata):
         self.metadata = metadata
@@ -52,7 +80,17 @@ def ScheduledBlock(object):
         # TODO: Handle molecule priorities
         self.molecules.append(molecule)
 
+    def add_target(self, target):
+        self.target = target
+
     def create_pond_block(self):
+        # Check we have everything we need
+        missing_fields = self.list_missing_fields()
+        if len(missing_fields) > 0:
+
+            raise IncompleteScheduledBlockError(missing_fields)
+
+    def split_location(self):
         pass
 
     def send_to_pond(self):
@@ -61,11 +99,66 @@ def ScheduledBlock(object):
 
 
 
-def Metadata(DataContainer):
-    pass
+class Metadata(DataContainer):
+    def list_missing_fields(self):
+        req_fields = ('user', 'proposal', 'tag')
+        missing_fields = []
 
-def Target(object):
-    pass
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
 
-def Molecule(object):
-    pass
+        return missing_fields
+
+
+
+class Target(DataContainer):
+    def list_missing_fields(self):
+        req_fields = ('type', 'ra', 'dec', 'epoch')
+        missing_fields = []
+
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
+
+        return missing_fields
+
+
+
+class Molecule(DataContainer):
+    #TODO: This is really an expose_n molecule, so should be specified
+    #TODO: This will be necessary once other molecules are scheduled
+
+    def list_missing_fields(self):
+        req_fields = ('type', 'count', 'binning', 'instrument_name', 'filter')
+        missing_fields = []
+
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
+
+        return missing_fields
+
+
+
+class IncompleteScheduledBlockError(Exception):
+    '''Raised when a block is missing required parameters.'''
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        message = "The following fields are missing in this ScheduledBlock.\n"
+        for param_type in self.value:
+            message += "%s:\n" % param_type
+
+            for parameter in self.value[param_type]:
+                message += "    %s\n" % parameter
+
+        return message
