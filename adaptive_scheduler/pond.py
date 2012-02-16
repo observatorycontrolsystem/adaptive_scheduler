@@ -27,6 +27,7 @@ February 2012
 '''
 
 from adaptive_scheduler.model import DataContainer
+from lcogt.pond import pond_client
 
 
 class ScheduledBlock(object):
@@ -87,11 +88,46 @@ class ScheduledBlock(object):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
-
             raise IncompleteScheduledBlockError(missing_fields)
 
+        # Construct the POND objects...
+        # 1) Create a POND ScheduledBlock
+        site, observatory, telescope = self.split_location()
+        pond_block = pond_client.ScheduledBlock(
+                                                 start       = self.start,
+                                                 end         = self.end,
+                                                 site        = site,
+                                                 observatory = observatory,
+                                                 telescope   = telescope,
+                                                 priority    = self.priority
+                                                )
+
+
+
     def split_location(self):
-        pass
+        '''
+            If the location is of the form telescope.observatory.site, then
+            extract those separate components and return them. Otherwise, return
+            the full location in the place of each component without splitting.
+
+            Examples:  '0m4a.aqwb.coj' -> (0m4a, aqwb, coj)
+                       'Maui'          -> (Maui, Maui, Maui)
+        '''
+        # Split on full stops (sometimes obscurely also known as periods)
+        DELIMITER = '.'
+
+        # Number of sections making up the full location string
+        N_COMPONENTS = 3
+
+        separated = tuple(self.location.split(DELIMITER))
+
+        if len(separated) == N_COMPONENTS:
+            return separated
+
+        # Separation wasn't possible. Selling a house is all about:
+        return (self.location, self.location, self.location)
+
+
 
     def send_to_pond(self):
         pass
@@ -130,8 +166,8 @@ class Target(DataContainer):
 
 
 class Molecule(DataContainer):
-    #TODO: This is really an expose_n molecule, so should be specified
-    #TODO: This will be necessary once other molecules are scheduled
+    #TODO: This is really an expose_n molecule, so should be specialised
+    #TODO: Specialisation will be necessary once other molecules are scheduled
 
     def list_missing_fields(self):
         req_fields = ('type', 'count', 'binning', 'instrument_name', 'filter')
