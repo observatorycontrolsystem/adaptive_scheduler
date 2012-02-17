@@ -70,7 +70,7 @@ def make_pond_schedule(schedule, semester_start):
 
 # Configuration files
 tel_file     = 'telescopes.dat'
-target_file  = 'targets_to_schedule.dat'
+target_file  = 'targets.dat'
 request_file = 'requests.dat'
 
 # TODO: Replace with config file (from laptop)

@@ -84,7 +84,7 @@ class ScheduledBlock(object):
     def add_target(self, target):
         self.target = target
 
-    def create_pond_block(self):
+    def create_pond_block(self, group_id):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
@@ -101,6 +101,43 @@ class ScheduledBlock(object):
                                                  telescope   = telescope,
                                                  priority    = self.priority
                                                 )
+
+        # 2) Create a Group
+        pond_group = pond_client.Group(tag_id   = self.metadata.tag,
+                                       user_id  = self.metadata.user,
+                                       prop_id  = self.metadata.proposal,
+                                       group_id = group_id)
+
+        # 3) Construct the Pointing
+        DEFAULT_EQUINOX = 2000.0
+        pond_pointing = Pointing.sidereal(
+                                           name  = self.target.name,
+                                           ra    = self.target.ra,
+                                           dec    = self.target.dec,
+                                           equinox = DEFAULT_EQUINOX,
+                                          )
+
+        # 4) Construct the Observations
+        for molecule in self.molecules:
+            pond_group.add_expose(
+                                   cnt    = molecule.count,
+                                   len    = ,
+                                   bin    = molecule.binning,
+                                   inst   = molecule.instrument_name,
+                                   target = pond_pointing,
+                                   filter = molecule.filter
+                                  )
+#TODO: Delete this
+# Create a target
+point_params = {'source_name':'test_target', 'ra':90.123, 'dec':34.4}
+target = pond_client.Pointing.sidereal(**point_params)
+
+# Add an exposure of the target to the scheduled block
+expose_params = {'len':10000, 'cnt':1, 'bin':2, 'inst':'KB12',
+                 'filter':'BSSL-UX-020', 'target':target}
+expose = group.add_expose(**expose_params)
+expose_priority = 3
+block.add_obs(expose, expose_priority)
 
 
 
