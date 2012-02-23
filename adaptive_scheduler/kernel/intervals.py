@@ -22,6 +22,7 @@ bugfixes in clean_up() and subtract() in November 2011
 
 from timepoint import *
 import math
+import copy
 
 class Intervals(object):
 
@@ -298,3 +299,39 @@ class Intervals(object):
                         tmp.pop()
                     quantum_starts.extend(tmp)
         return quantum_starts
+
+
+
+class IntervalsUtility(object):
+    
+#    def __init__(self):
+#        return
+
+
+    def intervals_to_retval(self, intervals, retval):
+        # format intervals object as: [[start, end, retval]]
+        retlist          = [] 
+        current_interval = []
+        for tp in intervals.timepoints:
+            current_interval.append(tp.time)
+            if tp.type == 'end':
+                current_interval.append(retval)
+                retlist.append(copy.copy(current_interval))
+                current_interval = []
+        return retlist
+
+
+    def get_coverage_binary(self, intervals_base, intervals_list):
+        empty = intervals_base
+        for i in intervals_list:
+            empty = empty.subtract(i)
+        retlist = self.intervals_to_retval(empty, 0)
+        busy = intervals_base.subtract(empty)
+        retlist.extend(self.intervals_to_retval(busy, 1))
+        return retlist
+        
+
+    def get_coverage_count(self, intervals_base, intervals_list):
+        return
+
+

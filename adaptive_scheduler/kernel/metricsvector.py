@@ -60,33 +60,18 @@ class MetricsVector(object):
         if resource in self.resource_list:
             self.current_resource = resource
             reservation_list = filter(self.resource_equals, self.reservation_list)
-            available_windows = self.globally_possible_windows_dict[resource]
+            available_windows = copy.copy(self.globally_possible_windows_dict[resource])
             available_windows.clean_up()
+            iu = IntervalsUtility()
             if reservation_list:
-                still_available_windows = copy.copy(available_windows)
-                for reservation in reservation_list:
-                    still_available_windows = still_available_windows.subtract(reservation.possible_windows)
-                retlist = self.intervals_to_retval(still_available_windows, 0)
-                busy_windows = available_windows.subtract(still_available_windows)
-                retlist.extend(self.intervals_to_retval(busy_windows, 1))
+                intervals_list = [r.possible_windows for r in reservation_list]
+                retlist = iu.get_coverage_binary(available_windows, intervals_list)
             else: 
                 # this means we got globally_available_windows for this 
                 # resource, but no reservations. So all the windows in
                 # g_a_w are 0.
-                retlist = self.intervals_to_retval(available_windows, 0)
+                retlist = iu.intervals_to_retval(available_windows, 0)
             retlist.sort()
             return retlist
         else:
             print "Error: resource not in resource list."
-
-
-    def intervals_to_retval(self, intervals, retval):
-        retlist = [] #  [[start, end, retval]] format
-        current_interval = []
-        for tp in intervals.timepoints:
-            current_interval.append(tp.time)
-            if tp.type == 'end':
-                current_interval.append(retval)
-                retlist.append(copy.copy(current_interval))
-                current_interval = []
-        return retlist

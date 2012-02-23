@@ -74,11 +74,11 @@ class TestMetricsVector(object):
         assert_equal(self.mv3.oneof_constraints[0][1], self.r5)
 
 
-    def test_intervals_to_retval(self):
-        rl = self.mv1.intervals_to_retval(self.s1, 0)
-        assert_equal(rl, [[1, 2, 0]])
-        rl = self.mv1.intervals_to_retval(self.s1, 1)
-        assert_equal(rl, [[1, 2, 1]])
+#     def test_intervals_to_retval(self):
+#         rl = self.mv1.intervals_to_retval(self.s1, 0)
+#         assert_equal(rl, [[1, 2, 0]])
+#         rl = self.mv1.intervals_to_retval(self.s1, 1)
+#         assert_equal(rl, [[1, 2, 1]])
         
 
     def test_get_coverage_by_resource(self):
