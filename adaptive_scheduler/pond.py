@@ -27,21 +27,29 @@ February 2012
 '''
 
 from adaptive_scheduler.model import DataContainer
+from rise_set.sky_coordinates import RightAscension, Declination
 from lcogt.pond import pond_client
 
 
 class ScheduledBlock(object):
 
-    def __init__(self, location, start, end, priority=0):
+    def __init__(self, location, start, end, group_id, priority=0):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
         self.end       = end
+        self.group_id  = group_id
         self.priority  = priority
 
         self.metadata  = Metadata()
         self.molecules = []
-        self.target    = Target()
+        self.target    = Target(ra='00 00 00.00',dec='00 00 00.0')
+
+        # TODO: For now, assume all molecules have the same priority
+        self.OBS_PRIORITY = 1
+
+        # TODO: This should be a float in PB, not a string
+        self.DEFAULT_EQUINOX = '2000.0'
 
 
     def list_missing_fields(self):
@@ -84,7 +92,7 @@ class ScheduledBlock(object):
     def add_target(self, target):
         self.target = target
 
-    def create_pond_block(self, group_id):
+    def create_pond_block(self):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
@@ -103,42 +111,40 @@ class ScheduledBlock(object):
                                                 )
 
         # 2) Create a Group
-        pond_group = pond_client.Group(tag_id   = self.metadata.tag,
-                                       user_id  = self.metadata.user,
-                                       prop_id  = self.metadata.proposal,
-                                       group_id = group_id)
+        pond_group = pond_client.Group(
+                                        tag_id   = self.metadata.tag,
+                                        user_id  = self.metadata.user,
+                                        prop_id  = self.metadata.proposal,
+                                        group_id = self.group_id
+                                      )
 
         # 3) Construct the Pointing
-        DEFAULT_EQUINOX = 2000.0
-        pond_pointing = Pointing.sidereal(
-                                           name  = self.target.name,
-                                           ra    = self.target.ra,
-                                           dec    = self.target.dec,
-                                           equinox = DEFAULT_EQUINOX,
+        pond_pointing = pond_client.Pointing.sidereal(
+                                          source_name  = self.target.name,
+                                          ra           = self.target.ra.in_degrees(),
+                                          dec          = self.target.dec.in_degrees(),
+                                          equinox      = self.DEFAULT_EQUINOX
                                           )
 
         # 4) Construct the Observations
+        observations = []
         for molecule in self.molecules:
-            pond_group.add_expose(
-                                   cnt    = molecule.count,
-                                   len    = ,
-                                   bin    = molecule.binning,
-                                   inst   = molecule.instrument_name,
-                                   target = pond_pointing,
-                                   filter = molecule.filter
-                                  )
-#TODO: Delete this
-# Create a target
-point_params = {'source_name':'test_target', 'ra':90.123, 'dec':34.4}
-target = pond_client.Pointing.sidereal(**point_params)
+            obs = pond_group.add_expose(
+                                         cnt    = molecule.count,
+                                         len    = molecule.duration,
+                                         bin    = molecule.binning,
+                                         inst   = molecule.instrument_name,
+                                         filter = molecule.filter,
+                                         target = pond_pointing
+                                        )
+            observations.append(obs)
 
-# Add an exposure of the target to the scheduled block
-expose_params = {'len':10000, 'cnt':1, 'bin':2, 'inst':'KB12',
-                 'filter':'BSSL-UX-020', 'target':target}
-expose = group.add_expose(**expose_params)
-expose_priority = 3
-block.add_obs(expose, expose_priority)
+        # 5) Add the Observations to the Block
+        for obs in observations:
+            block.add_obs(obs, self.OBS_PRIORITY)
 
+
+        return block
 
 
     def split_location(self):
@@ -188,6 +194,15 @@ class Metadata(DataContainer):
 
 
 class Target(DataContainer):
+
+    def __init__(self, ra, dec, *initial_data, **kwargs):
+
+        DataContainer.__init__(self, initial_data, kwargs)
+
+        self.ra  = RightAscension(ra)
+        self.dec = Declination(dec)
+
+
     def list_missing_fields(self):
         req_fields = ('type', 'ra', 'dec', 'epoch')
         missing_fields = []
@@ -207,7 +222,8 @@ class Molecule(DataContainer):
     #TODO: Specialisation will be necessary once other molecules are scheduled
 
     def list_missing_fields(self):
-        req_fields = ('type', 'count', 'binning', 'instrument_name', 'filter')
+        req_fields = ('type', 'count', 'binning',
+                      'instrument_name', 'filter', 'duration')
         missing_fields = []
 
         for field in req_fields:

@@ -36,7 +36,8 @@ class TestPond(object):
         scheduled_block = ScheduledBlock(
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
-                                          end      = datetime(2012, 1, 2, 0, 0, 0)
+                                          end      = datetime(2012, 1, 2, 0, 0, 0),
+                                          group_id = 1
                                         )
 
         scheduled_block.add_metadata(self.metadata)
@@ -46,7 +47,7 @@ class TestPond(object):
         missing = scheduled_block.list_missing_fields()
 
         assert_equal(missing, {'metadata'      : ['proposal', 'tag'],
-                               'molecule'      : ['binning'],
+                               'molecule'      : ['binning', 'duration'],
                                'target'        : ['type', 'ra', 'dec', 'epoch']  })
 
 
@@ -56,7 +57,8 @@ class TestPond(object):
         scheduled_block = ScheduledBlock(
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
-                                          end      = datetime(2012, 1, 2, 0, 0, 0)
+                                          end      = datetime(2012, 1, 2, 0, 0, 0),
+                                          group_id = 1
                                         )
 
         scheduled_block.create_pond_block()
@@ -68,7 +70,8 @@ class TestPond(object):
         scheduled_block = ScheduledBlock(
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
-                                          end      = datetime(2012, 1, 2, 0, 0, 0)
+                                          end      = datetime(2012, 1, 2, 0, 0, 0),
+                                          group_id = 1
                                         )
 
         scheduled_block.add_metadata(
@@ -81,6 +84,7 @@ class TestPond(object):
 
         scheduled_block.add_target(
                                     Target(
+                                            name  = 'deneb',
                                             type  = 'sidereal',
                                             ra    = '20 41 25.91',
                                             dec   = '+45 16 49.22',
@@ -94,7 +98,8 @@ class TestPond(object):
                                                 count           = 1,
                                                 binning         = 2,
                                                 instrument_name = 'KB12',
-                                                filter          = 'BSSL-UX-020'
+                                                filter          = 'BSSL-UX-020',
+                                                duration        = 30
                                                )
                                      )
 
@@ -107,7 +112,8 @@ class TestPond(object):
         scheduled_block = ScheduledBlock(
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
-                                          end      = datetime(2012, 1, 2, 0, 0, 0)
+                                          end      = datetime(2012, 1, 2, 0, 0, 0),
+                                          group_id = 1
                                         )
 
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
@@ -119,7 +125,8 @@ class TestPond(object):
         scheduled_block = ScheduledBlock(
                                           location = 'Maui',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
-                                          end      = datetime(2012, 1, 2, 0, 0, 0)
+                                          end      = datetime(2012, 1, 2, 0, 0, 0),
+                                          group_id = 1
                                         )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))
