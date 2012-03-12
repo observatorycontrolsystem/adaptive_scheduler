@@ -71,7 +71,7 @@ class TestPond(object):
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
                                           end      = datetime(2012, 1, 2, 0, 0, 0),
-                                          group_id = 1
+                                          group_id = 'related things'
                                         )
 
         scheduled_block.add_metadata(
@@ -113,7 +113,7 @@ class TestPond(object):
                                           location = '0m4a.aqwb.coj',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
                                           end      = datetime(2012, 1, 2, 0, 0, 0),
-                                          group_id = 1
+                                          group_id = 'related things'
                                         )
 
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
@@ -126,7 +126,7 @@ class TestPond(object):
                                           location = 'Maui',
                                           start    = datetime(2012, 1, 1, 0, 0, 0),
                                           end      = datetime(2012, 1, 2, 0, 0, 0),
-                                          group_id = 1
+                                          group_id = 'related things'
                                         )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))

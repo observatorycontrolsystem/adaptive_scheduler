@@ -43,7 +43,7 @@ class ScheduledBlock(object):
 
         self.metadata  = Metadata()
         self.molecules = []
-        self.target    = Target(ra='00 00 00.00',dec='00 00 00.0')
+        self.target    = Target()
 
         # TODO: For now, assume all molecules have the same priority
         self.OBS_PRIORITY = 1
@@ -141,10 +141,10 @@ class ScheduledBlock(object):
 
         # 5) Add the Observations to the Block
         for obs in observations:
-            block.add_obs(obs, self.OBS_PRIORITY)
+            pond_block.add_obs(obs, self.OBS_PRIORITY)
 
 
-        return block
+        return pond_block
 
 
     def split_location(self):
@@ -195,14 +195,6 @@ class Metadata(DataContainer):
 
 class Target(DataContainer):
 
-    def __init__(self, ra, dec, *initial_data, **kwargs):
-
-        DataContainer.__init__(self, initial_data, kwargs)
-
-        self.ra  = RightAscension(ra)
-        self.dec = Declination(dec)
-
-
     def list_missing_fields(self):
         req_fields = ('type', 'ra', 'dec', 'epoch')
         missing_fields = []
@@ -214,6 +206,23 @@ class Target(DataContainer):
                 missing_fields.append(field)
 
         return missing_fields
+
+
+    # Use accessors to ensure we always have valid coordinates
+    def get_ra(self):
+        return self._ra
+
+    def set_ra(self, ra):
+        self._ra = RightAscension(ra)
+
+    def set_dec(self, dec):
+        self._dec = Declination(dec)
+
+    def get_dec(self):
+        return self._dec
+
+    ra  = property(get_ra, set_ra)
+    dec = property(get_dec, set_dec)
 
 
 
