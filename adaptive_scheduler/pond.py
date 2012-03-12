@@ -48,9 +48,6 @@ class ScheduledBlock(object):
         # TODO: For now, assume all molecules have the same priority
         self.OBS_PRIORITY = 1
 
-        # TODO: This should be a float in PB, not a string
-        self.DEFAULT_EQUINOX = '2000.0'
-
 
     def list_missing_fields(self):
         # Find the list of missing metadata fields
@@ -123,7 +120,6 @@ class ScheduledBlock(object):
                                           source_name  = self.target.name,
                                           ra           = self.target.ra.in_degrees(),
                                           dec          = self.target.dec.in_degrees(),
-                                          equinox      = self.DEFAULT_EQUINOX
                                           )
 
         # 4) Construct the Observations
@@ -196,7 +192,7 @@ class Metadata(DataContainer):
 class Target(DataContainer):
 
     def list_missing_fields(self):
-        req_fields = ('type', 'ra', 'dec', 'epoch')
+        req_fields = ('type', 'ra', 'dec')
         missing_fields = []
 
         for field in req_fields:

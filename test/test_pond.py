@@ -48,7 +48,7 @@ class TestPond(object):
 
         assert_equal(missing, {'metadata'      : ['proposal', 'tag'],
                                'molecule'      : ['binning', 'duration'],
-                               'target'        : ['type', 'ra', 'dec', 'epoch']  })
+                               'target'        : ['type', 'ra', 'dec']  })
 
 
     @raises(IncompleteScheduledBlockError)
@@ -88,7 +88,6 @@ class TestPond(object):
                                             type  = 'sidereal',
                                             ra    = '20 41 25.91',
                                             dec   = '+45 16 49.22',
-                                            epoch = 2000
                                           )
                                    )
 
