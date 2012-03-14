@@ -1,6 +1,7 @@
 # List of molecule configurations available for making blocks.
 [
-    {
+    {   # A default expose_n with some basic params filled in
+        'name'            : 'expose_n default',
         'type'            : 'expose_n',
         'count'           : 1,
         'binning'         : 2,

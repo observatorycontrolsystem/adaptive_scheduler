@@ -2,55 +2,50 @@
 [
 
     {
-        'pi'          : 'Eric Saunders',
+        'proposal name' : 'Scheduler Testing',
         'res_type'    : 'single',
         'requests'    : [
                             {
                                 'target_name' : 'deneb',
                                 'telescope'   : 'maui',
-                                'priority'    : 1,
                                 'duration'    : 30,
                             },
                         ],
     },
     {
-        'pi'          : 'Eric Saunders',
+        'proposal name' : 'Scheduler Testing',
         'res_type'    : 'single',
         'requests'    : [
                             {
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
-                                'priority'    : 1,
                                 'duration'    : 60,
                             },
                         ],
     },
     {
-        'pi'          : 'Eric Saunders',
+        'proposal name' : 'Scheduler Testing',
         'res_type'    : 'single',
         'requests'    : [
                             {
                                 'target_name' : 'deneb',
                                 'telescope'   : 'maui',
-                                'priority'    : 1,
                                 'duration'    : 120,
                             },
                         ],
     },
     {
-        'pi'          : 'Eric Saunders',
+        'proposal name' : 'Scheduler Testing',
         'res_type'    : 'and',
         'requests'    : [
                             {
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
-                                'priority'    : 1,
                                 'duration'    : 150,
                             },
                             {
                                 'target_name' : 'canopus',
                                 'telescope'   : 'maui',
-                                'priority'    : 1,
                                 'duration'    : 500,
                             },
                         ],

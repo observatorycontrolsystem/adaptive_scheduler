@@ -12,7 +12,8 @@ November 2011
 from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle           import Angle
 
-from adaptive_scheduler.model    import Telescope, Target, Request, CompoundRequest
+from adaptive_scheduler.model    import (Telescope, Target, Proposal, Request,
+                                         CompoundRequest)
 from adaptive_scheduler.printing import print_req_summary
 
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -52,6 +53,16 @@ def build_targets(filename):
     return targets
 
 
+def build_proposals(filename):
+    proposals = {}
+    proposal_dicts = file_to_dicts(filename)
+
+    for d in proposal_dicts:
+        proposals[ d['proposal name'] ] = Proposal(d)
+
+    return proposals
+
+
 def build_requests(req_list, targets, telescopes):
     '''
         This one is a little different from the other build methods, because
@@ -66,7 +77,6 @@ def build_requests(req_list, targets, telescopes):
                          Request(
                                   target    = targets[ d['target_name'] ],
                                   telescope = telescopes[ d['telescope'] ],
-                                  priority  = d['priority'],
                                   duration  = d['duration'],
                                 )
                        )
@@ -75,7 +85,8 @@ def build_requests(req_list, targets, telescopes):
 
 
 
-def build_compound_requests(filename, targets, telescopes, semester_start, semester_end):
+def build_compound_requests(filename, targets, telescopes, proposals,
+                            semester_start, semester_end):
     # TODO: Currently we assume all windows are the width of the semester. Allow
     # user-specified windows.
     compound_requests = []
@@ -87,8 +98,9 @@ def build_compound_requests(filename, targets, telescopes, semester_start, semes
 
         compound_requests.append(
                                  CompoundRequest(
-                                          requests  = requests,
                                           res_type  = d['res_type'],
+                                          proposal  = proposals[ d['proposal name'] ],
+                                          requests  = requests,
                                           windows   = [semester_start, semester_end],
                                         )
                                 )
@@ -100,14 +112,13 @@ def build_compound_requests(filename, targets, telescopes, semester_start, semes
 def target_to_rise_set_target(target):
     '''
         Convert scheduler Target to rise_set target dict.
-        TODO: Move scheduler Target code to rise_set.
-        TODO: Change to default_dict, expand to allow proper motion etc.
     '''
 
+    # TODO: Move scheduler Target code to rise_set.
+    # TODO: Change to default_dict, expand to allow proper motion etc.
     target_dict = {
                     'ra'    : RightAscension(target.ra),
                     'dec'   : Declination(target.dec),
-                    'epoch' : target.epoch,
                    }
 
     return target_dict
@@ -187,10 +198,12 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         epoch_intervals = dt_to_epoch_intervals(dark_up_intervals, sem_start)
 
         # Construct Reservations
+        # Priority comes from the parent CompoundRequest
         # Each Reservation represents the set of available windows of opportunity
         # The resource is governed by the timepoint.resource attribute
         request = compound_request.requests[idx]
-        reservations.append( Reservation(request.priority, request.duration,
+        reservations.append( Reservation(compound_request.proposal.priority,
+                                         request.duration,
                                          request.telescope.name, epoch_intervals) )
 
         # Store the original request for recovery after scheduling

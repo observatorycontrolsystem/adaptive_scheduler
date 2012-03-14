@@ -11,6 +11,7 @@ November 2011
 from __future__ import division
 
 from adaptive_scheduler.input import (build_telescopes, build_targets,
+                                      build_proposals,
                                       build_compound_requests,
                                       target_to_rise_set_target,
                                       telescope_to_rise_set_telescope,
@@ -69,9 +70,10 @@ def make_pond_schedule(schedule, semester_start):
 
 
 # Configuration files
-tel_file     = 'telescopes.dat'
-target_file  = 'targets.dat'
-request_file = 'requests.dat'
+tel_file      = 'telescopes.dat'
+target_file   = 'targets.dat'
+proposal_file = 'proposals.dat'
+request_file  = 'requests.dat'
 
 # TODO: Replace with config file (from laptop)
 semester_start = datetime(2011, 11, 1, 0, 0, 0)
@@ -80,9 +82,12 @@ semester_end   = datetime(2011, 11, 8, 0, 0, 0)
 # Create telescopes, targets, and requests
 tels              = build_telescopes(tel_file)
 targets           = build_targets(target_file)
-compound_requests = build_compound_requests(request_file, targets, tels,
+proposals         = build_proposals(proposal_file)
+
+compound_requests = build_compound_requests(request_file, targets, tels, proposals,
                                             semester_start, semester_end)
 
+# Construct visibility objects for each telescope
 visibility_from = {}
 for tel_name, tel in tels.iteritems():
     rs_telescope = telescope_to_rise_set_telescope(tel)
@@ -121,11 +126,6 @@ print "Finished constructing compound reservations..."
 print "There are %d CompoundReservations to schedule:" % (len(to_schedule))
 for compound_res in to_schedule:
     print_compound_reservation(compound_res)
-
-
-#dump_requests_to_python(filename='scheduling_clashes.py', to_schedule)
-
-
 
 
 

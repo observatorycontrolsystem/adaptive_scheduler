@@ -32,6 +32,10 @@ class Telescope(DataContainer):
     pass
 
 
+class Proposal(DataContainer):
+    pass
+
+
 class Request(object):
     '''
         Represents a single valid configuration where an observation could take
@@ -40,14 +44,12 @@ class Request(object):
 
         target    - a Target object (pointing information)
         telescope - a Telescope object (lat/long information)
-        priority  - the value the scheduler should place on this request
         duration - exposure time of each observation. TODO: Clarify what this means.
     '''
 
-    def __init__(self, target, telescope, priority, duration):
+    def __init__(self, target, telescope, duration):
         self.target    = target
         self.telescope = telescope
-        self.priority  = priority
         self.duration  = duration
 
 
@@ -68,9 +70,10 @@ class CompoundRequest(object):
     # TODO: Add sanity checking, e.g. requiring windows for AND blocks, etc.
     valid_types = CompoundReservation.valid_types
 
-    def __init__(self, requests, res_type, windows):
-        self.requests  = requests
+    def __init__(self, res_type, proposal, requests, windows):
         self.res_type  = self._validate_type(res_type)
+        self.proposal  = proposal
+        self.requests  = requests
 
         if len(windows) % 2 > 0:
             error_msg = ("You must provide a start and end for each window "
