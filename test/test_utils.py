@@ -6,11 +6,9 @@ from datetime   import datetime, timedelta
 import calendar
 
 # Import the modules to test
-from adaptive_scheduler.input import (normalise, unnormalise,
-                                      datetime_to_epoch, epoch_to_datetime,
-                                      datetime_to_normalised_epoch,
+from adaptive_scheduler.utils import (normalise, unnormalise, datetime_to_epoch,
+                                      epoch_to_datetime, datetime_to_normalised_epoch,
                                       normalised_epoch_to_datetime)
-
 
 class TestDateEpochConversions(object):
     '''Unit tests for converting between normalised epoch times (used by the
