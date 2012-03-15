@@ -104,6 +104,10 @@ def make_dark_up_kernel_interval(req, visibility_from):
     # Construct the intersection (dark AND up) reprsenting actual visibility
     intersection = dark_intervals.intersect([up_intervals])
 
+    # Intersect with any window provided in the user request
+    user_intervals = rise_set_to_kernel_intervals(req.windows)
+    intersection   = intersection.intersect([user_intervals])
+
     # Print some summary info
     print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection)
 
@@ -128,7 +132,8 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         request = compound_request.requests[idx]
         reservations.append( Reservation(compound_request.proposal.priority,
                                          request.duration,
-                                         request.telescope.name, epoch_intervals) )
+                                         request.telescope.name,
+                                         epoch_intervals) )
 
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack

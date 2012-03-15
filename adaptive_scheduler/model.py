@@ -120,13 +120,7 @@ class Request(object):
         self.telescope = telescope
         self.molecule  = molecule
         self.duration  = duration
-
-        if len(windows) % 2 > 0:
-            error_msg = ("You must provide a start and end for each window "
-                         "(you provided an odd number of window edges)")
-            raise InvalidRequestError(error_msg)
-
-        self.windows = windows
+        self.windows   = windows
 
 
 

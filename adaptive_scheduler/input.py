@@ -77,8 +77,11 @@ def build_requests(req_list, targets, telescopes, molecules, semester_start,
 
         dt_windows = []
         if 'window' in d:
-            for str_date in d['window']:
-                dt_windows.append(iso_string_to_datetime(str_date))
+            for str_start_date, str_end_date in d['window']:
+                dt_windows.append(
+                                   ( iso_string_to_datetime(str_start_date),
+                                     iso_string_to_datetime(str_end_date) )
+                                 )
 
         # If no windows are provided, default to the semester bounds
         else:
@@ -110,7 +113,6 @@ def build_compound_requests(filename, targets, telescopes, proposals, molecules,
     for d in request_dicts:
         requests = build_requests(d['requests'], targets, telescopes, molecules,
                                   semester_start, semester_end)
-
 
         compound_requests.append(
                                  CompoundRequest(
