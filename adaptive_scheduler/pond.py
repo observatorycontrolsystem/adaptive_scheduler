@@ -8,7 +8,7 @@ It maps objects across domains from 1) -> 2) (described below).
 
 1) A complete scheduled observation in this facade needs the following:
     * A ScheduledBlock made up of
-            * A Metadata object
+            * A Proposal object
         * One or more Molecules, each made up of
             * A set of Molecule-specific parameters
             * A Target, if applicable
@@ -26,12 +26,11 @@ Author: Eric Saunders
 February 2012
 '''
 
-from adaptive_scheduler.model import DataContainer
-from rise_set.sky_coordinates import RightAscension, Declination
+from adaptive_scheduler.model import Proposal, Target
 from lcogt.pond import pond_client
 
 
-class ScheduledBlock(object):
+class Block(object):
 
     def __init__(self, location, start, end, group_id, priority=0):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
@@ -41,17 +40,19 @@ class ScheduledBlock(object):
         self.group_id  = group_id
         self.priority  = priority
 
-        self.metadata  = Metadata()
+        self.proposal  = Proposal()
         self.molecules = []
         self.target    = Target()
 
         # TODO: For now, assume all molecules have the same priority
         self.OBS_PRIORITY = 1
 
+        self.pond_block = None
+
 
     def list_missing_fields(self):
-        # Find the list of missing metadata fields
-        meta_missing = self.metadata.list_missing_fields()
+        # Find the list of missing proposal fields
+        proposal_missing = self.proposal.list_missing_fields()
 
         # Find the list of missing molecule fields
         molecule_missing = ['[No molecules specified]']
@@ -66,8 +67,8 @@ class ScheduledBlock(object):
         # Aggregate the missing fields to return
         missing_fields = {}
 
-        if len(meta_missing) > 0:
-            missing_fields['metadata'] = meta_missing
+        if len(proposal_missing) > 0:
+            missing_fields['proposal'] = proposal_missing
 
         if len(molecule_missing) > 0:
             missing_fields['molecule'] = molecule_missing
@@ -79,8 +80,8 @@ class ScheduledBlock(object):
         return missing_fields
 
 
-    def add_metadata(self, metadata):
-        self.metadata = metadata
+    def add_proposal(self, proposal):
+        self.proposal = proposal
 
     def add_molecule(self, molecule):
         # TODO: Handle molecule priorities
@@ -93,7 +94,7 @@ class ScheduledBlock(object):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
-            raise IncompleteScheduledBlockError(missing_fields)
+            raise IncompleteBlockError(missing_fields)
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
@@ -109,9 +110,9 @@ class ScheduledBlock(object):
 
         # 2) Create a Group
         pond_group = pond_client.Group(
-                                        tag_id   = self.metadata.tag,
-                                        user_id  = self.metadata.user,
-                                        prop_id  = self.metadata.proposal,
+                                        tag_id   = self.proposal.tag,
+                                        user_id  = self.proposal.user,
+                                        prop_id  = self.proposal.proposal_name,
                                         group_id = self.group_id
                                       )
 
@@ -131,7 +132,7 @@ class ScheduledBlock(object):
                                          bin    = molecule.binning,
                                          inst   = molecule.instrument_name,
                                          filter = molecule.filter,
-                                         target = pond_pointing
+                                         target = pond_pointing,
                                         )
             observations.append(obs)
 
@@ -139,6 +140,7 @@ class ScheduledBlock(object):
         for obs in observations:
             pond_block.add_obs(obs, self.OBS_PRIORITY)
 
+        self.pond_block = pond_block
 
         return pond_block
 
@@ -167,88 +169,65 @@ class ScheduledBlock(object):
         return (self.location, self.location, self.location)
 
 
-
     def send_to_pond(self):
-        pass
+        if not self.pond_block:
+            self.create_pond_block()
+
+        self.pond_block.save()
+
+        return
 
 
 
+def make_simple_pond_block(compound_reservation, semester_start):
+    '''Create a minimal POND block, with no molecule information. This is not
+       useful for realistic requests, but helpful for debugging and simulation.'''
 
-class Metadata(DataContainer):
-    def list_missing_fields(self):
-        req_fields = ('user', 'proposal', 'tag')
-        missing_fields = []
+    dt_start, dt_end = get_cr_datetimes(compound_reservation, semester_start)
 
-        for field in req_fields:
-            try:
-                getattr(self, field)
-            except:
-                missing_fields.append(field)
-
-        return missing_fields
-
-
-
-class Target(DataContainer):
-
-    def list_missing_fields(self):
-        req_fields = ('type', 'ra', 'dec')
-        missing_fields = []
-
-        for field in req_fields:
-            try:
-                getattr(self, field)
-            except:
-                missing_fields.append(field)
-
-        return missing_fields
+    pond_block = pond_client.ScheduledBlock(
+                                         start       = dt_start,
+                                         end         = dt_end,
+                                         site        = compound_reservation.resource,
+                                         observatory = compound_reservation.resource,
+                                         telescope   = compound_reservation.resource,
+                                         priority    = compound_reservation.priority
+                                        )
+    return pond_block
 
 
-    # Use accessors to ensure we always have valid coordinates
-    def get_ra(self):
-        return self._ra
+def make_simple_pond_schedule(schedule, semester_start):
+    '''Given a set of Reservations, construct simple POND blocks corresponding to
+       them. This is helpful for debugging and simulation.'''
 
-    def set_ra(self, ra):
-        self._ra = RightAscension(ra)
+    pond_blocks = []
 
-    def set_dec(self, dec):
-        self._dec = Declination(dec)
+    for resource_reservations in schedule.values():
+        for res in resource_reservations:
+            pond_block = make_pond_block(res, semester_start)
+            pond_blocks.append(pond_block)
 
-    def get_dec(self):
-        return self._dec
+    return pond_blocks
 
-    ra  = property(get_ra, set_ra)
-    dec = property(get_dec, set_dec)
+
+def send_blocks_to_pond(pond_blocks):
+    '''Commit a set of POND blocks to the POND endpoint.'''
+
+    for block in pond_blocks:
+        block.save()
+
+    return
 
 
 
-class Molecule(DataContainer):
-    #TODO: This is really an expose_n molecule, so should be specialised
-    #TODO: Specialisation will be necessary once other molecules are scheduled
-
-    def list_missing_fields(self):
-        req_fields = ('type', 'count', 'binning',
-                      'instrument_name', 'filter', 'duration')
-        missing_fields = []
-
-        for field in req_fields:
-            try:
-                getattr(self, field)
-            except:
-                missing_fields.append(field)
-
-        return missing_fields
-
-
-
-class IncompleteScheduledBlockError(Exception):
+class IncompleteBlockError(Exception):
     '''Raised when a block is missing required parameters.'''
 
     def __init__(self, value):
         self.value = value
 
     def __str__(self):
-        message = "The following fields are missing in this ScheduledBlock.\n"
+        message = "The following fields are missing in this Block.\n"
         for param_type in self.value:
             message += "%s:\n" % param_type
 

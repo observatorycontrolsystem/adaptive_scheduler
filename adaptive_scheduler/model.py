@@ -14,6 +14,9 @@ from __future__ import division
 from adaptive_scheduler.exceptions import InvalidRequestError
 from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 
+from rise_set.sky_coordinates import RightAscension, Declination
+
+
 
 class DataContainer(object):
     def __init__(self, *initial_data, **kwargs):
@@ -24,16 +27,76 @@ class DataContainer(object):
             setattr(self, key, kwargs[key])
 
 
+
 class Target(DataContainer):
-    pass
+
+    def list_missing_fields(self):
+        req_fields = ('ra', 'dec')
+        missing_fields = []
+
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
+
+        return missing_fields
+
+    # Use accessors to ensure we always have valid coordinates
+    def get_ra(self):
+        return self._ra
+
+    def set_ra(self, ra):
+        self._ra = RightAscension(ra)
+
+    def set_dec(self, dec):
+        self._dec = Declination(dec)
+
+    def get_dec(self):
+        return self._dec
+
+    ra  = property(get_ra, set_ra)
+    dec = property(get_dec, set_dec)
+
 
 
 class Telescope(DataContainer):
     pass
 
 
+
 class Proposal(DataContainer):
-    pass
+    def list_missing_fields(self):
+        req_fields = ('user', 'proposal_name', 'tag')
+        missing_fields = []
+
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
+
+        return missing_fields
+
+
+
+class Molecule(DataContainer):
+    #TODO: This is really an expose_n molecule, so should be specialised
+    #TODO: Specialisation will be necessary once other molecules are scheduled
+
+    def list_missing_fields(self):
+        req_fields = ('type', 'count', 'binning',
+                      'instrument_name', 'filter', 'duration')
+        missing_fields = []
+
+        for field in req_fields:
+            try:
+                getattr(self, field)
+            except:
+                missing_fields.append(field)
+
+        return missing_fields
+
 
 
 class Request(object):
@@ -44,12 +107,14 @@ class Request(object):
 
         target    - a Target object (pointing information)
         telescope - a Telescope object (lat/long information)
+        molecule  - a Molecule object (detailed observing information)
         duration - exposure time of each observation. TODO: Clarify what this means.
     '''
 
-    def __init__(self, target, telescope, duration):
+    def __init__(self, target, telescope, molecule, duration):
         self.target    = target
         self.telescope = telescope
+        self.molecule  = molecule
         self.duration  = duration
 
 
@@ -59,8 +124,9 @@ class CompoundRequest(object):
         A user-level request for an observation. This will be translated into the
         Reservation/CompoundReservation of the scheduling kernel.
 
-        requests - a list of Request objects. There must be at least one.
         res_type - the type of request (single, and, oneof)
+        proposal - proposal meta information associated with this request
+        requests - a list of Request objects. There must be at least one.
         windows  - a list of start/end datetimes, representing when this observation
                    is eligible to be performed. For user observations with no
                    time constraints, this should be the planning window of the

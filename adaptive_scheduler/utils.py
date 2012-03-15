@@ -39,14 +39,15 @@ def unnormalise(value, start):
     '''Perform the inverse of normalise().'''
     return value + start
 
-def get_block_datetimes(block, semester_start):
-    '''Find the real-world (datetime) start and end times of the provided block.
-       The start of the semester must be provided to allow the kernel epoch times
-       to be unnormalised.'''
+def get_reservation_datetimes(reservation, semester_start):
+    '''Find the real-world (datetime) start and end times of the provided
+       Reservation. The start of the semester must be provided to allow
+       the kernel epoch times to be unnormalised.'''
 
     epoch_start   = datetime_to_epoch(semester_start)
-    dt_start      = normalised_epoch_to_datetime(block.scheduled_start, epoch_start)
-    scheduled_end = block.scheduled_start + block.scheduled_quantum
+    dt_start      = normalised_epoch_to_datetime(reservation.scheduled_start,
+                                                 epoch_start)
+    scheduled_end = reservation.scheduled_start + reservation.scheduled_quantum
     dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
 
     return dt_start, dt_end

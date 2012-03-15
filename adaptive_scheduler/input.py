@@ -9,8 +9,8 @@ Author: Eric Saunders
 November 2011
 '''
 
-from adaptive_scheduler.model    import (Telescope, Target, Proposal, Request,
-                                         CompoundRequest)
+from adaptive_scheduler.model    import ( Telescope, Target, Proposal, Molecule,
+                                          Request, CompoundRequest )
 import ast
 
 
@@ -46,12 +46,22 @@ def build_proposals(filename):
     proposal_dicts = file_to_dicts(filename)
 
     for d in proposal_dicts:
-        proposals[ d['proposal name'] ] = Proposal(d)
+        proposals[ d['proposal_name'] ] = Proposal(d)
 
     return proposals
 
 
-def build_requests(req_list, targets, telescopes):
+def build_molecules(filename):
+    molecules = {}
+    molecule_dicts = file_to_dicts(filename)
+
+    for d in molecule_dicts:
+        molecules[ d['name'] ] = Molecule(d)
+
+    return molecules
+
+
+def build_requests(req_list, targets, telescopes, molecules):
     '''
         This one is a little different from the other build methods, because
         Requests are always intended to be sub-components of a CompoundRequest
@@ -61,18 +71,23 @@ def build_requests(req_list, targets, telescopes):
     requests = []
 
     for d in req_list:
-        requests.append(
-                         Request(
-                                  target    = targets[ d['target_name'] ],
-                                  telescope = telescopes[ d['telescope'] ],
-                                  duration  = d['duration'],
-                                )
-                       )
+        req = Request(
+                       target    = targets[ d['target_name'] ],
+                       telescope = telescopes[ d['telescope_name'] ],
+                       molecule  = molecules[ d['molecule_name'] ],
+                       duration  = d['duration'],
+                     )
+
+        # Store the requested duration directly in the molecule
+        req.molecule.duration = req.duration
+
+        # Add the completed request to the list
+        requests.append(req)
 
     return requests
 
 
-def build_compound_requests(filename, targets, telescopes, proposals,
+def build_compound_requests(filename, targets, telescopes, proposals, molecules,
                             semester_start, semester_end):
     # TODO: Currently we assume all windows are the width of the semester. Allow
     # user-specified windows.
@@ -80,13 +95,13 @@ def build_compound_requests(filename, targets, telescopes, proposals,
     request_dicts = file_to_dicts(filename)
 
     for d in request_dicts:
-        requests = build_requests(d['requests'], targets, telescopes)
+        requests = build_requests(d['requests'], targets, telescopes, molecules)
 
 
         compound_requests.append(
                                  CompoundRequest(
                                           res_type  = d['res_type'],
-                                          proposal  = proposals[ d['proposal name'] ],
+                                          proposal  = proposals[ d['proposal_name'] ],
                                           requests  = requests,
                                           windows   = [semester_start, semester_end],
                                         )

@@ -10,11 +10,9 @@ November 2011
 # Required for true (non-integer) division
 from __future__ import division
 
-from adaptive_scheduler.input import ( build_telescopes, build_targets,
-                                       build_proposals,
-                                       build_compound_requests )
-
-
+from adaptive_scheduler.input           import ( build_telescopes, build_targets,
+                                                 build_proposals, build_molecules,
+                                                 build_compound_requests )
 from adaptive_scheduler.kernel_mappings import ( target_to_rise_set_target,
                                                  telescope_to_rise_set_telescope,
                                                  rise_set_to_kernel_intervals,
@@ -24,19 +22,19 @@ from adaptive_scheduler.kernel_mappings import ( target_to_rise_set_target,
                                                  make_compound_reservations,
                                                  construct_resource_windows,
                                                  construct_visibilities)
+from adaptive_scheduler.utils           import ( datetime_to_normalised_epoch,
+                                                 epoch_to_datetime,
+                                                 get_reservation_datetimes )
+from adaptive_scheduler.model           import Request
+from adaptive_scheduler.printing        import ( print_reservation,
+                                                 print_compound_reservation,
+                                                 print_compound_reservations,
+                                                 print_schedule,
+                                                 print_req_summary,
+                                                 print_resource_windows )
 
-from adaptive_scheduler.utils import ( datetime_to_normalised_epoch,
-                                       epoch_to_datetime,
-                                       get_block_datetimes )
-
-from adaptive_scheduler.model import Request
-from adaptive_scheduler.printing import ( print_reservation,
-                                          print_compound_reservation,
-                                          print_compound_reservations,
-                                          print_schedule,
-                                          print_req_summary,
-                                          print_resource_windows )
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
+from adaptive_scheduler.pond import Block
 
 from lcogt.pond import pond_client
 pond_client.configure_service('localhost', 12345)
@@ -44,43 +42,11 @@ pond_client.configure_service('localhost', 12345)
 from datetime import datetime
 
 
-def make_pond_block(block, semester_start):
-    dt_start, dt_end = get_block_datetimes(block, semester_start)
-
-    pond_block = pond_client.ScheduledBlock(
-                                             start       = dt_start,
-                                             end         = dt_end,
-                                             site        = block.resource,
-                                             observatory = block.resource,
-                                             telescope   = block.resource,
-                                             priority    = block.priority
-                                            )
-    return pond_block
-
-
-def make_pond_schedule(schedule, semester_start):
-
-    pond_blocks = []
-
-    for resource_reservations in schedule.values():
-        for res in resource_reservations:
-            pond_block = make_pond_block(res, semester_start)
-            pond_blocks.append(pond_block)
-
-    return pond_blocks
-
-
-def send_blocks_to_pond(pond_blocks):
-    for block in pond_blocks:
-        block.save()
-
-    return
-
-
 # Configuration files
 tel_file      = 'telescopes.dat'
 target_file   = 'targets.dat'
 proposal_file = 'proposals.dat'
+molecule_file = 'molecules.dat'
 request_file  = 'requests.dat'
 
 # TODO: Replace with config file (from laptop)
@@ -91,14 +57,16 @@ semester_end   = datetime(2011, 11, 8, 0, 0, 0)
 tels              = build_telescopes(tel_file)
 targets           = build_targets(target_file)
 proposals         = build_proposals(proposal_file)
+molecules         = build_molecules(molecule_file)
 
+# Combine the input information to reconstitute the actual compound requests
 compound_requests = build_compound_requests(request_file, targets, tels, proposals,
-                                            semester_start, semester_end)
+                                            molecules, semester_start, semester_end)
 
 # Construct visibility objects for each telescope
 visibility_from = construct_visibilities(tels, semester_start, semester_end)
 
-# Construct resource windows for the kernel
+# Translate when telescopes are available into kernel speak
 resource_windows = construct_resource_windows(visibility_from, semester_start)
 
 # For info, print out the details of the resource windows
@@ -122,6 +90,22 @@ schedule = scheduler.schedule_all()
 print_schedule(schedule, semester_start, semester_end)
 
 # Construct POND blocks, and then put them into the POND
-pond_blocks = make_pond_schedule(schedule, semester_start)
-send_blocks_to_pond(pond_blocks)
+#pond_blocks = make_simple_pond_schedule(schedule, semester_start)
+#send_blocks_to_pond(pond_blocks)
 
+# Try and build a complete POND block with what we've got
+to_do = schedule['1m0a.doma.bpl'][0]
+to_do_start, to_do_end = get_reservation_datetimes(to_do, semester_start)
+block = Block(
+               location = to_do.resource,
+               start    = to_do_start,
+               end      = to_do_end,
+               group_id = 'PLACEHOLDER',
+               priority = to_do.priority
+             )
+
+block.add_proposal(to_do.compound_request.proposal)
+block.add_molecule(to_do.request.molecule)
+block.add_target(to_do.request.target)
+
+pond_block = block.send_to_pond()

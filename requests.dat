@@ -1,55 +1,15 @@
 # List of requests to schedule
 [
-
     {
-        'proposal name' : 'Scheduler Testing',
+        'proposal_name' : 'Scheduler Testing',
         'res_type'    : 'single',
         'requests'    : [
                             {
-                                'target_name' : 'deneb',
-                                'telescope'   : 'maui',
-                                'duration'    : 30,
+                                'target_name'    : 'deneb',
+                                'telescope_name' : '1m0a.doma.bpl',
+                                'molecule_name'  : 'expose_n default',
+                                'duration'       : 30,
                             },
                         ],
     },
-    {
-        'proposal name' : 'Scheduler Testing',
-        'res_type'    : 'single',
-        'requests'    : [
-                            {
-                                'target_name' : 'canopus',
-                                'telescope'   : 'maui',
-                                'duration'    : 60,
-                            },
-                        ],
-    },
-    {
-        'proposal name' : 'Scheduler Testing',
-        'res_type'    : 'single',
-        'requests'    : [
-                            {
-                                'target_name' : 'deneb',
-                                'telescope'   : 'maui',
-                                'duration'    : 120,
-                            },
-                        ],
-    },
-    {
-        'proposal name' : 'Scheduler Testing',
-        'res_type'    : 'and',
-        'requests'    : [
-                            {
-                                'target_name' : 'canopus',
-                                'telescope'   : 'maui',
-                                'duration'    : 150,
-                            },
-                            {
-                                'target_name' : 'canopus',
-                                'telescope'   : 'maui',
-                                'duration'    : 500,
-                            },
-                        ],
-    },
-
-
 ]

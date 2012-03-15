@@ -1,17 +1,17 @@
 # List of metadata (user/tag/project combinations) available for making blocks.
 [
     {
-        'proposal name'  : 'Scheduler Testing',
+        'proposal_name'  : 'Scheduler Testing',
         'user'           : 'Eric Saunders',
         'tag'            : 'admin',
-        'time remaining' : 10,               # In hours
+        'time_remaining' : 10,               # In hours
         'priority'       : 1
     },
     {
-        'proposal name'  : 'Kernel Testing',
+        'proposal_name'  : 'Kernel Testing',
         'user'           : 'Sotiria Lampoudi',
         'tag'            : 'admin',
-        'time remaining' : 5,
+        'time_remaining' : 5,
         'priority'       : 2
     },
 ]

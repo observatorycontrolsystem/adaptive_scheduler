@@ -14,7 +14,6 @@ INDENT = "    "
 
 def print_reservation(res):
     print res
-    print res.original_request
 
     return
 
