@@ -26,12 +26,12 @@ from adaptive_scheduler.utils           import ( datetime_to_normalised_epoch,
                                                  epoch_to_datetime,
                                                  get_reservation_datetimes )
 from adaptive_scheduler.model           import Request
-from adaptive_scheduler.printing        import ( print_reservation,
-                                                 print_compound_reservation,
-                                                 print_compound_reservations,
-                                                 print_schedule,
-                                                 print_req_summary,
-                                                 print_resource_windows )
+#from adaptive_scheduler.printing        import ( print_reservation,
+#                                                 print_compound_reservation,
+#                                                 print_compound_reservations,
+#                                                 print_schedule,
+#                                                 print_req_summary,
+#                                                 print_resource_windows )
 
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
 from adaptive_scheduler.pond import Block
