@@ -9,6 +9,10 @@
                                 'telescope_name' : '1m0a.doma.bpl',
                                 'molecule_name'  : 'expose_n default',
                                 'duration'       : 30,
+                                'window'         : [
+                                                    '2011-11-02 00:00:00',
+                                                    '2011-11-03 00:00:00'
+                                                   ]
                             },
                         ],
     },

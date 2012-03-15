@@ -108,14 +108,25 @@ class Request(object):
         target    - a Target object (pointing information)
         telescope - a Telescope object (lat/long information)
         molecule  - a Molecule object (detailed observing information)
-        duration - exposure time of each observation. TODO: Clarify what this means.
+        windows   - a list of start/end datetimes, representing when this observation
+                    is eligible to be performed. For user observations with no
+                    time constraints, this should be the planning window of the
+                    scheduler (e.g. the semester bounds).
+        duration  - exposure time of each observation. TODO: Clarify what this means.
     '''
 
-    def __init__(self, target, telescope, molecule, duration):
+    def __init__(self, target, telescope, molecule, windows, duration):
         self.target    = target
         self.telescope = telescope
         self.molecule  = molecule
         self.duration  = duration
+
+        if len(windows) % 2 > 0:
+            error_msg = ("You must provide a start and end for each window "
+                         "(you provided an odd number of window edges)")
+            raise InvalidRequestError(error_msg)
+
+        self.windows = windows
 
 
 
@@ -127,26 +138,14 @@ class CompoundRequest(object):
         res_type - the type of request (single, and, oneof)
         proposal - proposal meta information associated with this request
         requests - a list of Request objects. There must be at least one.
-        windows  - a list of start/end datetimes, representing when this observation
-                   is eligible to be performed. For user observations with no
-                   time constraints, this should be the planning window of the
-                   scheduler (e.g. the semester bounds).
     '''
 
-    # TODO: Add sanity checking, e.g. requiring windows for AND blocks, etc.
     valid_types = CompoundReservation.valid_types
 
-    def __init__(self, res_type, proposal, requests, windows):
+    def __init__(self, res_type, proposal, requests):
         self.res_type  = self._validate_type(res_type)
         self.proposal  = proposal
         self.requests  = requests
-
-        if len(windows) % 2 > 0:
-            error_msg = ("You must provide a start and end for each window "
-                         "(you provided an odd number of window edges)")
-            raise InvalidRequestError(error_msg)
-
-        self.windows = windows
 
 
     def _validate_type(self, provided_type):

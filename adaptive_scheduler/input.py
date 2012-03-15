@@ -11,6 +11,7 @@ November 2011
 
 from adaptive_scheduler.model    import ( Telescope, Target, Proposal, Molecule,
                                           Request, CompoundRequest )
+from adaptive_scheduler.utils    import iso_string_to_datetime
 import ast
 
 
@@ -61,7 +62,8 @@ def build_molecules(filename):
     return molecules
 
 
-def build_requests(req_list, targets, telescopes, molecules):
+def build_requests(req_list, targets, telescopes, molecules, semester_start,
+                   semester_end):
     '''
         This one is a little different from the other build methods, because
         Requests are always intended to be sub-components of a CompoundRequest
@@ -70,11 +72,23 @@ def build_requests(req_list, targets, telescopes, molecules):
 
     requests = []
 
+
     for d in req_list:
+
+        dt_windows = []
+        if 'window' in d:
+            for str_date in d['window']:
+                dt_windows.append(iso_string_to_datetime(str_date))
+
+        # If no windows are provided, default to the semester bounds
+        else:
+            dt_windows = [semester_start, semester_end]
+
         req = Request(
                        target    = targets[ d['target_name'] ],
                        telescope = telescopes[ d['telescope_name'] ],
                        molecule  = molecules[ d['molecule_name'] ],
+                       windows   = dt_windows,
                        duration  = d['duration'],
                      )
 
@@ -89,13 +103,13 @@ def build_requests(req_list, targets, telescopes, molecules):
 
 def build_compound_requests(filename, targets, telescopes, proposals, molecules,
                             semester_start, semester_end):
-    # TODO: Currently we assume all windows are the width of the semester. Allow
-    # user-specified windows.
+
     compound_requests = []
     request_dicts = file_to_dicts(filename)
 
     for d in request_dicts:
-        requests = build_requests(d['requests'], targets, telescopes, molecules)
+        requests = build_requests(d['requests'], targets, telescopes, molecules,
+                                  semester_start, semester_end)
 
 
         compound_requests.append(
@@ -103,7 +117,6 @@ def build_compound_requests(filename, targets, telescopes, proposals, molecules,
                                           res_type  = d['res_type'],
                                           proposal  = proposals[ d['proposal_name'] ],
                                           requests  = requests,
-                                          windows   = [semester_start, semester_end],
                                         )
                                 )
 

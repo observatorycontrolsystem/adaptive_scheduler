@@ -13,25 +13,15 @@ from __future__ import division
 from adaptive_scheduler.input           import ( build_telescopes, build_targets,
                                                  build_proposals, build_molecules,
                                                  build_compound_requests )
-from adaptive_scheduler.kernel_mappings import ( target_to_rise_set_target,
-                                                 telescope_to_rise_set_telescope,
-                                                 rise_set_to_kernel_intervals,
-                                                 make_dark_up_kernel_interval,
-                                                 dt_to_kernel_intervals,
-                                                 construct_compound_reservation,
-                                                 make_compound_reservations,
+from adaptive_scheduler.kernel_mappings import ( make_compound_reservations,
                                                  construct_resource_windows,
                                                  construct_visibilities)
 from adaptive_scheduler.utils           import ( datetime_to_normalised_epoch,
                                                  epoch_to_datetime,
                                                  get_reservation_datetimes )
-from adaptive_scheduler.model           import Request
-#from adaptive_scheduler.printing        import ( print_reservation,
-#                                                 print_compound_reservation,
-#                                                 print_compound_reservations,
-#                                                 print_schedule,
-#                                                 print_req_summary,
-#                                                 print_resource_windows )
+from adaptive_scheduler.printing        import ( print_resource_windows,
+                                                 print_compound_reservations,
+                                                 print_schedule)
 
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
 from adaptive_scheduler.pond import Block
@@ -54,10 +44,10 @@ semester_start = datetime(2011, 11, 1, 0, 0, 0)
 semester_end   = datetime(2011, 11, 8, 0, 0, 0)
 
 # Create telescopes, targets, proposals and requests from input files
-tels              = build_telescopes(tel_file)
-targets           = build_targets(target_file)
-proposals         = build_proposals(proposal_file)
-molecules         = build_molecules(molecule_file)
+tels      = build_telescopes(tel_file)
+targets   = build_targets(target_file)
+proposals = build_proposals(proposal_file)
+molecules = build_molecules(molecule_file)
 
 # Combine the input information to reconstitute the actual compound requests
 compound_requests = build_compound_requests(request_file, targets, tels, proposals,
