@@ -34,10 +34,10 @@ class TestPond(object):
     def test_scheduled_block_lists_missing_fields(self):
 
         scheduled_block = Block(
-                                  location = '0m4a.aqwb.coj',
-                                  start    = datetime(2012, 1, 1, 0, 0, 0),
-                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                  group_id = 1
+                                 location = '0m4a.aqwb.coj',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 1
                                 )
 
         scheduled_block.add_proposal(self.proposal)
@@ -55,10 +55,10 @@ class TestPond(object):
     def test_raises_error_on_incomplete_blocks(self):
 
         scheduled_block = Block(
-                                  location = '0m4a.aqwb.coj',
-                                  start    = datetime(2012, 1, 1, 0, 0, 0),
-                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                  group_id = 1
+                                 location = '0m4a.aqwb.coj',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 1
                                 )
 
         scheduled_block.create_pond_block()
@@ -68,10 +68,10 @@ class TestPond(object):
 
 
         scheduled_block = Block(
-                                  location = '0m4a.aqwb.coj',
-                                  start    = datetime(2012, 1, 1, 0, 0, 0),
-                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                  group_id = 'related things'
+                                 location = '0m4a.aqwb.coj',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 'related things'
                                 )
 
         scheduled_block.add_proposal(
@@ -109,10 +109,10 @@ class TestPond(object):
     def test_split_location_extracts_components(self):
 
         scheduled_block = Block(
-                                  location = '0m4a.aqwb.coj',
-                                  start    = datetime(2012, 1, 1, 0, 0, 0),
-                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                  group_id = 'related things'
+                                 location = '0m4a.aqwb.coj',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 'related things'
                                 )
 
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
@@ -122,10 +122,10 @@ class TestPond(object):
     def test_split_location_duplicates_components_if_it_cant_split(self):
 
         scheduled_block = Block(
-                                  location = 'Maui',
-                                  start    = datetime(2012, 1, 1, 0, 0, 0),
-                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                  group_id = 'related things'
+                                 location = 'Maui',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 'related things'
                                 )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))
