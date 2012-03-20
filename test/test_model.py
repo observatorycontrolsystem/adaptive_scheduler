@@ -44,32 +44,23 @@ class TestRequest(object):
                                   filter          = 'BSSL-UX-020'
                                 )
 
-        self.duration = 60
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
         self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
+        self.windows = [self.semester_start, self.semester_end]
+
+        self.duration = 60
 
 
     @raises(InvalidRequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
-        windows = [self.semester_start, self.semester_end]
-        request = Request(self.target, self.telescope, self.molecule, self.duration)
-        compound_request = CompoundRequest(junk_res_type, self.proposal,
-                                           [request], windows)
+        request = Request(self.target, self.telescope, self.molecule, self.windows,
+                          self.duration)
+        compound_request = CompoundRequest(junk_res_type, self.proposal, [request])
 
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
-        windows = [self.semester_start, self.semester_end]
-        request = Request(self.target, self.telescope, self.molecule, self.duration)
-        compound_request = CompoundRequest(valid_res_type, self.proposal,
-                                           [request], windows)
-
-
-    @raises(InvalidRequestError)
-    def test_odd_number_of_window_bounds_raises_exception(self):
-        res_type = 'and'
-        windows = [self.semester_start, self.semester_end, self.semester_end]
-        request = Request(self.target, self.telescope, self.molecule, self.duration)
-        compound_request = CompoundRequest(res_type, self.proposal,
-                                           [request], windows)
+        request = Request(self.target, self.telescope, self.molecule, self.windows,
+                          self.duration)
+        compound_request = CompoundRequest(valid_res_type, self.proposal, [request])

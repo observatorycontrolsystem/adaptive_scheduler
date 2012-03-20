@@ -85,7 +85,7 @@ def dt_to_kernel_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def make_dark_up_kernel_interval(req, visibility_from):
+def make_dark_up_kernel_intervals(req, visibility_from):
     '''Find the set of intervals where the target of the provided request it is both
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''

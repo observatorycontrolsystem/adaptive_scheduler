@@ -33,8 +33,9 @@ def print_compound_reservation(compound_res):
 
 
 def print_request(req):
+    target_name = getattr(req.target, 'name', 'no name')
     print "REQUEST: target %s, observed from %s" % (
-                                                      req.target.name,
+                                                      target_name,
                                                       req.telescope.name,
                                                     )
 
