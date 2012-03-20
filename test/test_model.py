@@ -46,7 +46,7 @@ class TestRequest(object):
 
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
         self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
-        self.windows = [self.semester_start, self.semester_end]
+        self.windows = [(self.semester_start, self.semester_end)]
 
         self.duration = 60
 
