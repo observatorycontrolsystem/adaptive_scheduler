@@ -72,8 +72,8 @@ def rise_set_to_kernel_intervals(intervals):
     return Intervals(timepoints)
 
 
-def dt_to_kernel_intervals(dt_intervals, dt_earliest):
-    '''Convert datetime Intervals into kernel Intervals.'''
+def normalise_dt_intervals(dt_intervals, dt_earliest):
+    '''Convert datetime Intervals into normalised kernel Intervals.'''
 
     epoch_earliest = datetime_to_epoch(dt_earliest)
 
@@ -123,7 +123,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     reservations = []
     for dark_up_intervals in dt_intervals_list:
         # Convert timepoints into normalised epoch time
-        epoch_intervals = dt_to_kernel_intervals(dark_up_intervals, sem_start)
+        epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
 
         # Construct Reservations
         # Priority comes from the parent CompoundRequest
@@ -160,7 +160,7 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
         # Find the dark/up intervals for each Request in this CompoundRequest
         dark_ups = []
         for req in c_req.requests:
-            dark_ups.append( make_dark_up_kernel_interval(req, visibility_from) )
+            dark_ups.append( make_dark_up_kernel_intervals(req, visibility_from) )
 
         # Make and store the CompoundReservation
         compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)
@@ -177,7 +177,7 @@ def construct_resource_windows(visibility_from, semester_start):
     for tel_name, visibility in visibility_from.iteritems():
         rs_dark_intervals = visibility.get_dark_intervals()
         dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
-        ep_dark_intervals = dt_to_kernel_intervals(dark_intervals, semester_start)
+        ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
         resource_windows[tel_name] = ep_dark_intervals
 
     return resource_windows
