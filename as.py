@@ -17,14 +17,13 @@ from adaptive_scheduler.kernel_mappings import ( make_compound_reservations,
                                                  construct_resource_windows,
                                                  construct_visibilities)
 from adaptive_scheduler.utils           import ( datetime_to_normalised_epoch,
-                                                 epoch_to_datetime,
-                                                 get_reservation_datetimes )
+                                                 epoch_to_datetime )
 from adaptive_scheduler.printing        import ( print_resource_windows,
                                                  print_compound_reservations,
                                                  print_schedule)
 
 from adaptive_scheduler.kernel.fullscheduler_v1 import FullScheduler_v1 as FullScheduler
-from adaptive_scheduler.pond import Block
+from adaptive_scheduler.pond import Block, send_schedule_to_pond
 
 from lcogt.pond import pond_client
 pond_client.configure_service('localhost', 12345)
@@ -79,23 +78,6 @@ schedule = scheduler.schedule_all()
 # Summarise the schedule in normalised epoch (kernel) units of time
 print_schedule(schedule, semester_start, semester_end)
 
-# Construct POND blocks, and then put them into the POND
-#pond_blocks = make_simple_pond_schedule(schedule, semester_start)
-#send_blocks_to_pond(pond_blocks)
+# Convert the kernel schedule into POND blocks, and send them to the POND
+send_schedule_to_pond(schedule, semester_start)
 
-# Try and build a complete POND block with what we've got
-to_do = schedule['1m0a.doma.bpl'][0]
-to_do_start, to_do_end = get_reservation_datetimes(to_do, semester_start)
-block = Block(
-               location = to_do.resource,
-               start    = to_do_start,
-               end      = to_do_end,
-               group_id = 'PLACEHOLDER',
-               priority = to_do.priority
-             )
-
-block.add_proposal(to_do.compound_request.proposal)
-block.add_molecule(to_do.request.molecule)
-block.add_target(to_do.request.target)
-
-pond_block = block.send_to_pond()

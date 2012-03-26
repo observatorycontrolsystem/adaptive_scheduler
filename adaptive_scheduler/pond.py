@@ -27,6 +27,7 @@ February 2012
 '''
 
 from adaptive_scheduler.model import Proposal, Target
+from adaptive_scheduler.utils import get_reservation_datetimes
 from lcogt.pond import pond_client
 
 
@@ -210,14 +211,28 @@ def make_simple_pond_schedule(schedule, semester_start):
     return pond_blocks
 
 
-def send_blocks_to_pond(pond_blocks):
-    '''Commit a set of POND blocks to the POND endpoint.'''
+def send_schedule_to_pond(schedule, semester_start):
+    '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
-    for block in pond_blocks:
-        block.save()
+    for resource_name in schedule:
+        for res in schedule[resource_name]:
+
+            res_start, res_end = get_reservation_datetimes(res, semester_start)
+            block = Block(
+                           location = res.resource,
+                           start    = res_start,
+                           end      = res_end,
+                           group_id = 'PLACEHOLDER',
+                           priority = res.priority
+                         )
+
+            block.add_proposal(res.compound_request.proposal)
+            block.add_molecule(res.request.molecule)
+            block.add_target(res.request.target)
+
+            pond_block = block.send_to_pond()
 
     return
-
 
 
 class IncompleteBlockError(Exception):
