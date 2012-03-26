@@ -99,32 +99,44 @@ class Molecule(DataContainer):
 
 
 
-class Request(object):
+class Request(EqualityMixin):
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
         semantics ("do this and this and this", "do this or this").
 
         target    - a Target object (pointing information)
-        telescope - a Telescope object (lat/long information)
         molecule  - a Molecule object (detailed observing information)
         windows   - a list of start/end datetimes, representing when this observation
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
         duration  - exposure time of each observation. TODO: Clarify what this means.
+
+        # Optional arguments (normally one of these will be specified):
+        telescope_name - the name of a Telescope, or class of Telescope
+        telescope      - a Telescope object (lat/long information)
     '''
 
-    def __init__(self, target, telescope, molecule, windows, duration):
-        self.target    = target
-        self.telescope = telescope
-        self.molecule  = molecule
-        self.duration  = duration
-        self.windows   = windows
+    def __init__(self, target, molecule, windows, duration,
+                 telescope_name=None, telescope=None):
+
+        self.target         = target
+        self.molecule       = molecule
+        self.windows        = windows
+        self.duration       = duration
+
+        if telescope_name:
+            self.telescope_name = telescope_name
+
+        # This is expected to be set later, but is provided as a convenience
+        if telescope:
+            self.telescope      = telescope
+            self.telescope_name = telescope.name
 
 
 
-class CompoundRequest(object):
+class CompoundRequest(EqualityMixin):
     '''
         A user-level request for an observation. This will be translated into the
         Reservation/CompoundReservation of the scheduling kernel.

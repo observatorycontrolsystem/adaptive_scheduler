@@ -15,7 +15,7 @@ from adaptive_scheduler.utils    import iso_string_to_datetime, EqualityMixin
 import ast
 
 
-class RequestProcessor(EqualityMixin):
+class RequestProcessor(object):
 
     def __init__(self):
         pass
@@ -23,7 +23,8 @@ class RequestProcessor(EqualityMixin):
 
     def set_telescope_class_mappings(self, telescopes):
         '''Given a set of telescopes, determine the mappings between classes and
-           telescope instances, and store them.'''
+           telescope instances, and store them. This makes it easy to find all
+           telescopes of a particular class.'''
 
         tel_classes = {}
 
@@ -38,18 +39,46 @@ class RequestProcessor(EqualityMixin):
             tel_classes[cur_tel.tel_class].append(cur_tel)
 
         self.telescope_classes = tel_classes
+        self.telescopes = telescopes
 
         return
 
 
     def expand_tel_class(self, compound_request):
         ''' Parse the provided CompoundRequest. If the provided telescope is actually
-            a telescope class, expand the Request to an OR across all telescopes of
-            that class. '''
+            a telescope class, expand the CompoundRequest to an OR across all
+            telescopes of that class. '''
 
-        return compound_request
+        processed_requests = []
+        # Go through each Request in turn...
+        for request in compound_request.requests:
 
+            # If the requested telescope is a class we know about...
+            if request.telescope_name in self.telescope_classes:
+                # ...then create a new request for each telescope in the class
+                for telescope in self.telescope_classes[request.telescope_name]:
 
+                    # Assume copying isn't needed, since originals won't be modified
+                    new_request = Request(
+                                           target    = request.target,
+                                           telescope = telescope,
+                                           molecule  = request.molecule,
+                                           windows   = request.windows,
+                                           duration  = request.duration
+                                         )
+
+                    processed_requests.append(new_request)
+
+            # Otherwise...
+            else:
+                #...resolve the name to a telescope instance, then store
+                request.telescope = self.telescopes[request.telescope_name]
+                processed_requests.append(request)
+
+        # TODO: Store pre-processed requests? Need careful copying!
+        compound_request.requests = processed_requests
+
+        return
 
 
 def file_to_dicts(filename):
@@ -105,8 +134,11 @@ def build_requests(req_list, targets, telescopes, molecules, semester_start,
         This one is a little different from the other build methods, because
         Requests are always intended to be sub-components of a CompoundRequest
         object (even if there is only one Request (type single)).
+
     '''
 
+    #TODO: These are not complete Request objects, because telescope hasn't
+    #      yet been resolved. Clean this up with the RequestProcessor.
     requests = []
 
 
@@ -125,11 +157,11 @@ def build_requests(req_list, targets, telescopes, molecules, semester_start,
             dt_windows = [semester_start, semester_end]
 
         req = Request(
-                       target    = targets[ d['target_name'] ],
-                       telescope = telescopes[ d['telescope_name'] ],
-                       molecule  = molecules[ d['molecule_name'] ],
-                       windows   = dt_windows,
-                       duration  = d['duration'],
+                       target         = targets[ d['target_name'] ],
+                       molecule       = molecules[ d['molecule_name'] ],
+                       windows        = dt_windows,
+                       duration       = d['duration'],
+                       telescope_name = d['telescope_name'],
                      )
 
         # Store the requested duration directly in the molecule
@@ -152,10 +184,10 @@ def build_compound_requests(filename, targets, telescopes, proposals, molecules,
                                   semester_start, semester_end)
 
         compound_requests.append(
-                                 CompoundRequest(
-                                          res_type  = d['res_type'],
-                                          proposal  = proposals[ d['proposal_name'] ],
-                                          requests  = requests,
+                                  CompoundRequest(
+                                          res_type = d['res_type'],
+                                          proposal = proposals[ d['proposal_name'] ],
+                                          requests = requests,
                                         )
                                 )
 

@@ -3,7 +3,7 @@ from __future__ import division
 
 from nose.tools import assert_equal
 
-from adaptive_scheduler.model import Telescope
+from adaptive_scheduler.model import Telescope, Request, CompoundRequest
 from adaptive_scheduler.input import RequestProcessor
 
 
@@ -11,6 +11,7 @@ from adaptive_scheduler.input import RequestProcessor
 class TestRequestProcessor(object):
 
     def setup(self):
+
         self.telescopes = {
                             'maui' : Telescope(
                                                 name      = 'maui',
@@ -32,11 +33,11 @@ class TestRequestProcessor(object):
                                               )
                             }
 
+        self.rp = RequestProcessor()
+        self.rp.set_telescope_class_mappings(self.telescopes)
+
 
     def test_can_construct_class_mappings(self):
-
-        rp = RequestProcessor()
-        rp.set_telescope_class_mappings(self.telescopes)
 
         expected = {
                      '2m0' : [
@@ -63,4 +64,73 @@ class TestRequestProcessor(object):
                              ]
                     }
 
-        assert_equal(rp.telescope_classes, expected)
+        assert_equal(self.rp.telescope_classes, expected)
+
+
+    def test_doesnt_expand_tel_names(self):
+        junk = 'junk'
+        tel_name = '1m0a.doma.bpl'
+        requests = [
+                     Request(
+                              target         = junk,
+                              telescope_name = tel_name,
+                              molecule       = junk,
+                              windows        = junk,
+                              duration       = junk
+                            )
+                   ]
+        compound_request = CompoundRequest(res_type='single',
+                                           proposal=junk,
+                                           requests=requests)
+
+        expected = CompoundRequest(
+               res_type='single',
+               proposal=junk,
+               requests= [
+                           Request(
+                                    target    = junk,
+                                    telescope = self.telescopes[tel_name],
+                                    molecule  = junk,
+                                    windows   = junk,
+                                    duration  = junk
+                                  )
+                         ]
+               )
+
+        self.rp.expand_tel_class(compound_request)
+
+        assert_equal(compound_request, expected)
+
+
+    def test_can_expand_single_req_to_one_tel(self):
+        junk = 'junk'
+        requests = [
+                     Request(
+                              target    = junk,
+                              telescope_name = '1m0',
+                              molecule  = junk,
+                              windows   = junk,
+                              duration  = junk
+                            )
+                   ]
+        compound_request = CompoundRequest(res_type='single',
+                                           proposal=junk,
+                                           requests=requests)
+
+        expected = CompoundRequest(
+               res_type='single',
+               proposal=junk,
+               requests= [
+                           Request(
+                                    target    = junk,
+                                    telescope = self.telescopes['1m0a.doma.bpl'],
+                                    molecule  = junk,
+                                    windows   = junk,
+                                    duration  = junk
+                                  )
+                         ]
+               )
+
+        self.rp.expand_tel_class(compound_request)
+
+        assert_equal(compound_request, expected)
