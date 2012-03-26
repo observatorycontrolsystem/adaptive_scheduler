@@ -48,6 +48,9 @@ targets   = build_targets(target_file)
 proposals = build_proposals(proposal_file)
 molecules = build_molecules(molecule_file)
 
+# Configure a preprocessor to handle telescope classes in requests
+
+
 # Combine the input information to reconstitute the actual compound requests
 compound_requests = build_compound_requests(request_file, targets, tels, proposals,
                                             molecules, semester_start, semester_end)

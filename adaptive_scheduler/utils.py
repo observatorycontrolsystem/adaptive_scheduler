@@ -10,6 +10,18 @@ March 2012
 import calendar
 from datetime import datetime
 
+class EqualityMixin(object):
+    '''Inherit from this class if you want your object to have simple equality
+       properties based on common attributes (this is what you usually want).'''
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
 
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to

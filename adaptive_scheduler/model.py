@@ -11,6 +11,7 @@ November 2011
 # Required for true (non-integer) division
 from __future__ import division
 
+from adaptive_scheduler.utils import EqualityMixin
 from adaptive_scheduler.exceptions import InvalidRequestError
 from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 
@@ -18,14 +19,13 @@ from rise_set.sky_coordinates import RightAscension, Declination
 
 
 
-class DataContainer(object):
+class DataContainer(EqualityMixin):
     def __init__(self, *initial_data, **kwargs):
         for dictionary in initial_data:
             for key in dictionary:
                 setattr(self, key, dictionary[key])
         for key in kwargs:
             setattr(self, key, kwargs[key])
-
 
 
 class Target(DataContainer):

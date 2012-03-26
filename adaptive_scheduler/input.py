@@ -11,8 +11,45 @@ November 2011
 
 from adaptive_scheduler.model    import ( Telescope, Target, Proposal, Molecule,
                                           Request, CompoundRequest )
-from adaptive_scheduler.utils    import iso_string_to_datetime
+from adaptive_scheduler.utils    import iso_string_to_datetime, EqualityMixin
 import ast
+
+
+class RequestProcessor(EqualityMixin):
+
+    def __init__(self):
+        pass
+
+
+    def set_telescope_class_mappings(self, telescopes):
+        '''Given a set of telescopes, determine the mappings between classes and
+           telescope instances, and store them.'''
+
+        tel_classes = {}
+
+        for tel_name, cur_tel in telescopes.items():
+
+            # If we've not seen this class of telescope before...
+            if cur_tel.tel_class not in tel_classes:
+                # ...create a new entry
+                tel_classes[cur_tel.tel_class] = []
+
+            # ...append this telescope to the appropriate class
+            tel_classes[cur_tel.tel_class].append(cur_tel)
+
+        self.telescope_classes = tel_classes
+
+        return
+
+
+    def expand_tel_class(self, compound_request):
+        ''' Parse the provided CompoundRequest. If the provided telescope is actually
+            a telescope class, expand the Request to an OR across all telescopes of
+            that class. '''
+
+        return compound_request
+
+
 
 
 def file_to_dicts(filename):
