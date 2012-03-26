@@ -50,11 +50,16 @@ class RequestProcessor(object):
             telescopes of that class. '''
 
         processed_requests = []
+
+        # Track the number of requests we expand
+        n_expanded = 0
+
         # Go through each Request in turn...
         for request in compound_request.requests:
 
             # If the requested telescope is a class we know about...
             if request.telescope_name in self.telescope_classes:
+
                 # ...then create a new request for each telescope in the class
                 for telescope in self.telescope_classes[request.telescope_name]:
 
@@ -69,11 +74,21 @@ class RequestProcessor(object):
 
                     processed_requests.append(new_request)
 
+                    # Note that we just created a new Request
+                    n_expanded += 1
+
             # Otherwise...
             else:
                 #...resolve the name to a telescope instance, then store
                 request.telescope = self.telescopes[request.telescope_name]
                 processed_requests.append(request)
+
+        # TODO: Handle AND etc. nesting intelligently
+        # TODO: Drive this functionality from unit tests
+        # If we expanded more than one request...
+        if n_expanded >= 2:
+            # ...then this must be a oneof now
+            compound_request.res_type = 'oneof'
 
         # TODO: Store pre-processed requests? Need careful copying!
         compound_request.requests = processed_requests
