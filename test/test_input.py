@@ -154,7 +154,7 @@ class TestRequestProcessor(object):
                                            requests=requests)
 
         expected = CompoundRequest(
-               res_type='oneof',
+               res_type='oneof',    # Note that the res_type should change
                proposal=junk,
                requests= [
                            Request(

@@ -46,7 +46,7 @@ class RequestProcessor(object):
 
     def expand_tel_class(self, compound_request):
         ''' Parse the provided CompoundRequest. If the provided telescope is actually
-            a telescope class, expand the CompoundRequest to an OR across all
+            a telescope class, expand the CompoundRequest to a ONEOF (OR) across all
             telescopes of that class. '''
 
         processed_requests = []
