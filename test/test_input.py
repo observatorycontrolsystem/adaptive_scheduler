@@ -136,8 +136,6 @@ class TestRequestProcessor(object):
         assert_equal(compound_request, expected)
 
 
-
-
     def test_can_expand_single_req_to_two_tels(self):
         junk = 'junk'
         requests = [
@@ -177,3 +175,62 @@ class TestRequestProcessor(object):
         self.rp.expand_tel_class(compound_request)
 
         assert_equal(compound_request, expected)
+
+
+    def test_expands_tel_class_plus_oneof_to_three_reqs(self):
+        junk = 'junk'
+        requests = [
+                     Request(
+                              target    = junk,
+                              telescope_name = '2m0',
+                              molecule  = junk,
+                              windows   = junk,
+                              duration  = junk
+                            ),
+                     Request(
+                              target    = junk,
+                              telescope_name = '1m0a.doma.bpl',
+                              molecule  = junk,
+                              windows   = junk,
+                              duration  = junk
+                            )
+                   ]
+
+
+        compound_request = CompoundRequest(res_type='oneof',
+                                           proposal=junk,
+                                           requests=requests)
+
+
+        expected = CompoundRequest(
+               res_type='oneof',
+               proposal=junk,
+               requests= [
+                           Request(
+                                    target    = junk,
+                                    telescope = self.telescopes['maui'],
+                                    molecule  = junk,
+                                    windows   = junk,
+                                    duration  = junk
+                                  ),
+                           Request(
+                                    target    = junk,
+                                    telescope = self.telescopes['siding spring'],
+                                    molecule  = junk,
+                                    windows   = junk,
+                                    duration  = junk
+                                  ),
+                           Request(
+                                    target    = junk,
+                                    telescope = self.telescopes['1m0a.doma.bpl'],
+                                    molecule  = junk,
+                                    windows   = junk,
+                                    duration  = junk
+                                  )
+                         ]
+               )
+
+        self.rp.expand_tel_class(compound_request)
+
+        assert_equal(compound_request, expected)
+

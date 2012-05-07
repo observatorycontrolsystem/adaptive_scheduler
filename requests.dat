@@ -6,7 +6,8 @@
         'requests'    : [
                             {
                                 'target_name'    : 'deneb',
-                                'telescope_name' : '1m0a.doma.bpl',
+                                #'telescope_name' : '1m0a.doma.bpl',
+                                'telescope_name' : '1m0',
                                 'molecule_name'  : 'expose_n default',
                                 'duration'       : 30,
                                 'window'         : [
