@@ -105,10 +105,21 @@ class FullScheduler_v2(object):
                     # also remove the constraint, since it's satisfied
                     constraints_to_remove.append(constraint)
                 elif len(intersection) == 1:
-                    # we only scheduled one, so just remove the constraint
+                    print 'got here'
+                    # we only scheduled one, so remove the constraint.
+                    # also remove the remaining res.'s on this constraint
+                    # from the unschedule_reservations list
+                    for r in constraint:
+                        if r == intersection[0]:
+                            pass
+                        else:
+                            self.unscheduled_reservation_list.remove(r)
                     constraints_to_remove.append(constraint)
             for constraint in constraints_to_remove:
-                self.oneof_constraints.remove(constraint)
+                try:
+                    self.oneof_constraints.remove(constraint)
+                except ValueError:
+                    pass
             # commit the reservations to the schedule
             for r in scheduled_reservations:
                 self.commit_reservation_to_schedule(r)
@@ -208,6 +219,17 @@ class FullScheduler_v2(object):
         # Not bothering with this now since there is no pass following 
         # this that could benefit from this information. 
         
+
+    def enforce_oneof_constraints(self):
+        for c in self.oneof_constraints:
+            counter = 0
+            size    = len(c)
+            for r in c:
+                if r.scheduled:
+                    counter += 1
+                if counter > 1:
+                    r.uncommit_reservation_from_schedule(r)
+
 
     def enforce_and_constraints(self):
         for c in self.and_constraints:

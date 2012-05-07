@@ -190,3 +190,25 @@ class TestFullScheduler_v2(object):
 #         print self.r4.get_ID()
 #         print self.r6.get_ID()
 #         print schedule_dict
+
+
+    def test_schedule_5_7_2012(self):
+        s1 = Intervals([Timepoint(93710, 'start'), 
+                        Timepoint(114484, 'end'),
+                        Timepoint(180058, 'start'), 
+                        Timepoint(200648, 'end')])
+        r1 = Reservation_v2(1, 30, 'foo', s1)
+        s2 = copy.copy(s1)
+        r2 = Reservation_v2(1, 30, 'goo', s2)
+
+        cr = CompoundReservation_v2([r1,r2], 'oneof')
+        gpw = {}
+        gpw['foo'] = Intervals([Timepoint(90000, 'start'), 
+                                Timepoint(201000, 'end')])
+        gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
+                                Timepoint(201000, 'end')])
+        print 'tricky'
+        fs = FullScheduler_v2([cr], gpw, [])
+        schedule = fs.schedule_all()
+        print schedule
+        print 'end tricky'

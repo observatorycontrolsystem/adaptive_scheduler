@@ -309,7 +309,8 @@ class IntervalsUtility(object):
 
 
     def intervals_to_retval(self, intervals, retval):
-        # format intervals object as: [[start, end, retval]]
+        ''' given intervals object, returns list of 
+        [start, end, retval] entries '''
         retlist          = [] 
         current_interval = []
         for tp in intervals.timepoints:
@@ -322,6 +323,10 @@ class IntervalsUtility(object):
 
 
     def get_coverage_binary(self, intervals_base, intervals_list):
+        ''' undefined for intervals not in intervals_base, 
+        returns 1 if the interval occurs in intervals_list
+        returns 0 otherwise. 
+        output is formatted by intervals_to_retval() '''
         empty = intervals_base
         for i in intervals_list:
             empty = empty.subtract(i)
@@ -332,6 +337,49 @@ class IntervalsUtility(object):
         
 
     def get_coverage_count(self, intervals_base, intervals_list):
-        return
+        ''' undefined for intervals not in intervals_base, 
+        returns # of intervals covering in intervals_list
+        returns 0 otherwise. 
+        output is formatted by intervals_to_retval() '''
+        # algorithm: first intersect all intervals in interval_list with 
+        # intervals_base to throw out undefined spots. 
+        new_intervals_list = [i.intersect([intervals_base]) for i in intervals_list]
+        # then add up all the timepoints &  sort them
+        all_tps = []
+        for i in new_intervals_list: 
+            all_tps.extend(i.timepoints)
+        all_tps.sort()
+        # walk thru in order, incrementing when hitting a start, 
+        # decrementing when hitting an end, make a list of all the numbers
+        height_list    = []
+        last_time      = all_tps[0].time
+        last_height    = 0
+        current_height = 0
+        for tp in all_tps: 
+            if (last_time < tp.time) and (last_height != current_height):
+                # commit last_height
+                height_list.append([last_time, current_height])
+                last_height   = current_height
+            last_time = tp.time
+            if tp.type == 'start':
+                current_height += 1
+            if tp.type == 'end':
+                current_height -= 1
+        height_list.append([last_time, current_height])
+        # sanity check: current_height should be 0
+        
+        retlist = []
+        last_height = 0
+        for h in height_list:
+            if last_height  == 0: # start
+                start       = h[0]
+                last_height = h[1]
+            elif h[1] == 0: # end
+                retlist.append([start, h[0], last_height])
+            else: # middle
+                retlist.append([start, h[0], last_height])
+                start       = h[0]
+                last_height = h[1]
+        return retlist
 
 

@@ -35,6 +35,13 @@ class TestIntervals(object):
         self.i5=Intervals([t1, t6])
         self.i6=Intervals([t1, t2, t5, t6, Timepoint(2, 'start'), Timepoint(2,'end')])
         self.i8=Intervals([])
+        
+        self.ui = IntervalsUtility()
+
+
+    def test_utility_get_coverage_count(self):
+        ret = self.ui.get_coverage_count(self.i1, [self.i2])
+        assert_equal(ret, [[2,3,1]])
 
 
     def test_remove_intervals_smaller_than_1(self):
