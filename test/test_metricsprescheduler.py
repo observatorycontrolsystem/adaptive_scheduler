@@ -89,10 +89,18 @@ class TestMetricsPreSchedulerVector(object):
 #         assert_equal(rl, [[1, 2, 1]])
         
 
-    def test_get_coverage_by_resource(self):
-        rl = self.mv1.get_coverage_by_resource('foo')
+    def test_get_coverage_by_resource_binary(self):
+        rl = self.mv1.get_coverage_by_resource('foo', 'binary')
         assert_equal(rl[1], [2,5,0])
         assert_equal(rl[0], [1,2,1])
-        rl = self.mv1.get_coverage_by_resource('bar')
+        rl = self.mv1.get_coverage_by_resource('bar', 'binary')
+        assert_equal(rl, [[1, 2, 0], [2, 4, 1], [4, 5, 0]])
+
+
+    def test_get_coverage_by_resource_count(self):
+        rl = self.mv1.get_coverage_by_resource('foo', 'count')
+        assert_equal(rl[0], [1,2,3])
+        assert_equal(rl[1], [2,5,0])
+        rl = self.mv1.get_coverage_by_resource('bar', 'count')
         assert_equal(rl, [[1, 2, 0], [2, 4, 1], [4, 5, 0]])
 

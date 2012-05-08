@@ -380,6 +380,13 @@ class IntervalsUtility(object):
                 retlist.append([start, h[0], last_height])
                 start       = h[0]
                 last_height = h[1]
+        # get the empties
+        empty = intervals_base
+        for i in intervals_list:
+            empty = empty.subtract(i)
+        retlist2 = self.intervals_to_retval(empty, 0)
+        retlist.extend(retlist2)
+
         return retlist
 
 
