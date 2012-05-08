@@ -1,17 +1,25 @@
 #!/usr/bin/env python
 
 '''
-test_metricsvector.py
+test_metricsprescheduler.py
 
 Author: Sotiria Lampoudi
-February 2012
+February, May 2012
 '''
 
 from nose.tools import assert_equal
 import copy
-from adaptive_scheduler.kernel.metricsvector import *
+from adaptive_scheduler.kernel.metricsprescheduler import *
  
-class TestMetricsVector(object):
+
+class TestMetricsPreSchedulerScalar(object):
+
+    def setup(self):
+        return
+
+
+
+class TestMetricsPreSchedulerVector(object):
 
     def setup(self):
         s1 = Intervals([Timepoint(1, 'start'),
@@ -43,11 +51,11 @@ class TestMetricsVector(object):
         self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
         self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
 
-        self.mv1 = MetricsVector([self.cr1, self.cr2, self.cr3], 
+        self.mv1 = MetricsPreSchedulerVector([self.cr1, self.cr2, self.cr3], 
                                  self.gpw2, [])
-        self.mv2 = MetricsVector([self.cr1, self.cr4],
+        self.mv2 = MetricsPreSchedulerVector([self.cr1, self.cr4],
                                  self.gpw2, [])
-        self.mv3 = MetricsVector([self.cr5],
+        self.mv3 = MetricsPreSchedulerVector([self.cr5],
                                  self.gpw2, [])
 
 
