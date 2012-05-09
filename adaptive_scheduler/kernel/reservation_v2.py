@@ -38,6 +38,7 @@ class Reservation_v2(object):
         self.scheduled_by         = None
         # order is the parameter used for grouping & ordering in scheduling
         self.order                = 1
+        self.compound_reservation_parent = None
 
 
     def schedule_anywhere(self):
@@ -58,6 +59,7 @@ class Reservation_v2(object):
         self.scheduled_timepoints = [Timepoint(start, 'start'), 
         Timepoint(start+quantum, 'end')]
         self.scheduled_by       = scheduler_description
+        self.compound_reservation_parent.schedule()
 
 
     def unschedule(self):
@@ -67,6 +69,7 @@ class Reservation_v2(object):
         self.scheduled          = False
         self.scheduled_timepoints = None
         self.scheduled_by       = None
+        self.compound_reservation_parent.unschedule()
 
 
     def __str__(self):
@@ -124,6 +127,8 @@ class CompoundReservation_v2(object):
 
     def __init__(self, reservation_list, type='single'):
         self.reservation_list = reservation_list
+        for r in reservation_list:
+            r.compound_reservation_parent = self
         self.type = type
         # allowed types are:
         # single
@@ -147,6 +152,33 @@ class CompoundReservation_v2(object):
                     "individual reservation."
                     % self.size )
             print msg
+        self.scheduled = False
+
+
+    def schedule(self):
+        if self.type == 'single':
+            self.scheduled = True
+        elif self.type == 'oneof':
+            self.scheduled = True
+        elif self.type == 'and':
+            count = 0
+            for r in self.reservation_list:
+                if r.scheduled:
+                    count += 1
+            if count == self.size:
+                self.scheduled = True
+
+    
+    def unschedule(self):
+        if self.type == 'single':
+            self.scheduled = False
+        elif self.type == 'oneof':
+            self.scheduled = False
+            for r in self.reservation_list:
+                if r.scheduled:
+                    self.scheduled = True
+        elif self.type == 'and':
+            self.scheduled = False
 
 
     def issingle(self):
