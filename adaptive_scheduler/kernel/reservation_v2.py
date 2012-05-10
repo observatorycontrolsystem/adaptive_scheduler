@@ -59,7 +59,8 @@ class Reservation_v2(object):
         self.scheduled_timepoints = [Timepoint(start, 'start'), 
         Timepoint(start+quantum, 'end')]
         self.scheduled_by       = scheduler_description
-        self.compound_reservation_parent.schedule()
+        if self.compound_reservation_parent:
+            self.compound_reservation_parent.schedule()
 
 
     def unschedule(self):
@@ -69,7 +70,8 @@ class Reservation_v2(object):
         self.scheduled          = False
         self.scheduled_timepoints = None
         self.scheduled_by       = None
-        self.compound_reservation_parent.unschedule()
+        if self.compound_reservation_parent:
+            self.compound_reservation_parent.unschedule()
 
 
     def __str__(self):
@@ -127,7 +129,7 @@ class CompoundReservation_v2(object):
 
     def __init__(self, reservation_list, type='single'):
         self.reservation_list = reservation_list
-        for r in reservation_list:
+        for r in self.reservation_list:
             r.compound_reservation_parent = self
         self.type = type
         # allowed types are:

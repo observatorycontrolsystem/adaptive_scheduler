@@ -12,45 +12,40 @@ from reservation_v2 import *
 from intervals import *
 from timepoint import *
 import copy
+from metrics import Metrics
 
-
-class MetricsPostSchedulerScalar(object):
-
-    def __init__(self, compound_reservation_list,
-                 globally_possible_windows_dict,
-                 contractual_obligation_list,
-                 schedule_dict):
-        self.compound_reservation_list   = compound_reservation_list
-        self.contractual_obligation_list = contractual_obligation_list
-        # globally_possible_windows_dict is a dictionary mapping:               
-        # resource -> globally possible windows (Intervals) on that resource.   
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
-        # resource_list holds the schedulable resources.                        
-        self.resource_list = globally_possible_windows_dict.keys()
-        self.and_constraints   = []
-        self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
-        self.current_resource  = None
-        self.schedule_dict = schedule_dict
-
-
-
-class MetricsPostSchedulerVector(object):
+class MetricsPostScheduler(Metrics):
 
     def __init__(self, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
                  schedule_dict):
-        self.compound_reservation_list   = compound_reservation_list
-        self.contractual_obligation_list = contractual_obligation_list
-        # globally_possible_windows_dict is a dictionary mapping:               
-        # resource -> globally possible windows (Intervals) on that resource.   
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
-        # resource_list holds the schedulable resources.                        
-        self.resource_list = globally_possible_windows_dict.keys()
-        self.and_constraints   = []
-        self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
-        self.current_resource  = None
+        Metrics.__init__(self, compound_reservation_list,
+                 globally_possible_windows_dict,
+                 contractual_obligation_list)
         self.schedule_dict = schedule_dict
-        return
+
+
+
+class MetricsPostSchedulerScalar(MetricsPostScheduler):
+
+    def get_fraction_of_crs_scheduled(self, type=None):
+        ''' Returns the fraction of c.r.s that have been scheduled.
+        If the c.r. type is specified in the optional argument, then
+        it returns the fraction for only that type of c.r.'''
+        scheduled_count = 0
+        type_count      = 0
+        for cr in self.compound_reservation_list:
+            if type == None:
+                if cr.scheduled:
+                    scheduled_count+=1
+            elif cr.type == type:
+                type_count+=1
+                if cr.scheduled:
+                    scheduled_count+=1
+        if type == None:
+            type_count = len(self.compound_reservation_list)
+        return float(scheduled_count)/float(type_count)
+
+
+#class MetricsPostSchedulerVector(MetricsPostScheduler):

@@ -207,8 +207,23 @@ class TestFullScheduler_v2(object):
                                 Timepoint(201000, 'end')])
         gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
                                 Timepoint(201000, 'end')])
-        print 'tricky'
         fs = FullScheduler_v2([cr], gpw, [])
         schedule = fs.schedule_all()
-        print schedule
-        print 'end tricky'
+
+
+    def test_schedule_all_1(self):
+	''' this test illustrates an example in which, if we were considering 
+	alternatives with the same weight, we might have caught the 'and'
+	and achieved a greater score'''
+        d = self.fs1.schedule_all()
+
+    def test_schedule_all_2(self):
+        self.fs2.schedule_all()
+        
+        
+    def test_schedule_all_3(self):
+        self.fs3.schedule_all()
+
+
+    def test_schedule_all_4(self):
+        self.fs4.schedule_all()

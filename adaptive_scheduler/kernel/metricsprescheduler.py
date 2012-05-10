@@ -12,42 +12,10 @@ from reservation_v2 import *
 from intervals import *
 from timepoint import *
 import copy
+from metrics import *
 
+class MetricsPreSchedulerScalar(Metrics):
 
-class MetricsPreSchedulerScalar(object):
-
-    def __init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
-                 contractual_obligation_list):
-        self.compound_reservation_list   = compound_reservation_list
-        self.contractual_obligation_list = contractual_obligation_list
-        # globally_possible_windows_dict is a dictionary mapping:
-        # resource -> globally possible windows (Intervals) on that resource. 
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
-        # resource_list holds the schedulable resources.
-        self.resource_list = globally_possible_windows_dict.keys()
-        self.and_constraints   = []        
-        self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
-        self.current_resource  = None
-
-
-    def convert_compound_to_simple(self):
-        ''' From fullscheduler_v1'''
-        reservation_list = []
-        for cr in self.compound_reservation_list:
-            if cr.issingle():
-                reservation_list.append(cr.reservation_list[0])
-            elif cr.isoneof():
-                reservation_list.extend(cr.reservation_list)
-                self.oneof_constraints.append(cr.reservation_list)
-            elif cr.isand():
-                reservation_list.extend(cr.reservation_list)
-                # add the constraint to the list of constraints
-                self.and_constraints.append(cr.reservation_list)
-        return reservation_list
-
-    
     def get_number_of_compound_reservations(self, type=None):
         ''' Without argument, returns number of all c.r.s
         possible args are 'oneof', 'and', 'single', and return
@@ -60,7 +28,7 @@ class MetricsPreSchedulerScalar(object):
             count = 0
             for cr in self.compound_reservation_list:
                 if cr.issingle():
-                    count++
+                    count+=1
             return count
         else:
             return len(self.compound_reservation_list)
@@ -73,51 +41,9 @@ class MetricsPreSchedulerScalar(object):
     def get_number_of_resources(self):
         return len(self.resource_list)
 
-    
 
 
-
-class MetricsPreSchedulerVector(object):
-
-    def __init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
-                 contractual_obligation_list):
-        self.compound_reservation_list   = compound_reservation_list
-        self.contractual_obligation_list = contractual_obligation_list
-        # globally_possible_windows_dict is a dictionary mapping:
-        # resource -> globally possible windows (Intervals) on that resource. 
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
-        # resource_list holds the schedulable resources.
-        self.resource_list = globally_possible_windows_dict.keys()
-        self.and_constraints   = []        
-        self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
-        self.current_resource  = None
-
-
-    def convert_compound_to_simple(self):
-        ''' From fullscheduler_v1 '''
-        reservation_list = []
-        for cr in self.compound_reservation_list:
-            if cr.issingle():
-                reservation_list.append(cr.reservation_list[0])
-            elif cr.isoneof():
-                reservation_list.extend(cr.reservation_list)
-                self.oneof_constraints.append(cr.reservation_list)
-            elif cr.isand():
-                reservation_list.extend(cr.reservation_list)
-                # add the constraint to the list of constraints
-                self.and_constraints.append(cr.reservation_list)
-        return reservation_list
-
-
-    # copied from FullScheduler_v1
-    def resource_equals(self, x):
-        if (self.current_resource == x.resource):
-            return True
-        else:
-            return False
-
+class MetricsPreSchedulerVector(Metrics):
 
     def get_coverage_by_resource(self, resource, mode):
         ''' Two modes: binary, count. 

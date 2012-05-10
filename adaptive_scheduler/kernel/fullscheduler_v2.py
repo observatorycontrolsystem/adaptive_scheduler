@@ -105,7 +105,6 @@ class FullScheduler_v2(object):
                     # also remove the constraint, since it's satisfied
                     constraints_to_remove.append(constraint)
                 elif len(intersection) == 1:
-                    print 'got here'
                     # we only scheduled one, so remove the constraint.
                     # also remove the remaining res.'s on this constraint
                     # from the unschedule_reservations list
@@ -156,7 +155,7 @@ class FullScheduler_v2(object):
                     for restomerge in intersection[1:]:
                         bs.merge_constraints(residtokeep, restomerge.get_ID())
             scheduled_reservations = bs.schedule()
-        else:
+        elif len(reservation_list) == 1:
             if reservation_list[0].schedule_anywhere():
                 scheduled_reservations = reservation_list
         for r in scheduled_reservations:
