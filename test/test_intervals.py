@@ -41,7 +41,7 @@ class TestIntervals(object):
 
     def test_utility_get_coverage_count(self):
         ret = self.ui.get_coverage_count(self.i1, [self.i2])
-        assert_equal(ret, [[2,3,1]])
+        assert_equal(ret, [[2,3,1],[1, 2, 0], [4, 5, 0]])
 
 
     def test_remove_intervals_smaller_than_1(self):

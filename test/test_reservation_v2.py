@@ -70,7 +70,7 @@ class TestReservation_v2(object):
 
     def test_lt(self):
         '''Sorting by priority'''
-        assert self.r1 < self.r3
+        assert self.r1 > self.r3
 
 
     def test_schedule(self):

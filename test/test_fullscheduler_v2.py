@@ -92,10 +92,10 @@ class TestFullScheduler_v2(object):
     def test_cluster_and_order_reservations(self):
         n = self.fs1.cluster_and_order_reservations(2)
         assert_equal(n, 2)
-        assert_equal(self.fs1.reservation_list[0].order, 1)
-        assert_equal(self.fs1.reservation_list[1].order, 1)
-        assert_equal(self.fs1.reservation_list[2].order, 2)
-        assert_equal(self.fs1.reservation_list[3].order, 1)
+        assert_equal(self.fs1.reservation_list[0].order, 2)
+        assert_equal(self.fs1.reservation_list[1].order, 2)
+        assert_equal(self.fs1.reservation_list[2].order, 1)
+        assert_equal(self.fs1.reservation_list[3].order, 2)
         
 
     def test_order_equals_1(self):

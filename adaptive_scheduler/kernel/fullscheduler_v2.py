@@ -145,9 +145,11 @@ class FullScheduler_v2(object):
     def schedule_contended_reservations_pass(self, current_order):
         self.current_order = current_order
         reservation_list   = filter(self.order_equals, self.unscheduled_reservation_list)
+        reservation_list.sort(reverse=True)
         scheduled_reservations = []
         if len(reservation_list) > 1:
             bs = BipartiteScheduler(reservation_list, self.resource_list)
+            # handle oneofs
             for constraint in self.oneof_constraints:
                 intersection = list(set(constraint).intersection(reservation_list))
                 if len(intersection) > 1:

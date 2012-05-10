@@ -103,7 +103,27 @@ class Reservation_v2(object):
                     
 
     def __lt__(self, other):
-        return self.priority < other.priority
+        ''' Higher priority number is higher priority. 
+        If priority numbers are equal, then reservation belonging to 
+        c.r.s are ranked as and < single < oneof '''
+        if self.priority == other.priority:
+            if (self.compound_reservation_parent) and (other.compound_reservation_parent):
+                selftype  = self.compound_reservation_parent.type
+                othertype = other.compound_reservation_parent.type
+                if selftype == othertype:
+                    return self.priority > other.priority
+                elif selftype == 'and':
+                    return True
+                elif othertype == 'and':
+                    return False
+                elif selftype == 'oneof':
+                    return False
+                elif othertype == 'oneof':
+                    return True
+            else: 
+                return self.priority > other.priority
+        else: 
+            return self.priority > other.priority
 
     
     def get_ID(self):

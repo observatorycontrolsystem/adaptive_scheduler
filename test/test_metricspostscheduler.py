@@ -73,6 +73,7 @@ class TestMetricsPostSchedulerScalar(object):
         self.fs1 = FullScheduler_v2([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [])
         self.sched1_d = self.fs1.schedule_all()
+#        print self.sched1_d
         self.mv1 = MetricsPostSchedulerScalar([self.cr1, self.cr2, self.cr3],
                                        self.gpw2, [], self.sched1_d)
 

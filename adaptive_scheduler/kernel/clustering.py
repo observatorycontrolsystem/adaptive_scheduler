@@ -5,6 +5,11 @@ Clustering class for clustering and ordering reservations
 
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
+May 2012 -- changed so higher priority results in lower order (evaluated earlier)
+TODO: 
+* fix clustering by priority so that hi prio -> low order
+* add clustering by request duration
+
 '''
 
 from reservation_v2 import *
@@ -41,20 +46,28 @@ class Clustering(object):
         
 
     def cut_into_n_by_priority(self, n):
+        ''' Higher priority should translate to lower order'''
         if len(self.reservation_list) < n:
             print "ERROR: fewer elements in the list (%d) than requested clusters (%d)\n" % (len(self.reservation_list), n)
             return
         max_p    = self.max_priority()
         min_p    = self.min_priority()
         interval = math.ceil((float(max_p - min_p + 1))/float(n))
+#         for r in self.reservation_list:
+#             for i in range(1,n):
+#                 if r.priority >= min_p + i*interval:
+#                     r.order = i+1
         for r in self.reservation_list:
+            r.order = 1
             for i in range(1,n):
-                if r.priority >= min_p + i*interval:
+                if r.priority <= max_p - i*interval:
                     r.order = i+1
         return n
 
 
     def cluster_into_n_by_priority(self, n):
+        ''' TODO: fix this so that it orders by higher prio -> lower order '''
+        # remember to fix test
         if len(self.reservation_list) < n:
             print "error: fewer elements in the list than requested clusters\n"
             return
