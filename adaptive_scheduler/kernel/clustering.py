@@ -7,7 +7,6 @@ Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
 May 2012 -- changed so higher priority results in lower order (evaluated earlier)
 TODO: 
-* fix clustering by priority so that hi prio -> low order
 * add clustering by request duration
 
 '''
@@ -26,6 +25,7 @@ class Clustering(object):
     def cluster_and_order(self, n=3):
         # must return number of clusters
         number_of_clusters = self.cut_into_n_by_priority(n)
+        #number_of_clusters = self.cluster_into_n_by_priority(n)
         return number_of_clusters
 
 
@@ -46,7 +46,8 @@ class Clustering(object):
         
 
     def cut_into_n_by_priority(self, n):
-        ''' Higher priority should translate to lower order'''
+        ''' Higher priority translates to lower (earlier) order.
+        Returns number of clusters. '''
         if len(self.reservation_list) < n:
             print "ERROR: fewer elements in the list (%d) than requested clusters (%d)\n" % (len(self.reservation_list), n)
             return
@@ -66,24 +67,35 @@ class Clustering(object):
 
 
     def cluster_into_n_by_priority(self, n):
-        ''' TODO: fix this so that it orders by higher prio -> lower order '''
-        # remember to fix test
+        ''' Higher priority translates to lower (earlier) order.
+        Returns number of clusters. '''
         if len(self.reservation_list) < n:
             print "error: fewer elements in the list than requested clusters\n"
             return
+        if n == 1:
+            for r in self.reservation_list:
+                r.order = 1
+            return n
+
         distances = []
         self.reservation_list.sort()
         # calculate distances between consecutive (in order of prio.) res's
-        for i in range(0,n-1):
-            distances.append(self.reservation_list[i+1].priority - 
-                             self.reservation_list[i].priority)
+        for i in range(0,len(self.reservation_list)-1):
+            distances.append(self.reservation_list[i].priority - 
+                             self.reservation_list[i+1].priority)
         # find cut-points
-        cutpoints = heapq.nlargest(n, distances)
-        order    = 1
-        previous = 1
+        cutpoints = heapq.nlargest(n-1, distances)
+        # find cut-point indices
+        cutpoints_idx = []
         for cp in cutpoints:
             i = distances.index(cp)
-            distances[i] = 0
+            cutpoints_idx.append(i)
+            distances[i] = -1
+        cutpoints_idx.sort()
+        # walk through res's in prio order and set their order
+        order    = 1
+        previous = 0
+        for i in cutpoints_idx:
             # fix the order of reservations to the left of i+1
             for j in range(previous, i+1):
                 self.reservation_list[j].order = order
