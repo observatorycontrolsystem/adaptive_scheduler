@@ -79,7 +79,7 @@ class FullScheduler_v2(object):
         return reservation_list
 
 
-    def cluster_and_order_reservations(self, n=2):
+    def cluster_and_order_reservations(self, n=1):
         c = Clustering(self.unscheduled_reservation_list)
         max_order = c.cluster_and_order(n)
         # returns the max order

@@ -8,7 +8,7 @@ November 2011
 May 2012 -- changed so higher priority results in lower order (evaluated earlier)
 TODO: 
 * add clustering by request duration
-
+* add automatic cluster number detection
 '''
 
 from reservation_v2 import *
@@ -51,6 +51,8 @@ class Clustering(object):
         if len(self.reservation_list) < n:
             print "ERROR: fewer elements in the list (%d) than requested clusters (%d)\n" % (len(self.reservation_list), n)
             return
+	if n == 1:
+		return n
         max_p    = self.max_priority()
         min_p    = self.min_priority()
         interval = math.ceil((float(max_p - min_p + 1))/float(n))
@@ -73,8 +75,6 @@ class Clustering(object):
             print "error: fewer elements in the list than requested clusters\n"
             return
         if n == 1:
-            for r in self.reservation_list:
-                r.order = 1
             return n
 
         distances = []

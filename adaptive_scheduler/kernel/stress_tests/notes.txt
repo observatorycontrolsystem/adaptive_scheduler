@@ -1,0 +1,5 @@
+1: single resource, random start & duration, tight windows, same priority
+2: two resources, random assignment to resource, ''
+3: two resources, random assignment to resource, random start, duration & slack, same prio
+4: 
+
