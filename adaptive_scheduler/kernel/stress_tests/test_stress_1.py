@@ -10,6 +10,7 @@ May 2011
 from nose.tools import assert_equal
 import copy, random
 from adaptive_scheduler.kernel.fullscheduler_v2 import *
+from util import *
 
 class TestStress_1(object):
 
@@ -64,7 +65,11 @@ class TestStress_1(object):
         fs = FullScheduler_v2(cr_list, gpw, [])
         s = fs.schedule_all()
 
+        u = Util()
+        #u.get_coverage_count_plot(s)
+        u.find_overlaps(s)
         return [float(total_duration)/float(resnum), len(s[resource])]
+
 
     def test_run_multi(self, howmany=1000):
         md_sum = 0

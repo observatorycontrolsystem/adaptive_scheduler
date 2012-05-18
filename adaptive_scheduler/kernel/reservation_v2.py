@@ -26,7 +26,7 @@ class Reservation_v2(object):
         # are free.
         self.free_windows    = copy.copy(self.possible_windows)
         # clean up free windows by removing ones that are too small:
-        #            self.clean_up_free_windows()
+        self.clean_up_free_windows()
         Reservation_v2.resID     += 1
         self.resID                = Reservation_v2.resID
         # these fields are defined when the reservation is ultimately scheduled

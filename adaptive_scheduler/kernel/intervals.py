@@ -388,5 +388,3 @@ class IntervalsUtility(object):
         retlist.extend(retlist2)
 
         return retlist
-
-

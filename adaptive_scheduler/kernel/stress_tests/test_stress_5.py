@@ -12,6 +12,7 @@ adding ands
 from nose.tools import assert_equal
 import copy, random
 from adaptive_scheduler.kernel.fullscheduler_v2 import *
+from util import *
 
 class TestStress_5(object):
 
@@ -87,7 +88,9 @@ class TestStress_5(object):
 
         fs = FullScheduler_v2(cr_list, gpw, [])
         s = fs.schedule_all()
-
+        u = Util()
+        #u.get_coverage_count_plot(s)
+        u.find_overlaps(s)
         return [len(s['1']),len(s['2'])]
 
 

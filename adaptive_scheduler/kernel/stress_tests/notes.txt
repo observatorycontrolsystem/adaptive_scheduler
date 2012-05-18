@@ -1,5 +1,6 @@
 1: single resource, random start & duration, tight windows, same priority
 2: two resources, random assignment to resource, ''
 3: two resources, random assignment to resource, random start, duration & slack, same prio
-4: 
+4: randomly choosing between single & oneofs (2 res)
+5: randomly choosing between single, oneof & ands (both 2 res)
 
