@@ -37,6 +37,7 @@ class TestFullScheduler_v2(object):
         self.cr6 = CompoundReservation_v2([self.r3])
         self.cr7 = CompoundReservation_v2([self.r2])
         self.cr8 = CompoundReservation_v2([self.r4, self.r6], 'oneof')
+        self.cr9 = CompoundReservation_v2([self.r4, self.r1, self.r3], 'oneof')
         self.gpw = {}
         self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
         
@@ -227,3 +228,10 @@ class TestFullScheduler_v2(object):
 
     def test_schedule_all_4(self):
         self.fs4.schedule_all()
+
+
+    def test_schedule_triple_oneof(self):
+        fs = FullScheduler_v2([self.cr9],
+                              self.gpw2, [])
+        s = fs.schedule_all()
+        assert_equal(len(s['foo']), 1)
