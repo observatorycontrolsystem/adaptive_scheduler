@@ -69,8 +69,18 @@ class Clustering(object):
 
 
     def cluster_into_n_by_priority(self, n):
+        return self.cluster_into_n_by_what(n, 'priority')
+        
+
+    def cluster_into_n_by_duration(self, n):
+        return self.cluster_into_n_by_what(n, 'duration')
+
+
+    def cluster_into_n_by_what(self, n, what):
         ''' Higher priority translates to lower (earlier) order.
+        Longer duration translates to lower (earlier) order.
         Returns number of clusters. '''
+
         if len(self.reservation_list) < n:
             print "error: fewer elements in the list than requested clusters\n"
             return
@@ -78,11 +88,66 @@ class Clustering(object):
             return n
 
         distances = []
-        self.reservation_list.sort()
-        # calculate distances between consecutive (in order of prio.) res's
-        for i in range(0,len(self.reservation_list)-1):
-            distances.append(self.reservation_list[i].priority - 
-                             self.reservation_list[i+1].priority)
+        if what == 'priority':
+            self.reservation_list.sort(key=lambda reservation: reservation.priority, reverse=True)
+            # calculate distances between consecutive res's
+            for i in range(0,len(self.reservation_list)-1):
+                distances.append(self.reservation_list[i].priority - 
+                                 self.reservation_list[i+1].priority)
+        elif what == 'duration':
+            # sort by duration
+            self.reservation_list.sort(key=lambda reservation: reservation.duration, reverse=True)
+            # calculate distances between consecutive res's
+            for i in range(0,len(self.reservation_list)-1):
+                distances.append(self.reservation_list[i].duration - 
+                                 self.reservation_list[i+1].duration)
+
+        # find cut-points
+        cutpoints = heapq.nlargest(n-1, distances)
+        # find cut-point indices
+        cutpoints_idx = []
+        for cp in cutpoints:
+            i = distances.index(cp)
+            cutpoints_idx.append(i)
+            distances[i] = -1
+        cutpoints_idx.sort()
+        # walk through res's in prio order and set their order
+        order    = 1
+        previous = 0
+        for i in cutpoints_idx:
+            # fix the order of reservations to the left of i+1
+            for j in range(previous, i+1):
+                self.reservation_list[j].order = order
+            order   += 1
+            previous = i + 1
+        # fix the order of the rightmost cluster of reservations
+        for j in range(previous, len(self.reservation_list)):
+            self.reservation_list[j].order = order
+        return n
+
+
+    def cluster_adaptively_by_what(self, what):
+        ''' Higher priority translates to lower (earlier) order.
+        Longer duration translates to lower (earlier) order.
+        Returns number of clusters. '''
+        
+        distances = []
+        if what == 'priority':
+            self.reservation_list.sort(key=lambda reservation: reservation.priority, reverse=True)
+            # calculate distances between consecutive res's
+            for i in range(0,len(self.reservation_list)-1):
+                distances.append(self.reservation_list[i].priority - 
+                                 self.reservation_list[i+1].priority)
+        elif what == 'duration':
+            # sort by duration
+            self.reservation_list.sort(key=lambda reservation: reservation.duration, reverse=True)
+            # calculate distances between consecutive res's
+            for i in range(0,len(self.reservation_list)-1):
+                distances.append(self.reservation_list[i].duration - 
+                                 self.reservation_list[i+1].duration)
+
+        # find non-zero distances
+#####
         # find cut-points
         cutpoints = heapq.nlargest(n-1, distances)
         # find cut-point indices
