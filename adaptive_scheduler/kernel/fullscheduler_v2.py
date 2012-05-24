@@ -208,7 +208,6 @@ class FullScheduler_v2(object):
 
 
     def uncommit_reservation_from_schedule(self, r):
-        print "HERHEEHEHEHWEHAERHAERHAWSEFRHASDEFA"
         resource = r.scheduled_resource
         self.schedule_dict[resource].remove(r)
         # remove interval & add back free time
@@ -230,7 +229,7 @@ class FullScheduler_v2(object):
                 if r.scheduled:
                     counter += 1
                 if counter > 1:
-                    r.uncommit_reservation_from_schedule(r)
+                    self.uncommit_reservation_from_schedule(r)
 
 
     def enforce_and_constraints(self):
@@ -250,7 +249,6 @@ class FullScheduler_v2(object):
               
 
     def schedule_all(self):
-        print "In schedule all"
         self.schedule_uncontended_reservations()
         self.schedule_contended_reservations()
         self.enforce_oneof_constraints()
