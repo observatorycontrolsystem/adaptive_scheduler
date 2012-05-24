@@ -24,8 +24,10 @@ class Clustering(object):
 
     def cluster_and_order(self, n=3):
         # must return number of clusters
-        number_of_clusters = self.cut_into_n_by_priority(n)
+        #number_of_clusters = self.cut_into_n_by_priority(n)
         #number_of_clusters = self.cluster_into_n_by_priority(n)
+#        number_of_clusters = self.cluster_adaptively_by_what('priority')
+        number_of_clusters = self.cluster_adaptively_by_what('duration')
         return number_of_clusters
 
 
@@ -147,10 +149,20 @@ class Clustering(object):
                                  self.reservation_list[i+1].duration)
 
         # find non-zero distances
-#####
+        nzdcount = 0
+        for i in range(len(distances)):
+            if distances[i] > 0:
+                nzdcount += 1
+        # choose how many cutpoints
+        num_cutpoints = min(nzdcount, len(self.reservation_list)/10)
+        if num_cutpoints < 1:
+            return 1
         # find cut-points
-        cutpoints = heapq.nlargest(n-1, distances)
-        # find cut-point indices
+        cutpoints = heapq.nlargest(num_cutpoints, distances)
+
+        # find cut-point indices -- this finds the first, if many
+        # TODO: what we really want is uniform distribution of 
+        # reservations, if using distance that appears many times
         cutpoints_idx = []
         for cp in cutpoints:
             i = distances.index(cp)
@@ -169,4 +181,4 @@ class Clustering(object):
         # fix the order of the rightmost cluster of reservations
         for j in range(previous, len(self.reservation_list)):
             self.reservation_list[j].order = order
-        return n
+        return num_cutpoints

@@ -3,4 +3,5 @@
 3: two resources, random assignment to resource, random start, duration & slack, same prio
 4: randomly choosing between single & oneofs (2 res)
 5: randomly choosing between single, oneof & ands (both 2 res)
-
+6: randomly choosing between 1-10 windows
+7: same as 5 w/ random priority

@@ -86,3 +86,7 @@ class TestClustering(object):
         assert_equal(self.r2.order, 2)
         assert_equal(self.r3.order, 1)
         
+
+    def test_cluster_adaptively_by_what(self):
+        n = self.c1.cluster_adaptively_by_what('priority')
+        print n
