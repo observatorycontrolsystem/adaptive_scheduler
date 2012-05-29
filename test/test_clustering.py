@@ -23,7 +23,7 @@ class TestClustering(object):
 
         self.r1 = Reservation_v2(1, 1, 'foo', s1)
         self.r2 = Reservation_v2(2, 2, 'foo', s1)
-        self.r3 = Reservation_v2(3, 1, 'foo', s1)
+        self.r3 = Reservation_v2(3, 3, 'foo', s1)
         
         self.c1 = Clustering([self.r1, self.r2, self.r3])
 
@@ -86,7 +86,28 @@ class TestClustering(object):
         assert_equal(self.r2.order, 2)
         assert_equal(self.r3.order, 1)
         
+        
+    def test_cluster_into_n_by_duration_1(self):
+        self.c1.cluster_into_n_by_duration(1)
+        assert_equal(self.r1.order, 1)
+        assert_equal(self.r2.order, 1)
+        assert_equal(self.r3.order, 1)
+        
 
+    def test_cluster_into_n_by_duration_2(self):
+        self.c1.cluster_into_n_by_duration(2)
+        assert_equal(self.r1.order, 2)
+        assert_equal(self.r2.order, 2)
+        assert_equal(self.r3.order, 1)
+
+
+    def test_cluster_into_n_by_duration_3(self):
+        self.c1.cluster_into_n_by_duration(3)
+        assert_equal(self.r1.order, 3)
+        assert_equal(self.r2.order, 2)
+        assert_equal(self.r3.order, 1)
+        
+        
     def test_cluster_adaptively_by_what(self):
         n = self.c1.cluster_adaptively_by_what('priority')
         print n
