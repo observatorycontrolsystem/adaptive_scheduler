@@ -24,7 +24,10 @@ class HungarianScheduler(object):
         self.constraint_matrix_rows_by_idx = {} # reservations
         self.constraint_matrix_cols_by_quantum = {} # quantums
         self.constraint_matrix_cols_by_idx = {} # quantums
-        self.priority_by_res = None
+        self.sparse_constraint_matrix = None
+        self.constraint_matrix_numrows = 0
+        self.constraint_matrix_numcols = 0
+#        self.priority_by_res = None
         for resource in resource_list:
             self.reservations_by_resource_dict[resource] = []
         for reservation in reservation_list:
@@ -32,57 +35,100 @@ class HungarianScheduler(object):
                 self.reservations_by_resource_dict[reservation.resource].append(reservation)
             else: 
                 print "what's this reservation doing here?"
-        self.create_constraint_graph()
+#        self.create_constraint_graph()
+        self.create_constraint_matrix()
 
 
-    def create_constraint_graph(self):
-        constraint_graph = {}
-        priority_by_res = {}
-        # calculate quantum as max of all request lengths, per resource
-        for resource in self.resource_list:
-            quantum = self.max_duration(self.reservations_by_resource_dict[resource])
-            for r in self.reservations_by_resource_dict[resource]:
-                # quantize free windows of opportunity for each reservation 
-                # (first checks which windows of opportunity are still free)
-                quantum_starts = self.quantize_windows(r, quantum)
-                # add to graph
-                constraint_graph[r.get_ID()] = quantum_starts
-                priority_by_res[r.get_ID()] = - r.priority
-        self.constraint_graph = constraint_graph
-        self.priority_by_res = priority_by_res
-
-
-    def merge_constraints(self, resid1, resid2):
-        self.constraint_graph[resid1].extend(self.constraint_graph[resid2])
-        del self.constraint_graph[resid2]
-
-
-    def convert_constraint_graph_to_matrix(self):
-        # TODO: priority semantics fix
+    def create_constraint_matrix(self):
         sparse_matrix = []
         current_row = 0
         current_col = 0
-        for r in self.constraint_graph.keys():
-            self.constraint_matrix_rows_by_res[r] = current_row
-            self.constraint_matrix_rows_by_idx[current_row] = r
+        for resource in self.resource_list:
+            quantum = self.max_duration(self.reservations_by_resource_dict[resource])
+            for r in self.reservations_by_resource_dict[resource]:
+                rid = r.get_ID()
+                self.constraint_matrix_rows_by_res[rid] = current_row
+                self.constraint_matrix_rows_by_idx[current_row] = rid
+                # quantize free windows of opportunity for each reservation 
+                # (first checks which windows of opportunity are still free)
+                quantum_starts = self.quantize_windows(r, quantum)
+                for q in quantum_starts:
+                    # if quantum already exists, just add entry to matrix
+                    if q in self.constraint_matrix_cols_by_quantum.keys():
+                        # get column number
+                        col = self.constraint_matrix_cols_by_quantum[q]
+                        sparse_matrix.append([current_row, col, - r.priority])
+                    else:
+                        # quantum does not already exist in matrix
+                        self.constraint_matrix_cols_by_quantum[q] = current_col
+                        self.constraint_matrix_cols_by_idx[current_col] = q
+                        sparse_matrix.append([current_row, current_col,- r.priority])
+                        current_col += 1 # advance quantum idx
+                current_row += 1 # advance res idx
+        self.sparse_constraint_matrix = sparse_matrix
+        self.constraint_matrix_numrows = current_row
+        self.constraint_matrix_numcols = current_col
+
+
+    # def create_constraint_graph(self):
+    #     constraint_graph = {}
+    #     priority_by_res = {}
+    #     # calculate quantum as max of all request lengths, per resource
+    #     for resource in self.resource_list:
+    #         quantum = self.max_duration(self.reservations_by_resource_dict[resource])
+    #         for r in self.reservations_by_resource_dict[resource]:
+    #             # quantize free windows of opportunity for each reservation 
+    #             # (first checks which windows of opportunity are still free)
+    #             quantum_starts = self.quantize_windows(r, quantum)
+    #             # add to graph
+    #             constraint_graph[r.get_ID()] = quantum_starts
+    #             priority_by_res[r.get_ID()] = - r.priority
+    #     self.constraint_graph = constraint_graph
+    #     self.priority_by_res = priority_by_res
+
+
+    # def merge_constraints(self, resid1, resid2):
+    #     self.constraint_graph[resid1].extend(self.constraint_graph[resid2])
+    #     del self.constraint_graph[resid2]
+
+
+    def merge_constraints(self, resid1, resid2):
+        # works on sparse constraint matrix
+        row1 = self.constraint_matrix_rows_by_res[resid1]
+        row2 = self.constraint_matrix_rows_by_res[resid2]
+        count = 0
+        for rid, cid, pid in self.sparse_constraint_matrix:
+            if rid == row2:
+                self.sparse_constraint_matrix[count][0] = row1
+            count += 1
+
+
+    # def convert_constraint_graph_to_matrix(self):
+    #     # TODO: priority semantics fix
+    #     sparse_matrix = []
+    #     current_row = 0
+    #     current_col = 0
+    #     for r in self.constraint_graph.keys():
+    #         self.constraint_matrix_rows_by_res[r] = current_row
+    #         self.constraint_matrix_rows_by_idx[current_row] = r
             
-            for q in self.constraint_graph[r]:
-                # if quantum already exists, just add entry to matrix
-                if q in self.constraint_matrix_cols_by_quantum.keys():
-                    # get column number
-                    col = self.constraint_matrix_cols_by_quantum[q]
-                    sparse_matrix.append([current_row, col, self.priority_by_res[r]])
-                else:
-                    # quantum does not already exist in matrix
-                    self.constraint_matrix_cols_by_quantum[q] = current_col
-                    self.constraint_matrix_cols_by_idx[current_col] = q
-                    sparse_matrix.append([current_row, current_col,self.priority_by_res[r]])
-                    current_col += 1
+    #         for q in self.constraint_graph[r]:
+    #             # if quantum already exists, just add entry to matrix
+    #             if q in self.constraint_matrix_cols_by_quantum.keys():
+    #                 # get column number
+    #                 col = self.constraint_matrix_cols_by_quantum[q]
+    #                 sparse_matrix.append([current_row, col, self.priority_by_res[r]])
+    #             else:
+    #                 # quantum does not already exist in matrix
+    #                 self.constraint_matrix_cols_by_quantum[q] = current_col
+    #                 self.constraint_matrix_cols_by_idx[current_col] = q
+    #                 sparse_matrix.append([current_row, current_col,self.priority_by_res[r]])
+    #                 current_col += 1
                     
-            current_row += 1
-        self.constraint_matrix = self.convert_sparse_to_dense_matrix(sparse_matrix,
-                                                                current_row, 
-                                                                current_col)
+    #         current_row += 1
+    #     self.constraint_matrix = self.convert_sparse_to_dense_matrix(sparse_matrix,
+    #                                                             current_row, 
+    #                                                             current_col)
 
 
     def convert_sparse_to_dense_matrix(self, sparse, rows, columns):
@@ -93,7 +139,11 @@ class HungarianScheduler(object):
 
 
     def schedule(self):
-        self.convert_constraint_graph_to_matrix()
+#        self.convert_constraint_graph_to_matrix()
+        self.constraint_matrix = self.convert_sparse_to_dense_matrix(self.sparse_constraint_matrix,
+                                                                     self.constraint_matrix_numrows, 
+                                                                     self.constraint_matrix_numcols)
+
         m = Munkres()
         indices = m.compute(self.constraint_matrix)
         for row, col in indices:
