@@ -111,3 +111,11 @@ class TestStress_7(object):
 # .
 # ----------------------------------------------------------------------
 # Ran 2 tests in 712.765s
+
+# after optimization
+#169-231-101-1:kernel slampoud$ nosetests -s stress_tests/test_stress_7_v3.py
+#.in  1000  runs, mean number of reservations scheduled was  47  and  44
+#.
+#----------------------------------------------------------------------
+#Ran 2 tests in 671.376s
+
