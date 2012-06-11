@@ -96,13 +96,13 @@ def write_collated_histories_to_file(collated, file_to_write):
     for sb_id in sorted(collated):
         extracted = collated[sb_id]
 
-        if collated[sb_id]['instrument'] == None:
+        if not collated[sb_id]['instrument']:
             print "Didn't find an instrument - skipping ID %s" % sb_id
             continue
 
         for obs_id_dict in collated[sb_id]['obs_ids']:
             obs_id = obs_id_dict['obs_id']
-            if obs_id_dict['history'] == None:
+            if not obs_id_dict['history']:
                 print "Didn't find a history - skipping obs_id %s (sb_id %s)" % (obs_id,
                                                                                  sb_id)
                 continue

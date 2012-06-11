@@ -72,7 +72,6 @@ class ObservationReportHandler(handler.ContentHandler):
 
             if (mol_type == 'STANDARD') or (mol_type == 'EXPOSE'):
                 self.info['useful_type'] = True
-
             else:
                 self.info['useful_type'] = False
 
@@ -166,30 +165,71 @@ if __name__ == '__main__':
 
     handler = ObservationReportHandler(debug)
 
-    totals         = {}
-    overhead_times = {}
+    totals             = {}
+    overhead_times     = {}
     non_overhead_times = {}
     useful = 0
-    for i, report in enumerate(xml_fh):
+    for i, line in enumerate(xml_fh):
         if debug:
-            print "\nHandling report number:", i
+            print "\nHandling line number:", i
+
+        # Skip comments
+        if line.startswith('#'):
+            continue
+
+        cols = line.split()
+        history_data = {
+                         'sb_id'      : cols[0],
+                         'obs_id'     : cols[1],
+                         'location'   : cols[2],
+                         'instrument' : cols[3],
+                       }
+
+        observing_report = " ".join(cols[4:])
+
         handler.reset_state()
-        parseString(report, handler)
+        print "Parsing line %d" % i
+        parseString(observing_report, handler)
 
         # Summarise the types of observation recorded
         if handler.info['mol_type'] in totals:
             totals[handler.info['mol_type']] += 1
         else:
-            totals[handler.info['mol_type']] = 1
+            totals[handler.info['mol_type']]  = 1
 
         # For successful observations of the right type, calculate the overhead time
         if handler.is_useful():
             useful += 1
-            time_format = '%Y-%m-%dT%H:%M:%S.%fZ'
-            exp_start   = datetime.strptime(handler.info['exposure_started'], time_format)
-            start = datetime.strptime(handler.info['start'], time_format)
-            end   = datetime.strptime(handler.info['end'], time_format)
-            print end.time(), exp_start.time(), start.time()
+            time_format_millis    = '%Y-%m-%dT%H:%M:%S.%fZ'
+            time_format_no_millis = '%Y-%m-%dT%H:%M:%SZ'
+
+            try:
+                exp_start = datetime.strptime(handler.info['exposure_started'],
+                                              time_format_millis)
+                start     = datetime.strptime(handler.info['start'],
+                                              time_format_millis)
+                end       = datetime.strptime(handler.info['end'],
+                                              time_format_millis)
+            except ValueError as e:
+                print "Input line %d: Couldn't parse time using millisecond format" % i
+                print "Retrying without milliseconds"
+                print "Error was", e
+
+                try:
+                    exp_start = datetime.strptime(handler.info['exposure_started'],
+                                                  time_format_no_millis)
+                    start     = datetime.strptime(handler.info['start'],
+                                                  time_format_no_millis)
+                    end       = datetime.strptime(handler.info['end'],
+                                                  time_format_no_millis)
+                except ValueError as e:
+                    print "Input line %d: Couldn't parse time without milliseconds." % i
+                    print "Skipping this record."
+                    print "Error was", e
+                    continue
+
+
+            #print end.time(), exp_start.time(), start.time()
             overhead_times[i] = exp_start - start
             non_overhead_times[i] = end - exp_start
 
