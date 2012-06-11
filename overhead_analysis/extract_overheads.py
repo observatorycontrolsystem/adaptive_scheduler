@@ -172,10 +172,15 @@ def determine_datetime_format(dt):
         return ''
 
 
-def parse_date(dt):
+def parse_datetime(dt):
     datetime_format = determine_datetime_format(dt)
     return datetime.strptime(dt, datetime_format)
 
+def increment_dict(key, dictionary):
+    if key in dictionary:
+        dictionary[key] += 1
+    else:
+        dictionary[key]  = 1
 
 if __name__ == '__main__':
 
@@ -209,6 +214,7 @@ if __name__ == '__main__':
         if line.startswith('#'):
             continue
 
+        # Chop up the meta data about the observing report
         cols = line.split()
         history_data = {
                          'sb_id'      : cols[0],
@@ -217,36 +223,34 @@ if __name__ == '__main__':
                          'instrument' : cols[3],
                        }
 
+        # We split on spaces earlier, so need to stick the XML back together
         observing_report = " ".join(cols[4:])
 
+        # Initialise the handler, and parse the XML of the observing report
         handler.reset_state()
         parseString(observing_report, handler)
 
         # Summarise the types of observation recorded
-        if handler.info['mol_type'] in totals:
-            totals[handler.info['mol_type']] += 1
-        else:
-            totals[handler.info['mol_type']]  = 1
+        increment_dict(handler.info['mol_type'], totals)
 
         # For successful observations of the right type, calculate the overhead time
         if handler.is_useful():
             n_useful += 1
-            if handler.info['mol_type'] in useful_totals:
-                useful_totals[handler.info['mol_type']] += 1
-            else:
-                useful_totals[handler.info['mol_type']]  = 1
 
+            increment_dict(handler.info['mol_type'], useful_totals)
+
+            # Pull out the datetime, which could be in a couple of different formats
             try:
-                exp_start = parse_date(handler.info['exposure_started'])
-                start     = parse_date(handler.info['start'])
-                end       = parse_date(handler.info['end'])
+                exp_start = parse_datetime(handler.info['exposure_started'])
+                start     = parse_datetime(handler.info['start'])
+                end       = parse_datetime(handler.info['end'])
 
+            # We can still fail on timezones, broken/missing times, etc.
             except ValueError as e:
                 print >> error_fh, "Input line %d: Couldn't parse datetime" % line_number
                 print >> error_fh, "Error was:", e
 
-
-
+            # Calculate the duration of the overhead, and the exposure
             overhead_times[i]     = exp_start - start
             non_overhead_times[i] = end - exp_start
 
@@ -268,5 +272,6 @@ if __name__ == '__main__':
                             in_seconds(overhead_times[report_number]),
                             in_seconds(non_overhead_times[report_number]))
 
+    # Clean up
     xml_fh.close()
     error_fh.close()
