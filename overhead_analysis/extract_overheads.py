@@ -23,11 +23,13 @@ this is not captured here.
 Author: Eric Saunders
 June 2012
 '''
+from __future__ import division
 
 import sys
 from xml.sax import handler, parseString
 
 from datetime import datetime
+import re
 
 
 class ObservationReportHandler(handler.ContentHandler):
@@ -152,26 +154,56 @@ class ObservationReportHandler(handler.ContentHandler):
 
 def in_seconds(td):
     '''Timedelta objects don't have any way to return their size in seconds, prior
-    to Python 2.7. This is taken from the docs.'''
+    to Python 2.7. This implementation is taken from the docs.'''
     return (td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
+
+
+def determine_datetime_format(dt):
+    datetime_format_millis    = '%Y-%m-%dT%H:%M:%S.%fZ'
+    datetime_format_no_millis = '%Y-%m-%dT%H:%M:%SZ'
+
+    regex_millis    = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z'
+    regex_no_millis = r'\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z'
+    if re.match(regex_millis, dt):
+        return datetime_format_millis
+    elif re.match(regex_no_millis, dt):
+        return datetime_format_no_millis
+    else:
+        return ''
+
+
+def parse_date(dt):
+    datetime_format = determine_datetime_format(dt)
+    return datetime.strptime(dt, datetime_format)
 
 
 if __name__ == '__main__':
 
     debug = False
     xml_filename = sys.argv[1]
+    if len(sys.argv) > 2:
+        debug = True
 
     xml_fh = open(xml_filename, 'r')
+
+    error_log = 'errors.out'
+    error_fh  = open(error_log, 'w')
 
     handler = ObservationReportHandler(debug)
 
     totals             = {}
+    useful_totals      = {}
     overhead_times     = {}
     non_overhead_times = {}
-    useful = 0
+    n_useful  = 0
+    n_reports = 0
     for i, line in enumerate(xml_fh):
+
+        # Enumerate starts at 0, but line numbers start at 1
+        line_number = i + 1
+
         if debug:
-            print "\nHandling line number:", i
+            print "\nHandling line number:", line_number
 
         # Skip comments
         if line.startswith('#'):
@@ -188,7 +220,6 @@ if __name__ == '__main__':
         observing_report = " ".join(cols[4:])
 
         handler.reset_state()
-        print "Parsing line %d" % i
         parseString(observing_report, handler)
 
         # Summarise the types of observation recorded
@@ -199,45 +230,33 @@ if __name__ == '__main__':
 
         # For successful observations of the right type, calculate the overhead time
         if handler.is_useful():
-            useful += 1
-            time_format_millis    = '%Y-%m-%dT%H:%M:%S.%fZ'
-            time_format_no_millis = '%Y-%m-%dT%H:%M:%SZ'
+            n_useful += 1
+            if handler.info['mol_type'] in useful_totals:
+                useful_totals[handler.info['mol_type']] += 1
+            else:
+                useful_totals[handler.info['mol_type']]  = 1
 
             try:
-                exp_start = datetime.strptime(handler.info['exposure_started'],
-                                              time_format_millis)
-                start     = datetime.strptime(handler.info['start'],
-                                              time_format_millis)
-                end       = datetime.strptime(handler.info['end'],
-                                              time_format_millis)
+                exp_start = parse_date(handler.info['exposure_started'])
+                start     = parse_date(handler.info['start'])
+                end       = parse_date(handler.info['end'])
+
             except ValueError as e:
-                print "Input line %d: Couldn't parse time using millisecond format" % i
-                print "Retrying without milliseconds"
-                print "Error was", e
-
-                try:
-                    exp_start = datetime.strptime(handler.info['exposure_started'],
-                                                  time_format_no_millis)
-                    start     = datetime.strptime(handler.info['start'],
-                                                  time_format_no_millis)
-                    end       = datetime.strptime(handler.info['end'],
-                                                  time_format_no_millis)
-                except ValueError as e:
-                    print "Input line %d: Couldn't parse time without milliseconds." % i
-                    print "Skipping this record."
-                    print "Error was", e
-                    continue
+                print >> error_fh, "Input line %d: Couldn't parse datetime" % line_number
+                print >> error_fh, "Error was:", e
 
 
-            #print end.time(), exp_start.time(), start.time()
-            overhead_times[i] = exp_start - start
+
+            overhead_times[i]     = exp_start - start
             non_overhead_times[i] = end - exp_start
+
+        n_reports += 1
 
 
     # Summarise what we read
-    print "Final stats (%d/%d useful observing reports):" % (useful, i)
-    for mol_type, number in totals.iteritems():
-        print "%14s: %d" % ( mol_type, number )
+    print "Final stats (%d/%d useful observing reports):" % (n_useful, n_reports)
+    for mol_type in totals:
+        print "%14s: %d/%d" % ( mol_type, useful_totals.get(mol_type, 0), totals[mol_type] )
     print
 
     # Tabulate the overheads
@@ -248,3 +267,6 @@ if __name__ == '__main__':
                             overhead_times[report_number],
                             in_seconds(overhead_times[report_number]),
                             in_seconds(non_overhead_times[report_number]))
+
+    xml_fh.close()
+    error_fh.close()
