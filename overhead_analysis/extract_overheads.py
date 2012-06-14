@@ -58,8 +58,10 @@ class ObservationReportHandler(handler.ContentHandler):
         self.not_seen_an_end_yet  = True
         self.inside_end_elem      = False
 
+        self.not_seen_an_exposure_event_yet = True
         self.inside_exposure_event_elem = False
         self.inside_exposure_event_time = False
+
 
 
     def startElement(self, name, attrs):
@@ -139,12 +141,15 @@ class ObservationReportHandler(handler.ContentHandler):
                 self.not_seen_an_end_yet = False
 
 
-        if self.inside_exposure_event_time:
-            self.info['exposure_started'] = data
-            if self.debug:
-                print "Found exposure start at", data
+        if self.not_seen_an_exposure_event_yet:
 
-            self.inside_exposure_event_time = False
+            if self.inside_exposure_event_time:
+                self.info['exposure_started'] = data
+                if self.debug:
+                    print "Found exposure start at", data
+
+                self.inside_exposure_event_time = False
+                self.not_seen_an_exposure_event_yet = False
 
 
     def is_useful(self):
@@ -176,11 +181,56 @@ def parse_datetime(dt):
     datetime_format = determine_datetime_format(dt)
     return datetime.strptime(dt, datetime_format)
 
-def increment_dict(key, dictionary):
+
+def increment_dict(dictionary, key):
     if key in dictionary:
         dictionary[key] += 1
     else:
         dictionary[key]  = 1
+
+
+def print_stats(n_useful, n_reports, totals, useful_totals, unique_loc_instr):
+    print "Final stats (%d/%d useful observing reports):" % (n_useful, n_reports)
+    for mol_type in totals:
+        print "%14s: %d/%d" % (
+                                mol_type,
+                                useful_totals.get(mol_type, 0),
+                                totals[mol_type]
+                              )
+    print
+    print "Reports come from %d unique location-instrument combinations:" % (
+                                                         len(unique_loc_instr.keys())
+                                                        )
+
+    for loc_instr in sorted(unique_loc_instr):
+        print loc_instr
+    print
+
+
+def print_summary_line(n, summary, out_fh):
+    print >> out_fh, "%-11d %-30s %-16s %-12s %s" % (
+                                                 n,
+                                                 summary[n]['start'],
+                                                 summary[n]['overhead'],
+                                                 in_seconds(summary[n]['overhead']),
+                                                 in_seconds(summary[n]['non-overhead'])
+                                              )
+    return
+
+
+def write_overheads_to_file(loc_instr, n, summary, out_fh):
+
+    print >> out_fh, "Calculated %d overhead times:" % n
+    print >> out_fh, "Report line Start (datetime)               Overhead (h:m:s) Overhead (s) Non-overhead (s)"
+
+    # Tabulate the overheads
+    for n in sorted(summary):
+        if ( summary[n]['location'] == loc_instr ):
+            print_summary_line(n, summary, out_fh)
+
+    return
+
+
 
 if __name__ == '__main__':
 
@@ -198,8 +248,8 @@ if __name__ == '__main__':
 
     totals             = {}
     useful_totals      = {}
-    overhead_times     = {}
-    non_overhead_times = {}
+    unique_loc_instr   = {}
+    summary            = {}
     n_useful  = 0
     n_reports = 0
     for i, line in enumerate(xml_fh):
@@ -217,27 +267,29 @@ if __name__ == '__main__':
         # Chop up the meta data about the observing report
         cols = line.split()
         history_data = {
-                         'sb_id'      : cols[0],
-                         'obs_id'     : cols[1],
-                         'location'   : cols[2],
-                         'instrument' : cols[3],
+                         'history_id'   : cols[0],
+                         'sb_id'        : cols[1],
+                         'location'     : cols[2],
+                         'overhead'     : None,
+                         'non-overhead' : None
                        }
 
         # We split on spaces earlier, so need to stick the XML back together
-        observing_report = " ".join(cols[4:])
+        observing_report = " ".join(cols[3:])
 
         # Initialise the handler, and parse the XML of the observing report
         handler.reset_state()
         parseString(observing_report, handler)
 
         # Summarise the types of observation recorded
-        increment_dict(handler.info['mol_type'], totals)
+        increment_dict(totals, handler.info['mol_type'])
+        increment_dict(unique_loc_instr, history_data['location'])
 
         # For successful observations of the right type, calculate the overhead time
         if handler.is_useful():
             n_useful += 1
 
-            increment_dict(handler.info['mol_type'], useful_totals)
+            increment_dict(useful_totals, handler.info['mol_type'])
 
             # Pull out the datetime, which could be in a couple of different formats
             try:
@@ -251,26 +303,27 @@ if __name__ == '__main__':
                 print >> error_fh, "Error was:", e
 
             # Calculate the duration of the overhead, and the exposure
-            overhead_times[i]     = exp_start - start
-            non_overhead_times[i] = end - exp_start
+            history_data['start']        = start
+            history_data['overhead']     = exp_start - start
+            history_data['non-overhead'] = end - exp_start
+            summary[i] = history_data
 
         n_reports += 1
 
 
     # Summarise what we read
-    print "Final stats (%d/%d useful observing reports):" % (n_useful, n_reports)
-    for mol_type in totals:
-        print "%14s: %d/%d" % ( mol_type, useful_totals.get(mol_type, 0), totals[mol_type] )
-    print
+    print_stats(n_useful, n_reports, totals, useful_totals, unique_loc_instr)
 
-    # Tabulate the overheads
-    print "Calculated %d overhead times:" % len(overhead_times.keys())
-    print "Report line Overhead (h:m:s) Overhead (s) Non-overhead(s)"
-    for report_number in sorted(overhead_times):
-        print "%-11d %-16s %-12s %s" % (report_number,
-                            overhead_times[report_number],
-                            in_seconds(overhead_times[report_number]),
-                            in_seconds(non_overhead_times[report_number]))
+    for loc_instr in unique_loc_instr:
+        out_filename = loc_instr + '_overheads.dat'
+        n = len([i for n in summary if summary[n]['location'] == loc_instr])
+        if n > 0:
+            out_fh = open(out_filename, 'w')
+            print "Writing overheads to file:", out_filename
+            write_overheads_to_file(loc_instr, n, summary, out_fh)
+            out_fh.close()
+
+
 
     # Clean up
     xml_fh.close()
