@@ -30,6 +30,7 @@ from xml.sax import handler, parseString
 
 from datetime import datetime
 import re
+import calendar
 
 
 class ObservationReportHandler(handler.ContentHandler):
@@ -207,10 +208,15 @@ def print_stats(n_useful, n_reports, totals, useful_totals, unique_loc_instr):
     print
 
 
-def print_summary_line(n, summary, out_fh):
+def print_summary_line(n, summary, out_fh, in_unix_time=None):
+
+    start = summary[n]['start']
+    if in_unix_time:
+        start = calendar.timegm(start.timetuple())
+
     print >> out_fh, "%-11d %-30s %-16s %-12s %s" % (
                                                  n,
-                                                 summary[n]['start'],
+                                                 start,
                                                  summary[n]['overhead'],
                                                  in_seconds(summary[n]['overhead']),
                                                  in_seconds(summary[n]['non-overhead'])
@@ -218,15 +224,21 @@ def print_summary_line(n, summary, out_fh):
     return
 
 
-def write_overheads_to_file(loc_instr, n, summary, out_fh):
+def write_overheads_to_file(loc_instr, n, summary, out_fh, in_unix_time=False):
+
+    start_header = "Start (datetime)"
+    if in_unix_time:
+        start_header = "Start(unixepoch)"
+
 
     print >> out_fh, "Calculated %d overhead times:" % n
-    print >> out_fh, "Report line Start (datetime)               Overhead (h:m:s) Overhead (s) Non-overhead (s)"
+    print >> out_fh, ("Report line " + start_header +
+                     "               Overhead (h:m:s) Overhead (s) Non-overhead (s)")
 
     # Tabulate the overheads
     for n in sorted(summary):
         if ( summary[n]['location'] == loc_instr ):
-            print_summary_line(n, summary, out_fh)
+            print_summary_line(n, summary, out_fh, in_unix_time)
 
     return
 
@@ -238,6 +250,9 @@ if __name__ == '__main__':
     xml_filename = sys.argv[1]
     if len(sys.argv) > 2:
         debug = True
+
+    # Toggle for datetime/unix time output for start times
+    in_unix_time = True
 
     xml_fh = open(xml_filename, 'r')
 
@@ -320,7 +335,7 @@ if __name__ == '__main__':
         if n > 0:
             out_fh = open(out_filename, 'w')
             print "Writing overheads to file:", out_filename
-            write_overheads_to_file(loc_instr, n, summary, out_fh)
+            write_overheads_to_file(loc_instr, n, summary, out_fh, in_unix_time)
             out_fh.close()
 
 
