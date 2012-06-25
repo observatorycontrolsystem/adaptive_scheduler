@@ -79,10 +79,9 @@ def dump_metric(metric, metric_name, dump_dir):
 
     dump_fh = open(dump_path, 'w')
 
-
     timestamped_wrapper = {
                             'recorded_at' : str(datetime.utcnow()),
-                            'metric_name' : metric
+                            metric_name : metric
                           }
     print >> dump_fh, timestamped_wrapper
 
