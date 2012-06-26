@@ -23,6 +23,15 @@ class EqualityMixin(object):
         return not self.__eq__(other)
 
 
+def increment_dict_by_value(dictionary, key, value):
+    '''Build a dictionary that tracks the total values of all provided keys.'''
+    if key in dictionary:
+        dictionary[key] += value
+    else:
+        dictionary[key]  = value
+
+    return
+
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to
        datetime objects. It's no coincidence that this also happens to be the string

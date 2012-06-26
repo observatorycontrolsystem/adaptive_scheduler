@@ -23,6 +23,9 @@ from adaptive_scheduler.utils           import ( datetime_to_normalised_epoch,
 from adaptive_scheduler.printing        import ( print_resource_windows,
                                                  print_compound_reservations,
                                                  print_schedule )
+from adaptive_scheduler.metrics         import ( convert_coverage_to_dmy,
+                                                 sum_contended_datetimes,
+                                                 dump_metric )
 
 from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
 from adaptive_scheduler.pond import Block, send_schedule_to_pond
@@ -31,63 +34,6 @@ from lcogt.pond import pond_client
 pond_client.configure_service('localhost', 12345)
 
 from datetime import datetime
-
-
-# TODO: Move this
-from adaptive_scheduler.utils import datetime_to_epoch, normalised_epoch_to_datetime
-def convert_coverage_to_dmy(coverage, semester_start):
-
-    epoch_start = datetime_to_epoch(semester_start)
-
-    dt_coverage = []
-    for interval in coverage:
-        dt_start = normalised_epoch_to_datetime(interval[0], epoch_start)
-        dt_end   = normalised_epoch_to_datetime(interval[1], epoch_start)
-
-        dt_interval = (dt_start, dt_end, interval[2])
-
-        dt_coverage.append(dt_interval)
-
-    return dt_coverage
-
-
-def increment_dict_by_value(dictionary, key, value):
-    if key in dictionary:
-        dictionary[key] += value
-    else:
-        dictionary[key]  = value
-
-    return
-
-
-def sum_contended_datetimes(dt_coverage):
-
-    contended_dts = {}
-    for interval in dt_coverage:
-        contended = interval[2]
-        if contended:
-            increment_dict_by_value(contended_dts, str(interval[0].date()), contended)
-            increment_dict_by_value(contended_dts, str(interval[1].date()), contended)
-
-    return contended_dts
-
-
-import os.path
-def dump_metric(metric, metric_name, dump_dir):
-    dump_file = metric_name + '.dat'
-    dump_path = os.path.join(dump_dir, dump_file)
-
-    dump_fh = open(dump_path, 'w')
-
-    timestamped_wrapper = {
-                            'recorded_at' : str(datetime.utcnow()),
-                            metric_name : metric
-                          }
-    print >> dump_fh, timestamped_wrapper
-
-    dump_fh.close()
-
-    return
 
 
 # Configuration files
@@ -179,7 +125,7 @@ for resource in resource_windows.keys():
 
 
 metric_dir = '/home/esaunderslocal/projects/schedule_viewer/schedule_viewer/metrics'
-dump_metric(resource_contention, 'resource_contention', metric_dir)
+dump_metric(resource_contention, 'contention_by_day', metric_dir)
 
 
 
