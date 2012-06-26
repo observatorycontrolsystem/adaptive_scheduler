@@ -20,6 +20,10 @@ import os.path
 
 
 def convert_coverage_to_dmy(coverage, semester_start):
+    ''' Given a coverage vector of the form:
+            (start, end, value)
+        convert the start/end times from kernel time to datetimes, and
+        return the new structure. '''
 
     epoch_start = datetime_to_epoch(semester_start)
 
@@ -36,6 +40,9 @@ def convert_coverage_to_dmy(coverage, semester_start):
 
 
 def sum_contended_datetimes(dt_coverage):
+    ''' Given a coverage vector of (start, end, value) tuples, sum the total amount
+        of value associated with each individual UT day. Return this as a dictionary,
+        keyed on the string representation of each date (e.g. "2011-11-02"). '''
 
     contended_dts = {}
     for interval in dt_coverage:
@@ -48,6 +55,9 @@ def sum_contended_datetimes(dt_coverage):
 
 
 def dump_metric(metric, metric_name, dump_dir):
+    ''' Write the metric datastructure to file, wrapped with a timestamp indicating
+        when this was generated. '''
+
     dump_file = metric_name + '.dat'
     dump_path = os.path.join(dump_dir, dump_file)
 
@@ -55,7 +65,7 @@ def dump_metric(metric, metric_name, dump_dir):
 
     timestamped_wrapper = {
                             'generated_at' : str(datetime.utcnow()),
-                            metric_name   : metric
+                             metric_name   : metric
                           }
     print >> dump_fh, timestamped_wrapper
 
