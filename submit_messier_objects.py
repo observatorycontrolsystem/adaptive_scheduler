@@ -71,23 +71,31 @@ def build_targets(messier_objects):
 
 def build_random_proposal():
 
-    proposal_names = (
-                       'Messier relationship',
-                       'Messier painting',
-                       'Messier room',
-                       'Messier hair'
+    proposal_info = (  #  Proposal Name          Proposal ID   Group ID
+                       ( 'Messier relationship', 'MESSIER-01', 'do stuff1' ),
+                       ( 'Messier painting',     'MESSIER-02', 'do stuff2' ),
+                       ( 'Messier room',         'MESSIER-03', 'do stuff3' ),
+                       ( 'Messier hair',         'MESSIER-04', 'do stuff4' )
                      )
 
-    user_names = (
-                   'esaunders',
-                   'mbecker',
-                   'mnorbury',
-                   'tlister'
+    user_info = (  # User name    User ID
+                   ( 'esaunders', '1' ),
+                   ( 'slampoud',  '2' ),
+                   ( 'mbecker',   '3' ),
+                   ( 'mnorbury',  '4' ),
+                   ( 'tlister',   '5' )
                  )
 
+    selected_proposal = random.choice(proposal_info)
+    selected_user     = random.choice(user_info)
+
     return Proposal(
-                     proposal_name = random.choice(proposal_names),
-                     user_name     = random.choice(user_names)
+                     proposal_name = selected_proposal[0],
+                     proposal_id   = selected_proposal[1],
+                     user_name     = selected_user[0],
+                     user_id       = selected_user[1],
+                     group_id      = selected_proposal[2],
+                     obs_id         = 'face',   # TODO: THIS IS DUE TO CHANGE
                    )
 
 
@@ -125,10 +133,10 @@ def req_to_client_req(request):
                                           dec  = request.target.dec.in_sexegesimal()
                                         )
     molecule = client.request_parts.Molecule(
-                                              description = request.molecule.type,
+                                              type        = request.molecule.type,
                                               filter      = request.molecule.filter,
                                               binning     = request.molecule.binning,
-                                              duration    = request.duration
+                                              exposure_time = request.duration
                                             )
     window = client.request_parts.Window(
                                           start = str(request.windows[0]),
@@ -207,8 +215,7 @@ if __name__ == '__main__':
     targets    = build_targets(messier_objects)
     molecule   = build_test_molecule()
 
-
-    duration        = '01:00:00'
+    duration = '60'
 
     WIN_MIN_DURATION = 30 * 60            # Windows must be at least 30 minutes wide
     WIN_MAX_DURATION  = 3 * 24 * 60 * 60  # Windows can't be longer than 3 days
@@ -246,7 +253,11 @@ if __name__ == '__main__':
         client   = SchedulerClient(req_db_url, client_c_req)
         client.submit_credentials(
                                    proposal_name = proposal.proposal_name,
-                                   user_name     = proposal.user_name
+                                   proposal_id   = proposal.proposal_id,
+                                   user_name     = proposal.user_name,
+                                   user_id       = proposal.user_id,
+                                   group_id      = proposal.group_id,
+                                   obs_id        = 'your face is dumb'
                                  )
 
         url = client.build_request_url()

@@ -67,7 +67,9 @@ class Telescope(DataContainer):
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
-        req_fields = ('user', 'proposal_name', 'tag')
+        req_fields = ('proposal_name', 'proposal_id',
+                      'user_name', 'user_id',
+                      'tag')
         missing_fields = []
 
         for field in req_fields:

@@ -2,14 +2,22 @@
 [
     {
         'proposal_name'  : 'Scheduler Testing',
-        'user'           : 'Eric Saunders',
+        'proposal id'    : 'YOUR-FACE-01',
+        'user_name'      : 'Eric Saunders',
+        'user_id'        : 1,
+        'group_id'       : 'Really important',
+        'obs_id'         : 1,
         'tag'            : 'admin',
         'time_remaining' : 10,               # In hours
         'priority'       : 1
     },
     {
         'proposal_name'  : 'Kernel Testing',
-        'user'           : 'Sotiria Lampoudi',
+        'proposal id'    : 'YOUR-FACE-01',
+        'user_name'      : 'Sotiria Lampoudi',
+        'user_id'        : 2,
+        'group_id'       : 'Also important',
+        'obs_id'         : 2,
         'tag'            : 'admin',
         'time_remaining' : 5,
         'priority'       : 2
