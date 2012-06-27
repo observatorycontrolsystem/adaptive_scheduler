@@ -200,7 +200,8 @@ def select_random_telescope_class():
 
 
 def build_single_compound_requests(requests):
-    # For simplicity, wrap each Request in a 'single' Compound Request
+    ''' The simplest thing we can do. Wrap each Request in a 'single'
+        Compound Request and return it.'''
     compound_requests = []
     for request in requests:
         proposal   = build_random_proposal()
@@ -215,21 +216,27 @@ def build_single_compound_requests(requests):
 
 
 def build_nested_compound_requests(requests):
+    '''Given a set of Requests, construct a set of Compound Requests, with one
+       level of nesting, randomly distributing the Requests.'''
+
     possible_types = (
                        'single',
                        'and',
                        'oneof'
                      )
 
+    # We use the request list as a stack, pulling off to populate our CRs
     compound_requests = []
     while requests:
         proposal = build_random_proposal()
 
+        # We can't choose ANDs or ONEOFs if we only have one request left
         if len(requests) >= 2:
             chosen_type = random.choice(possible_types)
         elif len(requests) == 1:
             chosen_type = 'single'
 
+        # SINGLEs are straighforward...
         if chosen_type == 'single':
             chosen_request = requests.pop(0)
             compound_request = CompoundRequest(
@@ -238,15 +245,19 @@ def build_nested_compound_requests(requests):
                                                 requests = [chosen_request]
                                               )
 
+        # We've got a more interesting compound request...
         else:
+            # Set up the first two requests...
             chosen_requests = list((requests.pop(0), requests.pop(0)))
 
+            # Randomly decide whether to add further requests...
             while requests:
                 if random.random() > 0.5:
                     chosen_requests.append(requests.pop(0))
                 else:
                     break
 
+            # Package it all up
             compound_request = CompoundRequest(
                                                 res_type = chosen_type,
                                                 proposal = proposal,
