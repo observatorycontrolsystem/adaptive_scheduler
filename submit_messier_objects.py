@@ -199,6 +199,67 @@ def select_random_telescope_class():
     return random.choice(possible_telescope_classes)
 
 
+def build_single_compound_requests(requests):
+    # For simplicity, wrap each Request in a 'single' Compound Request
+    compound_requests = []
+    for request in requests:
+        proposal   = build_random_proposal()
+        compound_request = CompoundRequest(
+                                            res_type = 'single',
+                                            proposal = proposal,
+                                            requests = [request]
+                                          )
+        compound_requests.append(compound_request)
+
+    return compound_requests
+
+
+def build_nested_compound_requests(requests):
+    possible_types = (
+                       'single',
+                       'and',
+                       'oneof'
+                     )
+
+    compound_requests = []
+    while requests:
+        proposal = build_random_proposal()
+
+        if len(requests) >= 2:
+            chosen_type = random.choice(possible_types)
+        elif len(requests) == 1:
+            chosen_type = 'single'
+
+        if chosen_type == 'single':
+            chosen_request = requests.pop(0)
+            compound_request = CompoundRequest(
+                                                res_type = chosen_type,
+                                                proposal = proposal,
+                                                requests = [chosen_request]
+                                              )
+
+        else:
+            chosen_requests = list((requests.pop(0), requests.pop(0)))
+
+            while requests:
+                if random.random() > 0.5:
+                    chosen_requests.append(requests.pop(0))
+                else:
+                    break
+
+            compound_request = CompoundRequest(
+                                                res_type = chosen_type,
+                                                proposal = proposal,
+                                                requests = chosen_requests
+                                              )
+
+        compound_requests.append(compound_request)
+
+
+    return compound_requests
+
+
+
 if __name__ == '__main__':
 
     tel_file        = 'telescopes.dat'
@@ -215,7 +276,7 @@ if __name__ == '__main__':
     targets    = build_targets(messier_objects)
     molecule   = build_test_molecule()
 
-    duration = '60'
+    duration = 60
 
     WIN_MIN_DURATION = 30 * 60            # Windows must be at least 30 minutes wide
     WIN_MAX_DURATION  = 3 * 24 * 60 * 60  # Windows can't be longer than 3 days
@@ -229,23 +290,24 @@ if __name__ == '__main__':
 
         requests.append(request)
 
+    print "%d requests before compounding..." % len(requests)
 
-    # For simplicity, wrap each Request in a 'single' Compound Request
-    compound_requests = []
-    for request in requests:
-        proposal   = build_random_proposal()
-        compound_request = CompoundRequest(
-                                            res_type = 'single',
-                                            proposal = proposal,
-                                            requests = [request]
-                                          )
-        compound_requests.append(compound_request)
+    #compound_requests = build_single_compound_requests(requests)
+    compound_requests = build_nested_compound_requests(requests)
+
+    tally = 0
+    for cr in compound_requests:
+        print cr.res_type, len(cr.requests)
+        tally += len(cr.requests)
+
+    print "%d requests after compounding..." % tally
 
     # Map to client request objects
     client_c_reqs = []
     for compound_request in compound_requests:
         client_c_req = c_req_to_client_c_req(compound_request)
         client_c_reqs.append(client_c_req)
+
 
     # Now submit
     for i, client_c_req in enumerate(client_c_reqs):
