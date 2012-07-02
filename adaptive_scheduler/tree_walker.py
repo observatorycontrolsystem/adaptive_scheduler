@@ -107,18 +107,14 @@ if __name__ == '__main__':
              'type'     : 'and',
              'requests' : [
                               {
-                                'type'     : 'and',
+                                'type'     : 'single',
                                 'requests' : [
-                                                 { 'target' : 'blah' },
-                                                 { 'target' : 'blah' },
                                                  { 'target' : 'blah' },
                                              ]
                               },
                               {
-                                'type'     : 'and',
+                                'type'     : 'single',
                                 'requests' : [
-                                                 { 'target' : 'blah' },
-                                                 { 'target' : 'blah' },
                                                  { 'target' : 'blah' },
                                              ]
                               },
