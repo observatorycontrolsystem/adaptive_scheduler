@@ -20,6 +20,16 @@ class TreeCollapser(object):
         * Pick up the minimal tree at self.collapsed_tree.
         * If the tree could not be collapsed, self.input_tree == self.collapsed_tree,
           and self.is_collapsible will be false.
+
+        A tree can be collapsed if all of its CompoundRequests are either:
+            * ANDs or SINGLEs
+            * ONEOFs or SINGLEs
+
+        In these cases, these trees are equivalent to flat structures, with a single
+        AND or ONEOF at the top-level.
+
+        Future work: This code does not currently minimise sub-trees. If any part of
+        the tree violates the above constraints, the tree will not be collapsed.
     '''
 
     def __init__(self, input_tree):
