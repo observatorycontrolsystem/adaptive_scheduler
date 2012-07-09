@@ -1,19 +1,31 @@
 #!/usr/bin/env python
 
 '''
-tree_walker.py - Functional programming implementation of a tree walking algorithm.
+request_parser.py - Objects for parsing UserRequests.
 
-Simple example of a general recursive tree-walking function.
+This module provides:
+    * TreeCollapser - Minimises the nesting of a UserRequest.
 
 Author: Eric Saunders
 June 2012
 '''
 
 class TreeCollapser(object):
+    '''
+        Takes a User Request and reduces it to the smallest possible nesting that
+        preserves the semantics of that request. Usage:
+
+        * Provide the User Request as a constructor argument.
+        * Call the collapse_tree() method.
+        * Pick up the minimal tree at self.collapsed_tree.
+        * If the tree could not be collapsed, self.input_tree == self.collapsed_tree,
+          and self.is_collapsible will be false.
+    '''
 
     def __init__(self, input_tree):
         self.input_tree     = input_tree
         self.first_time     = True
+
         # We assume the tree will collapse, until proven otherwise. Note that a
         # collapse may not change the tree, if it is already as small as it can be.
         self.is_collapsible = True
@@ -26,6 +38,11 @@ class TreeCollapser(object):
 
 
     def validate_node(self, node):
+        '''
+            Ensure that nodes conform to a restricted set of allowed types, and
+            that nodes of type single only have one child. Raise an exception if
+            this isn't the case, since the tree is then not parseable.
+        '''
 
         # Only allow a restricted set of types
         valid_types = ('single', 'and', 'oneof')
@@ -49,6 +66,11 @@ class TreeCollapser(object):
 
 
     def is_a_node(self, node):
+        '''
+            Introspect the node to decide if it's a node (CompoundRequest) or a
+            leaf (Request).
+        '''
+
         if 'requests' in node:
             return True
 
@@ -56,10 +78,22 @@ class TreeCollapser(object):
 
 
     def get_children(self, node):
+        '''
+            Return all the children of this node. Only call this if you have
+            previously determined this is a node, not a leaf.
+        '''
+
         return node['requests']
 
 
     def collapse_node(self, node):
+        '''
+            Nodes aren't actually collapsible. What we actually do is set the tree's
+            type on the root node of the tree, and then on subsequent nodes, we verify
+            that each child node is of a type that still permits it's sub-leaves to
+            be collapsed. If this is ever not the case, we set a flag allowing a
+            caller to know that continuing this process is futile.
+        '''
 
         if self.first_time:
             self.collapsed_tree['type'] = node['type']
@@ -71,19 +105,34 @@ class TreeCollapser(object):
                 # The tree has differing types, and can't be collapsed. Give up.
                self.is_collapsible = False
 
+        return
+
 
     def collapse_leaf(self, node):
+        '''
+            Take the provided node and append it to a new flat tree structure
+            representing the collapsing tree.
+        '''
         self.collapsed_tree['requests'].append(node)
 
 
     def collapse_tree(self):
+        '''
+            Public API to perform the tree collapsing. We want this because
+            self.collapse is recursive on nodes, so must be passed a node as an
+            argument.
+        '''
 
-        self.collapse(self.input_tree)
+        self._collapse(self.input_tree)
 
         return
 
 
-    def collapse(self, node):
+    def _collapse(self, node):
+        '''
+            Recursively collapse the tree, node by node. We give up immediately if
+            any node of the tree is shown to be non-collapsible.
+        '''
         # Only continue if we still believe the tree can be collapsed
         if self.is_collapsible:
 
@@ -99,7 +148,7 @@ class TreeCollapser(object):
 
                 # Otherwise, continue collapsing recursively down the tree
                 for child in self.get_children(node):
-                    self.collapse(child)
+                    self._collapse(child)
 
             # It's a node - deal with it appropriately
             else:
@@ -117,59 +166,3 @@ class InvalidTreeError(Exception):
     def __str__(self):
         return self.value
 
-
-
-
-
-
-
-if __name__ == '__main__':
-
-    import pprint
-
-    pp = pprint.PrettyPrinter()
-
-    tree2 = {
-             'type'     : 'and',
-             'requests' : [
-                              {
-                                'type'     : 'single',
-                                'requests' : [
-                                                 { 'target' : 'blah' },
-                                             ]
-                              },
-                              {
-                                'type'     : 'single',
-                                'requests' : [
-                                                 { 'target' : 'blah' },
-                                             ]
-                              },
-                          ]
-           }
-
-    tree = tree2
-
-    walk(tree, is_a_node, get_children, process_node, process_leaf)
-
-    print "Found %d nodes." % node_total
-    print "Found %d leaves." % leaf_total
-
-    print node_types
-
-    if len(node_types) == 1:
-        if 'and' in node_types:
-            print "All node types were of type AND. We can collapse this tree!"
-
-            print "Collapsing tree..."
-            collapsed_tree = collapse_tree(tree, is_a_node, get_children,
-                                           collapse_node, collapse_leaf)
-            print "Old tree was:"
-            pp.pprint(tree)
-            print "\nNew tree looks like this:"
-            pp.pprint(collapsed_tree)
-
-        else:
-            print "All nodes were of a type other than AND. Doing nothing."
-
-    else:
-        print "Multiple types found, no collapse possible."

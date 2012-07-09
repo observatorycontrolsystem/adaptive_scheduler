@@ -4,7 +4,7 @@ from __future__ import division
 from nose.tools import assert_equal, raises
 
 
-from adaptive_scheduler.tree_walker import TreeCollapser, InvalidTreeError
+from adaptive_scheduler.request_parser import TreeCollapser, InvalidTreeError
 
 
 class TestTreeCollapse(object):
@@ -39,12 +39,12 @@ class TestTreeCollapse(object):
         expected_tree = {
                           'type'     : 'and',
                           'requests' : [
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
                                        ]
                         }
 
@@ -79,12 +79,12 @@ class TestTreeCollapse(object):
         expected_tree = {
                           'type'     : 'oneof',
                           'requests' : [
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
                                        ]
                         }
 
@@ -124,12 +124,57 @@ class TestTreeCollapse(object):
         expected_tree = {
                           'type'     : 'and',
                           'requests' : [
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
-                                           { 'target' : 'blah'},
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                       ]
+                        }
+
+        self.tc = TreeCollapser(input_tree)
+        self.tc.collapse_tree()
+        assert_equal(expected_tree, self.tc.collapsed_tree)
+
+
+    def test_collapses_oneofs_and_singles(self):
+        input_tree = {
+                         'type'     : 'oneof',
+                         'requests' : [
+                                          {
+                                            'type'     : 'oneof',
+                                            'requests' : [
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                         ]
+                                          },
+                                          {
+                                            'type'     : 'oneof',
+                                            'requests' : [
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                         ]
+                                          },
+                                          {
+                                            'type'     : 'single',
+                                            'requests' : [
+                                                             { 'target' : 'blah' },
+                                                         ]
+                                          },
+                                      ]
+                     }
+
+        expected_tree = {
+                          'type'     : 'oneof',
+                          'requests' : [
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
                                        ]
                         }
 
