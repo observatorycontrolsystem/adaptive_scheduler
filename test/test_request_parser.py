@@ -20,7 +20,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'and',
+                                            'operator' : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -64,7 +64,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -72,7 +72,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -108,7 +108,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'and',
+                                            'operator' : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -116,14 +116,14 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'and',
+                                            'operator' : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'single',
+                                            'operator' : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                          ]
@@ -157,7 +157,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -165,14 +165,14 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'single',
+                                            'operator' : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                          ]
@@ -206,7 +206,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -214,7 +214,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'and',
+                                            'operator' : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -244,17 +244,17 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_single_at_top_level(self):
         input_tree = {
-                         'operator'     : 'single',
+                         'operator' : 'single',
                          'requests' : [
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -276,7 +276,7 @@ class TestTreeCollapse(object):
                          'proposal' : {},
                          'requests' : [
                                           {
-                                            'operator'     : 'single',
+                                            'operator' : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -284,7 +284,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'operator'     : 'oneof',
+                                            'operator' : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
