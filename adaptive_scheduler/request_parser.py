@@ -40,7 +40,7 @@ class TreeCollapser(object):
         # collapse may not change the tree, if it is already as small as it can be.
         self.is_collapsible = True
         self.collapsed_tree = {
-                                'type'     : None,
+                                'operator' : None,
                                 'requests' : []
                               }
 
@@ -55,16 +55,16 @@ class TreeCollapser(object):
         '''
 
         # Only allow a restricted set of types
-        valid_types = ('single', 'and', 'oneof')
-        if node['type'] not in valid_types:
-            error = "Provided type '%s' is not one of %s." % (
-                                                               node['type'],
-                                                               valid_types
-                                                             )
+        valid_operators = ('single', 'and', 'oneof')
+        if node['operator'] not in valid_operators:
+            error = "Provided operator '%s' is not one of %s." % (
+                                                                   node['operator'],
+                                                                   valid_operators
+                                                                 )
             raise InvalidTreeError(error)
 
         # Singles should only have one child
-        if node['type'] == 'single':
+        if node['operator'] == 'single':
             n_children = len(self.get_children(node))
             if n_children != 1:
                 error = "Nodes of type 'single' must have exactly 1 child (got %d)." % (
@@ -106,12 +106,16 @@ class TreeCollapser(object):
         '''
 
         if self.first_time:
-            self.collapsed_tree['type'] = node['type']
+            # This is the top-level, UserRequest
+            self.collapsed_tree['expires']  = node['expires']
+            self.collapsed_tree['operator'] = node['operator']
+            self.collapsed_tree['proposal'] = node['proposal']
+
             self.first_time = False
 
         else:
-            if ( node['type'] != self.collapsed_tree['type'] and
-                 node['type'] != 'single' ):
+            if ( node['operator'] != self.collapsed_tree['operator'] and
+                 node['operator'] != 'single' ):
                 # The tree has differing types, and can't be collapsed. Give up.
                self.is_collapsible = False
 

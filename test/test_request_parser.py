@@ -15,10 +15,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_all_ands(self):
         input_tree = {
-                         'type'     : 'and',
+                         'operator' : 'and',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'and',
+                                            'operator'     : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -26,7 +28,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'and',
+                                            'operator'     : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -37,7 +39,9 @@ class TestTreeCollapse(object):
                      }
 
         expected_tree = {
-                          'type'     : 'and',
+                          'operator' : 'and',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
                           'requests' : [
                                            { 'target' : 'blah' },
                                            { 'target' : 'blah' },
@@ -55,10 +59,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_all_oneofs(self):
         input_tree = {
-                         'type'     : 'oneof',
+                         'operator' : 'oneof',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -66,7 +72,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -77,7 +83,9 @@ class TestTreeCollapse(object):
                      }
 
         expected_tree = {
-                          'type'     : 'oneof',
+                          'operator' : 'oneof',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
                           'requests' : [
                                            { 'target' : 'blah' },
                                            { 'target' : 'blah' },
@@ -95,10 +103,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_ands_and_singles(self):
         input_tree = {
-                         'type'     : 'and',
+                         'operator' : 'and',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'and',
+                                            'operator'     : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -106,14 +116,14 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'and',
+                                            'operator'     : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'type'     : 'single',
+                                            'operator'     : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                          ]
@@ -122,7 +132,9 @@ class TestTreeCollapse(object):
                      }
 
         expected_tree = {
-                          'type'     : 'and',
+                          'operator' : 'and',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
                           'requests' : [
                                            { 'target' : 'blah' },
                                            { 'target' : 'blah' },
@@ -140,10 +152,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_oneofs_and_singles(self):
         input_tree = {
-                         'type'     : 'oneof',
+                         'operator' : 'oneof',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -151,14 +165,14 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'type'     : 'single',
+                                            'operator'     : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                          ]
@@ -167,7 +181,9 @@ class TestTreeCollapse(object):
                      }
 
         expected_tree = {
-                          'type'     : 'oneof',
+                          'operator' : 'oneof',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
                           'requests' : [
                                            { 'target' : 'blah' },
                                            { 'target' : 'blah' },
@@ -185,10 +201,12 @@ class TestTreeCollapse(object):
 
     def test_cant_collapse_ands_and_oneofs(self):
         input_tree = {
-                         'type'     : 'and',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'operator' : 'and',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -196,7 +214,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'and',
+                                            'operator'     : 'and',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -215,7 +233,7 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_type(self):
         input_tree = {
-                       'type' : 'married',
+                       'operator' : 'married',
                        'requests' : []
                      }
 
@@ -226,17 +244,17 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_single_at_top_level(self):
         input_tree = {
-                         'type'     : 'single',
+                         'operator'     : 'single',
                          'requests' : [
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
                                                          ]
                                           },
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -253,10 +271,12 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_single_at_lower_level(self):
         input_tree = {
-                         'type'     : 'oneof',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'operator' : 'oneof',
+                         'proposal' : {},
                          'requests' : [
                                           {
-                                            'type'     : 'single',
+                                            'operator'     : 'single',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
@@ -264,7 +284,7 @@ class TestTreeCollapse(object):
                                                          ]
                                           },
                                           {
-                                            'type'     : 'oneof',
+                                            'operator'     : 'oneof',
                                             'requests' : [
                                                              { 'target' : 'blah' },
                                                              { 'target' : 'blah' },
