@@ -64,6 +64,9 @@ class Telescope(DataContainer):
     pass
 
 
+class Window(DataContainer):
+    pass
+
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
@@ -87,8 +90,8 @@ class Molecule(DataContainer):
     #TODO: Specialisation will be necessary once other molecules are scheduled
 
     def list_missing_fields(self):
-        req_fields = ('type', 'count', 'binning',
-                      'instrument_name', 'filter', 'duration')
+        req_fields = ('type', 'exposure_count', 'bin_x', 'bin_y',
+                      'instrument_name', 'filter', 'exposure_time')
         missing_fields = []
 
         for field in req_fields:

@@ -95,7 +95,7 @@ def build_random_proposal():
                      user_name     = selected_user[0],
                      user_id       = selected_user[1],
                      group_id      = selected_proposal[2],
-                     obs_id         = 'face',   # TODO: THIS IS DUE TO CHANGE
+                     tag_id         = 'face',   # TODO: THIS IS DUE TO CHANGE
                    )
 
 
@@ -330,11 +330,11 @@ if __name__ == '__main__':
                                    user_name     = proposal.user_name,
                                    user_id       = proposal.user_id,
                                    group_id      = proposal.group_id,
-                                   obs_id        = 'your face is dumb'
+                                   tag_id        = 'your face is dumb'
                                  )
 
         url = client.build_request_url()
-        #print url
+        print url
         client.submit_request(url)
 
         #print client_c_req.requests
