@@ -32,6 +32,8 @@ class TestLocationExpander(object):
                     }
 
         received = self.le.expand_locations(dict_repr)
+
+        # We expect the full telescope list, with the telescope classes trimmed off
         expected = [ '.'.join(loc.split('.')[:-1]) for loc in self.telescopes ]
 
         assert_equal(received, expected)
