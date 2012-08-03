@@ -240,7 +240,7 @@ def build_nested_compound_requests(requests):
         if chosen_type == 'single':
             chosen_request = requests.pop(0)
             compound_request = CompoundRequest(
-                                                res_type = chosen_type,
+                                                operator = chosen_type,
                                                 proposal = proposal,
                                                 requests = [chosen_request]
                                               )
@@ -259,7 +259,7 @@ def build_nested_compound_requests(requests):
 
             # Package it all up
             compound_request = CompoundRequest(
-                                                res_type = chosen_type,
+                                                operator = chosen_type,
                                                 proposal = proposal,
                                                 requests = chosen_requests
                                               )

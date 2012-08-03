@@ -65,9 +65,21 @@ def rise_set_to_kernel_intervals(intervals):
        kernel Intervals (an object that stores Timepoints).'''
 
     timepoints = []
-    for (start, end) in intervals:
-        timepoints.append(Timepoint(start, 'start'))
-        timepoints.append(Timepoint(end, 'end'))
+    for dt_start, dt_end in intervals:
+        timepoints.append(Timepoint(dt_start, 'start'))
+        timepoints.append(Timepoint(dt_end, 'end'))
+
+    return Intervals(timepoints)
+
+
+def req_window_to_kernel_intervals(windows):
+    '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
+       kernel Intervals (an object that stores Timepoints).'''
+
+    timepoints = []
+    for window in windows:
+        timepoints.append(Timepoint(window.start, 'start'))
+        timepoints.append(Timepoint(window.end, 'end'))
 
     return Intervals(timepoints)
 
@@ -105,7 +117,7 @@ def make_dark_up_kernel_intervals(req, visibility_from):
     intersection = dark_intervals.intersect([up_intervals])
 
     # Intersect with any window provided in the user request
-    user_intervals = rise_set_to_kernel_intervals(req.windows)
+    user_intervals = req_window_to_kernel_intervals(req.windows)
     intersection   = intersection.intersect([user_intervals])
 
     # Print some summary info
@@ -130,7 +142,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         # Each Reservation represents the set of available windows of opportunity
         # The resource is governed by the timepoint.resource attribute
         request = compound_request.requests[idx]
-        reservations.append( Reservation(compound_request.proposal.priority,
+        reservations.append( Reservation(compound_request.priority,
                                          request.duration,
                                          request.telescope.name,
                                          epoch_intervals) )
@@ -144,7 +156,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something
-    compound_res = CompoundReservation(reservations, compound_request.res_type)
+    compound_res = CompoundReservation(reservations, compound_request.operator)
 
     return compound_res
 

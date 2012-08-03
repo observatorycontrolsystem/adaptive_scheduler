@@ -146,16 +146,15 @@ class CompoundRequest(EqualityMixin):
         A user-level request for an observation. This will be translated into the
         Reservation/CompoundReservation of the scheduling kernel.
 
-        res_type - the type of request (single, and, oneof)
+        operator - the type of compound request (single, and, oneof)
         proposal - proposal meta information associated with this request
         requests - a list of Request objects. There must be at least one.
     '''
 
     valid_types = CompoundReservation.valid_types
 
-    def __init__(self, res_type, proposal, requests):
+    def __init__(self, operator, requests):
         self.res_type  = self._validate_type(res_type)
-        self.proposal  = proposal
         self.requests  = requests
 
 
@@ -176,3 +175,11 @@ class CompoundRequest(EqualityMixin):
         return provided_type
 
 
+
+class UserRequest(CompoundRequest):
+
+    def __init__(self, operator, requests, proposal, expires):
+        CompoundRequest.__init__(self, operator, requests)
+
+        self.proposal = proposal
+        self.expires  = expires
