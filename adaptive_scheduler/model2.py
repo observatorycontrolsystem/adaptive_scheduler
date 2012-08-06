@@ -134,7 +134,7 @@ class Request(DefaultMixin):
         semantics ("do this and this and this", "do this or this").
 
         target    - a Target object (pointing information)
-        molecule  - a Molecule object (detailed observing information)
+        molecules - a list of Molecule objects (detailed observing information)
         windows   - a list of start/end datetimes, representing when this observation
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
@@ -143,14 +143,31 @@ class Request(DefaultMixin):
         telescope - a Telescope object (lat/long information)
     '''
 
-    def __init__(self, target, molecule, windows, duration, telescope):
+    def __init__(self, target, molecules, windows, telescope):
 
         self.target         = target
-        self.molecule       = molecule
+        self.molecules      = molecules
         self.windows        = windows
-        self.duration       = duration
         self.telescope      = telescope
 
+    def get_duration(self):
+        '''This is a placeholder for a more sophisticated duration function, that
+           does something clever with overheads. For now, it just sums the exposure
+           times of the molecules, and adds an almost arbitrary overhead.'''
+
+        #TODO: Placeholder for more sophisticated overhead scheme
+
+        # Pick a sensible sounding overhead, in seconds
+        overhead_per_molecule = 20
+        duration = 0
+        for mol in self.molecules:
+            duration += mol.exposure_count * mol.exposure_time
+            duration += overhead_per_molecule
+
+        return duration
+
+    # Define properties
+    duration = property(get_duration)
 
 
 class CompoundRequest(DefaultMixin):
@@ -187,8 +204,25 @@ class CompoundRequest(DefaultMixin):
         return provided_operator
 
 
+    def get_duration(self):
+        '''The duration of a CompoundRequest is just the sum of the durations of
+           its sub-requests.'''
+
+        duration = 0
+        for req in self.requests:
+            duration += req.duration()
+
+        return duration
+
+
+    # Define properties
+    duration = property(get_duration)
+
+
 
 class UserRequest(CompoundRequest, DefaultMixin):
+    '''UserRequests are just top-level CompoundRequests. They differ only in having
+       access to proposal and expiry information.'''
 
     def __init__(self, operator, requests, proposal, expires):
         CompoundRequest.__init__(self, operator, requests)
@@ -204,29 +238,8 @@ class UserRequest(CompoundRequest, DefaultMixin):
         #TODO: Placeholder for more sophisticated priority scheme
         return self.proposal.priority
 
-
-    def get_duration(self):
-        '''This is a placeholder for a more sophisticated duration function, that
-           does something clever with overheads. For now, it just sums the exposure
-           times of the molecules, and adds an almost arbitrary overhead.'''
-
-        #TODO: Placeholder for more sophisticated overhead scheme
-
-        # Pick a sensible sounding overhead, in seconds
-        overhead = 20
-        duration = 0
-        for req in requests:
-            for mol in req.molecules:
-                exp_time = mol.exposure_count * mol.exposure_time
-                exp_time += overhead
-
-            duration += exp_time
-
-        return duration
-
     # Define properties
     priority = property(get_priority)
-    duration = property(get_duration)
 
 
 
@@ -335,18 +348,14 @@ class ModelBuilder(object):
 
         telescopes = self.tel_network.get_telescopes_at_location(req_dict['location'])
 
-        # TODO: Construct this based on molecules plus overheads
-        duration = None
-
         # Build a Request for each expanded location
         requests = []
         for telescope in telescopes:
             req = Request(
-                           target    = target,
-                           molecule  = molecules,
-                           windows   = windows,
-                           duration  = duration,
-                           telescope = telescope,
+                           target     = target,
+                           molecules  = molecules,
+                           windows    = windows,
+                           telescope  = telescope,
                          )
             requests.append(req)
 

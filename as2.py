@@ -122,3 +122,12 @@ resource_windows = construct_resource_windows(visibility_from, semester_start)
 # Convert CompoundRequests -> CompoundReservations
 to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                          semester_start)
+
+
+
+
+# TODO: Temporary debug code
+v = visibility_from['1m0a.doma.bpl']
+rw = resource_windows['1m0a.doma.bpl']
+cr = to_schedule[0]
+print "cr.reservation_list:", cr.reservation_list
