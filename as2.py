@@ -15,18 +15,22 @@ import ast
 from datetime import datetime
 
 # TODO: Remove hard-coded paths
-sys.path.append('/home/esaunderslocal/projects/schedulerWebService')
-sys.path.append('/home/esaunderslocal/programming/python/rise_set/')
+#sys.path.append('/home/esaunderslocal/projects/schedulerWebService')
+#sys.path.append('${HOME}/programming/python/rise_set/')
 
 
-from client.retrieval_client import RetrievalClient
+#from client.retrieval_client import RetrievalClient
 from adaptive_scheduler.request_parser import TreeCollapser
 from adaptive_scheduler.tree_walker import RequestMaxDepthFinder
 from adaptive_scheduler.model2 import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations )
-from adaptive_scheduler.input import get_telescope_network
+from adaptive_scheduler.input import ( get_telescope_network, dump_scheduler_input )
+from adaptive_scheduler.printing import print_schedule
+
+from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
+
 
 def get_requests(url, telescope_class):
 
@@ -97,8 +101,11 @@ telescope_class = '1m0'
 requests       = get_requests_from_file('requests.dat', 'dummy arg')
 collapsed_reqs = collapse_requests(requests)
 
-
+# Configuration files
 tel_file = 'telescopes.dat'
+scheduler_dump_file = 'to_schedule.pickle'
+
+
 mb = ModelBuilder(tel_file)
 
 user_reqs = []
@@ -123,6 +130,22 @@ resource_windows = construct_resource_windows(visibility_from, semester_start)
 to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                          semester_start)
 
+# Dump the variables to be scheduled, for offline analysis if necessary
+contractual_obligations = []
+dump_scheduler_input(scheduler_dump_file, to_schedule, resource_windows,
+                     contractual_obligations)
+
+# Instantiate and run the scheduler
+kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations)
+schedule = kernel.schedule_all()
+
+# Summarise the schedule in normalised epoch (kernel) units of time
+print_schedule(schedule, semester_start, semester_end)
+
+# Convert the kernel schedule into POND blocks, and send them to the POND
+#send_schedule_to_pond(schedule, semester_start)
+
+
 
 
 
@@ -130,4 +153,4 @@ to_schedule = make_compound_reservations(user_reqs, visibility_from,
 v = visibility_from['1m0a.doma.bpl']
 rw = resource_windows['1m0a.doma.bpl']
 cr = to_schedule[0]
-print "cr.reservation_list:", cr.reservation_list
+#print "cr.reservation_list:", cr.reservation_list
