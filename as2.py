@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 '''
-as2.py - summary line
+as2.py - Run the adaptive scheduler in single use, non-persistent mode.
 
-description
+This is most useful for testing purposes.
 
 Author: Eric Saunders
 July 2012
