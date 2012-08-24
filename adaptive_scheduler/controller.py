@@ -19,7 +19,7 @@ from adaptive_scheduler.orchestrator import main as schedule
 # Module scope logger
 logger = create_logger("controller")
 
-def run_controller():
+def run_controller(interval):
     ''' Run the scheduler controller. '''
     logger.info("Starting controller")
 
@@ -27,7 +27,7 @@ def run_controller():
     queue = Queue()
 
     # Start monitor
-    monitor = create_monitor(10, queue)
+    monitor = create_monitor(interval, queue)
     monitor.start()
 
     # Process events TODO: maybe we want to shutdown/restart
