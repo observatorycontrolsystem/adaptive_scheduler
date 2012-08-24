@@ -5,7 +5,7 @@ start_controller - Run the controller.
 Author: Martin Norbury
 August 2012
 '''
-from argparse import ArgumentParser
+from optparse import OptionParser
 
 from adaptive_scheduler import log
 from adaptive_scheduler import controller
@@ -17,8 +17,8 @@ if __name__ == '__main__':
     logger.info("Starting application")
 
     # Parse the command line arguments
-    parser = ArgumentParser(description='Scheduler Controller')
-    arguments = parser.parse_args()
+    parser = OptionParser(description="Scheduler controller")
+    options, args = parser.parse_args()
 
     # Run controller
     controller.run_controller()
