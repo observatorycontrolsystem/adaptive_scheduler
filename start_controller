@@ -18,7 +18,10 @@ if __name__ == '__main__':
 
     # Parse the command line arguments
     parser = OptionParser(description="Scheduler controller")
-    parser.add_option("-i","--interval",dest="interval",help="Polling interval (s)", default=10, type="int")
+    parser.add_option("-i", "--interval", dest="interval",
+                      help="Polling interval (s)",
+                      default=10,
+                      type="int")
     options, args = parser.parse_args()
 
     # Run controller
