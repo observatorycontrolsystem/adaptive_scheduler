@@ -1,12 +1,14 @@
 import log
 import threading
 
+from adaptive_scheduler.orchestrator import get_requests_from_file as get_requests
+
 # Create module log 
 logger = log.create_logger("monitor")
 
-class PlainMessageEvent(object):
-    def __init__(self, message):
-        self.message = message
+class RequestUpdateEvent(object):
+    def __init__(self, requests):
+        self.requests = requests
     def __repr__(self):
         return '%s(%r)' % (self.__class__, self.__dict__)
 
@@ -36,12 +38,13 @@ class _MonitoringThread(_TimerThread):
         self.queue = queue
 
     def action(self):
-        logger.info("Do periodic action")
+        logger.info("Getting latest requests")
 
-        # Do period stuff here
+        # Do periodic stuff here
+        requests = get_requests('requests.dat','dummy arg')
 
         # Post results to controller
-        self.queue.put(PlainMessageEvent("An event with a simple message"))
+        self.queue.put(RequestUpdateEvent(requests))
 
 def create_monitor(period, queue):
     return _MonitoringThread(period, queue)

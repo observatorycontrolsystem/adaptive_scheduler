@@ -12,8 +12,9 @@ from __future__ import division
 from Queue import Queue
 
 # Internal imports
-from log import create_logger
-from monitor import create_monitor
+from adaptive_scheduler.log import create_logger
+from adaptive_scheduler.monitor import create_monitor
+from adaptive_scheduler.orchestrator import main as schedule
 
 # Module scope logger
 logger = create_logger("controller")
@@ -37,6 +38,7 @@ def handle_event(event):
     logger.info("Got event %r" % (event,))
 
     # Handle events here
+    schedule(event.requests)
 
 if __name__ == '__main__':
     run_controller()

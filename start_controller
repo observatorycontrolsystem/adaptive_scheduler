@@ -1,0 +1,25 @@
+#!/usr/bin/env python
+'''
+start_controller - Run the controller.
+
+Author: Martin Norbury
+August 2012
+'''
+from argparse import ArgumentParser
+
+from adaptive_scheduler import log
+from adaptive_scheduler import controller
+
+# Module logger
+logger = log.create_logger('main')
+
+if __name__ == '__main__':
+    logger.info("Starting application")
+
+    # Parse the command line arguments
+    parser = ArgumentParser(description='Scheduler Controller')
+    arguments = parser.parse_args()
+
+    # Run controller
+    controller.run_controller()
+
