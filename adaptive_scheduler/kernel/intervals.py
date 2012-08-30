@@ -310,7 +310,7 @@ class Intervals(object):
         for t in self.timepoints:
             if t.type == 'start':
                 # figure out start so it aligns with slice_alignment 
-                start = slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length
+                start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
             else:
                 while t.time - start >= duration:
                     tmp = range(start, t.time, slice_length)
