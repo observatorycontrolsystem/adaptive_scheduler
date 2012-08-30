@@ -301,6 +301,23 @@ class Intervals(object):
         return quantum_starts
 
 
+    def get_slices(self, slice_alignment, slice_length, duration):
+        ''' Returns a list of lists. Each inner list is a window. The first 
+        element is the initial slice, and each subsequent slice is also
+        occupied. All slices are aligned with slice_alignment.'''
+        slices = []
+        self.timepoints.sort()
+        for t in self.timepoints:
+            if t.type == 'start':
+                # figure out start so it aligns with slice_alignment 
+                start = slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length
+            else:
+                while t.time - start >= duration:
+                    tmp = range(start, t.time, slice_length)
+                    slices.append(tmp)
+                    start += slice_length
+        return slices
+        
 
 class IntervalsUtility(object):
     
