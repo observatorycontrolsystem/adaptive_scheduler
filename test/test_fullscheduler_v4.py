@@ -46,15 +46,18 @@ class TestFullScheduler_v3(object):
         self.gpw2 = {}
         self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
         self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
-        
+
+        slice_dict = {}
+        slice_dict['foo'] = [0,1]
+        slice_dict['bar'] = [0,1]
         self.fs1 = FullScheduler_v4([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [])
+                                    self.gpw2, [], slice_dict)
         self.fs2 = FullScheduler_v4([self.cr1, self.cr4],
-                                    self.gpw2, [])
+                                    self.gpw2, [], slice_dict)
         self.fs3 = FullScheduler_v4([self.cr5],
-                                    self.gpw2, [])
+                                    self.gpw2, [], slice_dict)
         self.fs4 = FullScheduler_v4([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [])
+                                    self.gpw2, [], slice_dict)
         
 
     def test_create(self):
@@ -91,29 +94,12 @@ class TestFullScheduler_v3(object):
         assert_equal(self.fs3.oneof_constraints[0][1], self.r5)
 
 
-    # def test_schedule_5_7_2012(self):
-    #     s1 = Intervals([Timepoint(93710, 'start'), 
-    #                     Timepoint(114484, 'end'),
-    #                     Timepoint(180058, 'start'), 
-    #                     Timepoint(200648, 'end')])
-    #     r1 = Reservation_v2(1, 30, 'foo', s1)
-    #     s2 = copy.copy(s1)
-    #     r2 = Reservation_v2(1, 30, 'goo', s2)
-
-    #     cr = CompoundReservation_v2([r1,r2], 'oneof')
-    #     gpw = {}
-    #     gpw['foo'] = Intervals([Timepoint(90000, 'start'), 
-    #                             Timepoint(201000, 'end')])
-    #     gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
-    #                             Timepoint(201000, 'end')])
-    #     fs = FullScheduler_v4([cr], gpw, [])
-    #     schedule = fs.schedule_all()
-
     def test_schedule_all_1(self):
         ''' this test illustrates an example in which, if we were considering 
         alternatives with the same weight, we might have caught the 'and'
         and achieved a greater score'''
         d = self.fs1.schedule_all()
+
 
     def test_schedule_all_2(self):
         self.fs2.schedule_all()
@@ -128,6 +114,31 @@ class TestFullScheduler_v3(object):
 
 
     def test_schedule_triple_oneof(self):
+        slice_dict = {}
+        slice_dict['foo'] = [0,1]
+        slice_dict['bar'] = [0,1]
         fs = FullScheduler_v4([self.cr9],
-                              self.gpw2, [])
+                              self.gpw2, [], slice_dict)
         s = fs.schedule_all()
+
+
+    def test_schedule_5_7_2012(self):
+        s1 = Intervals([Timepoint(93710, 'start'), 
+                        Timepoint(114484, 'end'),
+                        Timepoint(180058, 'start'), 
+                        Timepoint(200648, 'end')])
+        r1 = Reservation_v2(1, 30, 'foo', s1)
+        s2 = copy.copy(s1)
+        r2 = Reservation_v2(1, 30, 'goo', s2)
+
+        cr = CompoundReservation_v2([r1,r2], 'oneof')
+        gpw = {}
+        gpw['foo'] = Intervals([Timepoint(90000, 'start'), 
+                                Timepoint(201000, 'end')])
+        gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
+                                Timepoint(201000, 'end')])
+        slice_dict = {}
+        slice_dict['foo'] = [90000,60]
+        slice_dict['goo'] = [90000,60]
+        fs = FullScheduler_v4([cr], gpw, [], slice_dict)
+        schedule = fs.schedule_all()

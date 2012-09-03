@@ -2,7 +2,11 @@
 
 '''
 FullScheduler_v4 class for co-scheduling reservations 
-across multiple resources using a discretized integer program.
+across multiple resources using time-slicing and an integer program.
+
+Because time is discretized into time slices, this scheduler requires
+information about how to generate the slices, so its signature has one
+more argument than usual. 
 
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 August 2012
@@ -18,12 +22,17 @@ class FullScheduler_v4(object):
     
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
-                 contractual_obligation_list):
+                 contractual_obligation_list, 
+                 time_slicing_dict):
         self.compound_reservation_list   = compound_reservation_list
         self.contractual_obligation_list = contractual_obligation_list
         # globally_possible_windows_dict is a dictionary mapping:
         # resource -> globally possible windows (Intervals) on that resource. 
         self.globally_possible_windows_dict   = globally_possible_windows_dict
+        # time_slicing_dict is a dictionary that maps: 
+        # resource-> [slice_alignment, slice_length]
+        self.time_slicing_dict = time_slicing_dict
+
         # these dictionaries hold:
         # scheduled reservations
         self.schedule_dict      = {}
@@ -49,9 +58,18 @@ class FullScheduler_v4(object):
         self.and_constraints   = []        
         self.oneof_constraints = []
         self.reservation_list  = self.convert_compound_to_simple()
-        self.unscheduled_reservation_list = copy.copy(self.reservation_list)
-        self.Yik = [] # maps idx -> [resID, window idx]
+#        self.unscheduled_reservation_list = copy.copy(self.reservation_list)
+
+        # these are the structures we need for the linear programming solver
+        self.Yik = [] # maps idx -> [resID, window idx, priority]
         self.aikt = {} # maps slice -> Yik idxs
+
+
+    def get_reservation_by_ID(self, ID):
+        for r in self.reservation_list:
+            if r.get_ID() == ID:
+                return r
+        return None
 
 
     def convert_compound_to_simple(self):
@@ -79,10 +97,10 @@ class FullScheduler_v4(object):
 
 
     def schedule_all(self):
-        #TODO: where do slice_alignment and length (per resource) come from?
-        slice_alignment = 0
-        slice_length = 1
         for r in self.reservation_list:
+            resource = r.resource 
+            slice_alignment = self.time_slicing_dict[resource][0]
+            slice_length = self.time_slicing_dict[resource][1]
             r.slices = r.free_windows.get_slices(slice_alignment, slice_length, r.duration)
             r.Yik_entries = []
             w_idx = 0
@@ -165,32 +183,52 @@ class FullScheduler_v4(object):
             f[row] = - entry[2] #priority
             row += 1
         p = LP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
-        r = p.minimize('pclp') # or 'glpk' or 'lpsolve'
+#        r = p.minimize('pclp') 
+        r = p.minimize('glpk')
+#        r = p.minimize('lpsolve')
+
         print r.xf
+        idx = 0
+        for value in r.xf:
+            if value == 1:
+                resID = self.Yik[idx][0]
+                slice_idx = self.Yik[idx][1]
+                reservation = self.get_reservation_by_ID(resID)
+                start = reservation.slices[slice_idx][0]
+                # the time taken up by the reservation is this, but the actual
+                # ending time should be start + duration
+                quantum = reservation.slices[slice_idx][-1] + self.time_slicing_dict[reservation.resource][1]
+                self.commit_reservation_to_schedule(reservation, start, quantum)
+            idx += 1
+        # TODO? do anything about resolving whether parent comp. res.'s are
+        # scheduled?
+        return self.schedule_dict
 
 
-    # def commit_reservation_to_schedule(self, r):
-    #     if r.scheduled:
-    #         start    = r.scheduled_start
-    #         quantum  = r.scheduled_quantum
-    #         resource = r.scheduled_resource
-    #         interval = Intervals(r.scheduled_timepoints, 'busy')
-    #         self.schedule_dict[resource].append(r)
-    #         # add interval & remove free time
-    #         self.schedule_dict_busy[resource].add(r.scheduled_timepoints)
-    #         self.schedule_dict_free[resource] = self.schedule_dict_free[resource].subtract(interval)
-    #         # remove from list of unscheduled reservations
-    #         self.unscheduled_reservation_list.remove(r)
-    #         # remove scheduled time from free windows of other reservations
-    #         self.current_resource = resource
-    #         reservation_list = filter(self.resource_equals, self.reservation_list)
-    #         for reservation in reservation_list:
-    #             if r == reservation:
-    #                 continue
-    #             else:
-    #                 reservation.remove_from_free_windows(interval)
-    #     else:
-    #         print "error: trying to commit unscheduled reservation"
+    def commit_reservation_to_schedule(self, r, start, quantum):
+        r.scheduled = True
+        r.scheduled_start = start
+        r.scheduled_resource = r.resource
+        r.scheduled_quantum = quantum
+        r.scheduled_timepoints = [Timepoint(start, 'start'), 
+                                  Timepoint(start + r.duration, 'end')]
+        r.scheduled_by = 'slicedIP'
+        self.schedule_dict[r.resource].append(r)
+        # remove from list of unscheduled reservations
+#        self.unscheduled_reservation_list.remove(r)
+
+        # interval = Intervals(r.scheduled_timepoints, 'busy')
+        # # add interval & remove free time
+        # self.schedule_dict_busy[r.resource].add(r.scheduled_timepoints)
+        # self.schedule_dict_free[r.resource] = self.schedule_dict_free[r.resource].subtract(interval)
+        # # remove scheduled time from free windows of other reservations
+        # self.current_resource = resource
+        # reservation_list = filter(self.resource_equals, self.reservation_list)
+        # for reservation in reservation_list:
+        #     if r == reservation:
+        #         continue
+        #     else:
+        #         reservation.remove_from_free_windows(interval)
 
 
     # def uncommit_reservation_from_schedule(self, r):
@@ -207,38 +245,3 @@ class FullScheduler_v4(object):
     #     # this that could benefit from this information. 
         
 
-    # def enforce_oneof_constraints(self):
-    #     for c in self.oneof_constraints:
-    #         counter = 0
-    #         size    = len(c)
-    #         for r in c:
-    #             if r.scheduled:
-    #                 counter += 1
-    #             if counter > 1:
-    #                 self.uncommit_reservation_from_schedule(r)
-
-
-    # def enforce_and_constraints(self):
-    #     for c in self.and_constraints:
-    #         counter = 0
-    #         size    = len(c)
-    #         for r in c:
-    #             if r.scheduled:
-    #                 counter += 1
-    #         if counter > 0 and counter != size:
-    #             # we can either just return False, or fix it
-    #             # by removing the scheduled res's, and then
-    #             # return. Here we fix it first
-    #             for r in c:
-    #                 if r.scheduled:
-    #                     self.uncommit_reservation_from_schedule(r)
-              
-
-    # def schedule_all(self):
-    #     self.schedule_uncontended_reservations()
-    #     self.schedule_contended_reservations()
-    #     self.enforce_oneof_constraints()
-    #     self.enforce_and_constraints()
-    #     self.schedule_contractual_obligations()
-        
-    #     return self.schedule_dict

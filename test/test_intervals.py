@@ -234,3 +234,38 @@ class TestIntervals(object):
         assert_equal(self.i1.timepoints[1].type, 'end')
 
 
+    def test_get_slices_1(self):
+        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end')])
+        s = i.get_slices(0, 1, 1)
+        assert_equal(s[0][0], 0)
+
+
+    def test_get_slices_2(self):
+        ''' Multiple starts in one interval '''
+        i = Intervals([Timepoint(0, 'start'), Timepoint(2, 'end')])
+        s = i.get_slices(0, 1, 1)
+        assert_equal(s[0][0], 0)
+        assert_equal(s[1][0], 1)
+
+
+    def test_get_slices_3(self):
+        ''' Duration doesn't fit in interval '''
+        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end')])
+        s = i.get_slices(0, 1, 2)
+        assert_equal(s, [])
+
+        
+    def test_get_slices_4(self):
+        ''' Multiple intervals '''
+        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end'), Timepoint(3, 'start'), Timepoint(4, 'end')])
+        s = i.get_slices(0, 1, 1)
+        assert_equal(s[0][0], 0)
+        assert_equal(s[1][0], 3)
+
+
+    def test_get_slices_4(self):
+        ''' slice_alignment eliminates an interval '''
+        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end'), Timepoint(3, 'start'), Timepoint(4, 'end')])
+        s = i.get_slices(1, 1, 1)
+        assert_equal(s[0][0], 3)
+        

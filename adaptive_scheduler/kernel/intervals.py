@@ -309,9 +309,14 @@ class Intervals(object):
         self.timepoints.sort()
         for t in self.timepoints:
             if t.type == 'start':
+                if t.time < slice_alignment:
+                    start = slice_alignment
+                    continue
                 # figure out start so it aligns with slice_alignment 
                 start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
             else:
+                if t.time < slice_alignment:
+                    continue
                 while t.time - start >= duration:
                     tmp = range(start, t.time, slice_length)
                     slices.append(tmp)
