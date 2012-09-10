@@ -95,22 +95,31 @@ class TestFullScheduler_v3(object):
 
 
     def test_schedule_all_1(self):
-        ''' this test illustrates an example in which, if we were considering 
-        alternatives with the same weight, we might have caught the 'and'
-        and achieved a greater score'''
         d = self.fs1.schedule_all()
-
+        assert_equal(self.r1.scheduled, False)
+        assert_equal(self.r2.scheduled, True)
+        assert_equal(self.r3.scheduled, True)
+        assert_equal(self.r4.scheduled, False)
 
     def test_schedule_all_2(self):
-        self.fs2.schedule_all()
-        
+        d = self.fs2.schedule_all()
+        assert_equal(self.r1.scheduled, True)
+        assert_equal(self.r5.scheduled, True)
         
     def test_schedule_all_3(self):
-        self.fs3.schedule_all()
-
+        d = self.fs3.schedule_all()
+        assert_equal(self.r4.scheduled, False)
+        assert_equal(self.r5.scheduled, True)
 
     def test_schedule_all_4(self):
-        self.fs4.schedule_all()
+        d = self.fs4.schedule_all()
+        assert_equal(self.r2.scheduled, True)
+        assert_equal(self.r6.scheduled, False)
+        # either r3 or r4 should be scheduled, not both
+        if self.r3.scheduled:
+            assert_equal(self.r4.scheduled, False)
+        else:
+            assert_equal(self.r4.scheduled, True)
 
 
     def test_schedule_triple_oneof(self):
@@ -120,7 +129,7 @@ class TestFullScheduler_v3(object):
         fs = FullScheduler_v4([self.cr9],
                               self.gpw2, [], slice_dict)
         s = fs.schedule_all()
-
+        # only one should be scheduled
 
     def test_schedule_5_7_2012(self):
         s1 = Intervals([Timepoint(93710, 'start'), 

@@ -8,8 +8,12 @@ Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
 more argument than usual. 
 
+This implementation uses a dense matrix representation. 
+
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 August 2012
+
+TODO: propagate scheduledness up to compound reservation parents.
 '''
 
 from reservation_v2 import *
@@ -119,13 +123,35 @@ class FullScheduler_v4(object):
                         self.aikt[key] = [Yik_idx]
         # allocate A & b
         # find the row size of A:
-        A_rows = len(self.reservation_list) + len(self.aikt) + len(self.oneof_constraints)
-        A = numpy.zeros((A_rows, len(self.Yik)), dtype=numpy.int)
+        # first find the number of reservations participating in oneofs
+        oneof_reservation_num = 0
+        for c in self.oneof_constraints:
+            oneof_reservation_num += len(c)
+        A_rows = len(self.reservation_list) + len(self.aikt) + len(self.oneof_constraints) - oneof_reservation_num
+        try:
+            A = numpy.zeros((A_rows, len(self.Yik)), dtype=numpy.int)
+        except ValueError:
+            print "Number of A rows: ", A_rows
         b = numpy.zeros(A_rows, dtype=numpy.int)
         # build A & b
-        # constraint 2: each res should have one start:
         row = 0
+
+        # constraint 5: oneof
+        for c in self.oneof_constraints:
+            for r in c:
+                for entry in r.Yik_entries:
+                    A[row,entry] = 1
+                r.skip_constraint2 = True
+            b[row] = 1
+            row += 1    
+
+        # constraint 2: each res should have one start:
+        # optimization: 
+        # if the reservation participates in a oneof, then this is 
+        # redundant with the oneof constraint added above, so don't add it.
         for r in self.reservation_list:
+            if hasattr(r, 'skip_constraint2'):
+                continue
             for entry in r.Yik_entries:
                 A[row,entry] = 1
             b[row] = 1
@@ -137,18 +163,8 @@ class FullScheduler_v4(object):
                 A[row,entry] = 1
             b[row] = 1
             row += 1
-
-        # constraint 5: oneof
-        for c in self.oneof_constraints:
-            for r in c:
-                for entry in r.Yik_entries:
-                    A[row,entry] = 1
-            b[row] = 1
-            row += 1    
         
         # constraint 6: and       
-#        Aeq = None
-#        beq = None
         # figure out size of constraint matrix
         Aeq_rows = 0
         for c in self.and_constraints:
@@ -187,7 +203,7 @@ class FullScheduler_v4(object):
         r = p.minimize('glpk')
 #        r = p.minimize('lpsolve')
 
-        print r.xf
+#        print r.xf
         idx = 0
         for value in r.xf:
             if value == 1:
@@ -212,7 +228,7 @@ class FullScheduler_v4(object):
         r.scheduled_quantum = quantum
         r.scheduled_timepoints = [Timepoint(start, 'start'), 
                                   Timepoint(start + r.duration, 'end')]
-        r.scheduled_by = 'slicedIP'
+        r.scheduled_by = 'slicedIPdense'
         self.schedule_dict[r.resource].append(r)
         # remove from list of unscheduled reservations
 #        self.unscheduled_reservation_list.remove(r)
