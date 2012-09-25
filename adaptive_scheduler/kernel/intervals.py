@@ -302,26 +302,38 @@ class Intervals(object):
 
 
     def get_slices(self, slice_alignment, slice_length, duration):
-        ''' Returns a list of lists. Each inner list is a window. The first 
+        ''' Returns two things: 
+        * slices: list of lists. Each inner list is a window. The first 
         element is the initial slice, and each subsequent slice is also
-        occupied. All slices are aligned with slice_alignment.'''
+        occupied. All slices are aligned with slice_alignment, and are 
+        slice_length long.
+        * internal_starts: list of values, one per inner list of slices. 
+        Each internal_start can be either equal to the corresponding 
+        slices[0], in which case it's not internal, or > than it, being 
+        internal.'''
         slices = []
+        internal_starts = []
         self.timepoints.sort()
         for t in self.timepoints:
             if t.type == 'start':
-                if t.time < slice_alignment:
+                if t.time <= slice_alignment:
                     start = slice_alignment
-                    continue
-                # figure out start so it aligns with slice_alignment 
-                start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
-            else:
+                    internal_start = slice_alignment
+                else:
+                    # figure out start so it aligns with slice_alignment 
+                    start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
+                    # use the actual start as an internal start (may or may not align w/ slice_alignment)
+                    internal_start = t.time
+            elif t.type == 'end': 
                 if t.time < slice_alignment:
                     continue
                 while t.time - start >= duration:
                     tmp = range(start, t.time, slice_length)
                     slices.append(tmp)
+                    internal_starts.append(internal_start)
                     start += slice_length
-        return slices
+                    internal_start = start
+        return slices, internal_starts
         
 
 class IntervalsUtility(object):

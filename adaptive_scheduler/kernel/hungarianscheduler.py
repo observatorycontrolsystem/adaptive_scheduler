@@ -96,7 +96,10 @@ class HungarianScheduler(object):
             quantum_start = self.constraint_matrix_cols_by_idx[col]
             r = self.get_reservation_by_ID(reservation_ID)
             [resource, start, quantum] = self.unhash_quantum_start(quantum_start)
-            r.schedule(start, quantum, resource, 'Hungarian scheduler')
+            r.schedule(start, quantum, resource, 
+                       [Timepoint(start, 'start'),
+                        Timepoint(start+r.duration,'end')], 
+                       'Hungarian scheduler')
             self.scheduled_reservations.append(r)
         return self.scheduled_reservations
 

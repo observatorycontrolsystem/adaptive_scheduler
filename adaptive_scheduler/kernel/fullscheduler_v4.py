@@ -105,7 +105,7 @@ class FullScheduler_v4(object):
             resource = r.resource 
             slice_alignment = self.time_slicing_dict[resource][0]
             slice_length = self.time_slicing_dict[resource][1]
-            r.slices = r.free_windows.get_slices(slice_alignment, slice_length, r.duration)
+            r.slices, r.internal_starts = r.free_windows.get_slices(slice_alignment, slice_length, r.duration)
             r.Yik_entries = []
             w_idx = 0
             for w in r.slices:
@@ -210,25 +210,24 @@ class FullScheduler_v4(object):
                 resID = self.Yik[idx][0]
                 slice_idx = self.Yik[idx][1]
                 reservation = self.get_reservation_by_ID(resID)
-                start = reservation.slices[slice_idx][0]
-                # the time taken up by the reservation is this, but the actual
-                # ending time should be start + duration
-                quantum = reservation.slices[slice_idx][-1] + self.time_slicing_dict[reservation.resource][1]
+                # use the internal_start for the start
+                start = reservation.internal_starts[slice_idx]
+                # the quantum is the length of all the slices we've occupied
+                quantum = reservation.slices[slice_idx][-1] + self.time_slicing_dict[reservation.resource][1] - reservation.slices[slice_idx][0]
+                reservation.scheduled = True
                 self.commit_reservation_to_schedule(reservation, start, quantum)
             idx += 1
-        # TODO? do anything about resolving whether parent comp. res.'s are
-        # scheduled?
         return self.schedule_dict
 
 
     def commit_reservation_to_schedule(self, r, start, quantum):
-        r.scheduled = True
-        r.scheduled_start = start
-        r.scheduled_resource = r.resource
-        r.scheduled_quantum = quantum
-        r.scheduled_timepoints = [Timepoint(start, 'start'), 
-                                  Timepoint(start + r.duration, 'end')]
-        r.scheduled_by = 'slicedIPdense'
+        if r.scheduled:
+            r.schedule(start, quantum, r.resource, 
+                       [Timepoint(start, 'start'),
+                        Timepoint(start + r.duration, 'end')], 
+                       'slicedIPdense')
+        else:
+            print "error: trying to commit unscheduled reservation"
         self.schedule_dict[r.resource].append(r)
         # remove from list of unscheduled reservations
 #        self.unscheduled_reservation_list.remove(r)

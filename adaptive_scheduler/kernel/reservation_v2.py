@@ -45,19 +45,21 @@ class Reservation_v2(object):
         # find the first available spot & stick it there
         start = self.free_windows.find_interval_of_length(self.duration)
         if start >=0:
-            self.schedule(start, self.duration, self.resource, 'reservation_v2.schedule_anywhere()')
+            self.schedule(start, self.duration, self.resource, 
+                          [Timepoint(start, 'start'), 
+                           Timepoint(start+self.duration, 'end')] , 
+                          'reservation_v2.schedule_anywhere()')
             return True
         else:
             return False
 
     
-    def schedule(self, start, quantum, resource, scheduler_description=None):
+    def schedule(self, start, quantum, resource, scheduled_timepoints, scheduler_description=None):
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
         self.scheduled_resource = resource
         self.scheduled          = True
-        self.scheduled_timepoints = [Timepoint(start, 'start'), 
-        Timepoint(start+quantum, 'end')]
+        self.scheduled_timepoints = scheduled_timepoints
         self.scheduled_by       = scheduler_description
         if self.compound_reservation_parent:
             self.compound_reservation_parent.schedule()
