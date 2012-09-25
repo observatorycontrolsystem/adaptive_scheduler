@@ -180,27 +180,43 @@ class FullScheduler_v5(object):
         A = coo_matrix((A_data, (A_rows, A_cols)), shape=(A_numrows, len(self.Yik)))
         # constraint 6: and       
         # figure out size of constraint matrix
-        Aeq_rows = 0
-        for c in self.and_constraints:
-            Aeq_rows += len(c)-1
+
+        if not self.and_constraints:
+            Aeq = []
+            beq = []
+        else:
+            Aeq_numrows = 0
+            for c in self.and_constraints:
+                Aeq_numrows += len(c)-1
         # allocate Aeq and beq
-        Aeq = numpy.zeros((Aeq_rows, len(self.Yik)), dtype=numpy.int)
-        beq = numpy.zeros(Aeq_rows, dtype=numpy.int)
-        row = 0
-        for c in self.and_constraints:
-            constraint_size = len(c)
-            left_idx = 0
-            right_idx = 1
-            while right_idx < constraint_size:
-                left_r = c[left_idx]
-                right_r = c[right_idx]
-                for entry in left_r.Yik_entries:
-                    Aeq[row, entry] = 1
-                for entry in right_r.Yik_entries:
-                    Aeq[row, entry] = -1
-                left_idx += 1
-                right_idx += 1
-                row += 1
+#        Aeq = numpy.zeros((Aeq_numrows, len(self.Yik)), dtype=numpy.int)
+            Aeq_rows = []
+            Aeq_cols = []
+            Aeq_data = []
+            beq = numpy.zeros(Aeq_numrows, dtype=numpy.int)
+            row = 0
+            for c in self.and_constraints:
+                constraint_size = len(c)
+                left_idx = 0
+                right_idx = 1
+                while right_idx < constraint_size:
+                    left_r = c[left_idx]
+                    right_r = c[right_idx]
+                    for entry in left_r.Yik_entries:
+#                    Aeq[row, entry] = 1
+                        Aeq_rows.append(row)
+                        Aeq_cols.append(entry)
+                        Aeq_data.append(1)
+                    for entry in right_r.Yik_entries:
+                        Aeq_rows.append(row)
+                        Aeq_cols.append(entry)
+                        Aeq_data.append(-1)
+#                    Aeq[row, entry] = -1
+                    left_idx += 1
+                    right_idx += 1
+                    row += 1
+            print Aeq_numrows
+            Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))   
 
         # bounds:
         lb = numpy.zeros(len(self.Yik), dtype=numpy.int)

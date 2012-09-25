@@ -32,7 +32,7 @@ class TestStress_realistic(object):
         self.tfinal = self.numdays * 24 * 60 * 60 # days * hrs * min *sec
         self.max_slack = 1*60*60 # 1 hr * min * sec
         self.max_priority = 100
-        self.num_resources = 3
+        self.num_resources = 4
 
         self.gpw = {}
         self.slice_dict = {}
