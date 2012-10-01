@@ -108,16 +108,29 @@ class TreeCollapser(object):
         if self.first_time:
             # This is the top-level, UserRequest
             self.collapsed_tree['expires']  = node['expires']
-            self.collapsed_tree['operator'] = node['operator']
             self.collapsed_tree['proposal'] = node['proposal']
+            self.collapsed_tree['operator'] = node['operator']
 
             self.first_time = False
 
         else:
+            # Handle the case where the top-level is a single, but the next level isn't
+            # They can be combined, since singles can always combine with any operator
+            # Setting them equal throws away the single, and ensures the next if isn't
+            # triggered
+            if ( node['operator'] != self.collapsed_tree['operator'] and
+                 self.collapsed_tree['operator'] == 'single' ):
+                # Set the top-level to the operator of the lower level
+                self.collapsed_tree['operator'] = node['operator']
+
+            # NOTE THAT THIS IS NOT AN ELIF!
+            # If the two levels don't match, and the lower level isn't a single
+            # (it is implied that the top was not a single, because we would have
+            # equated the operators in the previous if)
             if ( node['operator'] != self.collapsed_tree['operator'] and
                  node['operator'] != 'single' ):
                 # The tree has differing types, and can't be collapsed. Give up.
-               self.is_collapsible = False
+                self.is_collapsible = False
 
         return
 
