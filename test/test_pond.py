@@ -12,12 +12,12 @@ class TestPond(object):
 
     def setup(self):
         # Metadata missing proposal and tag parameters
-        self.proposal = Proposal(user='Eric')
+        self.proposal = Proposal(user_name='Eric')
 
         # Molecule missing a binning parameter
         self.mol1     = Molecule(
                                   type            = 'expose_n',
-                                  count           = 1,
+                                  exposure_count  = 1,
                                   instrument_name = 'KB12',
                                   filter          = 'BSSL-UX-020'
                                  )
@@ -27,7 +27,10 @@ class TestPond(object):
     def test_proposal_lists_missing_fields(self):
         missing  = self.proposal.list_missing_fields()
 
-        assert_equal(missing, ['proposal_name', 'tag'])
+        assert_equal(
+                      missing, 
+                      ['proposal_name', 'proposal_id', 'user_id', 'tag']
+                    )
 
 
 
@@ -46,9 +49,14 @@ class TestPond(object):
 
         missing = scheduled_block.list_missing_fields()
 
-        assert_equal(missing, {'proposal'      : ['proposal_name', 'tag'],
-                               'molecule'      : ['binning', 'duration'],
-                               'target'        : ['ra', 'dec']  })
+        assert_equal(
+                      missing,
+                      {
+                        'proposal' : ['proposal_name', 'proposal_id', 'user_id', 'tag'],
+                        'molecule' : ['bin_x', 'bin_y', 'exposure_time'],
+                        'target'   : ['ra', 'dec']
+                      }
+                   )
 
 
     @raises(IncompleteBlockError)
@@ -76,9 +84,11 @@ class TestPond(object):
 
         scheduled_block.add_proposal(
                                       Proposal(
-                                                user          = 'Eric',
+                                                user_name     = 'Eric Saunders',
+                                                user_id       = 'esaunders',
                                                 proposal_name = 'Scheduler Testing',
-                                                tag           = 'admin'
+                                                proposal_id    = 'test',
+                                                tag           = 'admin',
                                                )
                                      )
 
@@ -93,12 +103,13 @@ class TestPond(object):
 
         scheduled_block.add_molecule(
                                       Molecule(
-                                                type            = 'expose_n',
-                                                count           = 1,
-                                                binning         = 2,
+                                                type           = 'expose_n',
+                                                exposure_count = 1,
+                                                bin_x          = 2,
+                                                bin_y           = 2,
                                                 instrument_name = 'KB12',
                                                 filter          = 'BSSL-UX-020',
-                                                duration        = 30
+                                                exposure_time   = 30,
                                                )
                                      )
 
