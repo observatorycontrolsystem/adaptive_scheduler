@@ -2,8 +2,8 @@ from __future__ import division
 
 from nose.tools import assert_equal, raises
 
-from adaptive_scheduler.pond import (Block, IncompleteBlockError)
-from adaptive_scheduler.model import (Proposal, Molecule, Target)
+from adaptive_scheduler.pond  import (Block, IncompleteBlockError)
+from adaptive_scheduler.model2 import (Proposal, Molecule, Target)
 
 from datetime import datetime
 
@@ -15,12 +15,12 @@ class TestPond(object):
         self.proposal = Proposal(user_name='Eric')
 
         # Molecule missing a binning parameter
-        self.mol1     = Molecule(
-                                  type            = 'expose_n',
-                                  exposure_count  = 1,
-                                  instrument_name = 'KB12',
-                                  filter          = 'BSSL-UX-020'
-                                 )
+        self.mol1 = Molecule(
+                              type            = 'expose_n',
+                              exposure_count  = 1,
+                              instrument_name = 'KB12',
+                              filter          = 'BSSL-UX-020'
+                            )
 
 
 
@@ -28,8 +28,8 @@ class TestPond(object):
         missing  = self.proposal.list_missing_fields()
 
         assert_equal(
-                      missing, 
-                      ['proposal_name', 'proposal_id', 'user_id', 'tag']
+                      missing,
+                      ['proposal_name', 'proposal_id', 'user_id', 'tag_id']
                     )
 
 
@@ -41,7 +41,7 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 1
-                                )
+                               )
 
         scheduled_block.add_proposal(self.proposal)
         scheduled_block.add_molecule(self.mol1)
@@ -52,7 +52,7 @@ class TestPond(object):
         assert_equal(
                       missing,
                       {
-                        'proposal' : ['proposal_name', 'proposal_id', 'user_id', 'tag'],
+                        'proposal' : ['proposal_name', 'proposal_id', 'user_id', 'tag_id'],
                         'molecule' : ['bin_x', 'bin_y', 'exposure_time'],
                         'target'   : ['ra', 'dec']
                       }
@@ -80,17 +80,17 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things'
-                                )
+                               )
 
         scheduled_block.add_proposal(
                                       Proposal(
-                                                user_name     = 'Eric Saunders',
-                                                user_id       = 'esaunders',
-                                                proposal_name = 'Scheduler Testing',
+                                                user_name      = 'Eric Saunders',
+                                                user_id        = 'esaunders',
+                                                proposal_name  = 'Scheduler Testing',
                                                 proposal_id    = 'test',
-                                                tag           = 'admin',
-                                               )
-                                     )
+                                                tag_id         = 'admin',
+                                              )
+                                    )
 
         scheduled_block.add_target(
                                     Target(
@@ -99,13 +99,13 @@ class TestPond(object):
                                             ra    = '20 41 25.91',
                                             dec   = '+45 16 49.22',
                                           )
-                                   )
+                                  )
 
         scheduled_block.add_molecule(
                                       Molecule(
-                                                type           = 'expose_n',
-                                                exposure_count = 1,
-                                                bin_x          = 2,
+                                                type            = 'expose_n',
+                                                exposure_count  = 1,
+                                                bin_x           = 2,
                                                 bin_y           = 2,
                                                 instrument_name = 'KB12',
                                                 filter          = 'BSSL-UX-020',
@@ -124,7 +124,7 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things'
-                                )
+                               )
 
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
 
@@ -137,6 +137,6 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things'
-                                )
+                               )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))

@@ -207,8 +207,8 @@ def build_requests(req_list, targets, telescopes, molecules, semester_start,
 
         # Build the Request
         req = Request(
-                       target         = targets[ d['target_name'] ],
-                       molecule       = molecules[ d['molecule_name'] ],
+                       target         = targets[ d['name'] ],
+                       molecule       = molecules[ d['name'] ],
                        windows        = dt_windows,
                        duration       = d['duration'],
                        telescope_name = d['telescope_name'],

@@ -28,9 +28,9 @@ February 2012
 
 from adaptive_scheduler.model import Proposal, Target
 from adaptive_scheduler.utils import get_reservation_datetimes
-from lcogtpond import pointing
-from lcogtpond.block import Block as PondBlock
-from lcogtpond.molecule import Expose
+from lcogtpond                import pointing
+from lcogtpond.block          import Block as PondBlock
+from lcogtpond.molecule       import Expose
 
 
 class Block(object):
@@ -103,43 +103,43 @@ class Block(object):
         # 1) Create a POND ScheduledBlock
         site, observatory, telescope = self.split_location()
         pond_block = PondBlock.build(
-                                        start       = self.start,
-                                        end         = self.end,
-                                        site        = site,
-                                        observatory = observatory,
-                                        telescope   = telescope,
-                                        priority    = self.priority
+                                      start       = self.start,
+                                      end         = self.end,
+                                      site        = site,
+                                      observatory = observatory,
+                                      telescope   = telescope,
+                                      priority    = self.priority
                                     )
 
         # 2a) Counstruct the Pointing Coordinate
         coord = pointing.ra_dec(
-                                    ra  = self.target.ra.in_degrees(),
-                                    dec = self.target.dec.in_degrees()
+                                 ra  = self.target.ra.in_degrees(),
+                                 dec = self.target.dec.in_degrees()
                                )
         # 2b) Construct the Pointing
         pond_pointing = pointing.sidereal(
-                                          name  = self.target.name,
-                                          coord = coord,
+                                           name  = self.target.name,
+                                           coord = coord,
                                          )
 
         # 3) Construct the Observations
         observations = []
         for molecule in self.molecules:
             obs = Expose.build(
-                                        # Meta data
-                                        tag = self.proposal.tag,
-                                        user = self.proposal.user_id,
-                                        proposal = self.proposal.proposal_id,
-                                        group = self.group_id,
-                                        # Observation details
-                                        exp_cnt  = molecule.exposure_count,
-                                        exp_time = molecule.exposure_time,
-                                        # TODO: Allow bin_x and bin_y
-                                        bin = molecule.bin_x,
-                                        inst_name = molecule.instrument_name,
-                                        filters = molecule.filter,
-                                        pointing = pond_pointing,
-                                        priority = self.OBS_PRIORITY,
+                                # Meta data
+                                tag = self.proposal.tag_id,
+                                user = self.proposal.user_id,
+                                proposal = self.proposal.proposal_id,
+                                group = self.group_id,
+                                # Observation details
+                                exp_cnt  = molecule.exposure_count,
+                                exp_time = molecule.exposure_time,
+                                # TODO: Allow bin_x and bin_y
+                                bin = molecule.bin_x,
+                                inst_name = molecule.instrument_name,
+                                filters = molecule.filter,
+                                pointing = pond_pointing,
+                                priority = self.OBS_PRIORITY,
                               )
             observations.append(obs)
 
@@ -233,7 +233,8 @@ def send_schedule_to_pond(schedule, semester_start):
                          )
 
             block.add_proposal(res.compound_request.proposal)
-            block.add_molecule(res.request.molecule)
+            for molecule in res.request.molecules:
+                block.add_molecule(molecule)
             block.add_target(res.request.target)
 
             pond_block = block.send_to_pond()
@@ -246,6 +247,7 @@ class IncompleteBlockError(Exception):
 
     def __init__(self, value):
         self.value = value
+        self.msg = "The following fields are missing in this Block.\n"
 
     def __str__(self):
         message = "The following fields are missing in this Block.\n"
