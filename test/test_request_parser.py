@@ -101,6 +101,82 @@ class TestTreeCollapse(object):
         assert_equal(expected_tree, self.tc.collapsed_tree)
 
 
+    def test_collapses_single_and_ands(self):
+        input_tree = {
+                         'operator' : 'single',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
+                         'requests' : [
+                                          {
+                                            'operator' : 'and',
+                                            'requests' : [
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                             {
+                                                               'operator' : 'and',
+                                                               'requests' : [
+                                                                               { 'target' : 'blah' },
+                                                                               { 'target' : 'blah' },
+                                                                            ]
+                                                             },
+                                                         ]
+                                          },
+                                      ]
+                     }
+
+        expected_tree = {
+                          'operator' : 'and',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
+                          'requests' : [
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                       ]
+                        }
+
+        self.tc = TreeCollapser(input_tree)
+        self.tc.collapse_tree()
+        assert_equal(expected_tree, self.tc.collapsed_tree)
+
+
+    def test_collapses_single_and_oneofs(self):
+        input_tree = {
+                         'operator' : 'single',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'proposal' : {},
+                         'requests' : [
+                                          {
+                                            'operator' : 'oneof',
+                                            'requests' : [
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah' },
+                                                         ]
+                                          },
+                                      ]
+                     }
+
+        expected_tree = {
+                          'operator' : 'oneof',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'proposal' : {},
+                          'requests' : [
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah' },
+                                       ]
+                        }
+
+        self.tc = TreeCollapser(input_tree)
+        self.tc.collapse_tree()
+        assert_equal(expected_tree, self.tc.collapsed_tree)
+
+
+
     def test_collapses_ands_and_singles(self):
         input_tree = {
                          'operator' : 'and',

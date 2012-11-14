@@ -29,6 +29,7 @@ from adaptive_scheduler.printing import print_schedule
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
+from adaptive_scheduler.pond import send_schedule_to_pond
 
 
 #TODO: Refactor - move all these functions to better locations
@@ -87,8 +88,8 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2011, 11, 1, 0, 0, 0)
-    semester_end   = datetime(2011, 11, 8, 0, 0, 0)
+    semester_start = datetime(2021, 11, 1, 0, 0, 0)
+    semester_end   = datetime(2021, 11, 8, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -117,7 +118,6 @@ def main(requests):
         user_reqs.append(user_req)
         i += 1
 
-
     tels = get_telescope_network(tel_file)
 
 
@@ -144,7 +144,7 @@ def main(requests):
     print_schedule(schedule, semester_start, semester_end)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-#    send_schedule_to_pond(schedule, semester_start)
+    send_schedule_to_pond(schedule, semester_start)
 
     # TODO: Temporary debug code
     v = visibility_from['1m0a.doma.bpl']

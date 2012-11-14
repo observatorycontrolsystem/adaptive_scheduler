@@ -4,7 +4,7 @@
 test_fullscheduler_v2.py
 
 Author: Sotiria Lampoudi
-November 2011
+June 2012
 '''
 
 from nose.tools import assert_equal
@@ -90,13 +90,13 @@ class TestFullScheduler_v2(object):
         assert_equal(self.fs3.oneof_constraints[0][1], self.r5)
 
 
-    def test_cluster_and_order_reservations(self):
-        n = self.fs1.cluster_and_order_reservations(2)
-        assert_equal(n, 2)
-        assert_equal(self.fs1.reservation_list[0].order, 2)
-        assert_equal(self.fs1.reservation_list[1].order, 2)
-        assert_equal(self.fs1.reservation_list[2].order, 1)
-        assert_equal(self.fs1.reservation_list[3].order, 2)
+    # def test_cluster_and_order_reservations(self):
+    #      n = self.fs1.cluster_and_order_reservations(2)
+    #      assert_equal(n, 2)
+    #      assert_equal(self.fs1.reservation_list[0].order, 2)
+    #      assert_equal(self.fs1.reservation_list[1].order, 2)
+    #      assert_equal(self.fs1.reservation_list[2].order, 1)
+    #      assert_equal(self.fs1.reservation_list[3].order, 2)
         
 
     def test_order_equals_1(self):
@@ -110,15 +110,15 @@ class TestFullScheduler_v2(object):
 
         
     def test_enforce_and_constraints_2(self):
-	self.r3.schedule(1, 1, 'foo', 'test')
+	self.r3.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')], 'test')
         self.fs1.commit_reservation_to_schedule(self.r3)
         self.fs1.enforce_and_constraints()
         assert_equal(self.fs1.schedule_dict['foo'], [])
 
 
     def test_enforce_and_constraints_3(self):
-	self.r3.schedule(1, 1, 'foo', 'test')
-	self.r2.schedule(2, 2, 'bar', 'test')
+	self.r3.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')], 'test')
+	self.r2.schedule(2, 2, 'bar', [Timepoint(2, 'start'), Timepoint(4, 'end')],'test')
         self.fs1.commit_reservation_to_schedule(self.r3)
         self.fs1.commit_reservation_to_schedule(self.r2)
         self.fs1.enforce_and_constraints()
@@ -127,7 +127,7 @@ class TestFullScheduler_v2(object):
 
 
     def test_commit_reservation_to_schedule_1(self):
-        self.r1.schedule(1, 1, 'foo', 'test')
+        self.r1.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')],'test')
         self.fs2.commit_reservation_to_schedule(self.r1)
         assert_equal(self.fs2.schedule_dict['foo'][0].scheduled_start, 1)
         assert_equal(self.fs2.schedule_dict_busy['foo'].timepoints[0].time, 1)
@@ -142,7 +142,7 @@ class TestFullScheduler_v2(object):
 
     def test_uncommit_reservation_from_schedule(self):
         assert self.r1 in self.fs2.unscheduled_reservation_list
-	self.r1.schedule(1, 1, 'foo', 'test')
+	self.r1.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')],'test')
         self.fs2.commit_reservation_to_schedule(self.r1)
         assert self.r1 not in self.fs2.unscheduled_reservation_list
         self.fs2.uncommit_reservation_from_schedule(self.r1)

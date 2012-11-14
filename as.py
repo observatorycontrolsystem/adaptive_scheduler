@@ -30,9 +30,6 @@ from adaptive_scheduler.metrics         import ( convert_coverage_to_dmy,
 from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
 from adaptive_scheduler.pond import Block, send_schedule_to_pond
 
-from lcogt.pond import pond_client
-pond_client.configure_service('localhost', 12345)
-
 from datetime import datetime
 
 
@@ -126,8 +123,6 @@ for resource in resource_windows.keys():
 
 metric_dir = '/home/esaunderslocal/projects/schedule_viewer/schedule_viewer/metrics'
 dump_metric(resource_contention, 'contention_by_day', metric_dir)
-
-
 
 
 # Convert the kernel schedule into POND blocks, and send them to the POND

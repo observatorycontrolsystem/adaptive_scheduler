@@ -35,7 +35,11 @@ class UncontendedScheduler(object):
     def fit_reservation_in_uncontended_windows(self, reservation, windows):
         ret = windows.find_interval_of_length(reservation.duration)
         if ret >= 0:
-            reservation.schedule(ret, reservation.duration, reservation.resource, 'uncontended scheduler')
+            reservation.schedule(ret, reservation.duration, 
+                                 reservation.resource, 
+                                 [Timepoint(ret, 'start'), 
+                                  Timepoint(ret+reservation.duration, 'end')],
+                                 'uncontended scheduler')
             self.scheduled_reservations.append(reservation)
             return True
         return False

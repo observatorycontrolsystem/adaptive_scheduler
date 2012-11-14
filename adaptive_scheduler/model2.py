@@ -46,7 +46,7 @@ class DataContainer(DefaultMixin):
 class Target(DataContainer):
 
     def list_missing_fields(self):
-        req_fields = ('ra', 'dec')
+        req_fields = ('name', 'ra', 'dec')
         missing_fields = []
 
         for field in req_fields:
