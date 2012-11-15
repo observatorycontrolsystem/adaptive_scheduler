@@ -17,5 +17,5 @@ if __name__ == '__main__':
 
     # Acquire and collapse the requests
     #requests = get_requests(url, telescope_class)
-    requests = get_requests_from_file('requests.dat', 'dummy arg')
+    requests = get_requests_from_file('new_requests.dat', 'dummy arg')
     main(requests)

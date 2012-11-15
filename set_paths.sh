@@ -3,6 +3,6 @@
 # Eric Saunders, May 2012
 
 export PYTHONPATH=$HOME/programming/python/rise_set:$PYTHONPATH
-export PYTHONPATH=$HOME/projects/schedulerWebService:$PYTHONPATH
+export PYTHONPATH=$HOME/projects:$PYTHONPATH
 
 echo "PYTHONPATH set to:" $PYTHONPATH

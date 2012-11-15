@@ -31,6 +31,8 @@ from adaptive_scheduler.printing import print_schedule
 from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
 from adaptive_scheduler.pond import send_schedule_to_pond
 
+from requestdb.client import SearchQuery, SchedulerClient
+from requestdb.reqdb  import request_factory
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -51,6 +53,23 @@ def get_requests_from_file(req_filename, telescope_class):
 
     return ast.literal_eval(req_data)
 
+
+def get_requests_from_db(url, telescope_class):
+
+    search = SearchQuery()
+    search.set_location(telescope_class=telescope_class)
+    sc = SchedulerClient(url)
+    json_ur_list = sc.retrieve(search, debug=True)
+    ur_list = json.loads(json_ur_list)
+
+    return ur_list
+
+
+def write_requests_to_file(requests, filename):
+
+    out_fh = open(filename, 'w')
+    out_fh.write(str(requests))
+    out_fh.close()
 
 def collapse_requests(requests):
     collapsed_reqs = []
@@ -88,8 +107,8 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2021, 11, 1, 0, 0, 0)
-    semester_end   = datetime(2021, 11, 8, 0, 0, 0)
+    semester_start = datetime(2012, 3, 20, 0, 0, 0)
+    semester_end   = datetime(2012, 4, 20, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -111,12 +130,19 @@ def main(requests):
     mb = ModelBuilder(tel_file)
 
     user_reqs = []
-    i = 0
-    for serialised_req in collapsed_reqs:
-        print "Trying i", i
-        user_req = mb.build_user_request(serialised_req)
-        user_reqs.append(user_req)
-        i += 1
+    for serialised_ur in requests:
+        proposal_data = serialised_ur['proposal']
+        del(serialised_ur['proposal'])
+        ur = request_factory.parse(serialised_ur, proposal_data)
+        user_reqs.append(ur)
+
+#    user_reqs = []
+#    i = 0
+#    for serialised_req in collapsed_reqs:
+#        print "Trying i", i
+#        user_req = mb.build_user_request(serialised_req)
+#        user_reqs.append(user_req)
+#        i += 1
 
     tels = get_telescope_network(tel_file)
 
@@ -150,4 +176,5 @@ def main(requests):
     v = visibility_from['1m0a.doma.bpl']
     rw = resource_windows['1m0a.doma.bpl']
     cr = to_schedule[0]
+    1/0
     #print "cr.reservation_list:", cr.reservation_list
