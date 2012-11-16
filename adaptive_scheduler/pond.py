@@ -35,12 +35,15 @@ from lcogtpond.molecule       import Expose
 
 class Block(object):
 
-    def __init__(self, location, start, end, group_id, priority=0):
+    def __init__(self, location, start, end, group_id,
+                 tracking_number, request_number, priority=0):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
         self.end       = end
         self.group_id  = group_id
+        self.tracking_number = tracking_number
+        self.request_number = request_number
         self.priority  = priority
 
         self.proposal  = Proposal()
@@ -124,9 +127,15 @@ class Block(object):
 
         # 3) Construct the Observations
         observations = []
+
+        # TODO: Remove this once implementation changed to strings in pond client
+        self.tracking_number = 1
+        self.request_number = 1
         for molecule in self.molecules:
             obs = Expose.build(
                                 # Meta data
+                                tracking_num = self.tracking_number,
+                                request_num = self.request_number,
                                 tag = self.proposal.tag_id,
                                 user = self.proposal.user_id,
                                 proposal = self.proposal.proposal_id,
@@ -225,11 +234,13 @@ def send_schedule_to_pond(schedule, semester_start):
 
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
-                           location = res.resource,
-                           start    = res_start,
-                           end      = res_end,
-                           group_id = 'PLACEHOLDER',
-                           priority = res.priority
+                           location        = res.resource,
+                           start           = res_start,
+                           end             = res_end,
+                           group_id        = 'PLACEHOLDER',
+                           tracking_number = res.compound_request.tracking_number,
+                           request_number  = res.request.request_number,
+                           priority        = res.priority,
                          )
 
             block.add_proposal(res.compound_request.proposal)

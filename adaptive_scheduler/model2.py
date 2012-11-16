@@ -143,12 +143,13 @@ class Request(DefaultMixin):
         telescope - a Telescope object (lat/long information)
     '''
 
-    def __init__(self, target, molecules, windows, telescope):
+    def __init__(self, target, molecules, windows, telescope, request_number):
 
         self.target         = target
         self.molecules      = molecules
         self.windows        = windows
         self.telescope      = telescope
+        self.request_number = request_number
 
     def get_duration(self):
         '''This is a placeholder for a more sophisticated duration function, that
@@ -224,11 +225,12 @@ class UserRequest(CompoundRequest, DefaultMixin):
     '''UserRequests are just top-level CompoundRequests. They differ only in having
        access to proposal and expiry information.'''
 
-    def __init__(self, operator, requests, proposal, expires):
+    def __init__(self, operator, requests, proposal, expires, tracking_number):
         CompoundRequest.__init__(self, operator, requests)
 
         self.proposal = proposal
         self.expires  = expires
+        self.tracking_number = tracking_number
 
 
     def get_priority(self):
@@ -308,7 +310,8 @@ class ModelBuilder(object):
                                     operator = cr_dict['operator'],
                                     requests = requests,
                                     proposal = proposal,
-                                    expires  = expiry_dt
+                                    expires  = expiry_dt,
+                                    tracking_number = cr_dict['tracking_number']
                                   )
 
         return user_request
@@ -356,6 +359,7 @@ class ModelBuilder(object):
                            molecules  = molecules,
                            windows    = windows,
                            telescope  = telescope,
+                           request_number = req_dict['request_number'],
                          )
             requests.append(req)
 
