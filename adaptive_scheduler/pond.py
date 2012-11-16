@@ -128,9 +128,6 @@ class Block(object):
         # 3) Construct the Observations
         observations = []
 
-        # TODO: Remove this once implementation changed to strings in pond client
-        self.tracking_number = 1
-        self.request_number = 1
         for molecule in self.molecules:
             obs = Expose.build(
                                 # Meta data
