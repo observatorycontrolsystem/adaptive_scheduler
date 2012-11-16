@@ -107,8 +107,8 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2012, 3, 20, 0, 0, 0)
-    semester_end   = datetime(2012, 4, 20, 0, 0, 0)
+    semester_start = datetime(2012, 11, 15, 0, 0, 0)
+    semester_end   = datetime(2012, 11, 18, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -129,20 +129,20 @@ def main(requests):
 
     mb = ModelBuilder(tel_file)
 
-    user_reqs = []
-    for serialised_ur in requests:
-        proposal_data = serialised_ur['proposal']
-        del(serialised_ur['proposal'])
-        ur = request_factory.parse(serialised_ur, proposal_data)
-        user_reqs.append(ur)
-
 #    user_reqs = []
-#    i = 0
-#    for serialised_req in collapsed_reqs:
-#        print "Trying i", i
-#        user_req = mb.build_user_request(serialised_req)
-#        user_reqs.append(user_req)
-#        i += 1
+#    for serialised_ur in collapsed_reqs:
+#        proposal_data = serialised_ur['proposal']
+#        del(serialised_ur['proposal'])
+#        ur = request_factory.parse(serialised_ur, proposal_data)
+#        user_reqs.append(ur)
+
+    user_reqs = []
+    i = 0
+    for serialised_req in collapsed_reqs:
+        print "Trying i", i
+        user_req = mb.build_user_request(serialised_req)
+        user_reqs.append(user_req)
+        i += 1
 
     tels = get_telescope_network(tel_file)
 
@@ -176,5 +176,4 @@ def main(requests):
     v = visibility_from['1m0a.doma.bpl']
     rw = resource_windows['1m0a.doma.bpl']
     cr = to_schedule[0]
-    1/0
     #print "cr.reservation_list:", cr.reservation_list

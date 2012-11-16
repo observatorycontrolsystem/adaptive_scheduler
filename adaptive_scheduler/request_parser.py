@@ -107,9 +107,12 @@ class TreeCollapser(object):
 
         if self.first_time:
             # This is the top-level, UserRequest
-            self.collapsed_tree['expires']  = node['expires']
-            self.collapsed_tree['proposal'] = node['proposal']
-            self.collapsed_tree['operator'] = node['operator']
+            self.collapsed_tree['type']            = node['type']
+            self.collapsed_tree['expires']         = node['expires']
+            self.collapsed_tree['timestamp']       = node['timestamp']
+            self.collapsed_tree['tracking_number'] = node['tracking_number']
+            self.collapsed_tree['proposal']        = node['proposal']
+            self.collapsed_tree['operator']        = node['operator']
 
             self.first_time = False
 
