@@ -107,7 +107,7 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2012, 11, 15, 0, 0, 0)
+    semester_start = datetime(2012, 11, 17, 0, 0, 0)
     semester_end   = datetime(2012, 11, 18, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'

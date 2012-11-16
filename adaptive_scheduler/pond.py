@@ -101,7 +101,7 @@ class Block(object):
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
-        site, observatory, telescope = self.split_location()
+        telescope, observatory, site = self.split_location()
         pond_block = PondBlock.build(
                                       start       = self.start,
                                       end         = self.end,
