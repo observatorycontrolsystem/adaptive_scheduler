@@ -113,6 +113,7 @@ class TreeCollapser(object):
             self.collapsed_tree['tracking_number'] = node['tracking_number']
             self.collapsed_tree['proposal']        = node['proposal']
             self.collapsed_tree['operator']        = node['operator']
+            self.collapsed_tree['group_id']        = node['group_id']
 
             self.first_time = False
 

@@ -107,9 +107,7 @@ class Window(DefaultMixin):
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
-        req_fields = ('proposal_name', 'proposal_id',
-                      'user_name', 'user_id',
-                      'tag_id')
+        req_fields = ('proposal_id', 'user_id', 'tag_id', 'priority')
         missing_fields = []
 
         for field in req_fields:
@@ -225,12 +223,14 @@ class UserRequest(CompoundRequest, DefaultMixin):
     '''UserRequests are just top-level CompoundRequests. They differ only in having
        access to proposal and expiry information.'''
 
-    def __init__(self, operator, requests, proposal, expires, tracking_number):
+    def __init__(self, operator, requests, proposal, expires,
+                 tracking_number, group_id):
         CompoundRequest.__init__(self, operator, requests)
 
         self.proposal = proposal
         self.expires  = expires
         self.tracking_number = tracking_number
+        self.group_id = group_id
 
 
     def get_priority(self):
@@ -311,7 +311,8 @@ class ModelBuilder(object):
                                     requests = requests,
                                     proposal = proposal,
                                     expires  = expiry_dt,
-                                    tracking_number = cr_dict['tracking_number']
+                                    tracking_number = cr_dict['tracking_number'],
+                                    group_id = cr_dict['group_id']
                                   )
 
         return user_request

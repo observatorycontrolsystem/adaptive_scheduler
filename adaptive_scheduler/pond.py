@@ -26,7 +26,7 @@ Author: Eric Saunders
 February 2012
 '''
 
-from adaptive_scheduler.model import Proposal, Target
+from adaptive_scheduler.model2 import Proposal, Target
 from adaptive_scheduler.utils import get_reservation_datetimes
 from lcogtpond                import pointing
 from lcogtpond.block          import Block as PondBlock
@@ -234,7 +234,7 @@ def send_schedule_to_pond(schedule, semester_start):
                            location        = res.resource,
                            start           = res_start,
                            end             = res_end,
-                           group_id        = 'PLACEHOLDER',
+                           group_id        = res.compound_request.group_id,
                            tracking_number = res.compound_request.tracking_number,
                            request_number  = res.request.request_number,
                            priority        = res.priority,
