@@ -28,6 +28,7 @@ February 2012
 
 from adaptive_scheduler.model2 import Proposal, Target
 from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.camera_mapping import create_camera_mapping
 from lcogtpond                import pointing
 from lcogtpond.block          import Block as PondBlock
 from lcogtpond.molecule       import Expose
@@ -128,7 +129,25 @@ class Block(object):
         # 3) Construct the Observations
         observations = []
 
+        # TODO: Move this somewhere better!
+        # TODO: And clean up disgusting hacks
+        generic_camera_names = ('SCICAM', 'FASTCAM')
+        mapping = create_camera_mapping("camera_mappings.dat")
+
+
+
+
         for molecule in self.molecules:
+            specific_camera = molecule.instrument_name
+            if molecule.instrument_name in generic_camera_names:
+                tel_class = telescope[:-1]
+                search = tel_class + '-' + molecule.instrument_name
+                inst_match = mapping.find_by_camera_type_and_location(site,
+                                                                      observatory,
+                                                                      telescope,
+                                                                      search)
+                specific_camera = inst_match[0]['camera']
+
             obs = Expose.build(
                                 # Meta data
                                 tracking_num = self.tracking_number,
@@ -142,7 +161,7 @@ class Block(object):
                                 exp_time = molecule.exposure_time,
                                 # TODO: Allow bin_x and bin_y
                                 bin = molecule.bin_x,
-                                inst_name = molecule.instrument_name,
+                                inst_name = specific_camera,
                                 filters = molecule.filter,
                                 pointing = pond_pointing,
                                 priority = self.OBS_PRIORITY,
