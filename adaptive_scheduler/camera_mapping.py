@@ -1,10 +1,14 @@
 '''
-camera_mapping.py - Module for reading in the lcogt camera details.
+camera_mapping.py - Module for reading in LCOGT camera attribute information.
 
-This module reads in camera _data and provides an interface for querying by a
-variety of different criteria.
+This module reads in camera attribute information (e.g. available binnings) and
+provides an interface for querying by a variety of different criteria. The primary
+use is to resolve a generic camera type (e.g. SCICAM) to the specific science
+camera at a given resource, so that a valid POND block may be constructed.
 
-Author: Martin Norbury (mnorbury@lcogt.net)
+See camera_mappings.dat for an example of the input data.
+
+Authors: Martin Norbury (mnorbury@lcogt.net)
 
 November 2012
 
@@ -15,7 +19,7 @@ from collections import defaultdict
 def create_camera_mapping(resource):
     ''' Factory method for creating camera mappings.
 
-    resource - Either a file stream or filename.
+        resource - Either a file stream or filename.
     '''
     try:
         stream = open(resource)
@@ -121,14 +125,18 @@ def _convert_camel_case(input_value):
 
 
 if __name__ == '__main__':
+    # Example usage of this module
 
-    site = 'bpl'
+    site        = 'bpl'
     observatory = 'aqwa'
-    telescope = '0m4a'
-    camera = 'tn22'
+    telescope   = '0m4a'
+    camera      = 'tn22'
     camera_type = '0m4-SCICAM'
 
     mapping = create_camera_mapping("camera_mappings.dat")
+
+
+    # Make some searches
     results = mapping.find_by_location(site, observatory, telescope)
     message = 'Found {0} results by location {1}-{2}-{3}'
     message_args = len(results), site, observatory, telescope
