@@ -12,11 +12,10 @@ This implementation uses a SPARSE matrix representation.
 
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 Sept 2012
-
-TODO: propagate scheduledness up to compound reservation parents.
+Dec 2012: changed to work with Reservation_v3
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 #from contracts_v2 import *
 import copy
 import numpy
@@ -66,7 +65,7 @@ class FullScheduler_v5(object):
 #        self.unscheduled_reservation_list = copy.copy(self.reservation_list)
 
         # these are the structures we need for the linear programming solver
-        self.Yik = [] # maps idx -> [resID, window idx, priority]
+        self.Yik = [] # maps idx -> [resID, window idx, priority, resource]
         self.aikt = {} # maps slice -> Yik idxs
 
 
@@ -102,26 +101,38 @@ class FullScheduler_v5(object):
 
 
     def schedule_all(self):
+        # first we need to build up the list of discretized slices that each
+        # reservation can begin in. These are represented as attributes
+        # that get attached to the reservation object. 
+        # The new attributes are: 
+        # slices_dict
+        # internal_starts_dict
+        # and the dicts are keyed by resource. 
+        # the description of slices and internal starts is in intervals.py
         for r in self.reservation_list:
-            resource = r.resource 
-            slice_alignment = self.time_slicing_dict[resource][0]
-            slice_length = self.time_slicing_dict[resource][1]
-            r.slices, r.internal_starts = r.free_windows.get_slices(slice_alignment, slice_length, r.duration)
+            # there is no longer a one-to-one mapping between reservations 
+            # and resources, so we need to iterate over each resource
             r.Yik_entries = []
-            w_idx = 0
-            for w in r.slices:
-                Yik_idx = len(self.Yik)
-                r.Yik_entries.append(Yik_idx)
-                self.Yik.append([r.resID, w_idx, r.priority])
-                w_idx += 1
-                for s in w:
-                    # build aikt
-                    # working with slice: (s,r.resource)
-                    key = self.hash_slice(s, r.resource, slice_length)
-                    if key in self.aikt.keys():
-                        self.aikt[key].append(Yik_idx)
-                    else:
-                        self.aikt[key] = [Yik_idx]
+            r.slices_dict = {}
+            r.internal_starts_dict = {}
+            for resource in r.free_windows_dict.keys():
+                slice_alignment = self.time_slicing_dict[resource][0]
+                slice_length = self.time_slicing_dict[resource][1]
+                r.slices_dict[resource], r.internal_starts_dict[resource] = r.free_windows_dict[resource].get_slices(slice_alignment, slice_length, r.duration)
+                w_idx = 0
+                for w in r.slices_dict[resource]:
+                    Yik_idx = len(self.Yik)
+                    r.Yik_entries.append(Yik_idx)
+                    self.Yik.append([r.resID, w_idx, r.priority, resource])
+                    w_idx += 1
+                    for s in w:
+                        # build aikt
+                        # working with slice: (s,r.resource)
+                        key = self.hash_slice(s, resource, slice_length)
+                        if key in self.aikt.keys():
+                            self.aikt[key].append(Yik_idx)
+                        else:
+                            self.aikt[key] = [Yik_idx]
         # allocate A & b
         # find the row size of A:
         # first find the number of reservations participating in oneofs
@@ -239,26 +250,27 @@ class FullScheduler_v5(object):
             if value == 1:
                 resID = self.Yik[idx][0]
                 slice_idx = self.Yik[idx][1]
+                resource = self.Yik[idx][3]
                 reservation = self.get_reservation_by_ID(resID)
                 # use the internal_start for the start  
-                start = reservation.internal_starts[slice_idx]
+                start = reservation.internal_starts_dict[resource][slice_idx]
                 # the quantum is the length of all the slices we've occupied
-                quantum = reservation.slices[slice_idx][-1] + self.time_slicing_dict[reservation.resource][1] - reservation.slices[slice_idx][0]
+                quantum = reservation.slices_dict[resource][slice_idx][-1] + self.time_slicing_dict[resource][1] - reservation.slices_dict[resource][slice_idx][0]
                 reservation.scheduled = True
-                self.commit_reservation_to_schedule(reservation, start, quantum)
+                self.commit_reservation_to_schedule(reservation, start, quantum, resource)
             idx += 1
         return self.schedule_dict
 
 
-    def commit_reservation_to_schedule(self, r, start, quantum):
+    def commit_reservation_to_schedule(self, r, start, quantum, resource):
         if r.scheduled:
-            r.schedule(start, quantum, r.resource,
+            r.schedule(start, quantum, resource,
                        [Timepoint(start, 'start'),
                         Timepoint(start + r.duration, 'end')],
                        'slicedIPsparse')
         else:
             print "error: trying to commit unscheduled reservation"
-        self.schedule_dict[r.resource].append(r)
+        self.schedule_dict[resource].append(r)
         # remove from list of unscheduled reservations
 #        self.unscheduled_reservation_list.remove(r)
 

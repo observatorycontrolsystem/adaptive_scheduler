@@ -24,12 +24,12 @@ class TestFullScheduler_v3(object):
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(2, 2, 'bar', s2)
-        self.r3 = Reservation_v2(1, 1, 'foo', s3)
-        self.r4 = Reservation_v2(1, 1, 'foo', s4)
-        self.r5 = Reservation_v2(2, 2, 'bar', s5)
-        self.r6 = Reservation_v2(1, 2, 'bar', s5)
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(2, 2, {'bar': s2})
+        self.r3 = Reservation_v3(1, 1, {'foo': s3})
+        self.r4 = Reservation_v3(1, 1, {'foo': s4})
+        self.r5 = Reservation_v3(2, 2, {'bar': s5})
+        self.r6 = Reservation_v3(1, 2, {'bar': s5})
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -136,9 +136,9 @@ class TestFullScheduler_v3(object):
                         Timepoint(114484, 'end'),
                         Timepoint(180058, 'start'), 
                         Timepoint(200648, 'end')])
-        r1 = Reservation_v2(1, 30, 'foo', s1)
+        r1 = Reservation_v3(1, 30, {'foo': s1})
         s2 = copy.copy(s1)
-        r2 = Reservation_v2(1, 30, 'goo', s2)
+        r2 = Reservation_v3(1, 30, {'goo': s2})
 
         cr = CompoundReservation_v2([r1,r2], 'oneof')
         gpw = {}

@@ -165,7 +165,7 @@ class FullScheduler_v1(object):
                 if r == reservation:
                     continue
                 else:
-                    reservation.remove_from_free_windows(interval)
+                    reservation.remove_from_free_windows(interval, resource)
         else:
             print "error: trying to commit unscheduled reservation"
 
