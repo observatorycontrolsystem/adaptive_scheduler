@@ -250,7 +250,7 @@ def send_schedule_to_pond(schedule, semester_start):
 
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
-                           location        = res.resource,
+                           location        = res.scheduled_resource,
                            start           = res_start,
                            end             = res_end,
                            group_id        = res.compound_request.group_id,

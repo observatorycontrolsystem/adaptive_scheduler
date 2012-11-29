@@ -27,8 +27,10 @@ from rise_set.visibility      import Visibility
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
-from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+#from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
+#from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
 from adaptive_scheduler.utils    import (datetime_to_epoch, normalise,
                                          normalised_epoch_to_datetime)
@@ -142,10 +144,17 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         # Each Reservation represents the set of available windows of opportunity
         # The resource is governed by the timepoint.resource attribute
         request = compound_request.requests[idx]
+        window_dict = {
+                        request.telescope.name : epoch_intervals
+                      }
+#        reservations.append( Reservation(compound_request.priority,
+#                                         request.duration,
+#                                         request.telescope.name,
+#                                         epoch_intervals) )
         reservations.append( Reservation(compound_request.priority,
                                          request.duration,
-                                         request.telescope.name,
-                                         epoch_intervals) )
+                                         window_dict
+                                         ) )
 
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack

@@ -28,7 +28,10 @@ from adaptive_scheduler.input import ( get_telescope_network, dump_scheduler_inp
 from adaptive_scheduler.printing import print_schedule
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
+#from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
+
+
 from adaptive_scheduler.pond import send_schedule_to_pond
 
 from requestdb.client import SearchQuery, SchedulerClient
@@ -107,8 +110,8 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2012, 11, 17, 0, 0, 0)
-    semester_end   = datetime(2012, 11, 18, 0, 0, 0)
+    semester_start = datetime(2012, 11, 29, 0, 0, 0)
+    semester_end   = datetime(2012, 12, 29, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -163,7 +166,15 @@ def main(requests):
                          contractual_obligations)
 
     # Instantiate and run the scheduler
-    kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations)
+    #kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations)
+    # TODO: Set alignment to start of first night on each resource
+    # TODO: Move this to a config file
+    time_slicing_dict = {
+                            '0m4a.aqwa.bpl' : [0, 600],
+                            '0m4b.aqwa.bpl' : [0, 600],
+                        }
+    kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
+                             time_slicing_dict)
     schedule = kernel.schedule_all()
 
     # Summarise the schedule in normalised epoch (kernel) units of time
