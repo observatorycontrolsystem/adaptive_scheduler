@@ -211,90 +211,9 @@ class TestIntervals(object):
         assert_equal(t,0)
 
 
-    def test_get_quantum_starts_1(self):
-        qs = self.i1.get_quantum_starts(1)
-        assert_equal(qs[0], 1)
-        assert_equal(qs[1], 2)
-        assert_equal(qs[2], 4)
-
-
-    def test_get_quantum_starts_2(self):
-        '''
-        Impossible to align w/ start of quantum
-        '''
-        qs = self.i1.get_quantum_starts(2)
-        assert_equal(qs, [])
-
-
     def test_trim_to_time(self):
         self.i1.trim_to_time(2)
         assert_equal(self.i1.timepoints[0].time, 1)
         assert_equal(self.i1.timepoints[0].type, 'start')
         assert_equal(self.i1.timepoints[1].time, 3)
         assert_equal(self.i1.timepoints[1].type, 'end')
-
-
-    def test_get_slices_1(self):
-        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end')])
-        s, si = i.get_slices(0, 1, 1)
-        assert_equal(s[0][0], 0)
-        assert_equal(si[0], 0)
-
-
-    def test_get_slices_2(self):
-        ''' Multiple starts in one interval '''
-        i = Intervals([Timepoint(0, 'start'), Timepoint(2, 'end')])
-        s, si = i.get_slices(0, 1, 1)
-        assert_equal(s[0][0], 0)
-        assert_equal(s[1][0], 1)
-        assert_equal(si[0], 0)
-        assert_equal(si[1], 1)
-
-
-    def test_get_slices_3(self):
-        ''' Duration doesn't fit in interval '''
-        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end')])
-        s, si = i.get_slices(0, 1, 2)
-        assert_equal(s, [])
-        assert_equal(si, [])
-
-        
-    def test_get_slices_4(self):
-        ''' Multiple intervals '''
-        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end'), Timepoint(3, 'start'), Timepoint(4, 'end')])
-        s, si = i.get_slices(0, 1, 1)
-        assert_equal(s[0][0], 0)
-        assert_equal(s[1][0], 3)
-        assert_equal(si[0], 0)
-        assert_equal(si[1], 3)
-
-
-    def test_get_slices_5(self):
-        ''' slice_alignment eliminates an interval '''
-        i = Intervals([Timepoint(0, 'start'), Timepoint(1, 'end'), Timepoint(3, 'start'), Timepoint(4, 'end')])
-        s, si = i.get_slices(1, 1, 1)
-        assert_equal(s[0][0], 3)
-        assert_equal(si[0], 3)
-        
-
-    def test_get_slices_6(self):
-        ''' slice_alignment starts in the middle of an interval '''
-        i = Intervals([Timepoint(0, 'start'), Timepoint(2, 'end'), Timepoint(3, 'start'), Timepoint(4, 'end')])
-        s, si = i.get_slices(1, 1, 1)
-        assert_equal(s[0][0], 1)
-        assert_equal(s[1][0], 3)
-        assert_equal(si[0], 1)
-        assert_equal(si[1], 3)
-
-
-    def test_get_slices_7(self):
-        ''' internal start case '''
-        i = Intervals([Timepoint(17, 'start'), Timepoint(25, 'end')])
-        s, si = i.get_slices(10, 5, 5)
-        assert_equal(s[0][0], 15)
-        assert_equal(s[0][1], 20)
-        assert_equal(s[1][0], 20)
-        assert_equal(si[0], 17)
-        assert_equal(si[1], 20)
-        
-

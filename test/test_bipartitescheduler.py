@@ -21,8 +21,8 @@ class TestBipartiteScheduler(object):
         s2 = Intervals([Timepoint(2, 'start'),
                         Timepoint(4, 'end')]) # --2--4
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(2, 2, 'bar', s2)
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(2, 2, {'bar': s2})
     
         self.bs = BipartiteScheduler([self.r1, self.r2], ['foo', 'bar'])
 
@@ -70,7 +70,44 @@ class TestBipartiteScheduler(object):
 
 
     def test_merge_constraints(self):
-        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 1)
+        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 0)
         self.bs.merge_constraints(self.r1.get_ID(), self.r2.get_ID())
-        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 2)
+        assert_equal(len(self.bs.constraint_graph[self.r1.get_ID()]), 1)
         assert not self.r2.get_ID() in self.bs.constraint_graph.keys()
+
+
+    def test_get_quantum_starts_1(self):
+        t1=Timepoint(1,'start');
+        t2=Timepoint(3, 'end');
+        t5=Timepoint(4, 'start');
+        t6=Timepoint(5, 'end');
+
+        i1=Intervals([t1, t2, t5, t6], 'free')
+
+        qs = get_quantum_starts(i1,1)
+        assert_equal(qs[0], 1)
+        assert_equal(qs[1], 2)
+        assert_equal(qs[2], 4)
+
+
+    def test_get_quantum_starts_2(self):
+        '''
+        Impossible to align w/ start of quantum
+        '''
+        t1=Timepoint(1,'start');
+        t2=Timepoint(3, 'end');
+        t5=Timepoint(4, 'start');
+        t6=Timepoint(5, 'end');
+
+        i1=Intervals([t1, t2, t5, t6], 'free')
+
+        qs = get_quantum_starts(i1,2)
+        assert_equal(qs, [])
+
+
+    def test_get_quantum_starts_3(self):
+        t1 = Timepoint(1, 'start')
+        t2 = Timepoint(2, 'end')
+        i1 = Intervals([t1,t2], 'free')
+        qs = get_quantum_starts(i1,2)
+	assert_equal(qs, [])

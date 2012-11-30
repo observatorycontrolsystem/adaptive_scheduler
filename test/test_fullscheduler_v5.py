@@ -13,7 +13,7 @@ from adaptive_scheduler.kernel.intervals import *
 from adaptive_scheduler.kernel.fullscheduler_v5 import *
 import copy
 
-class TestFullScheduler_v3(object):
+class TestFullScheduler_v5(object):
 
     def setup(self):
         s1 = Intervals([Timepoint(1, 'start'),
@@ -70,40 +70,6 @@ class TestFullScheduler_v3(object):
         self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
         
-
-    def test_create(self):
-        assert_equal(self.fs1.compound_reservation_list, [self.cr1, self.cr2, self.cr3])
-        assert_equal(self.fs1.globally_possible_windows_dict, self.gpw2)
-        assert_equal(self.fs1.contractual_obligation_list, [])
-        assert_equal(self.fs1.schedule_dict_free['foo'].timepoints[0].time, 1)
-        assert_equal(self.fs1.schedule_dict_free['foo'].timepoints[0].type, 
-                     'start')
-        assert_equal(self.fs1.schedule_dict_free['foo'].timepoints[1].time, 5)
-        assert_equal(self.fs1.schedule_dict_free['foo'].timepoints[1].type, 
-                     'end')
-        
-
-    def test_create_2(self):
-        assert_equal(self.fs2.resource_list, ['foo', 'bar'])
-        assert_equal(self.fs2.schedule_dict['foo'], [])
-        assert_equal(self.fs2.schedule_dict['bar'], [])
-
-
-    def test_convert_compound_to_simple_1(self):
-        assert_equal(self.fs1.reservation_list[0], self.r1)
-        assert_equal(self.fs1.reservation_list[1], self.r3)
-        assert_equal(self.fs1.reservation_list[2], self.r2)
-        assert_equal(self.fs1.reservation_list[3], self.r4)
-        assert_equal(self.fs1.and_constraints[0][0], self.r3)
-        assert_equal(self.fs1.and_constraints[0][1], self.r2)
-
-
-    def test_convert_compound_to_simple_2(self):
-        assert_equal(self.fs3.reservation_list[0], self.r4)
-        assert_equal(self.fs3.reservation_list[1], self.r5)
-        assert_equal(self.fs3.oneof_constraints[0][0], self.r4)
-        assert_equal(self.fs3.oneof_constraints[0][1], self.r5)
-
 
     def test_schedule_all_1(self):
         d = self.fs1.schedule_all()

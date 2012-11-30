@@ -7,7 +7,7 @@ Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 
 class BipartiteScheduler(object):
 
@@ -15,29 +15,36 @@ class BipartiteScheduler(object):
         self.reservation_list       = reservation_list
         self.scheduled_reservations = []
         self.resource_list          = resource_list
-        self.reservations_by_resource_dict = {}
+#        self.reservations_by_resource_dict = {}
         self.constraint_graph       = None
-        for resource in resource_list:
-            self.reservations_by_resource_dict[resource] = []
-        for reservation in reservation_list:
-            if reservation.resource in resource_list:
-                self.reservations_by_resource_dict[reservation.resource].append(reservation)
-            else: 
-                print "what's this reservation doing here?"
+        # for resource in resource_list:
+        #     self.reservations_by_resource_dict[resource] = []
+        # for reservation in reservation_list:
+        #     if reservation.resource in resource_list:
+        #         self.reservations_by_resource_dict[reservation.resource].append(reservation)
+        #     else: 
+        #         print "what's this reservation doing here?"
         self.create_constraint_graph()
 
 
     def create_constraint_graph(self):
         constraint_graph = {}
         # calculate quantum as max of all request lengths, per resource
-        for resource in self.resource_list:
-            quantum = self.max_duration(self.reservations_by_resource_dict[resource])
-            for r in self.reservations_by_resource_dict[resource]:
-                # quantize free windows of opportunity for each reservation 
-                # (first checks which windows of opportunity are still free)
-                quantum_starts = self.quantize_windows(r, quantum)
-                # add to graph
-                constraint_graph[r.get_ID()] = quantum_starts
+        # for resource in self.resource_list:
+        #     quantum = self.max_duration(self.reservations_by_resource_dict[resource])
+        #     for r in self.reservations_by_resource_dict[resource]:
+        #         # quantize free windows of opportunity for each reservation 
+        #         # (first checks which windows of opportunity are still free)
+        #         quantum_starts = self.quantize_windows(r, quantum)
+        #         # add to graph
+        #         constraint_graph[r.get_ID()] = quantum_starts
+        
+        # calculate quantum as max of all reservation durations
+        quantum = self.max_duration(self.reservation_list)
+        for r in self.reservation_list:
+            quantum_starts = self.quantize_windows(r, quantum)
+            # add to graph
+            constraint_graph[r.get_ID()] = quantum_starts
         self.constraint_graph = constraint_graph
 
 
@@ -71,10 +78,10 @@ class BipartiteScheduler(object):
 
     def quantize_windows(self, reservation, quantum):
         quantum_starts = []
-        resource = reservation.resource
-        qss = reservation.free_windows.get_quantum_starts(quantum)
-        for qs in qss:
-            quantum_starts.append(self.hash_quantum_start(resource, qs, quantum))
+        for resource in reservation.free_windows_dict.keys():
+            qss = get_quantum_starts(reservation.free_windows_dict[resource], quantum)
+            for qs in qss:
+                quantum_starts.append(self.hash_quantum_start(resource, qs, quantum))
         return quantum_starts
 
 
@@ -167,3 +174,22 @@ def bipartiteMatch(graph):
             return 0
 
         for v in unmatched: recurse(v)
+
+
+def get_quantum_starts(intervals, quantum_length):
+    ''' Returns a list of the start times of quantums of quantum_length,
+    and aligned with quantum_length boundary in the intervals. '''
+    quantum_starts = []
+    intervals.timepoints.sort()
+    for t in intervals.timepoints:
+        if t.type == 'start':
+            # align the start with a quantum boundary
+            start = int(math.ceil(float(t.time)/float(quantum_length))*quantum_length)
+        else:
+            tmp = range(start, t.time, quantum_length)
+            if tmp:
+                # figure out whether the last quantum is whole
+                if tmp[-1] + quantum_length > t.time:
+                    tmp.pop()
+                quantum_starts.extend(tmp)
+    return quantum_starts

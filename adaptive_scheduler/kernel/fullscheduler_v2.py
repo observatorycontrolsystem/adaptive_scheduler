@@ -10,7 +10,7 @@ Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 November 2011
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 from bipartitescheduler import *
 from uncontendedscheduler import *
 #from contracts_v2 import *
@@ -87,6 +87,8 @@ class FullScheduler_v2(object):
 
 
     def schedule_uncontended_reservations(self):
+	# FIX: w/ reservation_v3 this becomes co-scheduling of all resources
+	# at once
         for resource in self.resource_list:
             self.current_resource = resource
             reservation_list = filter(self.resource_equals, self.unscheduled_reservation_list)

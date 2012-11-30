@@ -8,7 +8,7 @@ Author: Sotiria Lampoudi
 November 2011
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 
 class UncontendedScheduler(object):
 
@@ -20,15 +20,15 @@ class UncontendedScheduler(object):
 
     def find_uncontended_windows(self, reservation):
         uncontended = []
-        uncontended = reservation.free_windows #intervals
+        uncontended = reservation.free_windows_dict[self.resource] #intervals
         for r in self.reservation_list:
-            if self.resource == r.resource:
+            if self.resource in r.free_windows_dict.keys():
                 if r == reservation: 
                     continue
                 elif r.scheduled:
                     uncontended = uncontended.subtract(Intervals(r.scheduled_timepoints, 'busy'))
                 else:
-                    uncontended = uncontended.subtract(r.free_windows)
+                    uncontended = uncontended.subtract(r.free_windows_dict[self.resource])
         return uncontended 
 
     
@@ -36,7 +36,7 @@ class UncontendedScheduler(object):
         ret = windows.find_interval_of_length(reservation.duration)
         if ret >= 0:
             reservation.schedule(ret, reservation.duration, 
-                                 reservation.resource, 
+                                 self.resource, 
                                  [Timepoint(ret, 'start'), 
                                   Timepoint(ret+reservation.duration, 'end')],
                                  'uncontended scheduler')
