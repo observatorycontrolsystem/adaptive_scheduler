@@ -11,7 +11,7 @@ TODO:
 * add automatic cluster number detection
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 import sys
 import math
 import heapq

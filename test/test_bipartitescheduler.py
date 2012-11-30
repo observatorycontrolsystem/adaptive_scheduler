@@ -33,12 +33,6 @@ class TestBipartiteScheduler(object):
         assert_equal(self.bs.scheduled_reservations, [])
 
 
-    def test_get_reservation_by_ID(self):
-        id = self.r1.get_ID()
-        r = self.bs.get_reservation_by_ID(id)
-        assert_equal(r, self.r1)
-
-
     def test_hash_and_unhash_quantum_start(self):
         tmp = self.bs.hash_quantum_start('foo', 2, 1)
         [resource, start, quantum] = self.bs.unhash_quantum_start(tmp)

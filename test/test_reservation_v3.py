@@ -43,7 +43,7 @@ class TestReservation_v3(object):
 
     
     def test_print_2(self):
-        self.r1.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')], 'test')
+        self.r1.schedule(1, 1, 'foo', 'test')
         print self.r1
 
 
@@ -72,7 +72,7 @@ class TestReservation_v3(object):
 
 
     def test_schedule(self):
-        self.r1.schedule(1, 1, 'foo', [Timepoint(1, 'start'), Timepoint(2, 'end')],'test')
+        self.r1.schedule(1, 1, 'foo', 'test')
         assert_equal(self.r1.scheduled_start, 1)
         assert_equal(self.r1.scheduled_quantum, 1)
         assert_equal(self.r1.scheduled, True)

@@ -60,19 +60,18 @@ class Reservation_v3(object):
             start = self.free_windows_dict[resource].find_interval_of_length(self.duration)
             if start >=0:
                 self.schedule(start, self.duration, resource, 
-                              [Timepoint(start, 'start'), 
-                               Timepoint(start+self.duration, 'end')] , 
                               'reservation_v3.schedule_anywhere()')
                 return True
         return False
 
     
-    def schedule(self, start, quantum, resource, scheduled_timepoints, scheduler_description=None):
+    def schedule(self, start, quantum, resource, scheduler_description=None):
+        self.scheduled          = True
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
         self.scheduled_resource = resource
-        self.scheduled          = True
-        self.scheduled_timepoints = scheduled_timepoints
+        self.scheduled_timepoints = [Timepoint(start, 'start'), 
+                                     Timepoint(start+self.duration, 'end')]
         self.scheduled_by       = scheduler_description
         if self.compound_reservation_parent:
             self.compound_reservation_parent.schedule()

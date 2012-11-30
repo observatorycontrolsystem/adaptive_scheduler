@@ -7,7 +7,7 @@ Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 June 2012
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 from munkres import Munkres
 
 
@@ -29,11 +29,10 @@ class HungarianScheduler(object):
         self.constraint_matrix_numcols = 0
         for resource in resource_list:
             self.reservations_by_resource_dict[resource] = []
-        for reservation in reservation_list:
-            if reservation.resource in resource_list:
-                self.reservations_by_resource_dict[reservation.resource].append(reservation)
-            else: 
-                print "what's this reservation doing here?"
+        for resource in resource_list:
+            for reservation in reservation_list:
+                if resource in reservation.free_windows_dict.keys():
+                    self.reservations_by_resource_dict[resource].append(reservation)
         self.create_constraint_matrix()
 
 
@@ -49,7 +48,7 @@ class HungarianScheduler(object):
                 self.constraint_matrix_rows_by_idx[current_row] = rid
                 # quantize free windows of opportunity for each reservation 
                 # (first checks which windows of opportunity are still free)
-                quantum_starts = self.quantize_windows(r, quantum)
+                quantum_starts = self.quantize_windows(r, quantum, resource)
                 for q in quantum_starts:
                     # if quantum already exists, just add entry to matrix
                     if q in self.constraint_matrix_cols_by_quantum.keys():
@@ -97,8 +96,6 @@ class HungarianScheduler(object):
             r = self.get_reservation_by_ID(reservation_ID)
             [resource, start, quantum] = self.unhash_quantum_start(quantum_start)
             r.schedule(start, quantum, resource, 
-                       [Timepoint(start, 'start'),
-                        Timepoint(start+r.duration,'end')], 
                        'Hungarian scheduler')
             self.scheduled_reservations.append(r)
         return self.scheduled_reservations
@@ -112,10 +109,9 @@ class HungarianScheduler(object):
         return duration
 
 
-    def quantize_windows(self, reservation, quantum):
+    def quantize_windows(self, reservation, quantum, resource):
         quantum_starts = []
-        resource = reservation.resource
-        qss = get_quantum_starts(reservation.free_windows, quantum)
+        qss = get_quantum_starts(reservation.free_windows_dict[resource], quantum)
         for qs in qss:
             quantum_starts.append(self.hash_quantum_start(resource, qs, quantum))
         return quantum_starts

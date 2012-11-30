@@ -8,7 +8,7 @@ Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
 Feb 2012, May 2012
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 from intervals import *
 from timepoint import *
 import copy

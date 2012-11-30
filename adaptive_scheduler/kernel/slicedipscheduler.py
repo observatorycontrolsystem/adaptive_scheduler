@@ -17,78 +17,26 @@ from reservation_v3 import *
 #from contracts_v2 import *
 import copy
 import numpy
+from scheduler import *
 
-
-class SlicedIPScheduler(object):
+class SlicedIPScheduler(Scheduler):
     
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
                  time_slicing_dict):
-        self.compound_reservation_list   = compound_reservation_list
-        self.contractual_obligation_list = contractual_obligation_list
-        # globally_possible_windows_dict is a dictionary mapping:
-        # resource -> globally possible windows (Intervals) on that resource. 
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
+        Scheduler.__init__(self, compound_reservation_list, 
+                 globally_possible_windows_dict, 
+                 contractual_obligation_list)
         # time_slicing_dict is a dictionary that maps: 
         # resource-> [slice_alignment, slice_length]
         self.time_slicing_dict = time_slicing_dict
-
-        # these dictionaries hold:
-        # scheduled reservations
-        self.schedule_dict      = {}
-        # busy intervals
-        self.schedule_dict_busy = {}
-        # free intervals
-        self.schedule_dict_free = {}
-
-        # resource_list holds the schedulable resources.
-        # possible windows specified by reservations may include
-        # resources not on this list, but we cannot schedule them because
-        # we do not know their globally possible windows.
-        self.resource_list = globally_possible_windows_dict.keys()
-
-        for resource in self.resource_list:
-            # reservation list
-            self.schedule_dict[resource]      = []
-            # busy intervals
-            self.schedule_dict_busy[resource] = Intervals([], 'busy')
-        # free intervals
-        self.schedule_dict_free = copy.copy(globally_possible_windows_dict)
-        
-        self.and_constraints   = []        
-        self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
-#        self.unscheduled_reservation_list = copy.copy(self.reservation_list)
-
         # these are the structures we need for the linear programming solver
         self.Yik = [] # maps idx -> [resID, window idx, priority, resource]
         self.aikt = {} # maps slice -> Yik idxs
 	self.schedulerIDstring = 'slicedIPscheduler'
 
 
-    def get_reservation_by_ID(self, ID):
-        for r in self.reservation_list:
-            if r.get_ID() == ID:
-                return r
-        return None
-
-
-    def convert_compound_to_simple(self):
-        reservation_list = []
-        for cr in self.compound_reservation_list:
-            if cr.issingle():
-                reservation_list.append(cr.reservation_list[0])
-            elif cr.isoneof():
-                reservation_list.extend(cr.reservation_list)
-                self.oneof_constraints.append(cr.reservation_list)
-            elif cr.isand():
-                reservation_list.extend(cr.reservation_list)
-                # add the constraint to the list of constraints
-                self.and_constraints.append(cr.reservation_list)
-        return reservation_list
-
-    
     def hash_slice(self, start, resource, slice_length):
         return "resource_"+resource+"_start_"+repr(start)+"_length_"+repr(slice_length)
         
@@ -145,21 +93,10 @@ class SlicedIPScheduler(object):
                 start = reservation.internal_starts_dict[resource][slice_idx]
                 # the quantum is the length of all the slices we've occupied
                 quantum = reservation.slices_dict[resource][slice_idx][-1] + self.time_slicing_dict[resource][1] - reservation.slices_dict[resource][slice_idx][0]
-                reservation.scheduled = True
-                self.commit_reservation_to_schedule(reservation, start, quantum, resource)
+                reservation.schedule(start, quantum, resource, self.schedulerIDstring)
+                self.commit_reservation_to_schedule(reservation)
             idx += 1
         return self.schedule_dict
-
-
-    def commit_reservation_to_schedule(self, r, start, quantum, resource):
-        if r.scheduled:
-            r.schedule(start, quantum, resource,
-                       [Timepoint(start, 'start'),
-                        Timepoint(start + r.duration, 'end')],
-                       self.schedulerIDstring)
-        else:
-            print "error: trying to commit unscheduled reservation"
-        self.schedule_dict[resource].append(r)
         
 
     def get_slices(self, intervals, slice_alignment, slice_length, duration):
