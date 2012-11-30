@@ -6,11 +6,16 @@ from adaptive_scheduler.orchestrator import get_requests_from_json as get_reques
 # Create module log 
 logger = log.create_logger("monitor")
 
+class DBSyncronizeEvent(object):
+    def __repr__(self):
+        return '%s' % (self.__class__,)
+
 class RequestUpdateEvent(object):
     def __init__(self, requests):
         self.requests = requests
     def __repr__(self):
         return '%s(%r)' % (self.__class__, self.__dict__)
+
 
 class _TimerThread(threading.Thread):
     def __init__(self, period, name="Timer Thread"):
@@ -32,6 +37,17 @@ class _TimerThread(threading.Thread):
     def action(self):
         raise NotImplementedError("Override in sub-class")
 
+
+class _DBSyncronizeThread(_TimerThread):
+    def __init__(self, period, queue, name="DB Syncronization Thread"):
+        super(_DBSyncronizeThread, self).__init__(period)
+        self.queue = queue
+
+    def action(self):
+        logger.info("Syncronizing databases")
+        self.queue.put(DBSyncronizeEvent())
+
+
 class _MonitoringThread(_TimerThread):
     def __init__(self, period, queue, name="Monitoring Thread"):
         super(_MonitoringThread, self).__init__(period)
@@ -48,3 +64,6 @@ class _MonitoringThread(_TimerThread):
 
 def create_monitor(period, queue):
     return _MonitoringThread(period, queue)
+
+def create_database_syncronizer(period, queue):
+    return _DBSyncronizeThread(period, queue)
