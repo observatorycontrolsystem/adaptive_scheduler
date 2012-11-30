@@ -1,0 +1,79 @@
+[
+ {
+  "timestamp": "2012-11-29 22:47:12", 
+  "expires": "2013-02-21 22:47:12", 
+  "tracking_number": "0000000001", 
+  "operator": "single", 
+  "proposal": {
+   "priority": 1, 
+   "proposal_id": "Eng", 
+   "user_id": "eric.saunders", 
+   "tag_id": "LCOGT"
+  }, 
+  "group_id": "LALALALALALALALALALALALALALAAL", 
+  "type": "compound_request", 
+  "requests": [
+   {
+    "operator": "single", 
+    "requests": [
+     {
+      "target": {
+       "equinox": "J2000", 
+       "name": "QX And", 
+       "coordinate_system": "ICRS", 
+       "altitude": null, 
+       "pitch": null, 
+       "proper_motion_ra": 0.0, 
+       "epoch": 2000.0, 
+       "proper_motion_dec": 0.0, 
+       "hour_angle": null, 
+       "parallax": 0.0, 
+       "azimuth": null, 
+       "dec": 37.806111100000003, 
+       "type": "SIDEREAL", 
+       "roll": null, 
+       "ra": 29.4906875
+      }, 
+      "windows": [
+       {
+        "start": "2012-11-29 13:37:43", 
+        "end": "2012-11-30 14:40:44"
+       }
+      ], 
+      "request_number": "0000000001", 
+      "location": {
+       "observatory": "aqwa", 
+       "telescope": "0m4a", 
+       "telescope_class": "0m4", 
+       "site": "bpl"
+      }, 
+      "molecules": [
+       {
+        "exposure_time": 45.0, 
+        "ag_name": null, 
+        "exposure_count": 2, 
+        "defocus": null, 
+        "sub_x2": null, 
+        "sub_x1": null, 
+        "args": null, 
+        "sub_y1": null, 
+        "sub_y2": null, 
+        "expose_at": null, 
+        "filter": "V", 
+        "instrument_name": "SCICAM", 
+        "ag_mode": "OPTIONAL", 
+        "bin_x": 1, 
+        "type": "EXPOSE", 
+        "bin_y": 1, 
+        "priority": 1
+       }
+      ], 
+      "type": "request", 
+      "observation_note": "your note here"
+     }
+    ], 
+    "type": "compound_request"
+   }
+  ]
+ }
+]

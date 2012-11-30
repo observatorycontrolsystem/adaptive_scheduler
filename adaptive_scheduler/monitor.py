@@ -1,7 +1,7 @@
 import log
 import threading
 
-from adaptive_scheduler.orchestrator import get_requests_from_file as get_requests
+from adaptive_scheduler.orchestrator import get_requests_from_json as get_requests
 
 # Create module log 
 logger = log.create_logger("monitor")
@@ -41,7 +41,7 @@ class _MonitoringThread(_TimerThread):
         logger.info("Getting latest requests")
 
         # Do periodic stuff here
-        requests = get_requests('requests.dat','dummy arg')
+        requests = get_requests('requests.json','dummy arg')
 
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))
