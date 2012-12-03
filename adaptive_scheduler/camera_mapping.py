@@ -229,3 +229,14 @@ if __name__ == '__main__':
     for cam in results:
         print cam['camera']
     print
+
+
+
+class ConnectionError(Exception):
+    '''Wrapper for URL/HTTP transport or server errors.'''
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value
