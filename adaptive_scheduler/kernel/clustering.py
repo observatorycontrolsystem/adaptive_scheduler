@@ -154,7 +154,8 @@ class Clustering(object):
             if distances[i] > 0:
                 nzdcount += 1
         # choose how many cutpoints
-        num_cutpoints = min(nzdcount, len(self.reservation_list)/10)
+#        num_cutpoints = min(nzdcount, len(self.reservation_list)/10)
+        num_cutpoints = nzdcount
         if num_cutpoints < 1:
             return 1
         # find cut-points
