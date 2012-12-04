@@ -334,12 +334,12 @@ class ModelBuilder(object):
         expiry_dt = iso_string_to_datetime(cr_dict['expires'])
 
         user_request = UserRequest(
-                                    operator = cr_dict['operator'],
-                                    requests = requests,
-                                    proposal = proposal,
-                                    expires  = expiry_dt,
+                                    operator        = cr_dict['operator'],
+                                    requests        = requests,
+                                    proposal        = proposal,
+                                    expires         = expiry_dt,
                                     tracking_number = cr_dict['tracking_number'],
-                                    group_id = cr_dict['group_id']
+                                    group_id        = cr_dict['group_id']
                                   )
 
         return user_request
@@ -348,24 +348,13 @@ class ModelBuilder(object):
     def build_requests(self, req_dicts):
         requests = []
         for req_dict in req_dicts:
-            expanded_requests = self.build_and_expand_request(req_dict)
-
-            # if there is more than one request after expansion, they need to be
-            # wrapped in a ONEOF CompoundRequest
-            if len(expanded_requests) >= 2:
-                req = CompoundRequest(
-                                       operator = 'oneof',
-                                       requests = expanded_requests,
-                                     )
-            else:
-                req = expanded_requests[0]
-
+            req = self.build_request(req_dict)
             requests.append(req)
 
         return requests
 
 
-    def build_and_expand_request(self, req_dict):
+    def build_request(self, req_dict):
         target = Target(req_dict['target'])
 
         molecules = []
@@ -375,8 +364,6 @@ class ModelBuilder(object):
 
         telescopes = self.tel_network.get_telescopes_at_location(req_dict['location'])
 
-        # Build a Request for each expanded location
-        requests = []
 
         windows = Windows()
         for telescope in telescopes:
@@ -391,10 +378,8 @@ class ModelBuilder(object):
                        windows        = windows,
                        request_number = req_dict['request_number'],
                      )
-        requests.append(req)
 
-
-        return requests
+        return req
 
 
 

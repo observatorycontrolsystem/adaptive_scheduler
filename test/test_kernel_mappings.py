@@ -60,7 +60,7 @@ class TestKernelMappings(object):
                       )
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
-        received = make_dark_up_kernel_intervals(req, resource_name, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
@@ -71,8 +71,9 @@ class TestKernelMappings(object):
                            )
 
         # Verify we get the intervals we expect
-        for i, received_tp in enumerate(received.timepoints):
-            assert_equal(received_tp.time, rise_set_dark_intervals[i])
+        for resource_name, received_intervals in received.iteritems():
+            for i, received_tp in enumerate(received_intervals.timepoints):
+                assert_equal(received_tp.time, rise_set_dark_intervals[i])
 
 
     def test_user_interval_is_honoured(self):
@@ -97,7 +98,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, resource_name, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -110,8 +111,9 @@ class TestKernelMappings(object):
                             )
 
         # Verify we get the intervals we expect
-        for i, received_tp in enumerate(received.timepoints):
-            assert_equal(received_tp.time, rise_set_dark_intervals[i])
+        for resource_name, received_intervals in received.iteritems():
+            for i, received_tp in enumerate(received_intervals.timepoints):
+                assert_equal(received_tp.time, rise_set_dark_intervals[i])
 
 
 
@@ -142,7 +144,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, resource_name, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
@@ -155,6 +157,7 @@ class TestKernelMappings(object):
                            )
 
         # Verify we get the intervals we expect
-        for i, received_tp in enumerate(received.timepoints):
-            assert_equal(received_tp.time, rise_set_dark_intervals[i])
+        for resource_name, received_intervals in received.iteritems():
+            for i, received_tp in enumerate(received_intervals.timepoints):
+                assert_equal(received_tp.time, rise_set_dark_intervals[i])
 
