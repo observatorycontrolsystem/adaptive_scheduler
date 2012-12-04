@@ -277,6 +277,9 @@ class IncompleteBlockError(Exception):
         self.msg = "The following fields are missing in this Block.\n"
 
     def __str__(self):
+        return self.value
+
+    def a__str__(self):
         message = "The following fields are missing in this Block.\n"
         for param_type in self.value:
             message += "%s:\n" % param_type
