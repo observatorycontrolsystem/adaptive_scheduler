@@ -119,9 +119,6 @@ def main(requests):
     url  = hierarchical_url
 
 
-    # TODO: Replace with loop over all classes, schedule each separately
-    telescope_class = '1m0'
-
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
 
@@ -166,7 +163,6 @@ def main(requests):
                          contractual_obligations)
 
     # Instantiate and run the scheduler
-    #kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations)
     # TODO: Set alignment to start of first night on each resource
     # TODO: Move this to a config file
     time_slicing_dict = {

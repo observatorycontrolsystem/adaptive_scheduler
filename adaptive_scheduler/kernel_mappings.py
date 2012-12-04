@@ -99,13 +99,13 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def make_dark_up_kernel_intervals(req, visibility_from):
+def make_dark_up_kernel_intervals(req, resource_name, visibility_from):
     '''Find the set of intervals where the target of the provided request it is both
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
 
     rs_target  = target_to_rise_set_target(req.target)
-    visibility = visibility_from[req.telescope.name]
+    visibility = visibility_from[resource_name]
 
     # Find when it's dark, and when the target is up
     rs_dark_intervals = visibility.get_dark_intervals()
@@ -119,11 +119,12 @@ def make_dark_up_kernel_intervals(req, visibility_from):
     intersection = dark_intervals.intersect([up_intervals])
 
     # Intersect with any window provided in the user request
-    user_intervals = req_window_to_kernel_intervals(req.windows)
+    user_windows   = req.windows.at(resource_name)
+    user_intervals = req_window_to_kernel_intervals(user_windows)
     intersection   = intersection.intersect([user_intervals])
 
     # Print some summary info
-    print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection)
+    print_req_summary(req, resource_name, rs_dark_intervals, rs_up_intervals, intersection)
 
     return intersection
 
@@ -147,10 +148,6 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
         window_dict = {
                         request.telescope.name : epoch_intervals
                       }
-#        reservations.append( Reservation(compound_request.priority,
-#                                         request.duration,
-#                                         request.telescope.name,
-#                                         epoch_intervals) )
         reservations.append( Reservation(compound_request.priority,
                                          request.duration,
                                          window_dict

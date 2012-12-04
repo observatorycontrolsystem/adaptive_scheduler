@@ -32,18 +32,18 @@ def print_compound_reservation(compound_res):
     return
 
 
-def print_request(req):
+def print_request(req, resource_name):
     target_name = getattr(req.target, 'name', 'no name')
     print "REQUEST: target %s, observed from %s" % (
                                                       target_name,
-                                                      req.telescope.name,
+                                                      resource_name,
                                                     )
 
 
 
 
-def print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection):
-    print_request(req)
+def print_req_summary(req, resource_name, rs_dark_intervals, rs_up_intervals, intersection):
+    print_request(req, resource_name)
 
     for interval in rs_dark_intervals:
         print "Darkness from %s to %s" % (interval[0], interval[1])
