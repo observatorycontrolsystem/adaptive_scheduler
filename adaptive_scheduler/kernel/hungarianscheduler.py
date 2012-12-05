@@ -29,9 +29,9 @@ class HungarianScheduler(object):
         self.constraint_matrix_numcols = 0
         for resource in resource_list:
             self.reservations_by_resource_dict[resource] = []
-            for reservation in reservation_list:
-                if resource in reservation.free_windows_dict.keys():
-                    self.reservations_by_resource_dict[resource].append(reservation)
+        for reservation in reservation_list:
+            for resource in reservation.free_windows_dict.keys():
+                self.reservations_by_resource_dict[resource].append(reservation)
         self.bq = BipartiteQuantization()
         self.create_constraint_matrix()
 

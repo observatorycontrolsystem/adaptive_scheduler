@@ -12,9 +12,9 @@ from reservation_v3 import *
 from intervals import *
 from timepoint import *
 import copy
-from metrics import *
-
-class MetricsPreSchedulerScalar(Metrics):
+#from metrics import *
+from scheduler import *
+class MetricsPreSchedulerScalar(Scheduler):
 
     def get_number_of_compound_reservations(self, type=None):
         ''' Without argument, returns number of all c.r.s
@@ -43,7 +43,7 @@ class MetricsPreSchedulerScalar(Metrics):
 
 
 
-class MetricsPreSchedulerVector(Metrics):
+class MetricsPreSchedulerVector(Scheduler):
 
     def get_coverage_by_resource(self, resource, mode):
         ''' Two modes: binary, count. 
@@ -57,13 +57,12 @@ class MetricsPreSchedulerVector(Metrics):
         * 0 otherwise.
         '''
         if resource in self.resource_list:
-            self.current_resource = resource
-            reservation_list = filter(self.resource_equals, self.reservation_list)
+            reservation_list = self.reservations_by_resource_dict[resource]
             available_windows = copy.copy(self.globally_possible_windows_dict[resource])
             available_windows.clean_up()
             iu = IntervalsUtility()
             if reservation_list:
-                intervals_list = [r.possible_windows for r in reservation_list]
+                intervals_list = [r.free_windows_dict[resource] for r in reservation_list]
                 if mode == 'binary':
                     retlist = iu.get_coverage_binary(available_windows, intervals_list)
                 elif mode == 'count':

@@ -12,15 +12,15 @@ from reservation_v3 import *
 from intervals import *
 from timepoint import *
 import copy
-from metrics import Metrics
+from scheduler import *
 
-class MetricsPostScheduler(Metrics):
+class MetricsPostScheduler(Scheduler):
 
     def __init__(self, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
                  schedule_dict):
-        Metrics.__init__(self, compound_reservation_list,
+        Scheduler.__init__(self, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list)
         self.schedule_dict = schedule_dict

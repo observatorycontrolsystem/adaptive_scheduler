@@ -49,6 +49,14 @@ class Scheduler(object):
         self.reservation_list  = self.convert_compound_to_simple()
         self.unscheduled_reservation_list = copy.copy(self.reservation_list)
 
+        self.reservations_by_resource_dict = {}
+        for resource in self.resource_list:
+            self.reservations_by_resource_dict[resource] = []
+        for reservation in self.reservation_list:
+            for resource in reservation.free_windows_dict.keys():
+                self.reservations_by_resource_dict[resource].append(reservation)        
+
+
 
     def order_equals(self, x):
         if (x.order == self.current_order):
