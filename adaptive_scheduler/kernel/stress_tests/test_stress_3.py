@@ -11,7 +11,7 @@ adding slack to see if # sched resources increases
 
 from nose.tools import assert_equal
 import copy, random
-from adaptive_scheduler.kernel.fullscheduler_v2 import *
+from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as CurrentScheduler
 from util import *
 
 class TestStress_3(object):
@@ -65,11 +65,11 @@ class TestStress_3(object):
             window = Intervals([Timepoint(start, 'start'),
                                Timepoint(start+duration+slack, 'end')])
             resource = str(random.randint(1,2))
-            reservation = Reservation_v2(1, duration, resource, window)
+            reservation = Reservation_v3(1, duration, {resource: window})
             cr = CompoundReservation_v2([reservation])
             cr_list.append(cr)
 
-        fs = FullScheduler_v2(cr_list, gpw, [])
+        fs = CurrentScheduler(cr_list, gpw, [])
         s = fs.schedule_all()
         u = Util()
         #u.get_coverage_count_plot(s)
