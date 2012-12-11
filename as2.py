@@ -13,6 +13,7 @@ from __future__ import division
 from adaptive_scheduler.orchestrator import ( main, get_requests_from_file,
                                               get_requests_from_db )
 
+from datetime import datetime
 
 if __name__ == '__main__':
 
@@ -22,11 +23,16 @@ if __name__ == '__main__':
     #requests = get_requests_from_file('human_readable_new_requests_new_format.dat', 'dummy arg')
 
     url = 'http://localhost:8001/'
-    telescope_class = '0m4'
+    #telescope_class = '0m4'
+    telescope_class = '1m0'
     requests = get_requests_from_db(url, telescope_class)
 
     print "Request DB gave us the following requests for telescope_class %s:" % telescope_class
+    good_requests = []
     for r in requests:
         print r
+        dt = datetime.strptime(r['requests'][0]['requests'][0]['windows'][0]['end'], '%Y-%m-%d %H:%M:%S')
+        if dt > datetime.utcnow():
+            good_requests.append(r)
 
-    main(requests)
+    main(good_requests)

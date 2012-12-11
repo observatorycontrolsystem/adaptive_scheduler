@@ -14,6 +14,8 @@ INDENT = "    "
 
 def print_reservation(res):
     print res
+    for resource, interval in res.possible_windows_dict.iteritems():
+        print "Possible windows: %s -> %s" % ( resource, interval )
 
     return
 

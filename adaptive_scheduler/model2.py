@@ -85,7 +85,8 @@ class Molecule(DataContainer):
 
     def list_missing_fields(self):
         req_fields = ('type', 'exposure_count', 'bin_x', 'bin_y',
-                      'instrument_name', 'filter', 'exposure_time')
+                      'instrument_name', 'filter', 'exposure_time',
+                      'priority')
         missing_fields = []
 
         for field in req_fields:
@@ -185,11 +186,10 @@ class Request(DefaultMixin):
         #TODO: Placeholder for more sophisticated overhead scheme
 
         # Pick a sensible sounding overhead, in seconds
-        overhead_per_molecule = 20
+        overhead_per_exposure = 20
         duration = 0
         for mol in self.molecules:
-            duration += mol.exposure_count * mol.exposure_time
-            duration += overhead_per_molecule
+            duration += mol.exposure_count * ( mol.exposure_time + overhead_per_exposure)
 
         return duration
 

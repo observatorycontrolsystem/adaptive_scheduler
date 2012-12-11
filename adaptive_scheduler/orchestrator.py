@@ -34,8 +34,8 @@ from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullS
 
 from adaptive_scheduler.pond import send_schedule_to_pond
 
-from requestdb.client import SearchQuery, SchedulerClient
-from requestdb.reqdb  import request_factory
+from reqdb.client import SearchQuery, SchedulerClient
+from reqdb        import request_factory
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -168,6 +168,8 @@ def main(requests):
     time_slicing_dict = {
                             '0m4a.aqwa.bpl' : [0, 600],
                             '0m4b.aqwa.bpl' : [0, 600],
+                            '1m0a.doma.elp' : [0, 600],
+                            '1m0a.domb.lsc' : [0, 600],
                         }
     kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
                              time_slicing_dict)
@@ -179,8 +181,4 @@ def main(requests):
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)
 
-    # TODO: Temporary debug code
-    v = visibility_from['1m0a.doma.bpl']
-    rw = resource_windows['1m0a.doma.bpl']
-    cr = to_schedule[0]
     #print "cr.reservation_list:", cr.reservation_list

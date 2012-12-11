@@ -1,22 +1,15 @@
 #!/usr/bin/env python
 
 '''
-for_teri.py - Bug with oneof?
+for_teri.py - Bug report
 
-I think there might be a bug with oneof handling. Try the code below and see what
-you think.
-
-I'm asking for a oneof CR, but I end up with both resources scheduled.
-
-Incidently, both resources are at the same site, which is why they have the same
-windows. That's not a bug!
 
 Author: Eric Saunders
 May 2012
 '''
 
 #from adaptive_scheduler.input import load_scheduler_input
-from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.printing import print_compound_reservations, print_schedule
 
 import cPickle
@@ -37,8 +30,15 @@ scheduler_dump_file = 'to_schedule.pickle'
 
 print_compound_reservations(to_schedule)
 
+time_slicing_dict = {
+                        '0m4a.aqwa.bpl' : [0, 600],
+                        '0m4b.aqwa.bpl' : [0, 600],
+                        '1m0a.doma.elp' : [0, 600],
+                        '1m0a.domb.lsc' : [0, 600],
+                    }
 print "Before scheduling"
-scheduler = FullScheduler(to_schedule, resource_windows, contractual_obs)
+scheduler = FullScheduler(to_schedule, resource_windows, contractual_obs,
+                          time_slicing_dict)
 
 schedule = scheduler.schedule_all()
 print "After scheduling"
