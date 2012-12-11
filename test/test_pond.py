@@ -19,7 +19,8 @@ class TestPond(object):
                               type            = 'expose_n',
                               exposure_count  = 1,
                               instrument_name = 'KB12',
-                              filter          = 'BSSL-UX-020'
+                              filter          = 'BSSL-UX-020',
+                              ag_mode         = 'OFF'
                             )
 
 
@@ -51,14 +52,9 @@ class TestPond(object):
 
         missing = scheduled_block.list_missing_fields()
 
-        assert_equal(
-                      missing,
-                      {
-                        'proposal' : ['proposal_id', 'user_id', 'tag_id', 'priority'],
-                        'molecule' : ['bin_x', 'bin_y', 'exposure_time'],
-                        'target'   : ['name', 'ra', 'dec']
-                      }
-                   )
+        assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
+        assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
+        assert_equal(missing['target'], ['name', 'ra', 'dec'])
 
 
     @raises(IncompleteBlockError)
@@ -119,6 +115,8 @@ class TestPond(object):
                                                 instrument_name = 'KB12',
                                                 filter          = 'BSSL-UX-020',
                                                 exposure_time   = 30,
+                                                priority        = 1,
+                                                ag_mode         = 'OFF',
                                                )
                                      )
 
