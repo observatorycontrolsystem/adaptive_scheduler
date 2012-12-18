@@ -16,26 +16,23 @@ import json
 import ast
 from datetime import datetime
 
-
-#from client.retrieval_client import RetrievalClient
-from adaptive_scheduler.request_parser import TreeCollapser
-from adaptive_scheduler.tree_walker import RequestMaxDepthFinder
-from adaptive_scheduler.model2 import ModelBuilder
+from adaptive_scheduler.request_parser  import TreeCollapser
+from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
+from adaptive_scheduler.model2          import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations )
-from adaptive_scheduler.input import ( get_telescope_network, dump_scheduler_input )
+from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import print_schedule
+from adaptive_scheduler.pond     import send_schedule_to_pond
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
 #from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 
-
-from adaptive_scheduler.pond import send_schedule_to_pond
-
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
+
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -177,6 +174,9 @@ def main(requests):
 
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
+
+    # Clean out all existing scheduled blocks
+    delete_scheduled_blocks()
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)
