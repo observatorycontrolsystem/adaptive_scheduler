@@ -156,7 +156,6 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
             request = compound_request.requests[idx]
             window_dict[resource_name] = epoch_intervals
 
-
         reservations.append( Reservation(compound_request.priority,
                                          request.duration,
                                          window_dict
@@ -188,7 +187,6 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
         dark_ups = []
         for req in c_req.requests:
             intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from)
-
             dark_ups.append(intersections_for_resource)
 
         # Make and store the CompoundReservation

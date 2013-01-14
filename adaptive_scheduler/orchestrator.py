@@ -23,7 +23,7 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
-from adaptive_scheduler.printing import print_schedule
+from adaptive_scheduler.printing import print_schedule, print_compound_reservations
 from adaptive_scheduler.pond     import send_schedule_to_pond
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
@@ -158,6 +158,8 @@ def main(requests):
     contractual_obligations = []
     dump_scheduler_input(scheduler_dump_file, to_schedule, resource_windows,
                          contractual_obligations)
+
+    print_compound_reservations(to_schedule)
 
     # Instantiate and run the scheduler
     # TODO: Set alignment to start of first night on each resource

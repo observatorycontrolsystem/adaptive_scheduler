@@ -15,6 +15,19 @@ from adaptive_scheduler.orchestrator import ( main, get_requests_from_file,
 
 from datetime import datetime
 
+
+def filter_out_of_date_requests(requests):
+    '''Temporary filter to prevent rescheduling of requests that can't happen.'''
+    good_requests = []
+    for r in requests:
+        dt = datetime.strptime(r['requests'][0]['requests'][0]['windows'][0]['end'],
+                               '%Y-%m-%d %H:%M:%S')
+        if dt > datetime.utcnow():
+            good_requests.append(r)
+
+    return good_requests
+
+
 if __name__ == '__main__':
 
     # Acquire and collapse the requests
@@ -28,11 +41,17 @@ if __name__ == '__main__':
     requests = get_requests_from_db(url, telescope_class)
 
     print "Request DB gave us the following requests for telescope_class %s:" % telescope_class
-    good_requests = []
     for r in requests:
-        print r
-        dt = datetime.strptime(r['requests'][0]['requests'][0]['windows'][0]['end'], '%Y-%m-%d %H:%M:%S')
-        if dt > datetime.utcnow():
-            good_requests.append(r)
+        print r['tracking_number']
 
-    main(good_requests)
+    possible_requests = filter_out_of_date_requests(requests)
+
+    #good_requests = [good_requests[0]]
+    print "%d requests are not yet expired." % len(possible_requests)
+
+    if possible_requests:
+        main(possible_requests)
+    else:
+        print "No requests to schedule. Aborting."
+
+

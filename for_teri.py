@@ -36,6 +36,8 @@ time_slicing_dict = {
                         '1m0a.doma.elp' : [0, 600],
                         '1m0a.domb.lsc' : [0, 600],
                     }
+
+
 print "Before scheduling"
 scheduler = FullScheduler(to_schedule, resource_windows, contractual_obs,
                           time_slicing_dict)
