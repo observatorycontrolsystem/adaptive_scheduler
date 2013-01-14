@@ -11,7 +11,7 @@ adding random number of windows
 
 from nose.tools import assert_equal
 import copy, random
-from adaptive_scheduler.kernel.fullscheduler_v2 import *
+from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as CurrentScheduler
 from util import *
 
 class TestStress_5(object):
@@ -64,7 +64,7 @@ class TestStress_5(object):
             window_tps.append(Timepoint(start+duration+slack, 'end'))
         window = Intervals(window_tps)
         resource = str(random.randint(1,2))
-        reservation = Reservation_v2(priority, duration, resource, window)
+        reservation = Reservation_v3(priority, duration, {resource: window})
         return reservation
          
 
@@ -91,7 +91,7 @@ class TestStress_5(object):
                 
             cr_list.append(cr)
 
-        fs = FullScheduler_v2(cr_list, gpw, [])
+        fs = CurrentScheduler(cr_list, gpw, [])
         s = fs.schedule_all()
         u = Util()
         #u.get_coverage_count_plot(s)

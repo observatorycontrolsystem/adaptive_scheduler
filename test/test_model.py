@@ -5,8 +5,8 @@ from nose.tools import raises
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.model      import (Target, Telescope, Proposal, Molecule,
-                                           Request, CompoundRequest)
+from adaptive_scheduler.model2      import (Target, Telescope, Proposal, Molecule,
+                                            Request, CompoundRequest)
 from adaptive_scheduler.exceptions import InvalidRequestError
 
 
@@ -16,8 +16,10 @@ class TestRequest(object):
     def setup(self):
         self.target = Target(
                               name  = 'deneb',
-                              ra    = '20 41 25.91',
-                              dec   = '+45 16 49.22',
+                              #ra  = '20 41 25.91',
+                              #dec = '+45 16 49.22',
+                              ra  = 310.35795833333333,
+                              dec = 45.280338888888885,
                               epoch = 2000,
                              )
 
@@ -49,18 +51,24 @@ class TestRequest(object):
         self.windows = [(self.semester_start, self.semester_end)]
 
         self.duration = 60
+        self.request_number = '0000000001'
+
 
 
     @raises(InvalidRequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
-        request = Request(self.target, self.telescope, self.molecule, self.windows,
-                          self.duration)
-        compound_request = CompoundRequest(junk_res_type, self.proposal, [request])
+        request = Request(target         = self.target,
+                          molecules      = [self.molecule],
+                          windows        = self.windows,
+                          request_number = self.request_number)
+        compound_request = CompoundRequest(junk_res_type, [request])
 
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
-        request = Request(self.target, self.telescope, self.molecule, self.windows,
-                          self.duration)
-        compound_request = CompoundRequest(valid_res_type, self.proposal, [request])
+        request = Request(target         = self.target,
+                          molecules      = [self.molecule],
+                          windows        = self.windows,
+                          request_number = self.request_number)
+        compound_request = CompoundRequest(valid_res_type, [request])

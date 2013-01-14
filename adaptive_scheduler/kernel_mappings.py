@@ -27,8 +27,10 @@ from rise_set.visibility      import Visibility
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
-from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+#from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
+#from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
 from adaptive_scheduler.utils    import (datetime_to_epoch, normalise,
                                          normalised_epoch_to_datetime)
@@ -103,27 +105,34 @@ def make_dark_up_kernel_intervals(req, visibility_from):
        kernel intervals to return.'''
 
     rs_target  = target_to_rise_set_target(req.target)
-    visibility = visibility_from[req.telescope.name]
 
-    # Find when it's dark, and when the target is up
-    rs_dark_intervals = visibility.get_dark_intervals()
-    rs_up_intervals   = visibility.get_target_intervals(rs_target)
+    intersections_for_resource = {}
+    for resource_name in req.windows.windows_for_resource:
 
-    # Convert the rise_set intervals into kernel speak
-    dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
-    up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
+        visibility = visibility_from[resource_name]
 
-    # Construct the intersection (dark AND up) reprsenting actual visibility
-    intersection = dark_intervals.intersect([up_intervals])
+        # Find when it's dark, and when the target is up
+        rs_dark_intervals = visibility.get_dark_intervals()
+        rs_up_intervals   = visibility.get_target_intervals(rs_target)
 
-    # Intersect with any window provided in the user request
-    user_intervals = req_window_to_kernel_intervals(req.windows)
-    intersection   = intersection.intersect([user_intervals])
+        # Convert the rise_set intervals into kernel speak
+        dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
+        up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
 
-    # Print some summary info
-    print_req_summary(req, rs_dark_intervals, rs_up_intervals, intersection)
+        # Construct the intersection (dark AND up) reprsenting actual visibility
+        intersection = dark_intervals.intersect([up_intervals])
 
-    return intersection
+        # Intersect with any window provided in the user request
+        user_windows   = req.windows.at(resource_name)
+        user_intervals = req_window_to_kernel_intervals(user_windows)
+        intersection   = intersection.intersect([user_intervals])
+        intersections_for_resource[resource_name] = intersection
+
+        # Print some summary info
+        print_req_summary(req, resource_name, rs_dark_intervals, rs_up_intervals, intersection)
+
+
+    return intersections_for_resource
 
 
 def construct_compound_reservation(compound_request, dt_intervals_list, sem_start):
@@ -133,19 +142,24 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 
     idx = 0
     reservations = []
-    for dark_up_intervals in dt_intervals_list:
-        # Convert timepoints into normalised epoch time
-        epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
+    for intersection_dict in dt_intervals_list:
 
-        # Construct Reservations
-        # Priority comes from the parent CompoundRequest
-        # Each Reservation represents the set of available windows of opportunity
-        # The resource is governed by the timepoint.resource attribute
-        request = compound_request.requests[idx]
+        window_dict = {}
+        for resource_name, dark_up_intervals in intersection_dict.iteritems():
+            # Convert timepoints into normalised epoch time
+            epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
+
+            # Construct Reservations
+            # Priority comes from the parent CompoundRequest
+            # Each Reservation represents the set of available windows of opportunity
+            # The resource is governed by the timepoint.resource attribute
+            request = compound_request.requests[idx]
+            window_dict[resource_name] = epoch_intervals
+
         reservations.append( Reservation(compound_request.priority,
                                          request.duration,
-                                         request.telescope.name,
-                                         epoch_intervals) )
+                                         window_dict
+                                         ) )
 
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack
@@ -172,7 +186,8 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
         # Find the dark/up intervals for each Request in this CompoundRequest
         dark_ups = []
         for req in c_req.requests:
-            dark_ups.append( make_dark_up_kernel_intervals(req, visibility_from) )
+            intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from)
+            dark_ups.append(intersections_for_resource)
 
         # Make and store the CompoundReservation
         compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)

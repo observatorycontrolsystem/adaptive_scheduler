@@ -8,12 +8,74 @@ camera at a given resource, so that a valid POND block may be constructed.
 
 See camera_mappings.dat for an example of the input data.
 
-Authors: Martin Norbury (mnorbury@lcogt.net)
+Authors:
+    Martin Norbury (mnorbury@lcogt.net)
+    Eric Saunders
 
 November 2012
 
 '''
 from collections import defaultdict
+from datetime    import datetime
+import sys
+import shutil
+import urllib2
+
+
+def update_mapping():
+    MAPPING_FILENAME  = 'camera_mappings.dat'
+    CONFIGDB_ENDPOINT = 'http://devlin1sba/configdb/camera_mappings/'
+    content = get_http_data(CONFIGDB_ENDPOINT)
+    replace_mapping_file(MAPPING_FILENAME, content)
+
+    return
+
+
+def replace_mapping_file(mapping_filename, content):
+    src = mapping_filename
+    dst = mapping_filename + '.old'
+    shutil.copyfile(src, dst)
+
+    out_fh = open(mapping_filename, 'w')
+    out_fh.write(content)
+    out_fh.close()
+
+    return
+
+
+def get_http_data(url):
+
+    try:
+        response = urllib2.urlopen(url)
+    except urllib2.URLError as e:
+        msg = "Received an error from server: %s" % str(e.reason)
+        msg += "\nYour url may be wrong, or the endpoint"
+        msg += " at '%s' may be down." % url
+        raise ConnectionError(msg)
+
+    except ValueError as e:
+        msg = str(e)
+        msg += "\nThe url you provided ('%s') is garbled or missing." % url
+        raise ConnectionError(msg)
+
+    # Catch-all for rare other errors allowed to bleed through by urllib2
+    except Exception as e:
+        msg += "Unexpected error:", sys.exc_info()[0]
+        raise ConnectionError(msg)
+
+    try:
+        response_data = response.read()
+        response.close()
+    except urllib2.URLError as e:
+        msg = "Received an error code from server: %s" % str(e.reason)
+        raise ConnectionError(msg)
+
+    # Catch-all for rare other errors allowed to bleed through by urllib2
+    except Exception as e:
+        msg += "Unexpected error:", sys.exc_info()[0]
+        raise ConnectionError(msg)
+
+    return response_data
 
 
 def create_camera_mapping(resource):
@@ -31,8 +93,14 @@ def create_camera_mapping(resource):
 
 class _CameraMapping(object):
     def __init__(self, lines):
-            self._headings = self._parse_headings(lines[0])
-            self._data = [self._parse_line(line) for line in lines[1:]]
+        self._last_modified = self._parse_last_modified(lines[0])
+        self._headings = self._parse_headings(lines[1])
+        self._data = [self._parse_line(line) for line in lines[2:]]
+
+    def _parse_last_modified(self, last_modified_line):
+        # Expecting this:# Last modified: 2012-11-30 23:18:24
+        return datetime.strptime(last_modified_line.strip(),
+                                 '# Last modified: %Y-%m-%d %H:%M:%S')
 
     def _parse_headings(self, heading_line):
         results = heading_line.strip('# ').split()
@@ -125,6 +193,9 @@ def _convert_camel_case(input_value):
 
 
 if __name__ == '__main__':
+    # Update the camera mapping file
+    update_mapping()
+
     # Example usage of this module
 
     site        = 'bpl'
@@ -158,3 +229,14 @@ if __name__ == '__main__':
     for cam in results:
         print cam['camera']
     print
+
+
+
+class ConnectionError(Exception):
+    '''Wrapper for URL/HTTP transport or server errors.'''
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value

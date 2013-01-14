@@ -51,9 +51,6 @@ class Block(object):
         self.molecules = []
         self.target    = Target()
 
-        # TODO: For now, assume all molecules have the same priority
-        self.OBS_PRIORITY = 1
-
         self.pond_block = None
 
 
@@ -115,7 +112,7 @@ class Block(object):
                                       priority    = self.priority
                                     )
 
-        # 2a) Counstruct the Pointing Coordinate
+        # 2a) Construct the Pointing Coordinate
         coord = pointing.ra_dec(
                                  ra  = self.target.ra.in_degrees(),
                                  dec = self.target.dec.in_degrees()
@@ -133,8 +130,6 @@ class Block(object):
         # TODO: And clean up disgusting hacks
         generic_camera_names = ('SCICAM', 'FASTCAM')
         mapping = create_camera_mapping("camera_mappings.dat")
-
-
 
 
         for molecule in self.molecules:
@@ -164,8 +159,18 @@ class Block(object):
                                 inst_name = specific_camera,
                                 filters = molecule.filter,
                                 pointing = pond_pointing,
-                                priority = self.OBS_PRIORITY,
+                                priority = molecule.priority,
                               )
+
+            if molecule.ag_mode is not 'OFF':
+                ag_search = 'LIHSP-iXon'
+                ag_match  = mapping.find_by_camera_type_and_location(site,
+                                                                     observatory,
+                                                                     telescope,
+                                                                     ag_search)
+                specific_ag = ag_match[0]['camera']
+                obs.ag_name = specific_ag
+
             observations.append(obs)
 
         # 4) Add the Observations to the Block
@@ -250,7 +255,7 @@ def send_schedule_to_pond(schedule, semester_start):
 
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
-                           location        = res.resource,
+                           location        = res.scheduled_resource,
                            start           = res_start,
                            end             = res_end,
                            group_id        = res.compound_request.group_id,
@@ -277,6 +282,9 @@ class IncompleteBlockError(Exception):
         self.msg = "The following fields are missing in this Block.\n"
 
     def __str__(self):
+        return self.value
+
+    def a__str__(self):
         message = "The following fields are missing in this Block.\n"
         for param_type in self.value:
             message += "%s:\n" % param_type

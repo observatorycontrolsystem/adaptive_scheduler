@@ -10,7 +10,7 @@ November 2011
 from nose.tools import assert_equal
 
 from adaptive_scheduler.kernel.clustering import *
-from adaptive_scheduler.kernel.reservation_v2 import *
+from adaptive_scheduler.kernel.reservation_v3 import *
 
 class TestClustering(object):
 
@@ -21,9 +21,9 @@ class TestClustering(object):
         s2 = Intervals([Timepoint(2, 'start'),
                         Timepoint(4, 'end')]) # --2--4
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(2, 2, 'foo', s1)
-        self.r3 = Reservation_v2(3, 3, 'foo', s1)
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(2, 2, {'foo': s1})
+        self.r3 = Reservation_v3(3, 3, {'foo': s1})
         
         self.c1 = Clustering([self.r1, self.r2, self.r3])
 

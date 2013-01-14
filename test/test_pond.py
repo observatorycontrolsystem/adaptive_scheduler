@@ -19,7 +19,8 @@ class TestPond(object):
                               type            = 'expose_n',
                               exposure_count  = 1,
                               instrument_name = 'KB12',
-                              filter          = 'BSSL-UX-020'
+                              filter          = 'BSSL-UX-020',
+                              ag_mode         = 'OFF'
                             )
 
 
@@ -29,7 +30,7 @@ class TestPond(object):
 
         assert_equal(
                       missing,
-                      ['proposal_name', 'proposal_id', 'user_id', 'tag_id']
+                      ['proposal_id', 'user_id', 'tag_id', 'priority']
                     )
 
 
@@ -40,7 +41,9 @@ class TestPond(object):
                                  location = '0m4a.aqwb.coj',
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 1
+                                 group_id = 1,
+                                 tracking_number = 1,
+                                 request_number = 1,
                                )
 
         scheduled_block.add_proposal(self.proposal)
@@ -49,14 +52,9 @@ class TestPond(object):
 
         missing = scheduled_block.list_missing_fields()
 
-        assert_equal(
-                      missing,
-                      {
-                        'proposal' : ['proposal_name', 'proposal_id', 'user_id', 'tag_id'],
-                        'molecule' : ['bin_x', 'bin_y', 'exposure_time'],
-                        'target'   : ['ra', 'dec']
-                      }
-                   )
+        assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
+        assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
+        assert_equal(missing['target'], ['name', 'ra', 'dec'])
 
 
     @raises(IncompleteBlockError)
@@ -66,7 +64,9 @@ class TestPond(object):
                                  location = '0m4a.aqwb.coj',
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 1
+                                 group_id = 1,
+                                 tracking_number = 1,
+                                 request_number = 1,
                                 )
 
         scheduled_block.create_pond_block()
@@ -79,7 +79,9 @@ class TestPond(object):
                                  location = '0m4a.aqwb.coj',
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 'related things'
+                                 group_id = 'related things',
+                                 tracking_number = '0000000001',
+                                 request_number  = '0000000001',
                                )
 
         scheduled_block.add_proposal(
@@ -89,6 +91,7 @@ class TestPond(object):
                                                 proposal_name  = 'Scheduler Testing',
                                                 proposal_id    = 'test',
                                                 tag_id         = 'admin',
+                                                priority       = 2,
                                               )
                                     )
 
@@ -96,8 +99,10 @@ class TestPond(object):
                                     Target(
                                             name  = 'deneb',
                                             type  = 'sidereal',
-                                            ra    = '20 41 25.91',
-                                            dec   = '+45 16 49.22',
+                                              #ra  = '20 41 25.91',
+                                              #dec = '+45 16 49.22',
+                                              ra  = 310.35795833333333,
+                                              dec = 45.280338888888885
                                           )
                                   )
 
@@ -110,6 +115,8 @@ class TestPond(object):
                                                 instrument_name = 'KB12',
                                                 filter          = 'BSSL-UX-020',
                                                 exposure_time   = 30,
+                                                priority        = 1,
+                                                ag_mode         = 'OFF',
                                                )
                                      )
 
@@ -123,7 +130,9 @@ class TestPond(object):
                                  location = '0m4a.aqwb.coj',
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 'related things'
+                                 group_id = 'related things',
+                                 tracking_number = 1,
+                                 request_number = 1,
                                )
 
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
@@ -136,7 +145,9 @@ class TestPond(object):
                                  location = 'Maui',
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 'related things'
+                                 group_id = 'related things',
+                                 tracking_number = 1,
+                                 request_number = 1,
                                )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))

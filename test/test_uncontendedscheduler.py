@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-test_uncontendedscheduler_v1.py
+test_uncontendedscheduler.py
 
 Author: Sotiria Lampoudi
 November 2011
@@ -21,9 +21,9 @@ class TestUncontendedScheduler_v1(object):
         s3 = Intervals([Timepoint(1, 'start'), 
               Timepoint(3, 'end')]) # 1--3
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(1, 2, 'foo', s2)
-        self.r3 = Reservation_v2(1, 1, 'foo', s3)
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(1, 2, {'foo': s2})
+        self.r3 = Reservation_v3(1, 1, {'foo': s3})
 
         
     def test_create(self):
