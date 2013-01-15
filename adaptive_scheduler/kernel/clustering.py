@@ -11,7 +11,7 @@ TODO:
 * add automatic cluster number detection
 '''
 
-from reservation_v2 import *
+from reservation_v3 import *
 import sys
 import math
 import heapq
@@ -154,7 +154,8 @@ class Clustering(object):
             if distances[i] > 0:
                 nzdcount += 1
         # choose how many cutpoints
-        num_cutpoints = min(nzdcount, len(self.reservation_list)/10)
+#        num_cutpoints = min(nzdcount, len(self.reservation_list)/10)
+        num_cutpoints = nzdcount
         if num_cutpoints < 1:
             return 1
         # find cut-points

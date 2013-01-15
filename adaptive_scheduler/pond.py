@@ -26,8 +26,9 @@ Author: Eric Saunders
 February 2012
 '''
 
-from adaptive_scheduler.model import Proposal, Target
+from adaptive_scheduler.model2 import Proposal, Target
 from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.camera_mapping import create_camera_mapping
 from lcogtpond                import pointing
 from lcogtpond.block          import Block as PondBlock
 from lcogtpond.molecule       import Expose
@@ -35,20 +36,20 @@ from lcogtpond.molecule       import Expose
 
 class Block(object):
 
-    def __init__(self, location, start, end, group_id, priority=0):
+    def __init__(self, location, start, end, group_id,
+                 tracking_number, request_number, priority=0):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
         self.end       = end
         self.group_id  = group_id
+        self.tracking_number = tracking_number
+        self.request_number = request_number
         self.priority  = priority
 
         self.proposal  = Proposal()
         self.molecules = []
         self.target    = Target()
-
-        # TODO: For now, assume all molecules have the same priority
-        self.OBS_PRIORITY = 1
 
         self.pond_block = None
 
@@ -101,7 +102,7 @@ class Block(object):
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
-        site, observatory, telescope = self.split_location()
+        telescope, observatory, site = self.split_location()
         pond_block = PondBlock.build(
                                       start       = self.start,
                                       end         = self.end,
@@ -111,7 +112,7 @@ class Block(object):
                                       priority    = self.priority
                                     )
 
-        # 2a) Counstruct the Pointing Coordinate
+        # 2a) Construct the Pointing Coordinate
         coord = pointing.ra_dec(
                                  ra  = self.target.ra.in_degrees(),
                                  dec = self.target.dec.in_degrees()
@@ -124,9 +125,28 @@ class Block(object):
 
         # 3) Construct the Observations
         observations = []
+
+        # TODO: Move this somewhere better!
+        # TODO: And clean up disgusting hacks
+        generic_camera_names = ('SCICAM', 'FASTCAM')
+        mapping = create_camera_mapping("camera_mappings.dat")
+
+
         for molecule in self.molecules:
+            specific_camera = molecule.instrument_name
+            if molecule.instrument_name in generic_camera_names:
+                tel_class = telescope[:-1]
+                search = tel_class + '-' + molecule.instrument_name
+                inst_match = mapping.find_by_camera_type_and_location(site,
+                                                                      observatory,
+                                                                      telescope,
+                                                                      search)
+                specific_camera = inst_match[0]['camera']
+
             obs = Expose.build(
                                 # Meta data
+                                tracking_num = self.tracking_number,
+                                request_num = self.request_number,
                                 tag = self.proposal.tag_id,
                                 user = self.proposal.user_id,
                                 proposal = self.proposal.proposal_id,
@@ -136,11 +156,21 @@ class Block(object):
                                 exp_time = molecule.exposure_time,
                                 # TODO: Allow bin_x and bin_y
                                 bin = molecule.bin_x,
-                                inst_name = molecule.instrument_name,
+                                inst_name = specific_camera,
                                 filters = molecule.filter,
                                 pointing = pond_pointing,
-                                priority = self.OBS_PRIORITY,
+                                priority = molecule.priority,
                               )
+
+            if molecule.ag_mode is not 'OFF':
+                ag_search = 'LIHSP-iXon'
+                ag_match  = mapping.find_by_camera_type_and_location(site,
+                                                                     observatory,
+                                                                     telescope,
+                                                                     ag_search)
+                specific_ag = ag_match[0]['camera']
+                obs.ag_name = specific_ag
+
             observations.append(obs)
 
         # 4) Add the Observations to the Block
@@ -225,11 +255,13 @@ def send_schedule_to_pond(schedule, semester_start):
 
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
-                           location = res.resource,
-                           start    = res_start,
-                           end      = res_end,
-                           group_id = 'PLACEHOLDER',
-                           priority = res.priority
+                           location        = res.scheduled_resource,
+                           start           = res_start,
+                           end             = res_end,
+                           group_id        = res.compound_request.group_id,
+                           tracking_number = res.compound_request.tracking_number,
+                           request_number  = res.request.request_number,
+                           priority        = res.priority,
                          )
 
             block.add_proposal(res.compound_request.proposal)
@@ -250,6 +282,9 @@ class IncompleteBlockError(Exception):
         self.msg = "The following fields are missing in this Block.\n"
 
     def __str__(self):
+        return self.value
+
+    def a__str__(self):
         message = "The following fields are missing in this Block.\n"
         for param_type in self.value:
             message += "%s:\n" % param_type

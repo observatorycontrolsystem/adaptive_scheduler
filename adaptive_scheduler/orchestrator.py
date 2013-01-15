@@ -16,20 +16,22 @@ import json
 import ast
 from datetime import datetime
 
-
-#from client.retrieval_client import RetrievalClient
-from adaptive_scheduler.request_parser import TreeCollapser
-from adaptive_scheduler.tree_walker import RequestMaxDepthFinder
-from adaptive_scheduler.model2 import ModelBuilder
+from adaptive_scheduler.request_parser  import TreeCollapser
+from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
+from adaptive_scheduler.model2          import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations )
-from adaptive_scheduler.input import ( get_telescope_network, dump_scheduler_input )
-from adaptive_scheduler.printing import print_schedule
+from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
+from adaptive_scheduler.printing import print_schedule, print_compound_reservations
+from adaptive_scheduler.pond     import send_schedule_to_pond
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
-from adaptive_scheduler.pond import send_schedule_to_pond
+#from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
+
+from reqdb.client import SearchQuery, SchedulerClient
+from reqdb        import request_factory
 
 
 #TODO: Refactor - move all these functions to better locations
@@ -51,6 +53,23 @@ def get_requests_from_file(req_filename, telescope_class):
 
     return ast.literal_eval(req_data)
 
+
+def get_requests_from_db(url, telescope_class):
+
+    search = SearchQuery()
+    search.set_location(telescope_class=telescope_class)
+    sc = SchedulerClient(url)
+    json_ur_list = sc.retrieve(search, debug=True)
+    ur_list = json.loads(json_ur_list)
+
+    return ur_list
+
+
+def write_requests_to_file(requests, filename):
+
+    out_fh = open(filename, 'w')
+    out_fh.write(str(requests))
+    out_fh.close()
 
 def collapse_requests(requests):
     collapsed_reqs = []
@@ -88,17 +107,14 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2021, 11, 1, 0, 0, 0)
-    semester_end   = datetime(2021, 11, 8, 0, 0, 0)
+    semester_start = datetime(2012, 11, 29, 0, 0, 0)
+    semester_end   = datetime(2012, 12, 29, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
 
     url  = hierarchical_url
 
-
-    # TODO: Replace with loop over all classes, schedule each separately
-    telescope_class = '1m0'
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
@@ -109,6 +125,13 @@ def main(requests):
 
 
     mb = ModelBuilder(tel_file)
+
+#    user_reqs = []
+#    for serialised_ur in collapsed_reqs:
+#        proposal_data = serialised_ur['proposal']
+#        del(serialised_ur['proposal'])
+#        ur = request_factory.parse(serialised_ur, proposal_data)
+#        user_reqs.append(ur)
 
     user_reqs = []
     i = 0
@@ -136,18 +159,28 @@ def main(requests):
     dump_scheduler_input(scheduler_dump_file, to_schedule, resource_windows,
                          contractual_obligations)
 
+    print_compound_reservations(to_schedule)
+
     # Instantiate and run the scheduler
-    kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations)
+    # TODO: Set alignment to start of first night on each resource
+    # TODO: Move this to a config file
+    time_slicing_dict = {
+                            '0m4a.aqwa.bpl' : [0, 600],
+                            '0m4b.aqwa.bpl' : [0, 600],
+                            '1m0a.doma.elp' : [0, 600],
+                            '1m0a.domb.lsc' : [0, 600],
+                        }
+    kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
+                             time_slicing_dict)
     schedule = kernel.schedule_all()
 
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
 
+    # Clean out all existing scheduled blocks
+    delete_scheduled_blocks()
+
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)
 
-    # TODO: Temporary debug code
-    v = visibility_from['1m0a.doma.bpl']
-    rw = resource_windows['1m0a.doma.bpl']
-    cr = to_schedule[0]
     #print "cr.reservation_list:", cr.reservation_list

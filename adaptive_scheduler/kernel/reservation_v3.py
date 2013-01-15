@@ -1,34 +1,47 @@
 #!/usr/bin/env python
 
 '''
-Reservation_v2 and CompoundReservation_v2 classes for scheduling.
+Reservation_v3 and CompoundReservation_v2 classes for scheduling.
 
 Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
-November 2011
-edited Dec 2011: added resource to res. constructor, 
-removed by-resource dicts, added oneof to comp. res.
+December 2012
+
+Reservation_v3 does not associate a single resource with each reservation. 
+Instead, the possible_windows field has become possible_windows_dict, a 
+dictionary mapping :
+resource -> possible windows on that resource
+
+Additionally, it is allowed to explicitly specify the resID, so as to 
+keep a uniform ID space between this and other parts of the scheduler.
 '''
 
 from timepoint import *
 from intervals import *
 import copy
 
-class Reservation_v2(object):
+class Reservation_v3(object):
 
     resID = 0
 
-    def __init__(self, priority, duration, resource, possible_windows):
+    def __init__(self, priority, duration, possible_windows_dict, resID=None):
         self.priority = priority
         self.duration = duration
-        self.resource = resource
-        self.possible_windows = possible_windows
+        self.possible_windows_dict = possible_windows_dict
         # free_windows keeps track of which of the possible_windows 
         # are free.
-        self.free_windows    = copy.copy(self.possible_windows)
+        self.free_windows_dict    = copy.copy(self.possible_windows_dict)
         # clean up free windows by removing ones that are too small:
-        self.clean_up_free_windows()
-        Reservation_v2.resID     += 1
-        self.resID                = Reservation_v2.resID
+        for resource in self.free_windows_dict.keys():
+            self.clean_up_free_windows(resource)
+        # set a unique resID. 
+        # ALERT: possible pitfall! Mixing incremented resID's and assigned
+        # resID's is unsafe, because they can clash. Pick one and stick with
+        # it. Either always let the class do IDs or always assign them.
+        if resID:
+            self.resID                = resID
+        else:
+            Reservation_v3.resID     += 1
+            self.resID                = Reservation_v3.resID
         # these fields are defined when the reservation is ultimately scheduled
         self.scheduled_start      = None
         self.scheduled_quantum    = None
@@ -43,23 +56,22 @@ class Reservation_v2(object):
 
     def schedule_anywhere(self):
         # find the first available spot & stick it there
-        start = self.free_windows.find_interval_of_length(self.duration)
-        if start >=0:
-            self.schedule(start, self.duration, self.resource, 
-                          [Timepoint(start, 'start'), 
-                           Timepoint(start+self.duration, 'end')] , 
-                          'reservation_v2.schedule_anywhere()')
-            return True
-        else:
-            return False
+        for resource in self.free_windows_dict.keys():
+            start = self.free_windows_dict[resource].find_interval_of_length(self.duration)
+            if start >=0:
+                self.schedule(start, self.duration, resource, 
+                              'reservation_v3.schedule_anywhere()')
+                return True
+        return False
 
     
-    def schedule(self, start, quantum, resource, scheduled_timepoints, scheduler_description=None):
+    def schedule(self, start, quantum, resource, scheduler_description=None):
+        self.scheduled          = True
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
         self.scheduled_resource = resource
-        self.scheduled          = True
-        self.scheduled_timepoints = scheduled_timepoints
+        self.scheduled_timepoints = [Timepoint(start, 'start'), 
+                                     Timepoint(start+self.duration, 'end')]
         self.scheduled_by       = scheduler_description
         if self.compound_reservation_parent:
             self.compound_reservation_parent.schedule()
@@ -80,11 +92,11 @@ class Reservation_v2(object):
         str = "Reservation ID: {0} \
         \n\tpriority: {1} \
         \n\tduration: {2} \
-        \n\tresource: {3} \
-        \n\tpossible windows: {4}\
-        \n\tis scheduled: {5}\n".format(self.resID, self.priority, 
-                                        self.duration, self.resource, 
-                                        self.possible_windows, self.scheduled)
+        \n\tpossible windows dict: {3}\
+        \n\tis scheduled: {4}\n".format(self.resID, self.priority, 
+                                        self.duration, 
+                                        self.possible_windows_dict, 
+                                        self.scheduled)
         if self.scheduled:
             str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
         return str
@@ -94,11 +106,11 @@ class Reservation_v2(object):
         str = "Reservation ID: {0} \
         \n\tpriority: {1} \
         \n\tduration: {2} \
-        \n\tresource: {3} \
-        \n\tpossible windows: {4}\
-        \n\tis scheduled: {5}\n".format(self.resID, self.priority, 
-                                        self.duration, self.resource, 
-                                        self.possible_windows, self.scheduled)
+        \n\tpossible windows dict: {3}\
+        \n\tis scheduled: {4}\n".format(self.resID, self.priority, 
+                                        self.duration,  
+                                        self.possible_windows_dict, 
+					self.scheduled)
         if self.scheduled:
             str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
         return str
@@ -132,13 +144,13 @@ class Reservation_v2(object):
         return self.resID
 
 
-    def remove_from_free_windows(self, interval):
-        self.free_windows = self.free_windows.subtract(interval)
-        self.clean_up_free_windows()
+    def remove_from_free_windows(self, interval, resource):
+        self.free_windows_dict[resource] = self.free_windows_dict[resource].subtract(interval)
+        self.clean_up_free_windows(resource)
 
         
-    def clean_up_free_windows(self):
-        self.free_windows.remove_intervals_smaller_than(self.duration)
+    def clean_up_free_windows(self, resource):
+        self.free_windows_dict[resource].remove_intervals_smaller_than(self.duration)
 
 
 class CompoundReservation_v2(object):

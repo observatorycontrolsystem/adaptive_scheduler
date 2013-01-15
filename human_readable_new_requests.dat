@@ -1,0 +1,78 @@
+[
+ {
+   u'timestamp': u'2012-11-15 04:27:15',
+   u'expires': u'2013-02-07 04:27:15',
+   u'tracking_number': u'0000000001',
+   u'operator': u'single',
+   u'proposal': {
+                  u'user_id': u'u01',
+                  u'proposal_name': u'Test One',
+                  u'tag_id': u'3506',
+                  u'group_name': u'g01',
+                  u'proposal_id': u'201205N1',
+                  u'user_name': u'User One'
+                }
+   u'compound_requests': [
+                          {
+                            u'operator': u'single',
+                            u'compound_requests': [],
+                            u'requests': [
+                                          {
+                                            u'target': {
+                                                         u'equinox': u'J2000',
+                                                         u'name': u'NGC1234',
+                                                         u'coordinate_system': u'ICRS',
+                                                         u'altitude': None,
+                                                         u'pitch': None,
+                                                         u'proper_motion_ra': 0.0,
+                                                         u'epoch': 2000.0,
+                                                         u'proper_motion_dec': 0.0,
+                                                         u'hour_angle': None,
+                                                         u'parallax': 0.0,
+                                                         u'azimuth': None,
+                                                         u'dec': 100.7,
+                                                         u'type': u'SIDEREAL',
+                                                         u'roll': None,
+                                                         u'ra': 100.7
+                                                       },
+                                            u'windows': [
+                                                         {
+                                                           u'start': u'2012-03-26 13:37:43',
+                                                           u'end': u'2012-03-27 14:40:44'
+                                                         }
+                                                        ],
+                                            u'request_number': u'0000000001',
+                                            u'location': {
+                                                           u'observatory': None,
+                                                           u'telescope': None,
+                                                           u'telescope_class': u'0m4',
+                                                           u'site': None
+                                                         },
+                                            u'molecules': [
+                                                           {
+                                                             u'exposure_time': 600.0,
+                                                             u'ag_name': None,
+                                                             u'exposure_count': 2,
+                                                             u'defocus': None,
+                                                             u'sub_x2': None,
+                                                             u'sub_x1': None,
+                                                             u'args': None,
+                                                             u'sub_y1': None,
+                                                             u'sub_y2': None,
+                                                             u'expose_at': None,
+                                                             u'filter': None,
+                                                             u'instrument_name': u'SCICAM',
+                                                             u'ag_mode': u'OPTIONAL',
+                                                             u'bin_x': 1,
+                                                             u'type': u'EXPOSE',
+                                                             u'bin_y': 1,
+                                                             u'priority': 1
+                                                           }
+                                                          ],
+                                         u'observation_note': u'take note'
+                                       }
+                                      ]
+                          }
+                         ],
+ }
+]

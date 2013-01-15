@@ -93,7 +93,7 @@ def get_reservation_datetimes(reservation, semester_start):
     epoch_start   = datetime_to_epoch(semester_start)
     dt_start      = normalised_epoch_to_datetime(reservation.scheduled_start,
                                                  epoch_start)
-    scheduled_end = reservation.scheduled_start + reservation.scheduled_quantum
+    scheduled_end = reservation.scheduled_start + reservation.duration
     dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
 
     return dt_start, dt_end

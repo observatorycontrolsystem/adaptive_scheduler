@@ -23,14 +23,16 @@ class TestMetricsPreSchedulerScalar(object):
         s3 = copy.copy(s1)
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
+        
         self.s1 = s1
         self.s2 = s2
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(2, 2, 'bar', s2)
-        self.r3 = Reservation_v2(1, 1, 'foo', s3)
-        self.r4 = Reservation_v2(1, 1, 'foo', s4)
-        self.r5 = Reservation_v2(2, 2, 'bar', s5)
+
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(2, 2, {'bar': s2})
+        self.r3 = Reservation_v3(1, 1, {'foo': s3})
+        self.r4 = Reservation_v3(1, 1, {'foo': s4})
+        self.r5 = Reservation_v3(2, 2, {'bar': s5})
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -86,11 +88,12 @@ class TestMetricsPreSchedulerVector(object):
         self.s1 = s1
         self.s2 = s2
 
-        self.r1 = Reservation_v2(1, 1, 'foo', s1)
-        self.r2 = Reservation_v2(2, 2, 'bar', s2)
-        self.r3 = Reservation_v2(1, 1, 'foo', s3)
-        self.r4 = Reservation_v2(1, 1, 'foo', s4)
-        self.r5 = Reservation_v2(2, 2, 'bar', s5)
+        self.r1 = Reservation_v3(1, 1, {'foo': s1})
+        self.r2 = Reservation_v3(2, 2, {'bar': s2})
+        self.r3 = Reservation_v3(1, 1, {'foo': s3})
+        self.r4 = Reservation_v3(1, 1, {'foo': s4})
+        self.r5 = Reservation_v3(2, 2, {'bar': s5})
+
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -123,4 +126,3 @@ class TestMetricsPreSchedulerVector(object):
         assert_equal(rl[1], [2,5,0])
         rl = self.mv1.get_coverage_by_resource('bar', 'count')
         assert_equal(rl, [[1, 2, 0], [2, 4, 1], [4, 5, 0]])
-

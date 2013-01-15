@@ -15,40 +15,66 @@ class TestTreeCollapse(object):
 
     def test_collapses_all_ands(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'type'     : 'compound_request',
                          'operator' : 'and',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
                          'requests' : [
                                           {
+                                            'type'     : 'compound_request',
                                             'operator' : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
+                                            'type'     : 'compound_request',
                                             'operator'     : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'type'     : 'compound_request',
                           'operator' : 'and',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
                                        ]
                         }
 
@@ -59,6 +85,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_all_oneofs(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'type'     : 'compound_request',
                          'operator' : 'oneof',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
@@ -66,33 +98,51 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'type'     : 'compound_request',
                           'operator' : 'oneof',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
                                        ]
                         }
 
@@ -103,6 +153,12 @@ class TestTreeCollapse(object):
 
     def test_collapses_single_and_ands(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
+                         'expires'  : '2012-09-30 12:27:38',
+                         'type'     : 'compound_request',
                          'operator' : 'single',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
@@ -110,14 +166,17 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                              {
                                                                'operator' : 'and',
                                                                'requests' : [
-                                                                               { 'target' : 'blah' },
-                                                                               { 'target' : 'blah' },
+                                                                               { 'target' : 'blah',
+                                                                                 'type'   : 'request'},
                                                                             ]
                                                              },
                                                          ]
@@ -126,15 +185,24 @@ class TestTreeCollapse(object):
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
+                          'expires'  : '2012-09-30 12:27:38',
+                          'type'     : 'compound_request',
                           'operator' : 'and',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
                                        ]
                         }
 
@@ -145,6 +213,10 @@ class TestTreeCollapse(object):
 
     def test_collapses_single_and_oneofs(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
                          'operator' : 'single',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
@@ -152,22 +224,32 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
                           'operator' : 'oneof',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
+                                         { 'target' : 'blah',
+                                           'type'   : 'request'},
                                        ]
                         }
 
@@ -179,6 +261,10 @@ class TestTreeCollapse(object):
 
     def test_collapses_ands_and_singles(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
                          'operator' : 'and',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
@@ -186,38 +272,54 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'single',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
                           'operator' : 'and',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
                                        ]
                         }
 
@@ -228,6 +330,10 @@ class TestTreeCollapse(object):
 
     def test_collapses_oneofs_and_singles(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
                          'operator' : 'oneof',
                          'expires'  : '2012-09-30 12:27:38',
                          'proposal' : {},
@@ -235,38 +341,54 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'single',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
                                                          ]
                                           },
                                       ]
                      }
 
         expected_tree = {
+                          'timestamp': '2012-09-30 12:27:38',
+                          'tracking_number': '0000000001',
+                          'group_id' : 'g01',
+                          'type'     : 'compound_request',
                           'operator' : 'oneof',
                           'expires'  : '2012-09-30 12:27:38',
                           'proposal' : {},
                           'requests' : [
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
-                                           { 'target' : 'blah' },
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
+                                           { 'target' : 'blah',
+                                             'type'   : 'request'},
                                        ]
                         }
 
@@ -277,6 +399,10 @@ class TestTreeCollapse(object):
 
     def test_cant_collapse_ands_and_oneofs(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
                          'expires'  : '2012-09-30 12:27:38',
                          'operator' : 'and',
                          'proposal' : {},
@@ -284,16 +410,21 @@ class TestTreeCollapse(object):
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'and',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
+                                                           { 'target' : 'blah',
+                                                             'type'   : 'request'},
                                                          ]
                                           },
                                       ]
@@ -320,20 +451,29 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_single_at_top_level(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
+                         'expires'  : '2012-09-30 12:27:38',
                          'operator' : 'single',
                          'requests' : [
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]
@@ -347,23 +487,34 @@ class TestTreeCollapse(object):
     @raises(InvalidTreeError)
     def test_rejects_invalid_single_at_lower_level(self):
         input_tree = {
+                         'timestamp': '2012-09-30 12:27:38',
+                         'tracking_number': '0000000001',
+                         'group_id' : 'g01',
+                         'type'     : 'compound_request',
                          'expires'  : '2012-09-30 12:27:38',
                          'operator' : 'oneof',
                          'proposal' : {},
                          'requests' : [
                                           {
+                                            'type'     : 'compound_request',
                                             'operator' : 'single',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                           {
+                                            'type'     : 'compound_request',
                                             'operator' : 'oneof',
                                             'requests' : [
-                                                             { 'target' : 'blah' },
-                                                             { 'target' : 'blah' },
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
+                                                             { 'target' : 'blah',
+                                                               'type'   : 'request'},
                                                          ]
                                           },
                                       ]

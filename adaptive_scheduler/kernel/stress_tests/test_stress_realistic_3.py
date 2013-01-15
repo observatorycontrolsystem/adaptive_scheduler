@@ -9,7 +9,7 @@ Sept 2011
 
 from nose.tools import assert_equal
 import copy, random
-from adaptive_scheduler.kernel.fullscheduler_v5 import *
+from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as CurrentScheduler
 from util import *
 
 class TestStress_realistic(object):
@@ -63,7 +63,7 @@ class TestStress_realistic(object):
         start = (start_day*24)*60*60 + start_time
         window = Intervals([Timepoint(start, 'start'),
                             Timepoint(start+duration+slack, 'end')])
-        reservation = Reservation_v2(priority, duration, resource, window)
+        reservation = Reservation_v3(priority, duration, {resource: window})
         return reservation
          
 
@@ -90,7 +90,7 @@ class TestStress_realistic(object):
             cr_list.append(cr)
 
 
-        fs = FullScheduler_v5(cr_list, self.gpw, [], self.slice_dict)
+        fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
         s = fs.schedule_all()
         u = Util()
         #u.get_coverage_count_plot(s)

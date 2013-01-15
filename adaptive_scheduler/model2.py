@@ -64,12 +64,12 @@ class Target(DataContainer):
     def set_ra(self, ra):
         #TODO: Check units are accurate
         print 'Setting RA in target:', ra
-        self._ra = RightAscension(degrees=ra)
+        self._ra = RightAscension(degrees=float(ra))
 
     def set_dec(self, dec):
         #TODO: Check units are accurate
         print 'Setting Dec in target:', dec
-        self._dec = Declination(dec)
+        self._dec = Declination(float(dec))
 
     def get_dec(self):
         return self._dec
@@ -85,7 +85,8 @@ class Molecule(DataContainer):
 
     def list_missing_fields(self):
         req_fields = ('type', 'exposure_count', 'bin_x', 'bin_y',
-                      'instrument_name', 'filter', 'exposure_time')
+                      'instrument_name', 'filter', 'exposure_time',
+                      'priority')
         missing_fields = []
 
         for field in req_fields:
@@ -99,17 +100,43 @@ class Molecule(DataContainer):
 
 
 class Window(DefaultMixin):
-    def __init__(self, window_dict):
-        self.start = iso_string_to_datetime(window_dict['start'])
-        self.end   = iso_string_to_datetime(window_dict['end'])
+    '''Accepts start and end times as datetimes or ISO strings.'''
+    def __init__(self, window_dict, resource):
+        try:
+            self.start    = iso_string_to_datetime(window_dict['start'])
+            self.end      = iso_string_to_datetime(window_dict['end'])
+        except TypeError:
+            self.start = window_dict['start']
+            self.end   = window_dict['end']
+
+        self.resource = resource
+
+    def get_resource_name(self):
+        return self.resource.name
+
+
+
+class Windows(DefaultMixin):
+    def __init__(self):
+        self.windows_for_resource = {}
+
+
+    def append(self, window):
+        if window.get_resource_name() in self.windows_for_resource:
+            self.windows_for_resource[window.get_resource_name()].append(window)
+        else:
+            self.windows_for_resource[window.get_resource_name()] = [window]
+
+        return
+
+    def at(self, resource_name):
+        return self.windows_for_resource[resource_name]
 
 
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
-        req_fields = ('proposal_name', 'proposal_id',
-                      'user_name', 'user_id',
-                      'tag_id')
+        req_fields = ('proposal_id', 'user_id', 'tag_id', 'priority')
         missing_fields = []
 
         for field in req_fields:
@@ -128,6 +155,7 @@ class Telescope(DataContainer):
 
 
 class Request(DefaultMixin):
+    # TODO: Update docstring to match new signature
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
@@ -143,12 +171,12 @@ class Request(DefaultMixin):
         telescope - a Telescope object (lat/long information)
     '''
 
-    def __init__(self, target, molecules, windows, telescope):
+    def __init__(self, target, molecules, windows, request_number):
 
         self.target         = target
         self.molecules      = molecules
         self.windows        = windows
-        self.telescope      = telescope
+        self.request_number = request_number
 
     def get_duration(self):
         '''This is a placeholder for a more sophisticated duration function, that
@@ -158,11 +186,10 @@ class Request(DefaultMixin):
         #TODO: Placeholder for more sophisticated overhead scheme
 
         # Pick a sensible sounding overhead, in seconds
-        overhead_per_molecule = 20
+        overhead_per_exposure = 20
         duration = 0
         for mol in self.molecules:
-            duration += mol.exposure_count * mol.exposure_time
-            duration += overhead_per_molecule
+            duration += mol.exposure_count * ( mol.exposure_time + overhead_per_exposure)
 
         return duration
 
@@ -224,11 +251,14 @@ class UserRequest(CompoundRequest, DefaultMixin):
     '''UserRequests are just top-level CompoundRequests. They differ only in having
        access to proposal and expiry information.'''
 
-    def __init__(self, operator, requests, proposal, expires):
+    def __init__(self, operator, requests, proposal, expires,
+                 tracking_number, group_id):
         CompoundRequest.__init__(self, operator, requests)
 
         self.proposal = proposal
         self.expires  = expires
+        self.tracking_number = tracking_number
+        self.group_id = group_id
 
 
     def get_priority(self):
@@ -240,7 +270,6 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
     # Define properties
     priority = property(get_priority)
-
 
 
 
@@ -305,10 +334,12 @@ class ModelBuilder(object):
         expiry_dt = iso_string_to_datetime(cr_dict['expires'])
 
         user_request = UserRequest(
-                                    operator = cr_dict['operator'],
-                                    requests = requests,
-                                    proposal = proposal,
-                                    expires  = expiry_dt
+                                    operator        = cr_dict['operator'],
+                                    requests        = requests,
+                                    proposal        = proposal,
+                                    expires         = expiry_dt,
+                                    tracking_number = cr_dict['tracking_number'],
+                                    group_id        = cr_dict['group_id']
                                   )
 
         return user_request
@@ -317,50 +348,38 @@ class ModelBuilder(object):
     def build_requests(self, req_dicts):
         requests = []
         for req_dict in req_dicts:
-            expanded_requests = self.build_and_expand_request(req_dict)
-
-            # if there is more than one request after expansion, they need to be
-            # wrapped in a ONEOF CompoundRequest
-            if len(expanded_requests) >= 2:
-                req = CompoundRequest(
-                                       operator = 'oneof',
-                                       requests = expanded_requests,
-                                     )
-            else:
-                req = expanded_requests[0]
-
+            req = self.build_request(req_dict)
             requests.append(req)
 
         return requests
 
 
-    def build_and_expand_request(self, req_dict):
+    def build_request(self, req_dict):
         target = Target(req_dict['target'])
 
         molecules = []
         for mol_dict in req_dict['molecules']:
             molecules.append(Molecule(mol_dict))
 
-        windows = []
-        for window_dict in req_dict['windows']:
-            windows.append(Window(window_dict))
-
 
         telescopes = self.tel_network.get_telescopes_at_location(req_dict['location'])
 
-        # Build a Request for each expanded location
-        requests = []
+
+        windows = Windows()
         for telescope in telescopes:
-            req = Request(
-                           target     = target,
-                           molecules  = molecules,
-                           windows    = windows,
-                           telescope  = telescope,
-                         )
-            requests.append(req)
+            for window_dict in req_dict['windows']:
+                window = Window(window_dict=window_dict, resource=telescope)
+                windows.append(window)
 
 
-        return requests
+        req = Request(
+                       target         = target,
+                       molecules      = molecules,
+                       windows        = windows,
+                       request_number = req_dict['request_number'],
+                     )
+
+        return req
 
 
 
