@@ -156,17 +156,17 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
             request = compound_request.requests[idx]
             window_dict[resource_name] = epoch_intervals
 
-        reservations.append( Reservation(compound_request.priority,
-                                         request.duration,
-                                         window_dict
-                                         ) )
+            reservations.append( Reservation(compound_request.priority,
+                                             request.duration,
+                                             window_dict
+                                             ) )
 
-        # Store the original requests for recovery after scheduling
-        # TODO: Do this with a field provided for this purpose, not this hack
-        reservations[-1].compound_request = compound_request
-        reservations[-1].request          = request
+            # Store the original requests for recovery after scheduling
+            # TODO: Do this with a field provided for this purpose, not this hack
+            reservations[-1].compound_request = compound_request
+            reservations[-1].request          = request
 
-        idx += 1
+            idx += 1
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something

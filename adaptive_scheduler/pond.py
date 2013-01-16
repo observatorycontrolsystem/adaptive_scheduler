@@ -162,7 +162,8 @@ class Block(object):
                                 priority = molecule.priority,
                               )
 
-            if molecule.ag_mode is not 'OFF':
+            # TODO: Replace this with an actual search on AG (Strawbs to implement)
+            if molecule.ag_mode != 'OFF':
                 ag_search = 'LIHSP-iXon'
                 ag_match  = mapping.find_by_camera_type_and_location(site,
                                                                      observatory,

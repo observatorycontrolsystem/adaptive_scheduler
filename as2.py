@@ -44,6 +44,8 @@ if __name__ == '__main__':
     for r in requests:
         print r['tracking_number']
 
+    print r
+
     possible_requests = filter_out_of_date_requests(requests)
 
     #good_requests = [good_requests[0]]

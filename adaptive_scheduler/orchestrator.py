@@ -48,11 +48,15 @@ def get_requests(url, telescope_class):
 
 def get_requests_from_file(req_filename, telescope_class):
 
-    req_fh = open(req_filename, 'r')
-    req_data = req_fh.read()
+    with open(req_filename, 'r') as req_fh:
+        req_data = req_fh.read()
+        return ast.literal_eval(req_data)
 
-    return ast.literal_eval(req_data)
+def get_requests_from_json(req_filename, telescope_class):
 
+    with open(req_filename, 'r') as req_fh:
+        req_data = req_fh.read()
+        return json.loads(req_data)
 
 def get_requests_from_db(url, telescope_class):
 
@@ -107,8 +111,8 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests):
     # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2012, 11, 29, 0, 0, 0)
-    semester_end   = datetime(2012, 12, 29, 0, 0, 0)
+    semester_start = datetime(2013, 3, 28, 0, 0, 0)
+    semester_end   = datetime(2013, 4, 28, 0, 0, 0)
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -178,7 +182,7 @@ def main(requests):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    delete_scheduled_blocks()
+#    delete_scheduled_blocks()
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)
