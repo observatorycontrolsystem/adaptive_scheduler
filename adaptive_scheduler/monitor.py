@@ -1,10 +1,15 @@
 import log
 import threading
 
-from adaptive_scheduler.orchestrator import get_requests_from_file as get_requests
+from adaptive_scheduler.orchestrator import get_requests_from_json as get_requests
 
 # Create module log 
 logger = log.create_logger("monitor")
+
+
+class DBSyncronizeEvent(object):
+    def __repr__(self):
+        return '%s' % (self.__class__,)
 
 class RequestUpdateEvent(object):
     def __init__(self, requests):
@@ -12,12 +17,13 @@ class RequestUpdateEvent(object):
     def __repr__(self):
         return '%s(%r)' % (self.__class__, self.__dict__)
 
+
 class _TimerThread(threading.Thread):
     def __init__(self, period, name="Timer Thread"):
         super(_TimerThread, self).__init__(name=name)
         self.period = period
         self.event = threading.Event()
-        self.setDaemon(True)
+        self.daemon = True
 
     def run(self):
         logger.info("Starting timer")
@@ -32,6 +38,17 @@ class _TimerThread(threading.Thread):
     def action(self):
         raise NotImplementedError("Override in sub-class")
 
+
+class _DBSyncronizeThread(_TimerThread):
+    def __init__(self, period, queue, name="DB Syncronization Thread"):
+        super(_DBSyncronizeThread, self).__init__(period)
+        self.queue = queue
+
+    def action(self):
+        logger.info("Syncronizing databases")
+        self.queue.put(DBSyncronizeEvent())
+
+
 class _MonitoringThread(_TimerThread):
     def __init__(self, period, queue, name="Monitoring Thread"):
         super(_MonitoringThread, self).__init__(period)
@@ -41,10 +58,13 @@ class _MonitoringThread(_TimerThread):
         logger.info("Getting latest requests")
 
         # Do periodic stuff here
-        requests = get_requests('requests.dat','dummy arg')
+        requests = get_requests('requests.json','dummy arg')
 
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))
 
 def create_monitor(period, queue):
     return _MonitoringThread(period, queue)
+
+def create_database_syncronizer(period, queue):
+    return _DBSyncronizeThread(period, queue)
