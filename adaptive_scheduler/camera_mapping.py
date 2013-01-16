@@ -129,6 +129,14 @@ class _CameraMapping(object):
                                        x['telescope'] == telescope
         return self._base_find(filter_by_location)
 
+    def find_by_autoguider(self, autoguider):
+        filter_by_autoguider = lambda x: x['autoguider'] == autoguider
+        return self._base_find(filter_by_autoguider)
+
+    def find_by_autoguider_type(self, autoguider_type):
+        filter_by_autoguider_type = lambda x: x['autoguider_type'] == autoguider_type
+        return self._base_find(filter_by_autoguider_type)
+
     def find_by_camera(self, camera):
         filter_by_camera = lambda x: x['camera'] == camera
         return self._base_find(filter_by_camera)
