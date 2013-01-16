@@ -1,3 +1,20 @@
+#!/usr/bin/env python
+
+'''
+monitor.py - Threads to update the Request DB state and poll for new Requests
+
+This class provides
+
+    * DBSyncronizeThread - update the state of Requests in the Request DB based
+                           on the state of blocks in the pond
+    * MonitoringThread   - poll the Request DB for a change triggering a schedule
+                           recompute
+
+Author: Martin Norbury
+        Eric Saunders
+January 2013
+'''
+
 import log
 import threading
 
@@ -5,6 +22,16 @@ from adaptive_scheduler.orchestrator import get_requests_from_json as get_reques
 
 # Create module log 
 logger = log.create_logger("monitor")
+
+
+# Public factory methods
+def create_monitor(period, queue):
+    '''Factory for creating a Request DB monitoring thread.'''
+    return _MonitoringThread(period, queue)
+
+def create_database_syncronizer(period, queue):
+    '''Factory for creating a Request status synchronisation thread.'''
+    return _DBSyncronizeThread(period, queue)
 
 
 class DBSyncronizeEvent(object):
@@ -18,28 +45,32 @@ class RequestUpdateEvent(object):
         return '%s(%r)' % (self.__class__, self.__dict__)
 
 
-class _TimerThread(threading.Thread):
+class _PollingThread(threading.Thread):
+    '''Superclass for periodic polling threads.'''
     def __init__(self, period, name="Timer Thread"):
-        super(_TimerThread, self).__init__(name=name)
+        super(_PollingThread, self).__init__(name=name)
         self.period = period
         self.event = threading.Event()
         self.daemon = True
 
     def run(self):
-        logger.info("Starting timer")
+        logger.info("Starting polling")
         while not self.event.is_set():
             self.action()
             self.event.wait(self.period)
-        logger.info("Stopping timer")
+        logger.info("Stopping polling")
 
     def stop(self):
         self.event.set()
 
     def action(self):
-        raise NotImplementedError("Override in sub-class")
+        raise NotImplementedError("Override this in sub-class")
 
 
-class _DBSyncronizeThread(_TimerThread):
+class _DBSyncronizeThread(_PollingThread):
+    '''Update the state of Requests in the Request DB based on the state of
+       blocks in the pond.'''
+
     def __init__(self, period, queue, name="DB Syncronization Thread"):
         super(_DBSyncronizeThread, self).__init__(period)
         self.queue = queue
@@ -49,7 +80,9 @@ class _DBSyncronizeThread(_TimerThread):
         self.queue.put(DBSyncronizeEvent())
 
 
-class _MonitoringThread(_TimerThread):
+class _MonitoringThread(_PollingThread):
+    '''Poll the Request DB for a change triggering a schedule recompute.'''
+
     def __init__(self, period, queue, name="Monitoring Thread"):
         super(_MonitoringThread, self).__init__(period)
         self.queue = queue
@@ -63,8 +96,3 @@ class _MonitoringThread(_TimerThread):
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))
 
-def create_monitor(period, queue):
-    return _MonitoringThread(period, queue)
-
-def create_database_syncronizer(period, queue):
-    return _DBSyncronizeThread(period, queue)

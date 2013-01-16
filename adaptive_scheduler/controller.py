@@ -1,15 +1,23 @@
 #!/usr/bin/env python
-''' scheduler/controller.py - Main controller and application entry point.
+'''
+controller.py - Main controller and application entry point
 
 This package contains the main entry point for the scheduler.
 
+Author: Martin Norbury
+        Eric Saunders
+January 2013
 '''
+
 
 # Required for true (non-integer) division
 from __future__ import division
 
 # Standard library imports
 from Queue import Queue
+import threading
+import signal
+import sys
 
 # Internal imports
 from adaptive_scheduler.log          import create_logger
@@ -18,11 +26,8 @@ from adaptive_scheduler.monitor      import create_database_syncronizer
 from adaptive_scheduler.monitor      import DBSyncronizeEvent, RequestUpdateEvent
 from adaptive_scheduler.orchestrator import main as schedule
 
-import threading
 
-import signal
-import sys
-
+# Define signal handlers
 def ctrl_c_handler(signal, frame):
         print 'Received Ctrl+C - terminating.'
         sys.exit(0)
@@ -37,67 +42,83 @@ signal.signal(signal.SIGTERM, kill_handler)
 # Module scope logger
 logger = create_logger("controller")
 
-class MyFred(threading.Thread):
+
+def run_controller(request_polling, syncronization_interval):
+    '''Execute the main scheduler thread.'''
+
+    logger.info("Starting controller")
+
+    # Create the Queue through which all the threads communicate
+    queue = Queue()
+
+    # Periodically monitor the Request DB for new Requests
+    monitor = create_monitor(request_polling, queue)
+    monitor.start()
+
+    # Periodically update the Request DB with POND block status
+    syncronizer = create_database_syncronizer(syncronization_interval, queue)
+    syncronizer.start()
+
+    # Process events from the other threads as they arrive
+    event_handler = EventHandlerThread(queue)
+    event_handler.start()
+
+    # Put the main thread to sleep unless interrupted by a signal
+    while True:
+        signal.pause()
+
+
+
+class EventHandlerThread(threading.Thread):
+    '''Thread to process events placed on the Queue from other threads.'''
+
     def __init__(self, queue, name="Event Handler Thread"):
-        super(MyFred, self).__init__(name=name)
-        self.queue = queue
-        self.event = threading.Event()
+        super(EventHandlerThread, self).__init__(name=name)
+        self.queue         = queue
+        self.event_handler = EventHandler()
+
+        # Thread configuration
+        self.event  = threading.Event()
         self.daemon = True
 
+
     def run(self):
-        while True: handle_event(self.queue.get(block=True))
+        while True: self.event_handler.handle(self.queue.get(block=True))
 
     def stop(self):
         self.event.set()
 
 
 
-def run_controller(request_polling, syncronization_interval):
-    ''' Run the scheduler controller. '''
-    logger.info("Starting controller")
+class EventHandler(object):
+    '''Resolves and executes the handler method for each type of Event.'''
+
+    def __init__(self):
+        self.handler_map = {
+                             DBSyncronizeEvent  : self._handle_syncronize_db,
+                             RequestUpdateEvent : self._handle_request_update,
+                           }
 
 
-    # Create queue
-    queue = Queue()
+    def handle(self, event):
+        '''Call the relevant handler method based on the type of Event.'''
+        logger.info("Got event %r" % (event,))
 
-    # Start monitor
-    monitor = create_monitor(request_polling, queue)
-    monitor.start()
-
-    # Start db syncronizer
-    syncronizer = create_database_syncronizer(syncronization_interval, queue)
-    syncronizer.start()
-
-    # Process events TODO: maybe we want to shutdown/restart
-    event_handler = MyFred(queue)
-    event_handler.start()
-
-    while True:
-        signal.pause()
+        handler = self.handler_map.get(event.__class__, self._handle_unknown_event)
+        handler(event)
 
 
-def handle_event(event):
-    ''' Handle event. '''
-    logger.info("Got event %r" % (event,))
+    def _handle_syncronize_db(self, event):
+        # Call the syncdb view here
+        logger.info("Syncronizing databases")
 
-    handler = handler_map.get(event.__class__, handle_unknown_event)
-    handler(event)
+    def _handle_request_update(self, event):
+        schedule(event.requests)
 
-def handle_syncronize_db(event):
-    # Call the syncdb view here
-    logger.info("Syncronizing databases")
+    def _handle_unknown_event(self, event):
+        logger.warning("Received an unknown event of type %s", event.__class__)
 
-def handle_request_update(event):
-    schedule(event.requests)
 
-def handle_unknown_event(event):
-    logger.warning("Received an unknown event of type %s", event.__class__)
-
-# Handler map
-handler_map = {
-                DBSyncronizeEvent  : handle_syncronize_db,
-                RequestUpdateEvent : handle_request_update,
-              }
 
 if __name__ == '__main__':
     run_controller()

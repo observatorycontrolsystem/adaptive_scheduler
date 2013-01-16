@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-start_controller - Run the controller.
+start_controller - Run the main scheduling control thread
 
 Author: Martin Norbury
 August 2012
