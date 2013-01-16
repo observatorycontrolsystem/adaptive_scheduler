@@ -1,3 +1,11 @@
+'''
+test_camera_mapping.py - Test cases for the camera_mapping module.
+
+Authors:
+    Martin Norbury (mnorbury@lcogt.net)
+
+January 2013
+'''
 from nose.tools import eq_
 
 from adaptive_scheduler.camera_mapping import create_camera_mapping
