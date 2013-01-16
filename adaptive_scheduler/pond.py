@@ -162,14 +162,17 @@ class Block(object):
                                 priority = molecule.priority,
                               )
 
-            # TODO: Replace this with an actual search on AG (Strawbs to implement)
+            # Resolve the Autoguider if necessary
             if molecule.ag_mode != 'OFF':
-                ag_search = 'LIHSP-iXon'
-                ag_match  = mapping.find_by_camera_type_and_location(site,
-                                                                     observatory,
-                                                                     telescope,
-                                                                     ag_search)
-                specific_ag = ag_match[0]['camera']
+                # At this point the specific camera was either provided, or has
+                # been resolved. We call the mapping again, because we won't have
+                # one yet if the specific name was provided, and we need it to find
+                # the AG...
+
+                ag_match    = mapping.find_by_camera(specific_camera)
+                specific_ag = ag_match[0]['autoguider']
+
+                print "Autoguider resolved as '%s'" % specific_ag
                 obs.ag_name = specific_ag
 
             observations.append(obs)

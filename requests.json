@@ -61,7 +61,7 @@
         "expose_at": null, 
         "filter": "V", 
         "instrument_name": "SCICAM", 
-        "ag_mode": "OFF", 
+        "ag_mode": "ON", 
         "bin_x": 1, 
         "type": "EXPOSE", 
         "bin_y": 1, 
