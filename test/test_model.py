@@ -5,9 +5,31 @@ from nose.tools import raises
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.model2      import (Target, Telescope, Proposal, Molecule,
-                                            Request, CompoundRequest)
+from adaptive_scheduler.model2      import ( build_telescope_network,
+                                             Target, Telescope, Proposal, Molecule,
+                                             Request, CompoundRequest )
 from adaptive_scheduler.exceptions import InvalidRequestError
+
+
+class TestTelescopeNetwork(object):
+
+    def setup(self):
+        self.tel_data = [
+                            {
+                                'name'      : '2m0a.clma.ogg',
+                                'tel_class' : '2m0',
+                                'latitude'  : 20.7069444444,
+                                'longitude' : -156.258055556,
+                                'horizon'   : 22,
+                            },
+                        ]
+
+        self.tel_network = build_telescope_network(tel_dicts=self.tel_data)
+
+
+
+
+
 
 
 class TestRequest(object):

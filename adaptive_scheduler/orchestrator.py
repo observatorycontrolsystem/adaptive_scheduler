@@ -24,7 +24,7 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  make_compound_reservations )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import print_schedule, print_compound_reservations
-from adaptive_scheduler.pond     import send_schedule_to_pond
+from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
 
 #from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
 #from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
@@ -145,7 +145,18 @@ def main(requests):
         user_reqs.append(user_req)
         i += 1
 
+    # TODO: Swap to tels2
     tels = get_telescope_network(tel_file)
+    tels2 = mb.tel_network.telescopes
+    for t in tels:
+        print t
+
+    print
+
+    for t in tels2:
+        print t
+    import time
+#    time.sleep(30)
 
 
     # Construct visibility objects for each telescope
@@ -182,7 +193,8 @@ def main(requests):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-#    delete_scheduled_blocks()
+    # TODO: HERE - Iterate through all sites
+    cancel_schedule(semester_start, semester_end, site, obs, tel)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)

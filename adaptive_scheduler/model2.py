@@ -273,41 +273,35 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
 
 
-class TelescopeNetwork(object):
+def build_telescope_network(tel_file=None, tel_dicts=None):
+    '''Factory for TelescopeNetwork objects.'''
 
-    def __init__(self, tel_file):
-        self.tels = self.get_telescope_network(tel_file)
+    # TODO: Raise exception if at least one argument isn't passed
+
+    if tel_file:
+        tel_dicts = file_to_dicts(tel_file)
+
+    # Key the telescopes on <name.tel_class>
+    telescopes = {}
+    for d in tel_dicts:
+        telescopes[ d['name'] ] = Telescope(d)
+
+    return TelescopeNetwork(telescopes)
+
+
+class TelescopeNetwork(object):
+    def __init__(self, telescopes):
+        self.telescopes = telescopes
 
         valid_locations = []
-        for tel_name, tel in self.tels.iteritems():
+        for tel_name, tel in self.telescopes.iteritems():
             valid_locations.append(tel_name + '.' + tel.tel_class)
 
         self.le = LocationExpander(valid_locations)
 
 
-    def get_telescope_network(self, tel_file):
-        ''' This function is a placeholder for the real thing, which will look up
-            the current installed network from the config DB.'''
-
-        if not hasattr(self, 'tels'):
-            self.tels = self.build_telescopes_from_file(tel_file)
-
-        return self.tels
-
-
-    def build_telescopes_from_file(self, tel_file):
-        telescopes = {}
-        tel_dicts  = file_to_dicts(tel_file)
-
-        # Key the telescopes on <name.tel_class>
-        for d in tel_dicts:
-            telescopes[ d['name'] ] = Telescope(d)
-
-        return telescopes
-
-
     def get_telescope(self, tel_name):
-        return self.tels.get(tel_name, None)
+        return self.telescopes.get(tel_name, None)
 
 
     def get_telescopes_at_location(self, location):
@@ -325,7 +319,7 @@ class TelescopeNetwork(object):
 class ModelBuilder(object):
 
     def __init__(self, tel_file):
-        self.tel_network = TelescopeNetwork(tel_file)
+        self.tel_network = build_telescope_network(tel_file)
 
 
     def build_user_request(self, cr_dict):

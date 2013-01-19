@@ -25,14 +25,15 @@ It maps objects across domains from 1) -> 2) (described below).
 Author: Eric Saunders
 February 2012
 '''
+from datetime import datetime
 
-from adaptive_scheduler.model2 import Proposal, Target
-from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.model2         import Proposal, Target
+from adaptive_scheduler.utils          import get_reservation_datetimes
 from adaptive_scheduler.camera_mapping import create_camera_mapping
-from lcogtpond                import pointing
-from lcogtpond.block          import Block as PondBlock
-from lcogtpond.molecule       import Expose
-
+from lcogtpond                         import pointing
+from lcogtpond.block                   import Block as PondBlock
+from lcogtpond.molecule                import Expose
+from lcogtpond.schedule                import Schedule
 
 class Block(object):
 
@@ -274,6 +275,31 @@ def send_schedule_to_pond(schedule, semester_start):
             block.add_target(res.request.target)
 
             pond_block = block.send_to_pond()
+
+    return
+
+
+def cancel_schedule(start, end, site, obs, tel):
+    schedule = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
+    dt = datetime.utcnow()
+    cutoff_dt = schedule.end_of_overlap(dt)
+    to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
+                                               b.tracking_num_set()]
+
+    print "Retrieved %d blocks from %s.%s.%s (%s <-> %s), of which:" % (
+                                                              len(schedule.blocks),
+                                                              tel, obs, site,
+                                                              start, end
+                                                            )
+    print "    %d/%d haven't yet begun" % (len(still_pending), len(schedule.blocks))
+    print "    %d/%d were placed by the scheduler and will be deleted" % (
+                                                                 len(to_delete),
+                                                                 len(schedule.blocks)
+                                                                )
+
+    for block in to_delete:
+        pass
+        #block.cancel(reason="Superceded by new schedule")
 
     return
 
