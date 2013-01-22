@@ -297,7 +297,7 @@ class TelescopeNetwork(object):
         for tel_name, tel in self.telescopes.iteritems():
             valid_locations.append(tel_name + '.' + tel.tel_class)
 
-        self.le = LocationExpander(valid_locations)
+        self.le = _LocationExpander(valid_locations)
 
 
     def get_telescope(self, tel_name):
@@ -377,7 +377,7 @@ class ModelBuilder(object):
 
 
 
-class LocationExpander(object):
+class _LocationExpander(object):
     def __init__(self, locations):
         self.set_locations(locations)
 

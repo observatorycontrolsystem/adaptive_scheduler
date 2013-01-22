@@ -1,30 +1,52 @@
 #!/usr/bin/python
 from __future__ import division
 
-from nose.tools import raises
+from nose.tools import assert_equal, raises
 from datetime import datetime
 
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Target, Telescope, Proposal, Molecule,
-                                             Request, CompoundRequest )
+                                             Request, CompoundRequest,
+                                             _LocationExpander )
 from adaptive_scheduler.exceptions import InvalidRequestError
 
 
 class TestTelescopeNetwork(object):
 
     def setup(self):
+        self.tel_name1 = '2m0a.clma.ogg'
+        self.tel_name2 = '1m0a.doma.ogg'
         self.tel_data = [
                             {
-                                'name'      : '2m0a.clma.ogg',
+                                'name'      : self.tel_name1,
                                 'tel_class' : '2m0',
-                                'latitude'  : 20.7069444444,
-                                'longitude' : -156.258055556,
-                                'horizon'   : 22,
+                            },
+                            {
+                                'name'      : self.tel_name2,
+                                'tel_class' : '1m0',
                             },
                         ]
 
         self.tel_network = build_telescope_network(tel_dicts=self.tel_data)
+
+
+    def test_get_telescope(self):
+        assert_equal(self.tel_network.get_telescope(self.tel_name1),
+                     Telescope(self.tel_data[0]))
+
+
+    def test_get_telescopes_at_location(self):
+        dict_repr = {
+                      'telescope_class' : '1m0a',
+                      'site'            : 'ogg',
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.tel_network.get_telescopes_at_location(dict_repr)
+        expected = [ Telescope(self.tel_data[1]) ]
+        assert_equal(received, expected)
 
 
 
@@ -94,3 +116,129 @@ class TestRequest(object):
                           windows        = self.windows,
                           request_number = self.request_number)
         compound_request = CompoundRequest(valid_res_type, [request])
+
+
+
+class TestLocationExpander(object):
+
+    def setup(self):
+        self.telescopes = (
+                            '0m4a.aqwa.bpl.0m4',
+                            '0m4b.aqwa.bpl.0m4',
+                            '1m0a.doma.elp.1m0',
+                            '1m0a.doma.bpl.1m0',
+                            '2m0a.clma.ogg.2m0',
+                            '2m0a.clma.coj.2m0',
+                          )
+
+        self.le = _LocationExpander(self.telescopes)
+
+
+    def test_expand_locations_no_filtering_if_empty_dict(self):
+        dict_repr = {
+                      'telescope_class' : None,
+                      'site'            : None,
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+
+        # We expect the full telescope list, with the telescope classes trimmed off
+        expected = [ '.'.join(loc.split('.')[:-1]) for loc in self.telescopes ]
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_no_class_match(self):
+        dict_repr = {
+                      'telescope_class' : '40m0',
+                      'site'            : None,
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = []
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_no_site_match(self):
+        dict_repr = {
+                      'telescope_class' : '1m0',
+                      'site'            : 'ogg',
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = []
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_class_only(self):
+        dict_repr = {
+                      'telescope_class' : '1m0',
+                      'site'            : None,
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = [
+                     '1m0a.doma.elp',
+                     '1m0a.doma.bpl',
+                   ]
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_class_and_site(self):
+        dict_repr = {
+                      'telescope_class' : '1m0',
+                      'site'            : 'elp',
+                      'observatory'     : None,
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = [
+                     '1m0a.doma.elp',
+                   ]
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_class_and_site_and_obs(self):
+        dict_repr = {
+                      'telescope_class' : '0m4',
+                      'site'            : 'bpl',
+                      'observatory'     : 'aqwa',
+                      'telescope'       : None
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = [
+                     '0m4a.aqwa.bpl',
+                     '0m4b.aqwa.bpl',
+                   ]
+
+        assert_equal(received, expected)
+
+
+    def test_expand_locations_class_and_site_and_obs_and_tel(self):
+        dict_repr = {
+                      'telescope_class' : '0m4',
+                      'site'            : 'bpl',
+                      'observatory'     : 'aqwa',
+                      'telescope'       : '0m4b'
+                    }
+
+        received = self.le.expand_locations(dict_repr)
+        expected = [
+                     '0m4b.aqwa.bpl',
+                   ]
+
+        assert_equal(received, expected)
