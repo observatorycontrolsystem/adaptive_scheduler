@@ -279,14 +279,14 @@ def send_schedule_to_pond(schedule, semester_start):
     return
 
 
-def cancel_schedule(start, end, site, obs, tel):
-    schedule = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
-    dt = datetime.utcnow()
+def get_deletable_blocks(start, end, site, obs, tel):
+    schedule  = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
+    dt        = datetime.utcnow()
     cutoff_dt = schedule.end_of_overlap(dt)
     to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
                                                b.tracking_num_set()]
 
-    print "Retrieved %d blocks from %s.%s.%s (%s <-> %s), of which:" % (
+    print "Retrieved %d blocks from %s.%s.%s (%s <-> %s), of which" % (
                                                               len(schedule.blocks),
                                                               tel, obs, site,
                                                               start, end
@@ -295,6 +295,12 @@ def cancel_schedule(start, end, site, obs, tel):
                                                                  len(to_delete),
                                                                  len(schedule.blocks)
                                                                 )
+
+    return to_delete
+
+
+def cancel_schedule(start, end, site, obs, tel):
+    to_delete = get_deletable_blocks(start, end, site, obs, tel)
 
     for block in to_delete:
         block.cancel(reason="Superceded by new schedule")

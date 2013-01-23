@@ -1,11 +1,13 @@
 from __future__ import division
 
 from nose.tools import assert_equal, raises
+from mock       import patch, Mock
 
-from adaptive_scheduler.pond  import (Block, IncompleteBlockError)
+from adaptive_scheduler.pond  import (Block, IncompleteBlockError, cancel_schedule)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target)
 
 from datetime import datetime
+
 
 
 class TestPond(object):
@@ -151,3 +153,14 @@ class TestPond(object):
                                )
 
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))
+
+
+    @patch('adaptive_scheduler.pond.get_deletable_blocks')
+    def test_cancel_schedule(self, func_mock):
+        block_mock = Mock()
+        func_mock.return_value = [block_mock]
+        junk = 'junk'
+
+        cancel_schedule(junk, junk, junk, junk, junk)
+        block_mock.cancel.assert_called_once_with(reason="Superceded by new schedule")
+
