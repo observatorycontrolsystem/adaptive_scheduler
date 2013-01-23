@@ -291,15 +291,13 @@ def cancel_schedule(start, end, site, obs, tel):
                                                               tel, obs, site,
                                                               start, end
                                                             )
-    print "    %d/%d haven't yet begun" % (len(still_pending), len(schedule.blocks))
     print "    %d/%d were placed by the scheduler and will be deleted" % (
                                                                  len(to_delete),
                                                                  len(schedule.blocks)
                                                                 )
 
     for block in to_delete:
-        pass
-        #block.cancel(reason="Superceded by new schedule")
+        block.cancel(reason="Superceded by new schedule")
 
     return
 

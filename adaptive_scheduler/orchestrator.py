@@ -146,17 +146,9 @@ def main(requests):
         i += 1
 
     # TODO: Swap to tels2
-    tels = get_telescope_network(tel_file)
-    tels2 = mb.tel_network.telescopes
-    for t in tels:
-        print t
-
-    print
-
-    for t in tels2:
-        print t
-    import time
-#    time.sleep(30)
+    tels = mb.tel_network.telescopes
+    for t, v in tels.iteritems():
+        print t, v
 
 
     # Construct visibility objects for each telescope
@@ -194,9 +186,18 @@ def main(requests):
 
     # Clean out all existing scheduled blocks
     # TODO: HERE - Iterate through all sites
-    cancel_schedule(semester_start, semester_end, site, obs, tel)
+    for full_tel_name in tels:
+        tel, obs, site = full_tel_name.split('.')
+        print "Cancelling schedule at %s, from %s to %s" % ( full_tel_name,
+                                                             semester_start,
+                                                             semester_end   )
+
+        cancel_schedule(semester_start, semester_end, site, obs, tel)
+
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     send_schedule_to_pond(schedule, semester_start)
+
+    print "New schedule submitted to POND"
 
     #print "cr.reservation_list:", cr.reservation_list
