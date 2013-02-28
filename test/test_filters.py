@@ -9,7 +9,8 @@ from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
                                                  Windows, Telescope )
 from adaptive_scheduler.request_filters import ( filter_on_expiry,
                                                  filter_out_past_windows,
-                                                 filter_out_future_windows )
+                                                 filter_out_future_windows,
+                                                 truncate_lower_crossing_windows )
 
 
 def get_windows_from_request(request, resource_name):
@@ -173,3 +174,25 @@ class TestWindowFilters(object):
 
         expected_window = window_list[0]
         assert_equal(received_windows, [expected_window])
+
+
+
+    @patch("adaptive_scheduler.request_filters.datetime")
+    def test_filters_out_only_future_windows(self, mock_datetime):
+        mock_datetime.utcnow.return_value = self.current_time
+
+        resource_name = "Martin"
+        # Comes after self.current_time, so should not be filtered
+        window_dict1 = {
+                         'start' : "2013-01-01 00:00:00",
+                         'end'   : "2013-03-01 01:00:00",
+                       }
+        ur1, window_list = self.create_user_request([window_dict1],
+                                                    resource_name)
+
+        received_ur_list = truncate_lower_crossing_windows([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, resource_name)
+
+        assert_equal(received_windows[0].start, self.current_time)

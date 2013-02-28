@@ -28,9 +28,23 @@ def filter_out_past_windows(ur_list):
 
 
 def filter_out_future_windows(ur_list):
-    # TODO: Implement this!
+    # TODO: Implement this service!
     sem_end = semester_service.get_semester_end()
     filter_test = lambda w: w.start < sem_end and w.end < sem_end
+
+    return for_all_ur_windows(ur_list, filter_test)
+
+
+def truncate_lower_crossing_windows(ur_list):
+    now = datetime.utcnow()
+
+    def truncate_lower_crossing(w):
+        if w.start < now and w.end > now:
+            w.start = now
+
+        return True
+
+    filter_test = truncate_lower_crossing
 
     return for_all_ur_windows(ur_list, filter_test)
 
@@ -43,3 +57,5 @@ def for_all_ur_windows(ur_list, filter_test):
 
     return ur_list
 
+
+#TODO: Expiry, compound filter
