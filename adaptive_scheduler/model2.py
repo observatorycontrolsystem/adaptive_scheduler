@@ -14,7 +14,7 @@ from __future__ import division
 from rise_set.sky_coordinates import RightAscension, Declination
 from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
-from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.exceptions import InvalidRequestError
 
 import ast
