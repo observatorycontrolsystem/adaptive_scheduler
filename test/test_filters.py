@@ -93,36 +93,43 @@ class TestWindowFilters(object):
         self.semester_end    = datetime(2013, 10, 1)
 
 
-    def create_user_request(self, window_dicts, resource_name):
+    def create_user_request(self, window_dicts, resource_name, operator='and'):
         t1 = Telescope(
                         name = resource_name
                       )
 
         window_list = []
         windows = Windows()
-        for window_dict in window_dicts:
-            w = Window(
-                        window_dict = window_dict,
-                        resource    = t1
-                      )
-            windows.append(w)
-            window_list.append(w)
+
+        req_list = []
+        for req_windows in window_dicts:
+            for window_dict in req_windows:
+                w = Window(
+                            window_dict = window_dict,
+                            resource    = t1
+                          )
+                windows.append(w)
+                window_list.append(w)
 
 
-        r1  = Request(
-                       target         = None,
-                       molecules      = None,
-                       windows        = windows,
-                       request_number = None
-                     )
+            r  = Request(
+                          target         = None,
+                          molecules      = None,
+                          windows        = windows,
+                          request_number = None
+                        )
+            req_list.append(r)
+
+        if len(req_list) == 1:
+            operator = 'single'
 
         ur1 = UserRequest(
-                           operator = 'single',
-                           requests = [r1],
-                           proposal = None,
-                           expires  = None,
+                           operator        = operator,
+                           requests        = req_list,
+                           proposal        = None,
+                           expires         = None,
                            tracking_number = None,
-                           group_id = None
+                           group_id        = None
                          )
 
         return ur1, window_list
@@ -142,8 +149,8 @@ class TestWindowFilters(object):
                          'start' : "2013-06-01 00:00:00",
                          'end'   : "2013-06-01 01:00:00",
                        }
-
-        ur1, window_list = self.create_user_request([window_dict1, window_dict2], resource_name)
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         received_ur_list = filter_out_past_windows([ur1])
 
@@ -170,7 +177,8 @@ class TestWindowFilters(object):
                          'end'   : "2013-12-01 01:00:00",
                        }
 
-        ur1, window_list = self.create_user_request([window_dict1, window_dict2], resource_name)
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         received_ur_list = filter_out_future_windows([ur1])
 
@@ -191,8 +199,8 @@ class TestWindowFilters(object):
                          'start' : "2013-01-01 00:00:00",
                          'end'   : "2013-03-01 01:00:00",
                        }
-        ur1, window_list = self.create_user_request([window_dict1],
-                                                    resource_name)
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         received_ur_list = truncate_lower_crossing_windows([ur1])
 
@@ -212,8 +220,8 @@ class TestWindowFilters(object):
                          'start' : "2013-09-01 00:00:00",
                          'end'   : "2013-11-01 01:00:00",
                        }
-        ur1, window_list = self.create_user_request([window_dict1],
-                                                    resource_name)
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         received_ur_list = truncate_upper_crossing_windows([ur1])
 
@@ -231,8 +239,8 @@ class TestWindowFilters(object):
                          'start' : "2013-09-01 00:00:00",
                          'end'   : "2013-11-01 01:00:00",
                        }
-        ur1, window_list = self.create_user_request([window_dict1],
-                                                    resource_name)
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         UserRequest.duration = property(fake_get_duration)
 
@@ -252,8 +260,8 @@ class TestWindowFilters(object):
                          'start' : "2013-09-01 00:00:00",
                          'end'   : "2013-09-01 00:30:00",
                        }
-        ur1, window_list = self.create_user_request([window_dict1],
-                                                    resource_name)
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
 
         UserRequest.duration = property(fake_get_duration)
 
@@ -263,3 +271,17 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, resource_name)
 
         assert_equal(received_windows, [])
+
+
+    def test_filter_on_type_AND_both_requests_have_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, resource_name)
