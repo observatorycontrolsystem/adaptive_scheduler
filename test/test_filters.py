@@ -2,7 +2,7 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_not_equal, raises
 from mock       import patch, Mock
-from datetime   import datetime
+from datetime   import datetime, timedelta
 from copy       import deepcopy
 
 from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
@@ -10,12 +10,18 @@ from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
 from adaptive_scheduler.request_filters import ( filter_on_expiry,
                                                  filter_out_past_windows,
                                                  filter_out_future_windows,
-                                                 truncate_lower_crossing_windows )
+                                                 truncate_lower_crossing_windows,
+                                                 truncate_upper_crossing_windows,
+                                                 filter_on_duration
+                                               )
 
 
 def get_windows_from_request(request, resource_name):
     return request.windows.windows_for_resource[resource_name]
 
+
+def fake_get_duration(self):
+    return timedelta(hours=1)
 
 class TestExpiryFilter(object):
 
@@ -84,7 +90,7 @@ class TestWindowFilters(object):
 
     def setup(self):
         self.current_time    = datetime(2013, 2, 27)
-        self.semester_end    = datetime(2013, 8, 1)
+        self.semester_end    = datetime(2013, 10, 1)
 
 
     def create_user_request(self, window_dicts, resource_name):
@@ -148,7 +154,6 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-
     @patch("adaptive_scheduler.request_filters.semester_service")
     def test_filters_out_only_future_windows(self, mock_semester_service):
         mock_semester_service.get_semester_end.return_value = self.semester_end
@@ -176,13 +181,12 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-
     @patch("adaptive_scheduler.request_filters.datetime")
-    def test_filters_out_only_future_windows(self, mock_datetime):
+    def test_truncates_lower_crossing_windows(self, mock_datetime):
         mock_datetime.utcnow.return_value = self.current_time
 
         resource_name = "Martin"
-        # Comes after self.current_time, so should not be filtered
+        # Crosses self.current time, so should be truncated
         window_dict1 = {
                          'start' : "2013-01-01 00:00:00",
                          'end'   : "2013-03-01 01:00:00",
@@ -196,3 +200,66 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, resource_name)
 
         assert_equal(received_windows[0].start, self.current_time)
+
+
+    @patch("adaptive_scheduler.request_filters.semester_service")
+    def test_truncates_upper_crossing_windows(self, mock_semester_service):
+        mock_semester_service.get_semester_end.return_value = self.semester_end
+
+        resource_name = "Martin"
+        # Crosses semester end, so should be truncated
+        window_dict1 = {
+                         'start' : "2013-09-01 00:00:00",
+                         'end'   : "2013-11-01 01:00:00",
+                       }
+        ur1, window_list = self.create_user_request([window_dict1],
+                                                    resource_name)
+
+        received_ur_list = truncate_upper_crossing_windows([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, resource_name)
+
+        assert_equal(received_windows[0].end, self.semester_end)
+
+
+    def test_filter_on_duration_window_larger(self):
+
+        resource_name = "Martin"
+        # Window is larger than one hour
+        window_dict1 = {
+                         'start' : "2013-09-01 00:00:00",
+                         'end'   : "2013-11-01 01:00:00",
+                       }
+        ur1, window_list = self.create_user_request([window_dict1],
+                                                    resource_name)
+
+        UserRequest.duration = property(fake_get_duration)
+
+        received_ur_list = filter_on_duration([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, resource_name)
+
+        assert_equal(received_windows, window_list)
+
+
+    def test_filter_on_duration_window_smaller(self):
+
+        resource_name = "Martin"
+        # Window is smaller than one hour
+        window_dict1 = {
+                         'start' : "2013-09-01 00:00:00",
+                         'end'   : "2013-09-01 00:30:00",
+                       }
+        ur1, window_list = self.create_user_request([window_dict1],
+                                                    resource_name)
+
+        UserRequest.duration = property(fake_get_duration)
+
+        received_ur_list = filter_on_duration([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, resource_name)
+
+        assert_equal(received_windows, [])
