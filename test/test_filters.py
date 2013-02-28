@@ -285,3 +285,7 @@ class TestWindowFilters(object):
                        }
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows, resource_name)
+
+        received_ur_list = filter_on_duration([ur1])
+
+        assert_equal(len(received_ur_list), 1)
