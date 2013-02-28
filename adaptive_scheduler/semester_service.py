@@ -30,3 +30,6 @@ def get_semester_end(dt=None):
 def get_semester_block(dt=None):
     return get_semester_start(dt), get_semester_end(dt)
 
+def get_semester_code(dt=None):
+    code = _timestamp_is_semester_A(dt) and 'A' or 'B'
+    return '%d%s' % (get_semester_start(dt).year, code)

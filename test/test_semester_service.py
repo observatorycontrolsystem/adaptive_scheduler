@@ -37,3 +37,13 @@ def test_return_semester_block_when_in_semester_B():
     expected_end   = datetime(2013, 4, 1)
     semester_block = semester_service.get_semester_block(now)
     eq_(semester_block, (expected_start, expected_end))
+
+def test_return_semester_code():
+    now = datetime(2013, 2, 28)
+    eq_(semester_service.get_semester_code(now), '2012B')
+
+    now = datetime(2013, 5, 28)
+    eq_(semester_service.get_semester_code(now), '2013A')
+
+    now = datetime(2013, 11, 1)
+    eq_(semester_service.get_semester_code(now), '2013B')
