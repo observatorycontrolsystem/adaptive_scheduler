@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 from __future__ import division
 
 from nose.tools import assert_equal, assert_not_equal, raises
@@ -292,6 +294,17 @@ class TestWindowFilters(object):
         assert_equal(len(received_ur_list), 1)
 
 
+    def test_filter_on_type_AND_neither_request_has_windows(self):
+        resource_name = "Martin"
+        windows = [ (), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='and')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 0)
+
+
     def test_filter_on_type_AND_one_request_has_no_windows(self):
         resource_name = "Martin"
         window_dict1 = {
@@ -305,3 +318,118 @@ class TestWindowFilters(object):
         received_ur_list = filter_on_type([ur1])
 
         assert_equal(len(received_ur_list), 0)
+
+
+    def test_filter_on_type_AND_two_windows_one_request_has_no_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='and')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 0)
+
+
+    def test_filter_on_type_ONEOF_both_requests_have_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1,), (window_dict2,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='oneof')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_ONEOF_one_request_has_no_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1,), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='oneof')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_ONEOF_two_windows_one_request_has_no_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='oneof')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_ONEOF_neither_request_has_windows(self):
+        resource_name = "Martin"
+        windows = [ (), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='oneof')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 0)
+
+
+    def test_filter_on_type_SINGLE_no_window_one_request(self):
+        resource_name = "Martin"
+        windows = [ () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='single')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 0)
+
+
+    def test_filter_on_type_SINGLE_two_windows_one_request(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='single')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 1)
+
+

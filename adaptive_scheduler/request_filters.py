@@ -93,27 +93,15 @@ def for_all_ur_windows(ur_list, filter_test):
         for r in ur.requests:
             ur.filter_requests(filter_test)
 
-
     return ur_list
 
 
-
 def filter_on_type(ur_list):
+    '''Only return URs which can still be completed (have enough child Requests
+       with Windows).'''
     new_ur_list = []
     for ur in ur_list:
-        ok_to_add = True
-        if ur.operator == 'and':
-            for r in ur.requests:
-                print "Doing an r"
-                all_windows = []
-                for resource_name, windows in r.windows.windows_for_resource.iteritems():
-                    print "Windows:", windows
-                    all_windows += windows
-
-                if len(all_windows) == 0:
-                    ok_to_add = False
-
-        if ok_to_add:
+        if ur.is_schedulable():
             new_ur_list.append(ur)
 
     return new_ur_list

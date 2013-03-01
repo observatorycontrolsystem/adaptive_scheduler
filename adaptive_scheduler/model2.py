@@ -120,7 +120,6 @@ class Windows(DefaultMixin):
     def __init__(self):
         self.windows_for_resource = {}
 
-
     def append(self, window):
         if window.get_resource_name() in self.windows_for_resource:
             self.windows_for_resource[window.get_resource_name()].append(window)
@@ -132,15 +131,13 @@ class Windows(DefaultMixin):
     def at(self, resource_name):
         return self.windows_for_resource[resource_name]
 
-
-    def is_empty(self):
-        is_empty = True
+    def has_windows(self):
+        all_windows = []
         for resource_name, windows in self.windows_for_resource.iteritems():
-            if windows:
-                is_empty = False
-                break
+            all_windows += windows
 
-        return is_empty
+        return bool(all_windows)
+
 
 
 
@@ -204,8 +201,14 @@ class Request(DefaultMixin):
 
         return duration
 
+
+    def has_windows(self):
+        return self.windows.has_windows()
+
+
     # Define properties
     duration = property(get_duration)
+
 
 
 class CompoundRequest(DefaultMixin):
@@ -257,6 +260,41 @@ class CompoundRequest(DefaultMixin):
         for r in self.requests:
             for resource_name, windows in r.windows.windows_for_resource.iteritems():
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
+
+
+    def is_schedulable(self):
+#        return self._is_schedulable_hard()
+        return self._is_schedulable_easy()
+
+
+    def _is_schedulable_easy(self):
+            if self.operator == 'and':
+                is_ok_to_return = True
+                for r in self.requests:
+                    if not r.has_windows():
+                        return False
+
+            elif self.operator == 'oneof' or self.operator == 'single':
+                is_ok_to_return = False
+                for r in self.requests:
+                    if r.has_windows():
+                        return True
+
+            return is_ok_to_return
+
+    def _is_schedulable_hard(self):
+        is_ok_to_return = {
+                            'and'    : (False, lambda r: not r.has_windows()),
+                            'oneof'  : (True,  lambda r: r.has_windows()),
+                            'single' : (True,  lambda r: r.has_windows())
+                          }
+
+        for r in self.requests:
+            if is_ok_to_return[self.operator][1](r):
+                return is_ok_to_return[self.operator][0]
+
+        return not is_ok_to_return[self.operator][0]
+
 
 
     # Define properties
