@@ -97,12 +97,13 @@ def truncate_lower_crossing_windows(ur_list):
 
 def truncate_upper_crossing_windows(ur_list):
     '''Case 4: The window starts at a schedulable time, but finishes beyond the
-       scheduling horizon. Remove the unschedulable portion of the window.'''
-    sem_end = semester_service.get_semester_end()
+       scheduling horizon (semester end or expiry date). Remove the unschedulable
+       portion of the window.'''
 
     def truncate_upper_crossing(w, ur):
-        if w.start < sem_end < w.end:
-            w.end = sem_end
+        horizon = _scheduling_horizon(ur)
+        if w.start < horizon < w.end:
+            w.end = horizon
 
         return True
 
@@ -110,11 +111,16 @@ def truncate_upper_crossing_windows(ur_list):
 
     return _for_all_ur_windows(ur_list, filter_test)
 
+def _scheduling_horizon(ur):
+    sem_end = semester_service.get_semester_end()
+    if ur.expires and ur.expires < sem_end:
+        return ur.expires
+    return sem_end
 
 def filter_out_future_windows(ur_list):
     '''Case 5: The window lies beyond the scheduling horizon.'''
-    sem_end = semester_service.get_semester_end()
-    filter_test = lambda w, ur: w.start < sem_end and w.end < sem_end
+    filter_test = lambda w, ur: w.start < _scheduling_horizon(ur) and \
+                                w.end < _scheduling_horizon(ur)
 
     return _for_all_ur_windows(ur_list, filter_test)
 
