@@ -1,11 +1,10 @@
 #!/usr/bin/env python
 from __future__ import division
-
 '''
-request_filters.py - Filtering of Requests for schedulability
+request_filters.py - Filtering of Requests for schedulability.
 
-description
-
+A) Window filters
+-----------------
      Semester start      Now               Semester end
            |    _____     |                      |
 1)         |   |     |    |                      |
@@ -24,6 +23,30 @@ description
            |              |                      |    |_____|
            |              |                      |
 
+6)  <--------->
+      _____
+     |     |
+     |_____|
+
+Window filters 1,2,4,5 and 6 are implemented. Filters 2 and 4 truncate the window
+at the scheduling boundaries. Running the first four filters results in a set of
+URs whose remaining windows are guaranteed to fall entirely within the scheduling
+horizon.
+
+Filter 6 throws away any windows too small to fit the requested observations,
+after accounting for overheads. Order matters here; this filter should be called
+*after* the truncation filters (2 and 4).
+
+B) User Request filters
+-----------------------
+The remaining filters operate on URs themselves:
+    * 7) expired URs are filtered out
+    * 8) URs which cannot be completed (no child Requests with appropriate Windows
+         remain) are filtered out
+
+The convenience method run_all_filters() executes all the filters in the correct
+order.
+
 Authors: Eric Saunders, Martin Norbury
 February 2013
 '''
@@ -32,27 +55,33 @@ from datetime import datetime
 from adaptive_scheduler import semester_service
 
 
-def filter_on_expiry(ur_list):
-    now = datetime.utcnow()
+def run_all_filters(ur_list):
+    '''Execute all the filters, in the correct order. Windows may be discarded or
+       truncated during this process. Unschedulable User Requests are discarded.'''
+    ur_list = filter_on_expiry(ur_list)
+    ur_list = filter_out_past_windows(ur_list)
+    ur_list = truncate_lower_crossing_windows(ur_list)
+    ur_list = truncate_upper_crossing_windows(ur_list)
+    ur_list = filter_out_future_windows(ur_list)
+    ur_list = filter_on_duration(ur_list)
+    ur_list = filter_on_type(ur_list)
 
-    return [ ur for ur in ur_list if ur.expires > now ]
+    return ur_list
 
 
+# A) Window Filters
+#------------------
 def filter_out_past_windows(ur_list):
+    '''Case 1: The window exists entirely in the past.'''
     now = datetime.utcnow()
     filter_test = lambda w, ur: w.start > now and w.end > now
 
-    return for_all_ur_windows(ur_list, filter_test)
-
-
-def filter_out_future_windows(ur_list):
-    sem_end = semester_service.get_semester_end()
-    filter_test = lambda w, ur: w.start < sem_end and w.end < sem_end
-
-    return for_all_ur_windows(ur_list, filter_test)
+    return _for_all_ur_windows(ur_list, filter_test)
 
 
 def truncate_lower_crossing_windows(ur_list):
+    '''Case 2: The window starts in the past, but finishes at a
+       schedulable time. Remove the unschedulable portion of the window.'''
     now = datetime.utcnow()
 
     def truncate_lower_crossing(w, ur):
@@ -63,10 +92,12 @@ def truncate_lower_crossing_windows(ur_list):
 
     filter_test = truncate_lower_crossing
 
-    return for_all_ur_windows(ur_list, filter_test)
+    return _for_all_ur_windows(ur_list, filter_test)
 
 
 def truncate_upper_crossing_windows(ur_list):
+    '''Case 4: The window starts at a schedulable time, but finishes beyond the
+       scheduling horizon. Remove the unschedulable portion of the window.'''
     sem_end = semester_service.get_semester_end()
 
     def truncate_upper_crossing(w, ur):
@@ -77,18 +108,27 @@ def truncate_upper_crossing_windows(ur_list):
 
     filter_test = truncate_upper_crossing
 
-    return for_all_ur_windows(ur_list, filter_test)
+    return _for_all_ur_windows(ur_list, filter_test)
+
+
+def filter_out_future_windows(ur_list):
+    '''Case 5: The window lies beyond the scheduling horizon.'''
+    sem_end = semester_service.get_semester_end()
+    filter_test = lambda w, ur: w.start < sem_end and w.end < sem_end
+
+    return _for_all_ur_windows(ur_list, filter_test)
 
 
 def filter_on_duration(ur_list):
-    '''Return only windows which are larger than the UR's duration.'''
-
+    '''Case 6: Return only windows which are larger than the UR's duration.'''
     filter_test = lambda w, ur: w.end - w.start > ur.duration
 
-    return for_all_ur_windows(ur_list, filter_test)
+    return _for_all_ur_windows(ur_list, filter_test)
 
 
-def for_all_ur_windows(ur_list, filter_test):
+def _for_all_ur_windows(ur_list, filter_test):
+    '''Loop over all Requests of each UserRequest provided, and execute the supplied
+       filter condition on each one.'''
     for ur in ur_list:
         for r in ur.requests:
             ur.filter_requests(filter_test)
@@ -96,9 +136,18 @@ def for_all_ur_windows(ur_list, filter_test):
     return ur_list
 
 
+# User Request Filters
+#---------------------
+def filter_on_expiry(ur_list):
+    '''Case 7: Return only URs which haven't expired.'''
+    now = datetime.utcnow()
+
+    return [ ur for ur in ur_list if ur.expires > now ]
+
+
 def filter_on_type(ur_list):
-    '''Only return URs which can still be completed (have enough child Requests
-       with Windows).'''
+    '''Case 8: Only return URs which can still be completed (have enough child
+       Requests with Windows remaining).'''
     new_ur_list = []
     for ur in ur_list:
         if ur.is_schedulable():

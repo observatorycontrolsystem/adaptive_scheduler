@@ -22,7 +22,6 @@ from adaptive_scheduler.request_filters import ( filter_on_expiry,
 def get_windows_from_request(request, resource_name):
     return request.windows.windows_for_resource[resource_name]
 
-
 def fake_get_duration(self):
     return timedelta(hours=1)
 
@@ -35,7 +34,6 @@ class TestExpiryFilter(object):
         self.future_expiry2  = datetime(2013, 7, 28)
 
 
-
     def create_user_request(self, expiry_dt):
         ur1 = UserRequest(
                            operator = 'single',
@@ -45,7 +43,6 @@ class TestExpiryFilter(object):
                            tracking_number = None,
                            group_id = None
                          )
-
         return ur1
 
 
@@ -68,7 +65,6 @@ class TestExpiryFilter(object):
                   ]
 
         received_ur_list = filter_on_expiry(ur_list)
-
         assert_equal(received_ur_list, ur_list)
 
 
@@ -84,7 +80,6 @@ class TestExpiryFilter(object):
         del(expected_ur_list)[0]
 
         received_ur_list = filter_on_expiry(ur_list)
-
         assert_equal(received_ur_list, expected_ur_list)
 
 
@@ -100,7 +95,6 @@ class TestWindowFilters(object):
         t1 = Telescope(
                         name = resource_name
                       )
-
 
         req_list = []
         for req_windows in window_dicts:

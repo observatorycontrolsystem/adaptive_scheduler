@@ -296,7 +296,6 @@ class CompoundRequest(DefaultMixin):
         return not is_ok_to_return[self.operator][0]
 
 
-
     # Define properties
     duration = property(get_duration)
 
