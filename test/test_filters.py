@@ -279,7 +279,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='and')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 1)
 
 
@@ -288,7 +287,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='and')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 0)
 
 
@@ -318,7 +316,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='and')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 0)
 
 
@@ -335,7 +332,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 1)
 
 
@@ -348,7 +344,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 1)
 
 
@@ -365,7 +360,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 1)
 
 
@@ -374,7 +368,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 0)
 
 
@@ -383,7 +376,6 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='single')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 0)
 
 
@@ -400,17 +392,19 @@ class TestWindowFilters(object):
         ur1, window_list = self.create_user_request(windows, operator='single')
 
         received_ur_list = filter_on_type([ur1])
-
         assert_equal(len(received_ur_list), 1)
 
 
-    def fest_run_all_filters(self):
+    @patch("adaptive_scheduler.request_filters.datetime")
+    def test_run_all_filters(self, mock_datetime):
+        mock_datetime.utcnow.return_value = self.current_time
         window_dict1 = {
                          'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'end'   : "2013-03-01 01:30:00",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
+        ur1.expires = datetime(2013, 12, 1)
         received_ur_list = run_all_filters([ur1])
 
         assert_equal(len(received_ur_list), 1)
