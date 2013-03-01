@@ -91,15 +91,31 @@ def filter_on_duration(ur_list):
 def for_all_ur_windows(ur_list, filter_test):
     for ur in ur_list:
         for r in ur.requests:
-            for resource_name, windows in r.windows.windows_for_resource.iteritems():
-                r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, ur)]
+            ur.filter_requests(filter_test)
+
 
     return ur_list
 
 
 
 def filter_on_type(ur_list):
-    #TODO: compound filter
-    pass
+    new_ur_list = []
+    for ur in ur_list:
+        ok_to_add = True
+        if ur.operator == 'and':
+            for r in ur.requests:
+                print "Doing an r"
+                all_windows = []
+                for resource_name, windows in r.windows.windows_for_resource.iteritems():
+                    print "Windows:", windows
+                    all_windows += windows
+
+                if len(all_windows) == 0:
+                    ok_to_add = False
+
+        if ok_to_add:
+            new_ur_list.append(ur)
+
+    return new_ur_list
 
 

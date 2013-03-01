@@ -12,7 +12,8 @@ from adaptive_scheduler.request_filters import ( filter_on_expiry,
                                                  filter_out_future_windows,
                                                  truncate_lower_crossing_windows,
                                                  truncate_upper_crossing_windows,
-                                                 filter_on_duration
+                                                 filter_on_duration,
+                                                 filter_on_type
                                                )
 
 
@@ -98,11 +99,11 @@ class TestWindowFilters(object):
                         name = resource_name
                       )
 
-        window_list = []
-        windows = Windows()
 
         req_list = []
         for req_windows in window_dicts:
+            window_list = []
+            windows = Windows()
             for window_dict in req_windows:
                 w = Window(
                             window_dict = window_dict,
@@ -110,7 +111,6 @@ class TestWindowFilters(object):
                           )
                 windows.append(w)
                 window_list.append(w)
-
 
             r  = Request(
                           target         = None,
@@ -283,9 +283,25 @@ class TestWindowFilters(object):
                          'start' : "2013-03-01 00:00:00",
                          'end'   : "2013-03-01 00:30:00",
                        }
-        windows = [ (window_dict1, window_dict2) ]
-        ur1, window_list = self.create_user_request(windows, resource_name)
+        windows = [ (window_dict1,), (window_dict2,) ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='and')
 
-        received_ur_list = filter_on_duration([ur1])
+        received_ur_list = filter_on_type([ur1])
 
         assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_AND_one_request_has_no_windows(self):
+        resource_name = "Martin"
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1,), () ]
+        ur1, window_list = self.create_user_request(windows, resource_name,
+                                                    operator='and')
+
+        received_ur_list = filter_on_type([ur1])
+
+        assert_equal(len(received_ur_list), 0)
