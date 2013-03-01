@@ -5,7 +5,7 @@ request_filters.py - Filtering of Requests for schedulability.
 
 A) Window filters
 -----------------
-     Semester start      Now               Semester end
+     Semester start      Now               Semester end (or expiry)
            |    _____     |                      |
 1)         |   |     |    |                      |
            |   |_____|    |                      |
@@ -52,7 +52,6 @@ February 2013
 '''
 
 from datetime import datetime
-from adaptive_scheduler import semester_service
 
 
 def run_all_filters(ur_list):
@@ -101,7 +100,7 @@ def truncate_upper_crossing_windows(ur_list):
        portion of the window.'''
 
     def truncate_upper_crossing(w, ur):
-        horizon = _scheduling_horizon(ur)
+        horizon = ur.scheduling_horizon()
         if w.start < horizon < w.end:
             w.end = horizon
 
@@ -111,16 +110,10 @@ def truncate_upper_crossing_windows(ur_list):
 
     return _for_all_ur_windows(ur_list, filter_test)
 
-def _scheduling_horizon(ur):
-    sem_end = semester_service.get_semester_end()
-    if ur.expires and ur.expires < sem_end:
-        return ur.expires
-    return sem_end
-
 def filter_out_future_windows(ur_list):
     '''Case 5: The window lies beyond the scheduling horizon.'''
-    filter_test = lambda w, ur: w.start < _scheduling_horizon(ur) and \
-                                w.end < _scheduling_horizon(ur)
+    filter_test = lambda w, ur: w.start < ur.scheduling_horizon() and \
+                                w.end < ur.scheduling_horizon()
 
     return _for_all_ur_windows(ur_list, filter_test)
 

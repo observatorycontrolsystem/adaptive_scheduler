@@ -159,7 +159,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-    @patch("adaptive_scheduler.request_filters.semester_service")
+    @patch("adaptive_scheduler.model2.semester_service")
     def test_filters_out_only_future_windows(self, mock_semester_service):
         mock_semester_service.get_semester_end.return_value = self.semester_end
 
@@ -206,7 +206,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].start, self.current_time)
 
 
-    @patch("adaptive_scheduler.request_filters.semester_service")
+    @patch("adaptive_scheduler.model2.semester_service")
     def test_truncates_upper_crossing_windows(self, mock_semester_service):
         mock_semester_service.get_semester_end.return_value = self.semester_end
 

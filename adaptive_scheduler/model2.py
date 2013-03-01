@@ -16,6 +16,7 @@ from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.exceptions import InvalidRequestError
+from adaptive_scheduler import semester_service
 
 import ast
 
@@ -324,6 +325,12 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
     # Define properties
     priority = property(get_priority)
+
+    def scheduling_horizon(self):
+        sem_end = semester_service.get_semester_end()
+        if self.expires and self.expires < sem_end:
+            return self.expires
+        return sem_end
 
 
 
