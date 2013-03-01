@@ -103,8 +103,8 @@ class Window(DefaultMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
     def __init__(self, window_dict, resource):
         try:
-            self.start    = iso_string_to_datetime(window_dict['start'])
-            self.end      = iso_string_to_datetime(window_dict['end'])
+            self.start  = iso_string_to_datetime(window_dict['start'])
+            self.end    = iso_string_to_datetime(window_dict['end'])
         except TypeError:
             self.start = window_dict['start']
             self.end   = window_dict['end']
@@ -131,6 +131,17 @@ class Windows(DefaultMixin):
 
     def at(self, resource_name):
         return self.windows_for_resource[resource_name]
+
+
+    def is_empty(self):
+        is_empty = True
+        for resource_name, windows in self.windows_for_resource.iteritems():
+            if windows:
+                is_empty = False
+                break
+
+        return is_empty
+
 
 
 
@@ -240,6 +251,12 @@ class CompoundRequest(DefaultMixin):
             duration += req.duration()
 
         return duration
+
+
+    def filter_requests(self, filter_test):
+        for r in self.requests:
+            for resource_name, windows in r.windows.windows_for_resource.iteritems():
+                r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
 
 
     # Define properties
