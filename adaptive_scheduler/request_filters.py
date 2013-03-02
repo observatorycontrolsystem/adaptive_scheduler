@@ -54,6 +54,25 @@ February 2013
 from datetime import datetime
 
 
+def filter_and_set_unschedulable_urs(client, ur_list):
+    initial_urs     = set(ur_list)
+    schedulable_urs = set(run_all_filters(ur_list))
+
+    unschedulable_urs = schedulable_urs - initial_urs
+
+    for ur in unschedulable_urs:
+        for r in ur.requests:
+            # Only blacklist child Requests with no windows
+            # (the UR could be unschedulable due to type, but that is a parent
+            # issue, not the child's)
+            # TODO: Set the state of the parent (not implemented at Req DB yet)
+            if not r.has_windows():
+                # TODO: Contemplate errors
+                client.set_request_state('UNSCHEDULABLE', r.request_number)
+
+    return schedulable_urs
+
+
 def run_all_filters(ur_list):
     '''Execute all the filters, in the correct order. Windows may be discarded or
        truncated during this process. Unschedulable User Requests are discarded.'''

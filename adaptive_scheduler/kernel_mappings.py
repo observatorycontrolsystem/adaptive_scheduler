@@ -32,9 +32,12 @@ from adaptive_scheduler.kernel.intervals      import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
-from adaptive_scheduler.utils    import (datetime_to_epoch, normalise,
-                                         normalised_epoch_to_datetime)
+from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
+                                          normalised_epoch_to_datetime,
+                                          epoch_to_datetime )
 from adaptive_scheduler.printing import print_req_summary
+from adaptive_scheduler.model2   import Window, Windows
+from adaptive_scheduler.request_filters import filter_on_duration, filter_on_type
 
 
 
@@ -173,6 +176,49 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     compound_res = CompoundReservation(reservations, compound_request.operator)
 
     return compound_res
+
+
+def prefilter_for_kernel(crs, visibility_from):
+    crs = filter_on_visibility(crs, visibility_from)
+    crs = filter_on_duration(crs)
+    crs = filter_on_type(crs)
+
+    return crs
+
+
+def filter_on_visibility(crs, visibility_from):
+    for cr in crs:
+        dark_ups = compute_intersections(cr, visibility_from)
+        for req, intersections_for_resource in dark_ups:
+            r_windows   = intervals_to_windows(req, intersections_for_resource)
+            req.windows = r_windows
+
+    return crs
+
+
+def compute_intersections(c_req, visibility_from):
+    # Find the dark/up intervals for each Request in this CompoundRequest
+    dark_ups = []
+    for req in c_req.requests:
+        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from)
+        dark_ups.append((req, intersections_for_resource))
+
+    return dark_ups
+
+
+def intervals_to_windows(req, intersections_for_resource):
+    windows = Windows()
+    for resource_name, intervals in intersections_for_resource.iteritems():
+        windows_for_resource = req.windows.windows_for_resource[resource_name]
+        resource = windows_for_resource[0].resource
+
+        while intervals.timepoints:
+            tp1 = intervals.timepoints.pop(0)
+            tp2 = intervals.timepoints.pop(0)
+            w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
+            windows.append(w)
+
+    return windows
 
 
 def make_compound_reservations(compound_requests, visibility_from, semester_start):

@@ -13,7 +13,7 @@ from __future__ import division
 
 from adaptive_scheduler.utils import EqualityMixin
 from adaptive_scheduler.exceptions import InvalidRequestError
-from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
 from rise_set.sky_coordinates import RightAscension, Declination
 

@@ -25,6 +25,7 @@ from adaptive_scheduler.monitor      import create_monitor
 from adaptive_scheduler.monitor      import create_database_syncronizer
 from adaptive_scheduler.monitor      import DBSyncronizeEvent, RequestUpdateEvent
 from adaptive_scheduler.orchestrator import main as schedule
+from reqdb.client                    import SchedulerClient
 
 
 # Define signal handlers
@@ -43,7 +44,7 @@ signal.signal(signal.SIGTERM, kill_handler)
 logger = create_logger("controller")
 
 
-def run_controller(request_polling, syncronization_interval):
+def run_controller(request_polling, syncronization_interval, request_db_url):
     '''Execute the main scheduler thread.'''
 
     logger.info("Starting controller")
@@ -52,15 +53,16 @@ def run_controller(request_polling, syncronization_interval):
     queue = Queue()
 
     # Periodically monitor the Request DB for new Requests
-    monitor = create_monitor(request_polling, queue)
+    monitor = create_monitor(request_polling, queue, request_db_url)
     monitor.start()
 
     # Periodically update the Request DB with POND block status
-    syncronizer = create_database_syncronizer(syncronization_interval, queue)
-    syncronizer.start()
+#    syncronizer = create_database_syncronizer(syncronization_interval, queue)
+#    syncronizer.start()
 
     # Process events from the other threads as they arrive
-    event_handler = EventHandlerThread(queue)
+    sc = SchedulerClient(request_db_url)
+    event_handler = EventHandlerThread(queue, sc)
     event_handler.start()
 
     # Put the main thread to sleep unless interrupted by a signal
@@ -72,10 +74,10 @@ def run_controller(request_polling, syncronization_interval):
 class EventHandlerThread(threading.Thread):
     '''Thread to process events placed on the Queue from other threads.'''
 
-    def __init__(self, queue, name="Event Handler Thread"):
+    def __init__(self, queue, sched_client, name="Event Handler Thread"):
         super(EventHandlerThread, self).__init__(name=name)
         self.queue         = queue
-        self.event_handler = EventHandler()
+        self.event_handler = EventHandler(sched_client)
 
         # Thread configuration
         self.event  = threading.Event()
@@ -93,11 +95,12 @@ class EventHandlerThread(threading.Thread):
 class EventHandler(object):
     '''Resolves and executes the handler method for each type of Event.'''
 
-    def __init__(self):
+    def __init__(self, sched_client):
         self.handler_map = {
                              DBSyncronizeEvent  : self._handle_syncronize_db,
                              RequestUpdateEvent : self._handle_request_update,
                            }
+        self.sched_client = sched_client
 
 
     def handle(self, event):
@@ -113,7 +116,7 @@ class EventHandler(object):
         logger.info("Syncronizing databases")
 
     def _handle_request_update(self, event):
-        schedule(event.requests)
+        schedule(event.requests, self.sched_client)
 
     def _handle_unknown_event(self, event):
         logger.warning("Received an unknown event of type %s", event.__class__)

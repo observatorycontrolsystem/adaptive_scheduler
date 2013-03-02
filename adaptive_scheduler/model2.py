@@ -252,7 +252,7 @@ class CompoundRequest(DefaultMixin):
 
         duration = 0
         for req in self.requests:
-            duration += req.duration()
+            duration += req.duration
 
         return duration
 

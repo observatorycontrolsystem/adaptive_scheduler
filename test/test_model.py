@@ -7,7 +7,8 @@ from datetime import datetime
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Target, Telescope, Proposal, Molecule,
-                                             Request, CompoundRequest,
+                                             Request, CompoundRequest, Windows,
+                                             Window,
                                              _LocationExpander )
 from adaptive_scheduler.exceptions import InvalidRequestError
 
@@ -242,3 +243,56 @@ class TestLocationExpander(object):
                    ]
 
         assert_equal(received, expected)
+
+
+class TestWindows(object):
+
+    def setup(self):
+        self.t1 = Telescope(
+                             name = "Baltic"
+                           )
+        self.t2 = Telescope(
+                             name = "Sea"
+                           )
+
+
+    def test_is_empty_has_windows(self):
+        window_dict = {
+                        'start' : "2013-03-01 00:00:00",
+                        'end'   : "2013-03-01 00:30:00",
+                      }
+        w = Window(
+                    window_dict = window_dict,
+                    resource    = self.t1
+                  )
+        windows = Windows()
+        windows.append(w)
+
+        assert_equal(windows.is_empty(), False)
+
+
+    def test_is_empty_has_no_windows(self):
+        windows = Windows()
+        assert_equal(windows.is_empty(), True)
+
+
+    def test_is_empty_has_windows_empty_on_one_resource(self):
+        window_dict = {
+                        'start' : "2013-03-01 00:00:00",
+                        'end'   : "2013-03-01 00:30:00",
+                      }
+        w = Window(
+                    window_dict = window_dict,
+                    resource    = self.t1
+                  )
+        w = Window(
+                    window_dict = {},
+                    resource    = self.t2
+                  )
+
+        windows = Windows()
+        windows.append(w)
+
+        assert_equal(windows.is_empty(), '[ppp')
+
+

@@ -21,14 +21,15 @@ from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
 from adaptive_scheduler.model2          import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
-                                                 make_compound_reservations )
+                                                 make_compound_reservations,
+                                                 prefilter_for_kernel        )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import print_schedule, print_compound_reservations
 from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
+from adaptive_scheduler.semester_service import get_semester_block
 
-#from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as FullScheduler
-#from adaptive_scheduler.kernel.fullscheduler_v2 import FullScheduler_v2 as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
+from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -59,9 +60,11 @@ def get_requests_from_json(req_filename, telescope_class):
         return json.loads(req_data)
 
 def get_requests_from_db(url, telescope_class):
+    sem_start, sem_end = get_semester_block()
+    format = '%Y-%m-%d %H:%M:%S'
 
     search = SearchQuery()
-    search.set_location(telescope_class=telescope_class)
+    search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
     sc = SchedulerClient(url)
     json_ur_list = sc.retrieve(search, debug=True)
     ur_list = json.loads(json_ur_list)
@@ -109,10 +112,8 @@ def collapse_requests(requests):
 
 # TODO: Add configuration options, refactor into smaller chunks
 # TODO: Remove hard-coded options
-def main(requests):
-    # TODO: Replace with config file (from laptop)
-    semester_start = datetime(2013, 3, 28, 0, 0, 0)
-    semester_end   = datetime(2013, 4, 28, 0, 0, 0)
+def main(requests, sched_client):
+    semester_start, semester_end = get_semester_block()
 
     flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
     hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
@@ -145,6 +146,8 @@ def main(requests):
         user_reqs.append(user_req)
         i += 1
 
+#    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs)
+
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
     for t, v in tels.iteritems():
@@ -154,12 +157,15 @@ def main(requests):
     # Construct visibility objects for each telescope
     visibility_from = construct_visibilities(tels, semester_start, semester_end)
 
-    # Translate when telescopes are available into kernel speak
-    resource_windows = construct_resource_windows(visibility_from, semester_start)
+    # Do another check on duration and operator soundness, after dark/rise checking
+    user_reqs = prefilter_for_kernel(user_reqs, visibility_from)
 
     # Convert CompoundRequests -> CompoundReservations
     to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                              semester_start)
+
+    # Translate when telescopes are available into kernel speak
+    resource_windows = construct_resource_windows(visibility_from, semester_start)
 
     # Dump the variables to be scheduled, for offline analysis if necessary
     contractual_obligations = []
@@ -167,6 +173,13 @@ def main(requests):
                          contractual_obligations)
 
     print_compound_reservations(to_schedule)
+
+
+    if not to_schedule:
+        print "Nothing to schedule! Skipping kernel call..."
+        #return
+
+    # Filter a second time to remove (now) unschedulable Requests
 
     # Instantiate and run the scheduler
     # TODO: Set alignment to start of first night on each resource

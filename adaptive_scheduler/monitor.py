@@ -18,16 +18,16 @@ January 2013
 import log
 import threading
 
-from adaptive_scheduler.orchestrator import get_requests_from_json as get_requests
+from adaptive_scheduler.orchestrator import get_requests_from_db as get_requests
 
 # Create module log 
 logger = log.create_logger("monitor")
 
 
 # Public factory methods
-def create_monitor(period, queue):
+def create_monitor(period, queue, request_db_url):
     '''Factory for creating a Request DB monitoring thread.'''
-    return _MonitoringThread(period, queue)
+    return _MonitoringThread(period, queue, request_db_url)
 
 def create_database_syncronizer(period, queue):
     '''Factory for creating a Request status synchronisation thread.'''
@@ -83,15 +83,17 @@ class _DBSyncronizeThread(_PollingThread):
 class _MonitoringThread(_PollingThread):
     '''Poll the Request DB for a change triggering a schedule recompute.'''
 
-    def __init__(self, period, queue, name="Monitoring Thread"):
+    def __init__(self, period, queue, request_db_url, name="Monitoring Thread"):
         super(_MonitoringThread, self).__init__(period)
         self.queue = queue
+        self.request_db_url = request_db_url
 
     def action(self):
         logger.info("Getting latest requests")
 
         # Do periodic stuff here
-        requests = get_requests('requests.json','dummy arg')
+#        requests = get_requests('requests.json','dummy arg')
+        requests = get_requests(self.request_db_url, 'dummy arg')
 
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))

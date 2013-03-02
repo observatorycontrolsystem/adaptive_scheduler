@@ -29,5 +29,8 @@ if __name__ == '__main__':
     options, args = parser.parse_args()
 
     # Run controller
-    controller.run_controller(options.request_polling, options.syncronization_interval)
+    request_db_url = 'http://zwalker-linux:8000/'
+    controller.run_controller(options.request_polling,
+                              options.syncronization_interval,
+                              request_db_url)
 
