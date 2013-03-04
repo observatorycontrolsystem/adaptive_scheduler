@@ -50,5 +50,6 @@ def get_semester_block(dt=None):
 
 def get_semester_code(dt=None):
     ''' Return the semester code e.g. "2013A" or "2013B" '''
+    dt = dt or datetime.utcnow()
     code = _timestamp_is_semester_A(dt) and 'A' or 'B'
     return '%d%s' % (get_semester_start(dt).year, code)
