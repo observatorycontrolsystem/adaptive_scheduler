@@ -51,7 +51,7 @@ Authors: Eric Saunders, Martin Norbury
 February 2013
 '''
 
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 def filter_and_set_unschedulable_urs(client, ur_list):
@@ -68,6 +68,10 @@ def filter_and_set_unschedulable_urs(client, ur_list):
             # TODO: Set the state of the parent (not implemented at Req DB yet)
             if not r.has_windows():
                 # TODO: Contemplate errors
+                msg =  "Request %s (UR %s) is UNSCHEDULABLE;" % (ur.tracking_number,
+                                                                 r.request_number)
+                msg += "updating Request DB"
+                print msg
                 client.set_request_state('UNSCHEDULABLE', r.request_number)
 
     return schedulable_urs
@@ -139,7 +143,16 @@ def filter_out_future_windows(ur_list):
 
 def filter_on_duration(ur_list):
     '''Case 6: Return only windows which are larger than the UR's duration.'''
-    filter_test = lambda w, ur: w.end - w.start > ur.duration
+    def filter_on_duration(w, ur):
+        # Transparently handle either float (in seconds) or datetime durations
+        try:
+            duration = timedelta(seconds=ur.duration)
+        except TypeError as e:
+            duration = ur.duration
+
+        return w.end - w.start > duration
+
+    filter_test = filter_on_duration
 
     return _for_all_ur_windows(ur_list, filter_test)
 

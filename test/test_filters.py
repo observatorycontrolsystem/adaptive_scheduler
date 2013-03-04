@@ -24,8 +24,12 @@ from adaptive_scheduler.request_filters import (
 def get_windows_from_request(request, resource_name):
     return request.windows.windows_for_resource[resource_name]
 
-def fake_get_duration(self):
+def fake_get_duration_as_timedelta(self):
     return timedelta(hours=1)
+
+def fake_get_duration_as_float(self):
+    # One hour, in seconds
+    return 3600.0
 
 class TestExpiryFilter(object):
 
@@ -226,7 +230,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].end, self.semester_end)
 
 
-    def test_filter_on_duration_window_larger(self):
+    def test_filter_on_duration_window_larger_tdelta(self):
 
         # Window is larger than one hour
         window_dict1 = {
@@ -236,7 +240,7 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration)
+        UserRequest.duration = property(fake_get_duration_as_timedelta)
 
         received_ur_list = filter_on_duration([ur1])
 
@@ -246,7 +250,27 @@ class TestWindowFilters(object):
         assert_equal(received_windows, window_list)
 
 
-    def test_filter_on_duration_window_smaller(self):
+    def test_filter_on_duration_window_larger_float(self):
+
+        # Window is larger than one hour
+        window_dict1 = {
+                         'start' : "2013-09-01 00:00:00",
+                         'end'   : "2013-11-01 01:00:00",
+                       }
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows)
+
+        UserRequest.duration = property(fake_get_duration_as_float)
+
+        received_ur_list = filter_on_duration([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, self.resource_name)
+
+        assert_equal(received_windows, window_list)
+
+
+    def test_filter_on_duration_window_smaller_tdelta(self):
 
         # Window is smaller than one hour
         window_dict1 = {
@@ -256,7 +280,27 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration)
+        UserRequest.duration = property(fake_get_duration_as_timedelta)
+
+        received_ur_list = filter_on_duration([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, self.resource_name)
+
+        assert_equal(received_windows, [])
+
+
+    def test_filter_on_duration_window_smaller_float(self):
+
+        # Window is smaller than one hour
+        window_dict1 = {
+                         'start' : "2013-09-01 00:00:00",
+                         'end'   : "2013-09-01 00:30:00",
+                       }
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows)
+
+        UserRequest.duration = property(fake_get_duration_as_float)
 
         received_ur_list = filter_on_duration([ur1])
 
