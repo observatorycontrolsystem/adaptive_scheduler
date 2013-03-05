@@ -54,12 +54,29 @@ February 2013
 from datetime import datetime, timedelta
 
 
+def log_urs(fn):
+    def wrap(ur_list):
+        in_size  = len(ur_list)
+        ur_list  = fn(ur_list)
+        out_size = len(ur_list)
+
+        print "%s: URs in (%d); URs out (%d)" % (fn.__name__, in_size, out_size)
+
+        return ur_list
+
+    return wrap
+
+
+
 def filter_and_set_unschedulable_urs(client, ur_list):
     initial_urs     = set(ur_list)
     schedulable_urs = set(run_all_filters(ur_list))
 
-    unschedulable_urs = schedulable_urs - initial_urs
+    unschedulable_urs = initial_urs - schedulable_urs
 
+    print "Found %d unschedulable URs after filtering" % len(unschedulable_urs)
+
+    unschedulable_r_numbers = []
     for ur in unschedulable_urs:
         for r in ur.requests:
             # Only blacklist child Requests with no windows
@@ -70,13 +87,18 @@ def filter_and_set_unschedulable_urs(client, ur_list):
                 # TODO: Contemplate errors
                 msg =  "Request %s (UR %s) is UNSCHEDULABLE;" % (ur.tracking_number,
                                                                  r.request_number)
-                msg += "updating Request DB"
+                msg += " updating Request DB"
                 print msg
-                client.set_request_state('UNSCHEDULABLE', r.request_number)
+                unschedulable_r_numbers.append(r.request_number)
+
+
+    # Update the state of all the unschedulable Requests in the DB in one go
+    client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
 
     return schedulable_urs
 
 
+@log_urs
 def run_all_filters(ur_list):
     '''Execute all the filters, in the correct order. Windows may be discarded or
        truncated during this process. Unschedulable User Requests are discarded.'''
@@ -93,6 +115,7 @@ def run_all_filters(ur_list):
 
 # A) Window Filters
 #------------------
+@log_urs
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
     now = datetime.utcnow()
@@ -101,6 +124,7 @@ def filter_out_past_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
+@log_urs
 def truncate_lower_crossing_windows(ur_list):
     '''Case 2: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
@@ -117,6 +141,7 @@ def truncate_lower_crossing_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
+@log_urs
 def truncate_upper_crossing_windows(ur_list):
     '''Case 4: The window starts at a schedulable time, but finishes beyond the
        scheduling horizon (semester end or expiry date). Remove the unschedulable
@@ -133,6 +158,8 @@ def truncate_upper_crossing_windows(ur_list):
 
     return _for_all_ur_windows(ur_list, filter_test)
 
+
+@log_urs
 def filter_out_future_windows(ur_list):
     '''Case 5: The window lies beyond the scheduling horizon.'''
     filter_test = lambda w, ur: w.start < ur.scheduling_horizon() and \
@@ -141,6 +168,7 @@ def filter_out_future_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
+@log_urs
 def filter_on_duration(ur_list):
     '''Case 6: Return only windows which are larger than the UR's duration.'''
     def filter_on_duration(w, ur):
@@ -169,6 +197,7 @@ def _for_all_ur_windows(ur_list, filter_test):
 
 # User Request Filters
 #---------------------
+@log_urs
 def filter_on_expiry(ur_list):
     '''Case 7: Return only URs which haven't expired.'''
     now = datetime.utcnow()
@@ -176,6 +205,7 @@ def filter_on_expiry(ur_list):
     return [ ur for ur in ur_list if ur.expires > now ]
 
 
+@log_urs
 def filter_on_type(ur_list):
     '''Case 8: Only return URs which can still be completed (have enough child
        Requests with Windows remaining).'''
