@@ -9,6 +9,7 @@ December 2011
 '''
 
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
+from datetime import timedelta
 
 INDENT = "    "
 
@@ -20,14 +21,18 @@ def print_reservation(res):
     return
 
 
+def pluralise(n, string):
+    if n != 1:
+        string += 's'
+
+    return string
+
 def print_compound_reservation(compound_res):
     print "CompoundReservation (%s):" % ( compound_res.type )
 
-    plural = ''
-    if compound_res.size > 1:
-        plural = 's'
+    res_string = pluralise(compound_res.size, 'Reservation')
 
-    print INDENT + "made of %d Reservation%s:" % (compound_res.size, plural)
+    print INDENT + "made of %d %s:" % (compound_res.size, res_string)
     for res in compound_res.reservation_list:
         print_reservation(res)
 
@@ -44,18 +49,37 @@ def print_request(req, resource_name):
 
 
 
-def print_req_summary(req, resource_name, rs_dark_intervals, rs_up_intervals, intersection):
+def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
+                      rs_up_intervals, intersection):
     print_request(req, resource_name)
+    # Pull out the timepoint list for printing
+    u_int = list(user_intervals.timepoints)
 
-    for interval in rs_dark_intervals:
-        print "Darkness from %s to %s" % (interval[0], interval[1])
-    for interval in rs_up_intervals:
-        print "Target above horizon from %s to %s" % (interval[0], interval[1])
+    if u_int:
+        earliest_tp = latest_tp = u_int[0]
 
-    print "Calculated intersections are:"
+    while u_int:
+        start = u_int.pop(0)
+        end   = u_int.pop(0)
+        print "User window from          %s to %s" % (start.time, end.time)
 
-    for i in intersection.timepoints:
-        print "    %s (%s)" % (i.time, i.type)
+        for tp in start, end:
+            if tp.time < earliest_tp.time: earliest_tp = tp
+            if tp.time > latest_tp.time: latest_tp = tp
+
+    for dark_int, up_int in zip(rs_dark_intervals, rs_up_intervals):
+        if dark_int[0] < latest_tp.time+timedelta(days=1) and dark_int[1] > earliest_tp.time - timedelta(days=1):
+            print "Darkness from             %s to %s" % (dark_int[0], dark_int[1])
+        if up_int[0] < latest_tp.time and up_int[1] > earliest_tp.time:
+            print "Target above horizon from %s to %s" % (up_int[0], up_int[1])
+
+    print "Request %s" % req.request_number
+    print "    On %s, dark and rise_set intersections are:" % resource_name
+    if not intersection.timepoints:
+        print "    <none>"
+    else:
+        for i in intersection.timepoints:
+            print "    %s (%s)" % (i.time, i.type)
 
     return
 

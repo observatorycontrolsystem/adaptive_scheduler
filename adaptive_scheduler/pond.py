@@ -30,6 +30,7 @@ from datetime import datetime
 from adaptive_scheduler.model2         import Proposal, Target
 from adaptive_scheduler.utils          import get_reservation_datetimes
 from adaptive_scheduler.camera_mapping import create_camera_mapping
+from adaptive_scheduler.printing       import pluralise
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.molecule                import Expose
@@ -216,6 +217,9 @@ class Block(object):
             self.create_pond_block()
 
         self.pond_block.save()
+        msg = "Sent Request %s (part of UR %s) to POND" % (self.request_number,
+                                                           self.tracking_number)
+        print msg
 
         return
 
@@ -255,9 +259,14 @@ def make_simple_pond_schedule(schedule, semester_start):
 def send_schedule_to_pond(schedule, semester_start):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
+    n_submitted_total = 0
     for resource_name in schedule:
-        for res in schedule[resource_name]:
+        n_submitted = len(schedule[resource_name])
+        print "Submitting %d %s to %s" % (n_submitted,
+                                          pluralise(n_submitted, 'block'),
+                                          resource_name)
 
+        for res in schedule[resource_name]:
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
                            location        = res.scheduled_resource,
@@ -276,7 +285,9 @@ def send_schedule_to_pond(schedule, semester_start):
 
             pond_block = block.send_to_pond()
 
-    return
+        n_submitted_total += n_submitted
+
+    return n_submitted_total
 
 
 def get_deletable_blocks(start, end, site, obs, tel):
@@ -305,7 +316,7 @@ def cancel_schedule(start, end, site, obs, tel):
     for block in to_delete:
         block.cancel(reason="Superceded by new schedule")
 
-    return
+    return len(to_delete)
 
 
 class IncompleteBlockError(Exception):

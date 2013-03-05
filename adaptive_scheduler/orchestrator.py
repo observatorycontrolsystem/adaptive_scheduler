@@ -24,7 +24,8 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  make_compound_reservations,
                                                  prefilter_for_kernel        )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
-from adaptive_scheduler.printing import print_schedule, print_compound_reservations
+from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations,
+                                          pluralise )
 from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
 from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
 
@@ -130,7 +131,8 @@ def main(requests, sched_client):
                                                      semester_start.strftime(date_fmt),
                                                      semester_end.strftime(date_fmt))
 
-    print "Received %d User Requests from Request DB" % len(requests)
+    ur_string = pluralise(len(requests), 'User Request')
+    print "Received %d %s from Request DB" % ( len(requests), ur_string)
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
@@ -210,19 +212,23 @@ def main(requests, sched_client):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    # TODO: HERE - Iterate through all sites
+    n_deleted_total = 0
     for full_tel_name in tels:
         tel, obs, site = full_tel_name.split('.')
         print "Cancelling schedule at %s, from %s to %s" % ( full_tel_name,
                                                              semester_start,
                                                              semester_end   )
 
-        cancel_schedule(semester_start, semester_end, site, obs, tel)
-
+        n_deleted = cancel_schedule(semester_start, semester_end, site, obs, tel)
+        print "Cancelled %d %s at %s\n" % (n_deleted, pluralise(n_deleted, 'block'),
+                                           full_tel_name)
+        n_deleted_total += n_deleted
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-    send_schedule_to_pond(schedule, semester_start)
+    n_submitted = send_schedule_to_pond(schedule, semester_start)
 
-    print "New schedule submitted to POND"
+    print "In total, deleted %d previously scheduled blocks" % n_deleted_total
+    print "Submitted %d new blocks to the POND" % n_submitted
+    print "Scheduling complete."
 
     #print "cr.reservation_list:", cr.reservation_list

@@ -132,7 +132,8 @@ def make_dark_up_kernel_intervals(req, visibility_from):
         intersections_for_resource[resource_name] = intersection
 
         # Print some summary info
-        print_req_summary(req, resource_name, rs_dark_intervals, rs_up_intervals, intersection)
+        print "Round the loop..."
+        print_req_summary(req, resource_name, user_intervals, rs_dark_intervals, rs_up_intervals, intersection)
 
 
     return intersections_for_resource
