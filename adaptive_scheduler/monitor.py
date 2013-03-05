@@ -95,6 +95,7 @@ class _MonitoringThread(_PollingThread):
 #        requests = get_requests('requests.json','dummy arg')
         requests = get_requests(self.request_db_url, 'dummy arg')
 
+        logger.info("Received %d User Requests from Request DB" % len(requests))
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))
 

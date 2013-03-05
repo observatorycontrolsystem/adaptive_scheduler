@@ -26,7 +26,7 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import print_schedule, print_compound_reservations
 from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
-from adaptive_scheduler.semester_service import get_semester_block
+from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
@@ -65,18 +65,28 @@ def get_requests_from_db(url, telescope_class):
 
     search = SearchQuery()
     search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
-    sc = SchedulerClient(url)
+
+    print "Asking DB for User Requests between %s and %s" % (sem_start, sem_end)
+    sc           = SchedulerClient(url)
     json_ur_list = sc.retrieve(search, debug=True)
-    ur_list = json.loads(json_ur_list)
+    ur_list      = json.loads(json_ur_list)
+
+    write_requests_to_file_as_json(ur_list, 'retrieved_urs.dat')
 
     return ur_list
 
 
-def write_requests_to_file(requests, filename):
+def write_requests_to_file_as_json(ur_list, filename):
+    out_fh = open(filename, 'w')
+    json.dump(ur_list, out_fh)
+    out_fh.close()
 
+
+def write_requests_to_file(requests, filename):
     out_fh = open(filename, 'w')
     out_fh.write(str(requests))
     out_fh.close()
+
 
 def collapse_requests(requests):
     collapsed_reqs = []
@@ -114,20 +124,20 @@ def collapse_requests(requests):
 # TODO: Remove hard-coded options
 def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
+    date_fmt = '%Y-%m-%d'
 
-    flat_url         = 'http://mbecker-linux2.lco.gtn:8001/get/requests/'
-    hierarchical_url = 'http://mbecker-linux2.lco.gtn:8001/get/'
+    print "Scheduling for semester %s (%s to %s)" % (get_semester_code(),
+                                                     semester_start.strftime(date_fmt),
+                                                     semester_end.strftime(date_fmt))
 
-    url  = hierarchical_url
-
+    print "Received %d User Requests from Request DB" % len(requests)
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
 
     # Configuration files
-    tel_file = 'telescopes.dat'
+    tel_file            = 'telescopes.dat'
     scheduler_dump_file = 'to_schedule.pickle'
-
 
     mb = ModelBuilder(tel_file)
 
@@ -146,13 +156,15 @@ def main(requests, sched_client):
         user_reqs.append(user_req)
         i += 1
 
-#    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs)
-
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
-    for t, v in tels.iteritems():
-        print t, v
+#    print "Available telescopes:"
+#    for t, v in tels.iteritems():
+#        print t, v
 
+
+    # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
+    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs)
 
     # Construct visibility objects for each telescope
     visibility_from = construct_visibilities(tels, semester_start, semester_end)
@@ -177,7 +189,7 @@ def main(requests, sched_client):
 
     if not to_schedule:
         print "Nothing to schedule! Skipping kernel call..."
-        #return
+        return
 
     # Filter a second time to remove (now) unschedulable Requests
 
