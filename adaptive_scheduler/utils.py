@@ -9,6 +9,7 @@ March 2012
 
 import calendar
 from datetime import datetime
+import time
 
 
 class ReprMixin(object):
@@ -97,3 +98,18 @@ def get_reservation_datetimes(reservation, semester_start):
     dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
 
     return dt_start, dt_end
+
+
+
+def timeit(method):
+    '''Decorator for timing methods.'''
+
+    def timed(*args, **kwargs):
+        start  = time.time()
+        result = method(*args, **kwargs)
+        end    = time.time()
+
+        print 'TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start)
+        return result
+
+    return timed

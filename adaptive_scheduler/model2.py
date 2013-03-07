@@ -64,12 +64,10 @@ class Target(DataContainer):
 
     def set_ra(self, ra):
         #TODO: Check units are accurate
-        print 'Setting RA in target:', ra
         self._ra = RightAscension(degrees=float(ra))
 
     def set_dec(self, dec):
         #TODO: Check units are accurate
-        print 'Setting Dec in target:', dec
         self._dec = Declination(float(dec))
 
     def get_dec(self):

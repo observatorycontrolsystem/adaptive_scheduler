@@ -22,6 +22,7 @@ import numpy
 from openopt import LP
 from scipy.sparse import coo_matrix
 from slicedipscheduler import *
+from adaptive_scheduler.utils import timeit
 
 class FullScheduler_v5(SlicedIPScheduler):
 
@@ -36,6 +37,7 @@ class FullScheduler_v5(SlicedIPScheduler):
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
 
 
+    @timeit
     def schedule_all(self):
         self.build_data_structures()
         # allocate A & b

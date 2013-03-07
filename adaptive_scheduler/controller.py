@@ -53,7 +53,8 @@ def run_controller(request_polling, syncronization_interval, request_db_url):
     queue = Queue()
 
     # Periodically monitor the Request DB for new Requests
-    monitor = create_monitor(request_polling, queue, request_db_url)
+    sc = SchedulerClient(request_db_url)
+    monitor = create_monitor(request_polling, queue, sc)
     monitor.start()
 
     # Periodically update the Request DB with POND block status
@@ -61,7 +62,6 @@ def run_controller(request_polling, syncronization_interval, request_db_url):
 #    syncronizer.start()
 
     # Process events from the other threads as they arrive
-    sc = SchedulerClient(request_db_url)
     event_handler = EventHandlerThread(queue, sc)
     event_handler.start()
 
@@ -117,6 +117,7 @@ class EventHandler(object):
 
     def _handle_request_update(self, event):
         schedule(event.requests, self.sched_client)
+        sys.stdout.flush()
 
     def _handle_unknown_event(self, event):
         logger.warning("Received an unknown event of type %s", event.__class__)

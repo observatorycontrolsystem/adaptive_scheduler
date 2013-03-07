@@ -95,7 +95,9 @@ def print_resource_windows(resource_windows):
 
 def print_compound_reservations(to_schedule):
     print "Finished constructing compound reservations..."
-    print "There are %d CompoundReservations to schedule:" % (len(to_schedule))
+    print "There are %d %s to schedule:" % (len(to_schedule),
+                                            pluralise(len(to_schedule),
+                                                      'CompoundReservation'))
     for compound_res in to_schedule:
         print_compound_reservation(compound_res)
 

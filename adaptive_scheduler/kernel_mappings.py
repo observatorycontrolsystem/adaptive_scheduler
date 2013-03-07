@@ -102,7 +102,7 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def make_dark_up_kernel_intervals(req, visibility_from):
+def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
     '''Find the set of intervals where the target of the provided request it is both
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
@@ -132,8 +132,9 @@ def make_dark_up_kernel_intervals(req, visibility_from):
         intersections_for_resource[resource_name] = intersection
 
         # Print some summary info
-        print "Round the loop..."
-        print_req_summary(req, resource_name, user_intervals, rs_dark_intervals, rs_up_intervals, intersection)
+        if verbose==True:
+            print_req_summary(req, resource_name, user_intervals,
+                              rs_dark_intervals, rs_up_intervals, intersection)
 
 
     return intersections_for_resource
@@ -233,7 +234,8 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
         # Find the dark/up intervals for each Request in this CompoundRequest
         dark_ups = []
         for req in c_req.requests:
-            intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from)
+            intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+                                                                       verbose=True)
             dark_ups.append(intersections_for_resource)
 
         # Make and store the CompoundReservation

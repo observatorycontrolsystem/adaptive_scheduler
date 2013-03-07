@@ -25,9 +25,9 @@ logger = log.create_logger("monitor")
 
 
 # Public factory methods
-def create_monitor(period, queue, request_db_url):
+def create_monitor(period, queue, scheduler_client):
     '''Factory for creating a Request DB monitoring thread.'''
-    return _MonitoringThread(period, queue, request_db_url)
+    return _MonitoringThread(period, queue, scheduler_client)
 
 def create_database_syncronizer(period, queue):
     '''Factory for creating a Request status synchronisation thread.'''
@@ -83,19 +83,28 @@ class _DBSyncronizeThread(_PollingThread):
 class _MonitoringThread(_PollingThread):
     '''Poll the Request DB for a change triggering a schedule recompute.'''
 
-    def __init__(self, period, queue, request_db_url, name="Monitoring Thread"):
+    def __init__(self, period, queue, scheduler_client, name="Monitoring Thread"):
         super(_MonitoringThread, self).__init__(period)
         self.queue = queue
-        self.request_db_url = request_db_url
+        self.scheduler_client = scheduler_client
 
     def action(self):
         logger.info("Getting latest requests")
 
         # Do periodic stuff here
 #        requests = get_requests('requests.json','dummy arg')
-        requests = get_requests(self.request_db_url, 'dummy arg')
+        dirty_response = self.scheduler_client.get_dirty_flag()
+        if 'TRUE' in dirty_response['dirty'].upper():
+            msg  = "Got dirty flag (DB needs reading) with timestamp"
+            msg += " %s (last updated %s)" % (dirty_response['timestamp'],
+                                              dirty_response['last_updated'])
+            print msg
+            requests = get_requests(self.scheduler_client.url, 'dummy arg')
+            # TODO: Log errors here
+            self.scheduler_client.clear_dirty_flag()
+            print "Requests received, clearing dirty flag"
+            logger.info("Received %d User Requests from Request DB" % len(requests))
 
-        logger.info("Received %d User Requests from Request DB" % len(requests))
         # Post results to controller
         self.queue.put(RequestUpdateEvent(requests))
 

@@ -28,7 +28,7 @@ February 2012
 from datetime import datetime
 
 from adaptive_scheduler.model2         import Proposal, Target
-from adaptive_scheduler.utils          import get_reservation_datetimes
+from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise
 from lcogtpond                         import pointing
@@ -144,6 +144,7 @@ class Block(object):
                                                                       telescope,
                                                                       search)
                 specific_camera = inst_match[0]['camera']
+                print "Instrument resolved as '%s'" % specific_camera
 
             obs = Expose.build(
                                 # Meta data
@@ -256,6 +257,7 @@ def make_simple_pond_schedule(schedule, semester_start):
     return pond_blocks
 
 
+@timeit
 def send_schedule_to_pond(schedule, semester_start):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
@@ -309,8 +311,25 @@ def get_deletable_blocks(start, end, site, obs, tel):
 
     return to_delete
 
+@timeit
+def cancel_schedule(tels, semester_start, semester_end):
+    n_deleted_total = 0
+    for full_tel_name in tels:
+        tel, obs, site = full_tel_name.split('.')
+        print "Cancelling schedule at %s, from %s to %s" % ( full_tel_name,
+                                                             semester_start,
+                                                             semester_end   )
 
-def cancel_schedule(start, end, site, obs, tel):
+        n_deleted = cancel_schedule_at_resource(semester_start, semester_end,
+                                                site, obs, tel)
+        print "Cancelled %d %s at %s\n" % (n_deleted, pluralise(n_deleted, 'block'),
+                                           full_tel_name)
+        n_deleted_total += n_deleted
+
+    return n_deleted_total
+
+
+def cancel_schedule_at_resource(start, end, site, obs, tel):
     to_delete = get_deletable_blocks(start, end, site, obs, tel)
 
     for block in to_delete:

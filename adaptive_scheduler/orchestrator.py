@@ -31,6 +31,7 @@ from adaptive_scheduler.semester_service import get_semester_block, get_semester
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
+from adaptive_scheduler.utils import timeit
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -60,6 +61,7 @@ def get_requests_from_json(req_filename, telescope_class):
         req_data = req_fh.read()
         return json.loads(req_data)
 
+@timeit
 def get_requests_from_db(url, telescope_class):
     sem_start, sem_end = get_semester_block()
     format = '%Y-%m-%d %H:%M:%S'
@@ -67,7 +69,7 @@ def get_requests_from_db(url, telescope_class):
     search = SearchQuery()
     search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
 
-    print "Asking DB for User Requests between %s and %s" % (sem_start, sem_end)
+    print "Asking DB (%s) for User Requests between %s and %s" % (url, sem_start, sem_end)
     sc           = SchedulerClient(url)
     json_ur_list = sc.retrieve(search, debug=True)
     ur_list      = json.loads(json_ur_list)
@@ -123,6 +125,7 @@ def collapse_requests(requests):
 
 # TODO: Add configuration options, refactor into smaller chunks
 # TODO: Remove hard-coded options
+@timeit
 def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
     date_fmt = '%Y-%m-%d'
@@ -151,12 +154,9 @@ def main(requests, sched_client):
 #        user_reqs.append(ur)
 
     user_reqs = []
-    i = 0
     for serialised_req in collapsed_reqs:
-        print "Trying i", i
         user_req = mb.build_user_request(serialised_req)
         user_reqs.append(user_req)
-        i += 1
 
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
@@ -212,23 +212,17 @@ def main(requests, sched_client):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    n_deleted_total = 0
-    for full_tel_name in tels:
-        tel, obs, site = full_tel_name.split('.')
-        print "Cancelling schedule at %s, from %s to %s" % ( full_tel_name,
-                                                             semester_start,
-                                                             semester_end   )
-
-        n_deleted = cancel_schedule(semester_start, semester_end, site, obs, tel)
-        print "Cancelled %d %s at %s\n" % (n_deleted, pluralise(n_deleted, 'block'),
-                                           full_tel_name)
-        n_deleted_total += n_deleted
+    n_deleted = cancel_schedule(tels, semester_start, semester_end)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     n_submitted = send_schedule_to_pond(schedule, semester_start)
 
-    print "In total, deleted %d previously scheduled blocks" % n_deleted_total
-    print "Submitted %d new blocks to the POND" % n_submitted
+    print "\nScheduling Summary"
+    print "------------------"
+    print "Received %d %s from Request DB" % ( len(requests), ur_string)
+    print "In total, deleted %d previously scheduled %s" % (n_deleted,
+                                                  pluralise(n_deleted, 'block'))
+    print "Submitted %d new %s to the POND" % (n_submitted,
+                                               pluralise(n_submitted, 'block'))
     print "Scheduling complete."
 
-    #print "cr.reservation_list:", cr.reservation_list
