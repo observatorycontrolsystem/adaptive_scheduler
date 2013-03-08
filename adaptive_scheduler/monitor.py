@@ -92,9 +92,9 @@ class _MonitoringThread(_PollingThread):
         logger.info("Getting latest requests")
 
         # Do periodic stuff here
-#        requests = get_requests('requests.json','dummy arg')
         dirty_response = self.scheduler_client.get_dirty_flag()
-        if 'TRUE' in dirty_response['dirty'].upper():
+        #if 'TRUE' in dirty_response['dirty'].upper():
+        if dirty_response['dirty'] is True:
             msg  = "Got dirty flag (DB needs reading) with timestamp"
             msg += " %s (last updated %s)" % (dirty_response['timestamp'],
                                               dirty_response['last_updated'])
@@ -105,6 +105,9 @@ class _MonitoringThread(_PollingThread):
             print "Requests received, clearing dirty flag"
             logger.info("Received %d User Requests from Request DB" % len(requests))
 
-        # Post results to controller
-        self.queue.put(RequestUpdateEvent(requests))
+            # Post results to controller
+            self.queue.put(RequestUpdateEvent(requests))
+        else:
+            msg = "Request DB is still clean - nothing has changed. Going back to sleep..."
+            print msg
 
