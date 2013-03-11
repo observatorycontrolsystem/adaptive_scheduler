@@ -27,6 +27,13 @@ def pluralise(n, string):
 
     return string
 
+def cowcud(n, string):
+    if n != 1:
+        string += 's'
+
+    return n, string
+
+
 def print_compound_reservation(compound_res):
     print "CompoundReservation (%s):" % ( compound_res.type )
 

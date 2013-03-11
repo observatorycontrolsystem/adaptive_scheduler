@@ -7,19 +7,26 @@ July 2012
 '''
 from __future__ import division
 
-
+from adaptive_scheduler.orchestrator import main, get_requests_from_db
+from adaptive_scheduler.printing     import cowcud as pl
 from reqdb.client import SchedulerClient
-from adaptive_scheduler.orchestrator import ( main, get_requests_from_file,
-                                              get_requests_from_db )
 
+from optparse import OptionParser
 from datetime import datetime
+import logging
 import signal
 import time
 import sys
 
+VERSION = '1.0.0'
+
+# Set up and configure an application scope logger
+logging.config.fileConfig('logging.conf')
+log = logging.getLogger('Scheduler')
+
+# Set up signal handling for graceful shutdown
 run_flag = True
 
-# Define signal handlers
 def ctrl_c_handler(signal, frame):
     global run_flag
     print 'Received Ctrl+C - terminating on loop completion.'
@@ -30,10 +37,16 @@ def kill_handler(signal, frame):
     print 'Received SIGTERM (kill) - terminating on loop completion.'
     run_flag = False
 
-signal.signal(signal.SIGINT, ctrl_c_handler)
+#signal.signal(signal.SIGINT, ctrl_c_handler)
 signal.signal(signal.SIGTERM, kill_handler)
 
+
+
 if __name__ == '__main__':
+
+
+#     'Coordinates: {latitude}, {longitude}'.format(latitude='37.24N', longitude='-115.81W')
+    log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
     sleep_duration = 2
 
     # Acquire and collapse the requests
@@ -50,13 +63,14 @@ if __name__ == '__main__':
             msg  = "Got dirty flag (DB needs reading) with timestamp"
             msg += " %s (last updated %s)" % (dirty_response['timestamp'],
                                               dirty_response['last_updated'])
-            print msg
+            log.info(msg)
 
             # TODO: Log request receiving errors
             requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
 
-            print "Received %d User Requests from Request DB" % len(requests)
-            print "Clearing dirty flag"
+            log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
+            exit()
+            log.info("Clearing dirty flag")
             scheduler_client.clear_dirty_flag()
 
             # Run the scheduling loop
@@ -65,6 +79,6 @@ if __name__ == '__main__':
         else:
             msg  = "Request DB is still clean - nothing has changed."
             msg += " Sleeping for %d seconds." % sleep_duration
+            log.info(msg)
             time.sleep(sleep_duration)
 
-            print msg
