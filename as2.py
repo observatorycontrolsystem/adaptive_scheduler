@@ -2,58 +2,69 @@
 '''
 as2.py - Run the adaptive scheduler in single use, non-persistent mode.
 
-This is most useful for testing purposes.
-
 Author: Eric Saunders
 July 2012
 '''
 from __future__ import division
 
 
+from reqdb.client import SchedulerClient
 from adaptive_scheduler.orchestrator import ( main, get_requests_from_file,
                                               get_requests_from_db )
 
 from datetime import datetime
+import signal
+import time
+import sys
 
+run_flag = True
 
-def filter_out_of_date_requests(requests):
-    '''Temporary filter to prevent rescheduling of requests that can't happen.'''
-    good_requests = []
-    for r in requests:
-        dt = datetime.strptime(r['requests'][0]['requests'][0]['windows'][0]['end'],
-                               '%Y-%m-%d %H:%M:%S')
-        if dt > datetime.utcnow():
-            good_requests.append(r)
+# Define signal handlers
+def ctrl_c_handler(signal, frame):
+    global run_flag
+    print 'Received Ctrl+C - terminating on loop completion.'
+    run_flag = False
 
-    return good_requests
+def kill_handler(signal, frame):
+    global run_flag
+    print 'Received SIGTERM (kill) - terminating on loop completion.'
+    run_flag = False
 
+signal.signal(signal.SIGINT, ctrl_c_handler)
+signal.signal(signal.SIGTERM, kill_handler)
 
 if __name__ == '__main__':
+    sleep_duration = 2
 
     # Acquire and collapse the requests
-    #requests = get_requests(url, telescope_class)
-    #requests = get_requests_from_file('new_requests.dat', 'dummy arg')
-    #requests = get_requests_from_file('human_readable_new_requests_new_format.dat', 'dummy arg')
+    request_db_url = 'http://localhost:8001/'
+    scheduler_client = SchedulerClient(request_db_url)
 
-    url = 'http://localhost:8001/'
-    #telescope_class = '0m4'
-    telescope_class = '1m0'
-    requests = get_requests_from_db(url, telescope_class)
-
-    print "Request DB gave us the following requests for telescope_class %s:" % telescope_class
-    for r in requests:
-        print r['tracking_number']
-
-    print r
-
-    possible_requests = filter_out_of_date_requests(requests)
-
-    #good_requests = [good_requests[0]]
-    print "%d requests are not yet expired." % len(possible_requests)
-
-    if possible_requests:
-        main(possible_requests)
-    else:
-        print "No requests to schedule. Aborting."
+    scheduler_client.set_dirty_flag()
 
 
+    while run_flag:
+        dirty_response = scheduler_client.get_dirty_flag()
+
+        if dirty_response['dirty'] is True:
+            msg  = "Got dirty flag (DB needs reading) with timestamp"
+            msg += " %s (last updated %s)" % (dirty_response['timestamp'],
+                                              dirty_response['last_updated'])
+            print msg
+
+            # TODO: Log request receiving errors
+            requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
+
+            print "Received %d User Requests from Request DB" % len(requests)
+            print "Clearing dirty flag"
+            scheduler_client.clear_dirty_flag()
+
+            # Run the scheduling loop
+            main(requests, scheduler_client)
+            sys.stdout.flush()
+        else:
+            msg  = "Request DB is still clean - nothing has changed."
+            msg += " Sleeping for %d seconds." % sleep_duration
+            time.sleep(sleep_duration)
+
+            print msg
