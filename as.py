@@ -38,19 +38,19 @@ def kill_handler(signal, frame):
     run_flag = False
 
 #signal.signal(signal.SIGINT, ctrl_c_handler)
-signal.signal(signal.SIGTERM, kill_handler)
+#signal.signal(signal.SIGTERM, kill_handler)
 
 
 
 if __name__ == '__main__':
 
-
-#     'Coordinates: {latitude}, {longitude}'.format(latitude='37.24N', longitude='-115.81W')
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
-    sleep_duration = 2
+    sleep_duration = 60
 
     # Acquire and collapse the requests
     request_db_url = 'http://localhost:8001/'
+#    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
+
     scheduler_client = SchedulerClient(request_db_url)
 
     scheduler_client.set_dirty_flag()
@@ -66,12 +66,12 @@ if __name__ == '__main__':
             log.info(msg)
 
             # TODO: Log request receiving errors
-            requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
-
-            log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
-            exit()
             log.info("Clearing dirty flag")
             scheduler_client.clear_dirty_flag()
+            requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
+            log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
+
+            # TODO: What about if we don't get stuff successfully - need to set flag
 
             # Run the scheduling loop
             main(requests, scheduler_client)
