@@ -7,13 +7,15 @@ July 2012
 '''
 from __future__ import division
 
+
 from adaptive_scheduler.orchestrator import main, get_requests_from_db
-from adaptive_scheduler.printing     import cowcud as pl
+from adaptive_scheduler.printing     import pluralise as pl
 from reqdb.client import SchedulerClient
 
 from optparse import OptionParser
 from datetime import datetime
 import logging
+import logging.config
 import signal
 import time
 import sys
@@ -22,7 +24,8 @@ VERSION = '1.0.0'
 
 # Set up and configure an application scope logger
 logging.config.fileConfig('logging.conf')
-log = logging.getLogger('Scheduler')
+log = logging.getLogger('adaptive_scheduler')
+
 
 # Set up signal handling for graceful shutdown
 run_flag = True
@@ -43,6 +46,7 @@ def kill_handler(signal, frame):
 
 
 if __name__ == '__main__':
+
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
     sleep_duration = 60

@@ -24,8 +24,8 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  make_compound_reservations,
                                                  prefilter_for_kernel        )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
-from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations,
-                                          pluralise )
+from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations )
+from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
 from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
 
@@ -36,6 +36,12 @@ from adaptive_scheduler.utils import timeit
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
 
+
+# Set up and configure a module scope logger
+import logging
+log = logging.getLogger(__name__)
+
+log.debug("Imported %s", __name__)
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -69,7 +75,7 @@ def get_requests_from_db(url, telescope_class):
     search = SearchQuery()
     search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
 
-    print "Asking DB (%s) for User Requests between %s and %s" % (url, sem_start, sem_end)
+    log.info("DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
     sc           = SchedulerClient(url)
     json_ur_list = sc.retrieve(search, debug=True)
     ur_list      = json.loads(json_ur_list)
@@ -99,23 +105,23 @@ def collapse_requests(requests):
         tc.collapse_tree()
 
         if tc.is_collapsible:
-            print "Request %d was successfully collapsed!" % i
+            log.debug("Request %d was successfully collapsed!", i)
 
             depth_finder = RequestMaxDepthFinder(tc.collapsed_tree)
             depth_finder.walk()
 
             # The scheduling kernel can't handle more than one level of nesting
             if depth_finder.max_depth > 1:
-                print "Request %d is still too deep (%d levels) - skipping." % ( i,
-                                                                  depth_finder.max_depth )
+                log.debug("Request %d is still too deep (%d levels) - skipping.", i,
+                                                                  depth_finder.max_depth)
 
             else:
-                print "Request %d has depth %d - continuing." % ( i,
-                                                                  depth_finder.max_depth )
+                log.debug("Request %d has depth %d - continuing.", i,
+                                                                  depth_finder.max_depth)
                 collapsed_reqs.append(tc.collapsed_tree)
 
         else:
-            print "Request %d could not be collapsed - skipping." % i
+            log.debug("Request %d could not be collapsed - skipping.", i)
 
 
     return collapsed_reqs
@@ -130,12 +136,11 @@ def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
     date_fmt = '%Y-%m-%d'
 
-    print "Scheduling for semester %s (%s to %s)" % (get_semester_code(),
+    log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
                                                      semester_start.strftime(date_fmt),
                                                      semester_end.strftime(date_fmt))
 
-    ur_string = pluralise(len(requests), 'User Request')
-    print "Received %d %s from Request DB" % ( len(requests), ur_string)
+    log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
@@ -217,12 +222,10 @@ def main(requests, sched_client):
     # Convert the kernel schedule into POND blocks, and send them to the POND
     n_submitted = send_schedule_to_pond(schedule, semester_start)
 
-    print "\nScheduling Summary"
-    print "------------------"
-    print "Received %d %s from Request DB" % ( len(requests), ur_string)
-    print "In total, deleted %d previously scheduled %s" % (n_deleted,
-                                                  pluralise(n_deleted, 'block'))
-    print "Submitted %d new %s to the POND" % (n_submitted,
-                                               pluralise(n_submitted, 'block'))
-    print "Scheduling complete."
+    log.info("\nScheduling Summary")
+    log.info("------------------")
+    log.info("Received %d %s from Request DB", *pl(len(requests), ur_string))
+    log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
+    log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
+    log.info("Scheduling complete.")
 

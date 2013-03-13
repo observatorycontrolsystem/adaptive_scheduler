@@ -10,6 +10,9 @@ March 2012
 import calendar
 from datetime import datetime
 import time
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class ReprMixin(object):
@@ -109,7 +112,8 @@ def timeit(method):
         result = method(*args, **kwargs)
         end    = time.time()
 
-        print 'TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start)
+        #print 'TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start)
+        log.debug('TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start))
         return result
 
     return timed

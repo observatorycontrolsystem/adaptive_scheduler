@@ -25,12 +25,6 @@ def pluralise(n, string):
     if n != 1:
         string += 's'
 
-    return string
-
-def cowcud(n, string):
-    if n != 1:
-        string += 's'
-
     return n, string
 
 
