@@ -181,6 +181,14 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 
 
 def prefilter_for_kernel(crs, visibility_from):
+    ''' After throwing out and marking URs as UNSCHEDULABLE, reduce windows by considering
+        dark time and target visibility. Remove any URs that are now too small to hold their
+        duration after this consideration, so they are not passed to the kernel.
+        NOTE: We do this as an explicit additional filtering step, because we do not want to
+        set the UNSCHEDULABLE flag for these Requests. This is because the step is network-dependent;
+        if the network subsequently changes (e.g. a telescope becomes available), then the Request
+        may then be schedulable.
+    '''
     crs = filter_on_visibility(crs, visibility_from)
     crs = filter_on_duration(crs)
     crs = filter_on_type(crs)
