@@ -119,7 +119,7 @@ def run_all_filters(ur_list):
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
     now = datetime.utcnow()
-    filter_test = lambda w, ur: w.start > now and w.end > now
+    filter_test = lambda w, ur: w.end > now
 
     return _for_all_ur_windows(ur_list, filter_test)
 
@@ -162,8 +162,7 @@ def truncate_upper_crossing_windows(ur_list):
 @log_urs
 def filter_out_future_windows(ur_list):
     '''Case 5: The window lies beyond the scheduling horizon.'''
-    filter_test = lambda w, ur: w.start < ur.scheduling_horizon() and \
-                                w.end < ur.scheduling_horizon()
+    filter_test = lambda w, ur: w.start < ur.scheduling_horizon()
 
     return _for_all_ur_windows(ur_list, filter_test)
 

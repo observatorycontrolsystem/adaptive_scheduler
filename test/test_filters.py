@@ -159,8 +159,33 @@ class TestWindowFilters(object):
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        expected_window = window_list[1]
-        assert_equal(received_windows, [expected_window])
+        expected_window = [window_list[1]]
+        assert_equal(received_windows, expected_window)
+
+
+    @patch("adaptive_scheduler.request_filters.datetime")
+    def test_filters_out_only_past_windows_straddling_boundary(self, mock_datetime):
+        mock_datetime.utcnow.return_value = self.current_time
+
+        window_dict1 = {
+                         'start' : "2013-02-26 11:30:00",
+                         'end'   : "2013-02-27 00:30:00",
+                       }
+        # Comes after self.current_time, so should not be filtered
+        window_dict2 = {
+                         'start' : "2013-06-01 00:00:00",
+                         'end'   : "2013-06-01 01:00:00",
+                       }
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows)
+
+        received_ur_list = filter_out_past_windows([ur1])
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, self.resource_name)
+
+        expected_window = [window_list[0], window_list[1]]
+        assert_equal(received_windows, expected_window)
 
 
     @patch("adaptive_scheduler.model2.semester_service")
