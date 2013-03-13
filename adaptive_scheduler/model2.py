@@ -257,8 +257,15 @@ class CompoundRequest(DefaultMixin):
 
     def filter_requests(self, filter_test):
         for r in self.requests:
-            for resource_name, windows in r.windows.windows_for_resource.iteritems():
+            n_before = 0
+            n_after  = 0
+            for resource_name, windows in r.windows.windows_for_resource.items():
+                n_before += len(windows)
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
+                n_after += len(r.windows.windows_for_resource[resource_name])
+
+            print "Windows before = ", n_before
+            print "Windows after  = ", n_after
 
 
     def is_schedulable(self):
@@ -413,7 +420,6 @@ class ModelBuilder(object):
         molecules = []
         for mol_dict in req_dict['molecules']:
             molecules.append(Molecule(mol_dict))
-
 
         telescopes = self.tel_network.get_telescopes_at_location(req_dict['location'])
 
