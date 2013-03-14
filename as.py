@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-as2.py - Run the adaptive scheduler in single use, non-persistent mode.
+as.py - Run the adaptive scheduler in single use, non-persistent mode.
 
 Author: Eric Saunders
 July 2012
@@ -52,7 +52,8 @@ if __name__ == '__main__':
     sleep_duration = 60
 
     # Acquire and collapse the requests
-    request_db_url = 'http://localhost:8001/'
+    request_db_url = 'http://pluto.lco.gtn:8001/'
+#    request_db_url = 'http://localhost:8001/'
 #    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
 
     scheduler_client = SchedulerClient(request_db_url)

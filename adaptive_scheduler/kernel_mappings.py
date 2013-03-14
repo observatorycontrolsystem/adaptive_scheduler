@@ -149,7 +149,10 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     reservations = []
     for intersection_dict in dt_intervals_list:
 
+        request = compound_request.requests[idx]
         window_dict = {}
+
+        # Build the normalised Windows data structure for the kernel
         for resource_name, dark_up_intervals in intersection_dict.iteritems():
             # Convert timepoints into normalised epoch time
             epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
@@ -158,20 +161,20 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
             # Priority comes from the parent CompoundRequest
             # Each Reservation represents the set of available windows of opportunity
             # The resource is governed by the timepoint.resource attribute
-            request = compound_request.requests[idx]
             window_dict[resource_name] = epoch_intervals
 
-            reservations.append( Reservation(compound_request.priority,
-                                             request.duration,
-                                             window_dict
-                                             ) )
+        # Construct the kernel Reservation
+        reservations.append( Reservation(compound_request.priority,
+                                         request.duration,
+                                         window_dict
+                                         ) )
 
-            # Store the original requests for recovery after scheduling
-            # TODO: Do this with a field provided for this purpose, not this hack
-            reservations[-1].compound_request = compound_request
-            reservations[-1].request          = request
+        # Store the original requests for recovery after scheduling
+        # TODO: Do this with a field provided for this purpose, not this hack
+        reservations[-1].compound_request = compound_request
+        reservations[-1].request          = request
 
-            idx += 1
+        idx += 1
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something

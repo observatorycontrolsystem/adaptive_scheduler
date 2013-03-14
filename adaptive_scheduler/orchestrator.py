@@ -127,6 +127,17 @@ def collapse_requests(requests):
     return collapsed_reqs
 
 
+def summarise_urs(user_reqs):
+    log.debug("User Request breakdown:")
+    for ur in user_reqs:
+        r_nums  = [r.request_number for r in ur.requests]
+        w_total = sum([r.n_windows() for r in ur.requests])
+        _, w_str = pl(w_total, 'Window')
+        r_total, r_str = pl(len(ur.requests), 'Request')
+        log.debug('%s: %s (%d %s, %d %s)', ur.tracking_number, r_nums,
+                  r_total, r_str, w_total, w_str)
+
+    return
 
 
 # TODO: Add configuration options, refactor into smaller chunks
@@ -163,11 +174,14 @@ def main(requests, sched_client):
         user_req = mb.build_user_request(serialised_req)
         user_reqs.append(user_req)
 
+    # Summarise the User Requests we've received
+    summarise_urs(user_reqs)
+
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
-#    print "Available telescopes:"
-#    for t, v in tels.iteritems():
-#        print t, v
+    log.debug("Available telescopes:")
+    for t in sorted(tels):
+        log.debug(str(t))
 
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
@@ -178,6 +192,9 @@ def main(requests, sched_client):
 
     # Do another check on duration and operator soundness, after dark/rise checking
     user_reqs = prefilter_for_kernel(user_reqs, visibility_from)
+
+    log.info('Filtering complete. Ready to construct Reservations.')
+    summarise_urs(user_reqs)
 
     # Convert CompoundRequests -> CompoundReservations
     to_schedule = make_compound_reservations(user_reqs, visibility_from,
@@ -203,12 +220,10 @@ def main(requests, sched_client):
     # Instantiate and run the scheduler
     # TODO: Set alignment to start of first night on each resource
     # TODO: Move this to a config file
-    time_slicing_dict = {
-                            '0m4a.aqwa.bpl' : [0, 600],
-                            '0m4b.aqwa.bpl' : [0, 600],
-                            '1m0a.doma.elp' : [0, 600],
-                            '1m0a.domb.lsc' : [0, 600],
-                        }
+    time_slicing_dict = {}
+    for t in tels:
+        time_slicing_dict[t] = [0, 600]
+
     kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()

@@ -19,7 +19,8 @@ from adaptive_scheduler.exceptions import InvalidRequestError
 from adaptive_scheduler import semester_service
 
 import ast
-
+import logging
+log = logging.getLogger(__name__)
 
 def file_to_dicts(filename):
     fh = open(filename, 'r')
@@ -131,13 +132,14 @@ class Windows(DefaultMixin):
         return self.windows_for_resource[resource_name]
 
     def has_windows(self):
+        return bool(self.size)
+
+    def size(self):
         all_windows = []
         for resource_name, windows in self.windows_for_resource.iteritems():
             all_windows += windows
 
-        return bool(all_windows)
-
-
+        return len(all_windows)
 
 
 
@@ -204,6 +206,9 @@ class Request(DefaultMixin):
     def has_windows(self):
         return self.windows.has_windows()
 
+    def n_windows(self):
+        return self.windows.size()
+
 
     # Define properties
     duration = property(get_duration)
@@ -264,8 +269,8 @@ class CompoundRequest(DefaultMixin):
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
                 n_after += len(r.windows.windows_for_resource[resource_name])
 
-            print "Windows before = ", n_before
-            print "Windows after  = ", n_after
+            log.debug("Windows before = %s", n_before)
+            log.debug("Windows after  = %s", n_after)
 
 
     def is_schedulable(self):

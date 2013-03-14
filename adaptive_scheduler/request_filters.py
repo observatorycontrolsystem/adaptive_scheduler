@@ -52,6 +52,9 @@ February 2013
 '''
 
 from datetime import datetime, timedelta
+from adaptive_scheduler.printing import pluralise as pl
+import logging
+log = logging.getLogger(__name__)
 
 
 def log_urs(fn):
@@ -60,7 +63,7 @@ def log_urs(fn):
         ur_list  = fn(ur_list)
         out_size = len(ur_list)
 
-        print "%s: URs in (%d); URs out (%d)" % (fn.__name__, in_size, out_size)
+        log.debug("%s: URs in (%d); URs out (%d)", fn.__name__, in_size, out_size)
 
         return ur_list
 
@@ -74,7 +77,7 @@ def filter_and_set_unschedulable_urs(client, ur_list):
 
     unschedulable_urs = initial_urs - schedulable_urs
 
-    print "Found %d unschedulable URs after filtering" % len(unschedulable_urs)
+    log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
 
     unschedulable_r_numbers = []
     for ur in unschedulable_urs:
