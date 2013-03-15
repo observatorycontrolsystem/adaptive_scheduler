@@ -10,7 +10,7 @@ from __future__ import division
 
 from adaptive_scheduler.orchestrator import main, get_requests_from_db
 from adaptive_scheduler.printing     import pluralise as pl
-from reqdb.client import SchedulerClient
+from reqdb.client import SchedulerClient, ConnectionError
 
 from optparse import OptionParser
 from datetime import datetime
@@ -40,8 +40,8 @@ def kill_handler(signal, frame):
     print 'Received SIGTERM (kill) - terminating on loop completion.'
     run_flag = False
 
-#signal.signal(signal.SIGINT, ctrl_c_handler)
-#signal.signal(signal.SIGTERM, kill_handler)
+signal.signal(signal.SIGINT, ctrl_c_handler)
+signal.signal(signal.SIGTERM, kill_handler)
 
 
 
@@ -49,11 +49,11 @@ if __name__ == '__main__':
 
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
-    sleep_duration = 60
+    sleep_duration = 20
 
     # Acquire and collapse the requests
-    request_db_url = 'http://pluto.lco.gtn:8001/'
-#    request_db_url = 'http://localhost:8001/'
+#    request_db_url = 'http://pluto.lco.gtn:8001/'
+    request_db_url = 'http://localhost:8001/'
 #    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
 
     scheduler_client = SchedulerClient(request_db_url)
@@ -62,7 +62,12 @@ if __name__ == '__main__':
 
 
     while run_flag:
-        dirty_response = scheduler_client.get_dirty_flag()
+        dirty_response = dict(dirty=False)
+        try:
+            dirty_response = scheduler_client.get_dirty_flag()
+        except ConnectionError as e:
+            log.warn("Error retrieving dirty flag from DB: %s", e)
+            log.warn("Skipping this scheduling cycle")
 
         if dirty_response['dirty'] is True:
             msg  = "Got dirty flag (DB needs reading) with timestamp"
@@ -73,17 +78,20 @@ if __name__ == '__main__':
             # TODO: Log request receiving errors
             log.info("Clearing dirty flag")
             scheduler_client.clear_dirty_flag()
-            requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
-            log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
+            try:
+                requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
+                log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
 
-            # TODO: What about if we don't get stuff successfully - need to set flag
+                # TODO: What about if we don't get stuff successfully - need to set flag
 
-            # Run the scheduling loop
-            main(requests, scheduler_client)
-            sys.stdout.flush()
+                # Run the scheduling loop
+                main(requests, scheduler_client)
+                sys.stdout.flush()
+            except ConnectionError as e:
+                log.warn("Error retrieving Requests from DB: %s", e)
+                log.warn("Skipping this scheduling cycle")
         else:
-            msg  = "Request DB is still clean - nothing has changed."
-            msg += " Sleeping for %d seconds." % sleep_duration
-            log.info(msg)
+            log.info("Request DB is still clean (or unreachable) - nothing has changed.")
+            log.info(" Sleeping for %d seconds.", sleep_duration)
             time.sleep(sleep_duration)
 
