@@ -132,7 +132,7 @@ class Windows(DefaultMixin):
         return self.windows_for_resource[resource_name]
 
     def has_windows(self):
-        return bool(self.size)
+        return bool(self.size())
 
     def size(self):
         all_windows = []
