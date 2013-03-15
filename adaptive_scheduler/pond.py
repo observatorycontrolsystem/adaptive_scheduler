@@ -303,10 +303,56 @@ def send_schedule_to_pond(schedule, semester_start):
     return n_submitted_total
 
 
+def construct_global_availability(running_at_tel):
+    # TODO: Use the cutoff times to create the initial global availability dict
+    # Note this will then be modified by dark times etc.
+
+@timeit
+def blacklist_running_blocks(ur_list, tels, start, end):
+    running_at_tel  = get_network_running_blocks(tels, start, end)
+    running_blocks  = [b for b in running_at_tel.values['running']]
+    schedulable_urs = [ur for ur in ur_list if ur not in running_blocks]
+
+    return schedulable_urs, running_at_tel
+
+
+def get_network_running_blocks(tels, start, end):
+    n_running_total = 0
+    running_at_tel = {}
+    for full_tel_name in tels:
+        tel, obs, site = full_tel_name.split('.')
+        log.debug("Aquiring running blocks and first availability at %s",
+                                                          full_tel_name)
+
+        cutoff, running = get_running_blocks(start, end, site, obs, tel)
+        running_at_tel[full_tel_name] = {
+                                          'cutoff' : cutoff,
+                                          'running' : running
+                                        }
+
+        n_running = len(running)
+        _, block_str = pl(n_running, 'block')
+        log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
+        n_running_total += n_running
+
+    log.info("Network-wide, found %d running %s", n_running_total, block_str)
+
+    return running_at_tel
+
+
+def get_running_blocks(start, end, site, obs, tel):
+    schedule  = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
+    cutoff_dt = schedule.end_of_overlap(start)
+
+    running = [b for b in schedule.blocks if b.start < cutoff_dt and
+                                             b.tracking_num_set()]
+
+    return cutoff, running
+
+
 def get_deletable_blocks(start, end, site, obs, tel):
     schedule  = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
-    dt        = datetime.utcnow()
-    cutoff_dt = schedule.end_of_overlap(dt)
+    cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
                                                b.tracking_num_set()]
 
