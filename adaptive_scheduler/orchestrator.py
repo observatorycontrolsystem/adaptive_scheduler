@@ -22,11 +22,13 @@ from adaptive_scheduler.model2          import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
-                                                 prefilter_for_kernel        )
+                                                 prefilter_for_kernel,
+                                                 construct_global_availability )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations )
 from adaptive_scheduler.printing import pluralise as pl
-from adaptive_scheduler.pond     import send_schedule_to_pond, cancel_schedule
+from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
+                                          blacklist_running_blocks )
 from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
@@ -197,12 +199,18 @@ def main(requests, sched_client):
     log.info('Filtering complete. Ready to construct Reservations.')
     summarise_urs(user_reqs)
 
+    # Remove running blocks from consideration, and get the availability edge
+    now = datetime.utcnow()
+    user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
+
     # Convert CompoundRequests -> CompoundReservations
     to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                              semester_start)
 
     # Translate when telescopes are available into kernel speak
     resource_windows = construct_resource_windows(visibility_from, semester_start)
+
+    resource_windows = construct_global_availability(now, semester_start, running_at_tel, resource_windows)
 
     # Dump the variables to be scheduled, for offline analysis if necessary
     contractual_obligations = []
@@ -233,7 +241,6 @@ def main(requests, sched_client):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    now = datetime.utcnow()
     n_deleted = cancel_schedule(tels, now, semester_end)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND

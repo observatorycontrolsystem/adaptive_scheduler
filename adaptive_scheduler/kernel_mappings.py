@@ -128,8 +128,6 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         # Intersect with any window provided in the user request
         user_windows   = req.windows.at(resource_name)
         user_intervals = req_window_to_kernel_intervals(user_windows)
-        import copy
-        p_ui = copy.deepcopy(user_intervals)
         intersection   = intersection.intersect([user_intervals])
         intersections_for_resource[resource_name] = intersection
 
@@ -284,3 +282,18 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                                                twilight)
 
     return visibility_from
+
+
+def construct_global_availability(now, semester_start, running_at_tel, resource_windows):
+    '''Use the cutoff time to make unavailable portions of each resource where an observation
+       is running. Normalise and intersect with the resource windows to get a final global
+       availability for each resource.
+    '''
+
+    for tel_name in running_at_tel:
+        running_interval = Intervals([Timepoint(now, 'start'),
+                                     Timepoint(running_at_tel[tel_name]['cutoff'], 'end')])
+        norm_running_interval = normalise_dt_intervals(running_interval, semester_start)
+        resource_windows[tel_name] = resource_windows[tel_name].intersect([norm_running_interval])
+
+    return resource_windows

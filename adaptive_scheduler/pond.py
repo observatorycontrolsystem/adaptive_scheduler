@@ -303,15 +303,21 @@ def send_schedule_to_pond(schedule, semester_start):
     return n_submitted_total
 
 
-def construct_global_availability(running_at_tel):
-    # TODO: Use the cutoff times to create the initial global availability dict
-    # Note this will then be modified by dark times etc.
-
 @timeit
 def blacklist_running_blocks(ur_list, tels, start, end):
     running_at_tel  = get_network_running_blocks(tels, start, end)
-    running_blocks  = [b for b in running_at_tel.values['running']]
-    schedulable_urs = [ur for ur in ur_list if ur not in running_blocks]
+
+    all_running_blocks = []
+    for run_dict in running_at_tel.values():
+        running_blocks = run_dict['running']
+        all_running_blocks += running_blocks
+
+    log.debug("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'block'))
+    log.debug("%d %s in the running blacklist", *pl(len(all_running_blocks), 'block'))
+
+    schedulable_urs = list(set(ur_list) - set(all_running_blocks))
+
+    log.debug("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'block'))
 
     return schedulable_urs, running_at_tel
 
@@ -326,11 +332,11 @@ def get_network_running_blocks(tels, start, end):
 
         cutoff, running = get_running_blocks(start, end, site, obs, tel)
         running_at_tel[full_tel_name] = {
-                                          'cutoff' : cutoff,
+                                          'cutoff'  : cutoff,
                                           'running' : running
                                         }
 
-        n_running = len(running)
+        n_running    = len(running)
         _, block_str = pl(n_running, 'block')
         log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
         n_running_total += n_running
@@ -347,7 +353,7 @@ def get_running_blocks(start, end, site, obs, tel):
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
                                              b.tracking_num_set()]
 
-    return cutoff, running
+    return cutoff_dt, running
 
 
 def get_deletable_blocks(start, end, site, obs, tel):
