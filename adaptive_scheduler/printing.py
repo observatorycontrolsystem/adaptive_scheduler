@@ -13,6 +13,10 @@ from datetime import timedelta
 
 INDENT = "    "
 
+# Set up and configure a module scope logger
+import logging
+log = logging.getLogger(__name__)
+
 def print_reservation(res):
     print res
     for resource, interval in res.possible_windows_dict.iteritems():
@@ -29,11 +33,9 @@ def pluralise(n, string):
 
 
 def print_compound_reservation(compound_res):
-    print "CompoundReservation (%s):" % ( compound_res.type )
+    log.debug("CompoundReservation (%s):", compound_res.type)
 
-    res_string = pluralise(compound_res.size, 'Reservation')
-
-    print INDENT + "made of %d %s:" % (compound_res.size, res_string)
+    log.debug(INDENT + "made of %d %s:", *pluralise(compound_res.size, 'Reservation'))
     for res in compound_res.reservation_list:
         print_reservation(res)
 
@@ -42,10 +44,9 @@ def print_compound_reservation(compound_res):
 
 def print_request(req, resource_name):
     target_name = getattr(req.target, 'name', 'no name')
-    print "REQUEST: target %s, observed from %s" % (
-                                                      target_name,
-                                                      resource_name,
-                                                    )
+    log.debug("Request %s: Target %s, observed from %s",req.request_number,
+                                                        target_name,
+                                                        resource_name)
 
 
 
@@ -59,10 +60,14 @@ def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
     if u_int:
         earliest_tp = latest_tp = u_int[0]
 
+    else:
+        log.debug("No user intervals found")
+        return
+
     while u_int:
         start = u_int.pop(0)
         end   = u_int.pop(0)
-        print "User window from          %s to %s" % (start.time, end.time)
+        log.debug("    User window:          %s to %s", start.time, end.time)
 
         for tp in start, end:
             if tp.time < earliest_tp.time: earliest_tp = tp
@@ -70,17 +75,16 @@ def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
 
     for dark_int, up_int in zip(rs_dark_intervals, rs_up_intervals):
         if dark_int[0] < latest_tp.time+timedelta(days=1) and dark_int[1] > earliest_tp.time - timedelta(days=1):
-            print "Darkness from             %s to %s" % (dark_int[0], dark_int[1])
+            log.debug("    Darkness:             %s to %s", dark_int[0], dark_int[1])
         if up_int[0] < latest_tp.time and up_int[1] > earliest_tp.time:
-            print "Target above horizon from %s to %s" % (up_int[0], up_int[1])
+            log.debug("    Target above horizon: %s to %s", up_int[0], up_int[1])
 
-    print "Request %s" % req.request_number
-    print "    On %s, dark and rise_set intersections are:" % resource_name
+    log.debug("    Dark/rise intersections:")
     if not intersection.timepoints:
-        print "    <none>"
+        log.debug("        <none>")
     else:
         for i in intersection.timepoints:
-            print "    %s (%s)" % (i.time, i.type)
+            log.debug("        %s (%s)", i.time, i.type)
 
     return
 
@@ -95,10 +99,8 @@ def print_resource_windows(resource_windows):
 
 
 def print_compound_reservations(to_schedule):
-    print "Finished constructing compound reservations..."
-    print "There are %d %s to schedule:" % (len(to_schedule),
-                                            pluralise(len(to_schedule),
-                                                      'CompoundReservation'))
+    log.info("Finished constructing compound reservations...")
+    log.info("There are %d %s to schedule.", *pluralise(len(to_schedule), 'CompoundReservation'))
     for compound_res in to_schedule:
         print_compound_reservation(compound_res)
 
