@@ -77,6 +77,7 @@ def get_requests_from_db(url, telescope_class):
 
     log.info("DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
     sc           = SchedulerClient(url)
+
     json_ur_list = sc.retrieve(search, debug=True)
     ur_list      = json.loads(json_ur_list)
 
@@ -232,14 +233,16 @@ def main(requests, sched_client):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    n_deleted = cancel_schedule(tels, semester_start, semester_end)
+    now = datetime.utcnow()
+    n_deleted = cancel_schedule(tels, now, semester_end)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     n_submitted = send_schedule_to_pond(schedule, semester_start)
 
-    log.info("\nScheduling Summary")
     log.info("------------------")
-    log.info("Received %d %s from Request DB", *pl(len(requests), ur_string))
+    log.info("Scheduling Summary")
+    log.info("------------------")
+    log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
     log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
     log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
     log.info("Scheduling complete.")
