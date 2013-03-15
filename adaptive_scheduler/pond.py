@@ -30,11 +30,15 @@ from datetime import datetime
 from adaptive_scheduler.model2         import Proposal, Target
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
 from adaptive_scheduler.camera_mapping import create_camera_mapping
-from adaptive_scheduler.printing       import pluralise
+from adaptive_scheduler.printing       import pluralise as pl
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.molecule                import Expose
 from lcogtpond.schedule                import Schedule
+
+# Set up and configure a module scope logger
+import logging
+log = logging.getLogger(__name__)
 
 class Block(object):
 
@@ -134,7 +138,12 @@ class Block(object):
         mapping = create_camera_mapping("camera_mappings.dat")
 
 
-        for molecule in self.molecules:
+        for i, molecule in enumerate(self.molecules):
+            log.debug("Building molecule %d/%d (%dx%.03d %s)", i+1,
+                                                            len(self.molecules),
+                                                            molecule.exposure_count,
+                                                            molecule.exposure_time,
+                                                            molecule.filter)
             specific_camera = molecule.instrument_name
             if molecule.instrument_name in generic_camera_names:
                 tel_class = telescope[:-1]
@@ -144,7 +153,7 @@ class Block(object):
                                                                       telescope,
                                                                       search)
                 specific_camera = inst_match[0]['camera']
-                print "Instrument resolved as '%s'" % specific_camera
+                log.debug("Instrument resolved as '%s'", specific_camera)
 
             obs = Expose.build(
                                 # Meta data
@@ -175,7 +184,7 @@ class Block(object):
                 ag_match    = mapping.find_by_camera(specific_camera)
                 specific_ag = ag_match[0]['autoguider']
 
-                print "Autoguider resolved as '%s'" % specific_ag
+                log.debug("Autoguider resolved as '%s'", specific_ag)
                 obs.ag_name = specific_ag
 
             observations.append(obs)
@@ -220,7 +229,7 @@ class Block(object):
         self.pond_block.save()
         msg = "Sent Request %s (part of UR %s) to POND" % (self.request_number,
                                                            self.tracking_number)
-        print msg
+        log.debug(msg)
 
         return
 
@@ -264,9 +273,8 @@ def send_schedule_to_pond(schedule, semester_start):
     n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
-        print "Submitting %d %s to %s" % (n_submitted,
-                                          pluralise(n_submitted, 'block'),
-                                          resource_name)
+        _, block_str = pl(n_submitted, 'block')
+        log.info("Submitting %d %s to %s...", n_submitted, block_str, resource_name)
 
         for res in schedule[resource_name]:
             res_start, res_end = get_reservation_datetimes(res, semester_start)
@@ -285,6 +293,9 @@ def send_schedule_to_pond(schedule, semester_start):
                 block.add_molecule(molecule)
             block.add_target(res.request.target)
 
+            log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
+                                             block.request_number, block.tracking_number,
+                                             block.start, block.end, block.priority)
             pond_block = block.send_to_pond()
 
         n_submitted_total += n_submitted
@@ -299,31 +310,26 @@ def get_deletable_blocks(start, end, site, obs, tel):
     to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
                                                b.tracking_num_set()]
 
-    print "Retrieved %d blocks from %s.%s.%s (%s <-> %s), of which" % (
-                                                              len(schedule.blocks),
+    log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
                                                               tel, obs, site,
-                                                              start, end
-                                                            )
-    print "    %d/%d were placed by the scheduler and will be deleted" % (
-                                                                 len(to_delete),
-                                                                 len(schedule.blocks)
-                                                                )
+                                                              start, end)
+    log.info("%d/%d were placed by the scheduler and will be deleted", len(to_delete),
+                                                                       len(schedule.blocks))
 
     return to_delete
 
 @timeit
-def cancel_schedule(tels, semester_start, semester_end):
+def cancel_schedule(tels, start, end):
     n_deleted_total = 0
     for full_tel_name in tels:
         tel, obs, site = full_tel_name.split('.')
-        print "Cancelling schedule at %s, from %s to %s" % ( full_tel_name,
-                                                             semester_start,
-                                                             semester_end   )
+        log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
+                                                             start, end)
 
-        n_deleted = cancel_schedule_at_resource(semester_start, semester_end,
+        n_deleted = cancel_schedule_at_resource(start, end,
                                                 site, obs, tel)
-        print "Cancelled %d %s at %s\n" % (n_deleted, pluralise(n_deleted, 'block'),
-                                           full_tel_name)
+        _, block_str = pl(n_deleted, 'block')
+        log.info("Cancelled %d %s at %s", n_deleted, block_str, full_tel_name)
         n_deleted_total += n_deleted
 
     return n_deleted_total

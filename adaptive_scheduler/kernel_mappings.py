@@ -128,12 +128,14 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         # Intersect with any window provided in the user request
         user_windows   = req.windows.at(resource_name)
         user_intervals = req_window_to_kernel_intervals(user_windows)
+        import copy
+        p_ui = copy.deepcopy(user_intervals)
         intersection   = intersection.intersect([user_intervals])
         intersections_for_resource[resource_name] = intersection
 
         # Print some summary info
         if verbose==True:
-            print_req_summary(req, resource_name, user_intervals,
+            print_req_summary(req, resource_name, p_ui,
                               rs_dark_intervals, rs_up_intervals, intersection)
 
 
@@ -213,7 +215,8 @@ def compute_intersections(c_req, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
     dark_ups = []
     for req in c_req.requests:
-        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from)
+        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+                                                                    verbose=True)
         dark_ups.append((req, intersections_for_resource))
 
     return dark_ups
@@ -246,7 +249,7 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
         dark_ups = []
         for req in c_req.requests:
             intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
-                                                                       verbose=True)
+                                                                       verbose=False)
             dark_ups.append(intersections_for_resource)
 
         # Make and store the CompoundReservation
