@@ -256,7 +256,7 @@ class TestWindows(object):
                            )
 
 
-    def test_is_empty_has_windows(self):
+    def test_has_windows_windows(self):
         window_dict = {
                         'start' : "2013-03-01 00:00:00",
                         'end'   : "2013-03-01 00:30:00",
@@ -268,12 +268,12 @@ class TestWindows(object):
         windows = Windows()
         windows.append(w)
 
-        assert_equal(windows.is_empty(), False)
+        assert_equal(windows.has_windows(), True)
 
 
-    def test_is_empty_has_no_windows(self):
+    def test_has_windows_no_windows(self):
         windows = Windows()
-        assert_equal(windows.is_empty(), True)
+        assert_equal(windows.has_windows(), False)
 
 
     def test_is_empty_has_windows_empty_on_one_resource(self):
@@ -285,14 +285,17 @@ class TestWindows(object):
                     window_dict = window_dict,
                     resource    = self.t1
                   )
-        w = Window(
-                    window_dict = {},
-                    resource    = self.t2
-                  )
+        w2 = Window(
+                     window_dict = window_dict,
+                     resource    = self.t2
+                   )
 
         windows = Windows()
         windows.append(w)
+        windows.append(w2)
+        windows.windows_for_resource[self.t2.name] = []
 
-        assert_equal(windows.is_empty(), '[ppp')
+        assert_equal(windows.has_windows(), True)
+        assert_equal(windows.size(), 1)
 
 
