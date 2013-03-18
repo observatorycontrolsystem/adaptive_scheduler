@@ -52,7 +52,78 @@ class TestTelescopeNetwork(object):
 
 
 
+class TestDuration(object):
+    '''Unit tests for duration of URs, CRs, and Rs.'''
 
+    def setup(self):
+        self.molecule1 = Molecule(
+                                  type            = 'expose_n',
+                                  exposure_count  = 1,
+                                  bin_x           = 2,
+                                  bin_y           = 2,
+                                  instrument_name = 'KB12',
+                                  filter          = 'BSSL-UX-020',
+                                  exposure_time   = 20,
+                                  priority        = 1
+                                )
+        self.molecule2 = Molecule(
+                                  type            = 'expose_n',
+                                  exposure_count  = 10,
+                                  bin_x           = 1,
+                                  bin_y           = 1,
+                                  instrument_name = 'KB12',
+                                  filter          = 'BSSL-UX-020',
+                                  exposure_time   = 20,
+                                  priority        = 1
+                                )
+        self.complex_mols = [
+                              Molecule(
+                                exposure_time   = 180.0,
+                                exposure_count  = 3,
+                                filter          = 'B',
+                                bin_x           = 2,
+                                bin_y           = 2,
+                              ),
+                              Molecule(
+                                exposure_time  = 120.0,
+                                exposure_count = 3,
+                                filter         = 'V',
+                                bin_x          = 2,
+                                bin_y          = 2,
+                              ),
+                              Molecule(
+                                exposure_time  = 120.0,
+                                exposure_count = 3,
+                                filter         = 'R',
+                                bin_x          = 2,
+                                bin_y          = 2,
+                              ),
+                           ]
+        self.request1  = Request(
+                                target         = None,
+                                molecules      = [self.molecule1],
+                                windows        = None,
+                                request_number = None)
+        self.request2  = Request(
+                                target         = None,
+                                molecules      = [self.molecule2],
+                                windows        = None,
+                                request_number = None)
+        self.request3  = Request(
+                                target         = None,
+                                molecules      = self.complex_mols,
+                                windows        = None,
+                                request_number = None)
+
+    def test_get_simple_duration(self):
+        assert_equal(self.request1.get_duration(), 109.0)
+
+
+    def test_get_medium_duration(self):
+        assert_equal(self.request2.get_duration(), 815.0)
+
+    def test_get_complex_duration(self):
+        assert_equal(self.request3.get_duration(), 1487.0)
 
 
 class TestRequest(object):
@@ -75,7 +146,7 @@ class TestRequest(object):
                                   )
 
         self.proposal = Proposal(
-                                  proposal_name  = 'Scheduler Testing',
+                                  proposal_name  = 'LCOSchedulerTest',
                                   user           = 'Eric Saunders',
                                   tag            = 'admin',
                                   time_remaining = 10,               # In hours
@@ -83,12 +154,14 @@ class TestRequest(object):
                                 )
 
         self.molecule = Molecule(
-                                  name            = 'expose_n default',
                                   type            = 'expose_n',
-                                  count           = 1,
-                                  binning         = 2,
+                                  exposure_count  = 1,
+                                  bin_x           = 2,
+                                  bin_y           = 2,
                                   instrument_name = 'KB12',
-                                  filter          = 'BSSL-UX-020'
+                                  filter          = 'BSSL-UX-020',
+                                  exposure_time   = 20,
+                                  priority        = 1
                                 )
 
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)

@@ -18,6 +18,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.exceptions import InvalidRequestError
 from adaptive_scheduler import semester_service
 
+import math
 import ast
 import logging
 log = logging.getLogger(__name__)
@@ -194,11 +195,34 @@ class Request(DefaultMixin):
 
         #TODO: Placeholder for more sophisticated overhead scheme
 
-        # Pick a sensible sounding overhead, in seconds
-        overhead_per_exposure = 20
+        # Pick sensible sounding overheads, in seconds
+        overhead_per_exposure = 13.5 * 4
+        filter_change_time    = 15
+        front_padding         = 60
         duration = 0
+
+        # Find number of filter changes, and calculate total filter overhead
+        prev_filter = None
+        n_filter_changes = 0
+        for i, mol in enumerate(self.molecules):
+            if mol.filter != prev_filter:
+                n_filter_changes += 1
+
+            prev_filter = mol.filter
+
+        filter_overhead = n_filter_changes * filter_change_time
+
         for mol in self.molecules:
-            duration += mol.exposure_count * ( mol.exposure_time + overhead_per_exposure)
+            binned_overhead_per_exposure = overhead_per_exposure / (mol.bin_x * mol.bin_y)
+            mol_duration  = mol.exposure_count * (mol.exposure_time + binned_overhead_per_exposure)
+
+            duration     += mol_duration
+
+        # Add per-block overheads
+        duration += front_padding
+        duration += filter_overhead
+
+        duration = math.ceil(duration)
 
         return duration
 
