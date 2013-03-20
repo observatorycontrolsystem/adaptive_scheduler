@@ -40,8 +40,8 @@ def kill_handler(signal, frame):
     print 'Received SIGTERM (kill) - terminating on loop completion.'
     run_flag = False
 
-signal.signal(signal.SIGINT, ctrl_c_handler)
-signal.signal(signal.SIGTERM, kill_handler)
+#signal.signal(signal.SIGINT, ctrl_c_handler)
+#signal.signal(signal.SIGTERM, kill_handler)
 
 
 
@@ -52,9 +52,9 @@ if __name__ == '__main__':
     sleep_duration = 20
 
     # Acquire and collapse the requests
-    request_db_url = 'http://pluto.lco.gtn:8001/'
+#    request_db_url = 'http://pluto.lco.gtn:8001/'
 #    request_db_url = 'http://localhost:8001/'
-#    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
+    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
 
     scheduler_client = SchedulerClient(request_db_url)
 
@@ -75,23 +75,29 @@ if __name__ == '__main__':
                                               dirty_response['last_updated'])
             log.info(msg)
 
+            raw_input("DEBUG: Press enter to continue")
+
             # TODO: Log request receiving errors
             log.info("Clearing dirty flag")
             scheduler_client.clear_dirty_flag()
+
             try:
                 requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
                 log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
 
                 # TODO: What about if we don't get stuff successfully - need to set flag
 
-                # Run the scheduling loop
-                main(requests, scheduler_client)
+                # Run the scheduling loop, if there are any User Requests
+                if len(requests):
+                    main(requests, scheduler_client)
+                else:
+                    log.warn("Recieved no User Requests! Skipping this scheduling cycle")
                 sys.stdout.flush()
             except ConnectionError as e:
                 log.warn("Error retrieving Requests from DB: %s", e)
                 log.warn("Skipping this scheduling cycle")
         else:
-            log.info("Request DB is still clean (or unreachable) - nothing has changed.")
-            log.info(" Sleeping for %d seconds.", sleep_duration)
+            log.info("Request DB is still clean - nothing has changed")
+            log.info(" Sleeping for %d seconds", sleep_duration)
             time.sleep(sleep_duration)
 

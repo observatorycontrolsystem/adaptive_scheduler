@@ -77,7 +77,7 @@ def get_requests_from_db(url, telescope_class):
     search = SearchQuery()
     search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
 
-    log.info("DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
+    log.info("Asking DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
     sc           = SchedulerClient(url)
 
     json_ur_list = sc.retrieve(search, debug=True)
