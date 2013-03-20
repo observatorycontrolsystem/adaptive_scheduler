@@ -73,10 +73,12 @@ def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
             if tp.time < earliest_tp.time: earliest_tp = tp
             if tp.time > latest_tp.time: latest_tp = tp
 
-    for dark_int, up_int in zip(rs_dark_intervals, rs_up_intervals):
+    for dark_int in rs_dark_intervals:
         if dark_int[0] < latest_tp.time+timedelta(days=1) and dark_int[1] > earliest_tp.time - timedelta(days=1):
             log.debug("    Darkness:             %s to %s", dark_int[0], dark_int[1])
-        if up_int[0] < latest_tp.time and up_int[1] > earliest_tp.time:
+
+    for up_int in rs_up_intervals:
+        if up_int[0] < latest_tp.time+timedelta(days=1) and up_int[1] > earliest_tp.time - timedelta(days=1):
             log.debug("    Target above horizon: %s to %s", up_int[0], up_int[1])
 
     log.debug("    Dark/rise intersections:")
