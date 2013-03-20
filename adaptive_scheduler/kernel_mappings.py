@@ -133,7 +133,7 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
 
         # Print some summary info
         if verbose==True:
-            print_req_summary(req, resource_name, p_ui,
+            print_req_summary(req, resource_name, user_intervals,
                               rs_dark_intervals, rs_up_intervals, intersection)
 
 
