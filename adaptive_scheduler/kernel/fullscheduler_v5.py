@@ -133,7 +133,7 @@ class FullScheduler_v5(SlicedIPScheduler):
                     left_idx += 1
                     right_idx += 1
                     row += 1
-            print Aeq_numrows
+#            print Aeq_numrows
             Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))   
 
         # bounds:
@@ -148,6 +148,6 @@ class FullScheduler_v5(SlicedIPScheduler):
             row += 1
         p = LP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
 #        r = p.minimize('pclp') 
-        r = p.minimize('glpk')
+        r = p.minimize('glpk',iprint=-1)
 #        r = p.minimize('lpsolve')
         return self.unpack_result(r)
