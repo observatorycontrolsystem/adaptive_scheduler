@@ -327,7 +327,7 @@ def get_network_running_blocks(tels, start, end):
     running_at_tel = {}
     for full_tel_name in tels:
         tel, obs, site = full_tel_name.split('.')
-        log.debug("Aquiring running blocks and first availability at %s",
+        log.debug("Acquiring running blocks and first availability at %s",
                                                           full_tel_name)
 
         cutoff, running = get_running_blocks(start, end, site, obs, tel)
@@ -357,7 +357,9 @@ def get_running_blocks(start, end, site, obs, tel):
 
 
 def get_deletable_blocks(start, end, site, obs, tel):
-    schedule  = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
+    schedule  = Schedule.get(start=start, end=end, site=site,
+                             observatory=obs, telescope=tel)
+                            #, canceled_blocks=False) # Currently not working
     cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
                                                b.tracking_num_set()]
@@ -367,6 +369,7 @@ def get_deletable_blocks(start, end, site, obs, tel):
                                                               start, end)
     log.info("%d/%d were placed by the scheduler and will be deleted", len(to_delete),
                                                                        len(schedule.blocks))
+    log.debug([b.tracking_num_set() for b in to_delete])
 
     return to_delete
 
