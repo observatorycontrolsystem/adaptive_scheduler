@@ -69,6 +69,16 @@ if __name__ == '__main__':
             log.warn("Error retrieving dirty flag from DB: %s", e)
             log.warn("Skipping this scheduling cycle")
 
+        #TODO: HACK to handle not a real error returned from Request DB
+        try:
+            if dirty_response['dirty'] is True:
+                print "hi. Please fix me."
+        except TypeError as e:
+            log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
+            log.info(" Sleeping for %d seconds", sleep_duration)
+            time.sleep(sleep_duration)
+            continue
+
         if dirty_response['dirty'] is True:
             msg  = "Got dirty flag (DB needs reading) with timestamp"
             msg += " %s (last updated %s)" % (dirty_response['timestamp'],
