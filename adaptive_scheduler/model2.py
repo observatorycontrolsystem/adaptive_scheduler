@@ -196,9 +196,9 @@ class Request(DefaultMixin):
         #TODO: Placeholder for more sophisticated overhead scheme
 
         # Pick sensible sounding overheads, in seconds
-        overhead_per_exposure = 13.5 * 4
+        overhead_per_exposure = 15.0 * 4
         filter_change_time    = 15
-        front_padding         = 60
+        front_padding         = 90
         duration = 0
 
         # Find number of filter changes, and calculate total filter overhead

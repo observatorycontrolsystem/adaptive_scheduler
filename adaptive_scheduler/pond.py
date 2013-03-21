@@ -357,9 +357,10 @@ def get_running_blocks(start, end, site, obs, tel):
 
 
 def get_deletable_blocks(start, end, site, obs, tel):
+    # Only retrieve blocks which have not been cancelled
     schedule  = Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel)
-                            #, canceled_blocks=False) # Currently not working
+                             observatory=obs, telescope=tel,
+                             canceled_blocks=False)
     cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
                                                b.tracking_num_set()]
