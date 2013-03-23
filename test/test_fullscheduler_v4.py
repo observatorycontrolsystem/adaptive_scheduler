@@ -47,9 +47,6 @@ class TestFullScheduler_v4(object):
         self.cr10 = CompoundReservation_v2([self.r7])
         self.cr11 = CompoundReservation_v2([self.r8])
 
-        self.gpw = {}
-        self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
-        
         self.gpw2 = {}
         self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
         self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
