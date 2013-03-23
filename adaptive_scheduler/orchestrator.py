@@ -242,7 +242,7 @@ def main(requests, sched_client):
     time_slicing_json     = jsonpickle.encode(time_slicing_dict)
 
     kernel_dump_file = 'kernel_input_%s.dump' % now
-    kernel_dump_fh = open('w', kernel_dump_file)
+    kernel_dump_fh = open(kernel_dump_file, 'w')
     kernel_dump_fh.write(to_schedule_json)
     kernel_dump_fh.write(resource_windows_json)
     kernel_dump_fh.write(contractual_obs_json)
