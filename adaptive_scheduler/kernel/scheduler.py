@@ -54,8 +54,7 @@ class Scheduler(object):
             self.reservations_by_resource_dict[resource] = []
         for reservation in self.reservation_list:
             for resource in reservation.free_windows_dict.keys():
-                self.reservations_by_resource_dict[resource].append(reservation)        
-
+                self.reservations_by_resource_dict[resource].append(reservation)
 
 
     def order_equals(self, x):
@@ -79,25 +78,46 @@ class Scheduler(object):
         return None
 
 
-    def check_window_consistency(self):
-        # TODO: 
-        # checks that all windows requested by reservations are within
-        # the global windows of opportunity for their respective resource
-        return
+    def check_against_gpw(self, reservation):
+        # intersect the free_windows of reservation with the 
+        # globally_possible_windows at each resource.
+        # if there are no more free_windows in a specific resource, then 
+        # remove that resource from the free_windows_dict.
+        # if there are NO MORE resources, then return False.
+        for resource in reservation.free_windows_dict.keys():
+            reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect([self.globally_possible_windows_dict[resource]])
+            reservation.clean_up_free_windows(resource)
+            if reservation.free_windows_dict[resource].is_empty():
+                del(reservation.free_windows_dict[resource])
+        if len(reservation.free_windows_dict.keys()) == 0:
+            return False
+        else:
+            return True
 
 
     def convert_compound_to_simple(self):
         reservation_list = []
         for cr in self.compound_reservation_list:
             if cr.issingle():
-                reservation_list.append(cr.reservation_list[0])
+                if self.check_against_gpw(cr.reservation_list[0]):
+                    reservation_list.append(cr.reservation_list[0])
             elif cr.isoneof():
-                reservation_list.extend(cr.reservation_list)
-                self.oneof_constraints.append(cr.reservation_list)
+                tmp_list = []
+                for reservation in cr.reservation_list:
+                    if self.check_against_gpw(reservation):
+                        tmp_list.append(reservation)
+                if tmp_list:
+                    reservation_list.extend(tmp_list)
+                self.oneof_constraints.append(tmp_list)
             elif cr.isand():
-                reservation_list.extend(cr.reservation_list)
-                # add the constraint to the list of constraints
-                self.and_constraints.append(cr.reservation_list)
+                all_good = True
+                for reservation in cr.reservation_list:
+                    if not self.check_against_gpw(reservation):
+                        all_good = False
+                if all_good:
+                    reservation_list.extend(cr.reservation_list)
+                    # add the constraint to the list of constraints
+                    self.and_constraints.append(cr.reservation_list)
         return reservation_list
 
 

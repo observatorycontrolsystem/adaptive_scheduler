@@ -39,6 +39,9 @@ class FullScheduler_v5(SlicedIPScheduler):
 
     @timeit
     def schedule_all(self):
+        if not self.reservation_list:
+            return self.schedule_dict
+
         self.build_data_structures()
         # allocate A & b
         # find the row size of A:
