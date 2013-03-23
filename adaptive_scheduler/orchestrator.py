@@ -16,6 +16,8 @@ import json
 import ast
 from datetime import datetime
 
+import jsonpickle
+
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
 from adaptive_scheduler.model2          import ModelBuilder
@@ -233,9 +235,21 @@ def main(requests, sched_client):
     for t in tels:
         time_slicing_dict[t] = [0, 600]
 
-    #HERE
-    import jsonpickle
-    to_schedule_json = jsonpickle.encode(to_schedule)
+
+    to_schedule_json      = jsonpickle.encode(to_schedule)
+    resource_windows_json = jsonpickle.encode(resource_windows)
+    contractual_obs_json  = jsonpickle.encode(contractual_obligations)
+    time_slicing_json     = jsonpickle.encode(time_slicing_dict)
+
+    kernel_dump_file = 'kernel_input_%s.dump' % now
+    kernel_dump_fh = open('w', kernel_dump_file)
+    kernel_dump_fh.write(to_schedule_json)
+    kernel_dump_fh.write(resource_windows_json)
+    kernel_dump_fh.write(contractual_obs_json)
+    kernel_dump_fh.write(time_slicing_json)
+    kernel_dump_fh.close()
+    log.info("Wrote kernel input dump to %s", kernel_dump_file)
+
 
     kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
                              time_slicing_dict)
