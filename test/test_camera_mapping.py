@@ -26,7 +26,7 @@ def test_find_by_autoguider():
 def test_find_by_autoguider_type():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
     cameras = camera_mapping.find_by_autoguider_type('OffAxis')
-    eq_( len(cameras), 5 )
+    eq_( len(cameras), 9 )
 
 def test_find_by_camera():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
@@ -38,4 +38,4 @@ def test_find_by_camera():
 def test_find_by_camera_type():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
     cameras = camera_mapping.find_by_camera_type('1m0-SciCam')
-    eq_( len(cameras), 5 )
+    eq_( len(cameras), 9 )

@@ -116,14 +116,14 @@ class TestDuration(object):
                                 request_number = None)
 
     def test_get_simple_duration(self):
-        assert_equal(self.request1.get_duration(), 109.0)
+        assert_equal(self.request1.get_duration(), 140.0)
 
 
     def test_get_medium_duration(self):
-        assert_equal(self.request2.get_duration(), 815.0)
+        assert_equal(self.request2.get_duration(), 905.0)
 
     def test_get_complex_duration(self):
-        assert_equal(self.request3.get_duration(), 1487.0)
+        assert_equal(self.request3.get_duration(), 1530.0)
 
 
 class TestRequest(object):

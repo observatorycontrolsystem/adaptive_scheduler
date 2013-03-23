@@ -159,8 +159,9 @@ class TestPond(object):
     def test_cancel_schedule(self, func_mock):
         block_mock = Mock()
         func_mock.return_value = [block_mock]
+        tels = ['1m0a.doma.tst']
         junk = 'junk'
 
-        cancel_schedule(junk, junk, junk, junk, junk)
+        cancel_schedule(tels, junk, junk)
         block_mock.cancel.assert_called_once_with(reason="Superceded by new schedule")
 
