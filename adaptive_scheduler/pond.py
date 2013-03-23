@@ -312,12 +312,22 @@ def blacklist_running_blocks(ur_list, tels, start, end):
         running_blocks = run_dict['running']
         all_running_blocks += running_blocks
 
-    log.debug("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'block'))
-    log.debug("%d %s in the running blacklist", *pl(len(all_running_blocks), 'block'))
+    log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
+    log.info("%d %s in the running blacklist", *pl(len(all_running_blocks), 'UR'))
+    for block in all_running_blocks:
+        msg = "UR %s has a running block (id=%d, finishing at %s)" % (
+                                                     block.tracking_num_set()[0],
+                                                     block.id,
+                                                     block.end
+                                                   )
+        log.debug(msg)
 
-    schedulable_urs = list(set(ur_list) - set(all_running_blocks))
+    all_tns         = [ur.tracking_number for ur in ur_list]
+    running_tns     = [block.tracking_num_set()[0] for block in all_running_blocks]
+    schedulable_tns = set(all_tns) - set(running_tns)
+    schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
 
-    log.debug("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'block'))
+    log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
 
     return schedulable_urs, running_at_tel
 
@@ -347,7 +357,9 @@ def get_network_running_blocks(tels, start, end):
 
 
 def get_running_blocks(start, end, site, obs, tel):
-    schedule  = Schedule.get(start=start, end=end, site=site, obs=obs, tel=tel)
+    schedule  = Schedule.get(start=start, end=end, site=site,
+                             observatory=obs, telescope=tel,
+                             canceled_blocks=False)
     cutoff_dt = schedule.end_of_overlap(start)
 
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
@@ -362,7 +374,7 @@ def get_deletable_blocks(start, end, site, obs, tel):
                              observatory=obs, telescope=tel,
                              canceled_blocks=False)
     cutoff_dt = schedule.end_of_overlap(start)
-    to_delete = [b for b in schedule.blocks if b.start > cutoff_dt and
+    to_delete = [b for b in schedule.blocks if b.start >= cutoff_dt and
                                                b.tracking_num_set()]
 
     log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),

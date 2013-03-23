@@ -72,7 +72,7 @@ if __name__ == '__main__':
         #TODO: HACK to handle not a real error returned from Request DB
         try:
             if dirty_response['dirty'] is True:
-                print "hi. Please fix me."
+                log.critical("hi. Please fix me.")
         except TypeError as e:
             log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
             log.info(" Sleeping for %d seconds", sleep_duration)
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                                               dirty_response['last_updated'])
             log.info(msg)
 
-            raw_input("DEBUG: Press enter to continue")
+#            raw_input("DEBUG: Press enter to continue")
 
             # TODO: Log request receiving errors
             log.info("Clearing dirty flag")
@@ -108,6 +108,6 @@ if __name__ == '__main__':
                 log.warn("Skipping this scheduling cycle")
         else:
             log.info("Request DB is still clean - nothing has changed")
-            log.info(" Sleeping for %d seconds", sleep_duration)
+            log.info("Sleeping for %d seconds", sleep_duration)
             time.sleep(sleep_duration)
 

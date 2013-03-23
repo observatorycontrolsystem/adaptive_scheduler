@@ -294,6 +294,24 @@ def construct_global_availability(now, semester_start, running_at_tel, resource_
         running_interval = Intervals([Timepoint(now, 'start'),
                                      Timepoint(running_at_tel[tel_name]['cutoff'], 'end')])
         norm_running_interval = normalise_dt_intervals(running_interval, semester_start)
-        resource_windows[tel_name] = resource_windows[tel_name].intersect([norm_running_interval])
+
+        tmp = resource_windows[tel_name]
+        if tel_name == '1m0a.doma.cpt':
+            print "Original availability"
+            for x in resource_windows[tel_name].timepoints:
+                print x.time, x.type, normalised_epoch_to_datetime(x.time, datetime_to_epoch(semester_start))
+            print 'NOW:', now
+            print
+            print "Unavailable:"
+            for x in norm_running_interval.timepoints:
+                print x.time, x.type, normalised_epoch_to_datetime(x.time, datetime_to_epoch(semester_start))
+
+        resource_windows[tel_name] = resource_windows[tel_name].subtract(norm_running_interval)
+
+        if tel_name == '1m0a.doma.cpt':
+            print "Resulting availability:"
+            for x in resource_windows[tel_name].timepoints:
+                print x.time, x.type, normalised_epoch_to_datetime(x.time, datetime_to_epoch(semester_start))
+
 
     return resource_windows

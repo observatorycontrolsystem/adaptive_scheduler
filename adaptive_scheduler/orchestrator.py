@@ -148,6 +148,7 @@ def summarise_urs(user_reqs):
 @timeit
 def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
+    now = datetime.utcnow()
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
@@ -191,7 +192,7 @@ def main(requests, sched_client):
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs)
 
     # Construct visibility objects for each telescope
-    visibility_from = construct_visibilities(tels, semester_start, semester_end)
+    visibility_from = construct_visibilities(tels, now, semester_end)
 
     # Do another check on duration and operator soundness, after dark/rise checking
     user_reqs = prefilter_for_kernel(user_reqs, visibility_from)
@@ -200,7 +201,6 @@ def main(requests, sched_client):
     summarise_urs(user_reqs)
 
     # Remove running blocks from consideration, and get the availability edge
-    now = datetime.utcnow()
     user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
 
     # Convert CompoundRequests -> CompoundReservations
@@ -221,7 +221,7 @@ def main(requests, sched_client):
 
 
     if not to_schedule:
-        print "Nothing to schedule! Skipping kernel call..."
+        log.info("Nothing to schedule! Skipping kernel call...")
         return
 
     # Filter a second time to remove (now) unschedulable Requests

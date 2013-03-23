@@ -5,10 +5,16 @@ from nose.tools import assert_equal
 
 from adaptive_scheduler.model2 import (Telescope, Target, Request, Window, Windows,
                                        Molecule)
-from adaptive_scheduler.utils import iso_string_to_datetime
+from adaptive_scheduler.utils import (iso_string_to_datetime,
+                                      datetime_to_epoch,
+                                      normalised_epoch_to_datetime)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 rise_set_to_kernel_intervals,
-                                                make_dark_up_kernel_intervals)
+                                                make_dark_up_kernel_intervals,
+                                                construct_global_availability,
+                                                normalise_dt_intervals)
+from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.kernel.timepoint import Timepoint
 
 from datetime import datetime
 
@@ -161,3 +167,52 @@ class TestKernelMappings(object):
             for i, received_tp in enumerate(received_intervals.timepoints):
                 assert_equal(received_tp.time, rise_set_dark_intervals[i])
 
+
+    def test_construct_global_availability(self):
+        tel_name = '1m0a.doma.tst'
+        sem_start = datetime(2012, 10, 1)
+
+        # Resource is available from 3-7
+
+        dt0 = datetime(2013, 3, 22, 3)
+        dt1 = datetime(2013, 3, 22, 7)
+
+        dt_resource_int = Intervals(
+                            [
+                              Timepoint(dt0, 'start'),
+                              Timepoint(dt1, 'end'),
+                            ]
+                          )
+        epoch_resource_int = normalise_dt_intervals(dt_resource_int, sem_start)
+        resource_windows = {
+                             tel_name : epoch_resource_int
+                           }
+
+        # Resource is unavailable from 4-5
+        dt2 = datetime(2013, 3, 22, 4)
+        dt3 = datetime(2013, 3, 22, 5)
+        now = dt2
+        running_at_tel = {
+                           tel_name : {
+                               'cutoff'  : dt3,
+                               'running' : []
+                            },
+                         }
+
+        # Expected available intervals after masking are
+        # 3-4, 5-7
+        received = construct_global_availability(now, sem_start, running_at_tel,
+                                                 resource_windows)
+        received_int = received[tel_name]
+        assert_equal(len(received_int.timepoints), 4)
+        r0 = normalised_epoch_to_datetime(received_int.timepoints[0].time,
+                                          datetime_to_epoch(sem_start))
+        r1 = normalised_epoch_to_datetime(received_int.timepoints[1].time,
+                                          datetime_to_epoch(sem_start))
+        r2 = normalised_epoch_to_datetime(received_int.timepoints[2].time,
+                                          datetime_to_epoch(sem_start))
+        r3 = normalised_epoch_to_datetime(received_int.timepoints[3].time,
+                                          datetime_to_epoch(sem_start))
+        assert_equal(r0, dt0)
+        assert_equal(r1, dt2)
+        assert_equal(r3, dt1)

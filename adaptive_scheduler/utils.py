@@ -20,8 +20,8 @@ class ReprMixin(object):
        contents when printed. Warning: beware of circular dependencies between
        objects inheriting this, which will cause infinite recursion!'''
 
-    def __repr__(self):
-        return "%s(%r)" % (self.__class__, self.__dict__)
+#    def __repr__(self):
+#        return "%s(%r)" % (self.__class__, self.__dict__)
 
 
 class EqualityMixin(object):
