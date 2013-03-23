@@ -30,7 +30,29 @@ class Test_23032013(object):
         self.cr3 = CompoundReservation_v2([self.r3])
 
         self.gpw = {}
-        self.gpw['foo'] = Intervals([Timepoint(0, 'start'), Timepoint(15724800, 'end')])
+#        self.gpw['foo'] = Intervals([Timepoint(0, 'start'), Timepoint(15724800, 'end')])
+        self.gpw['foo'] = Intervals([
+                                        Timepoint(14947200, 'start'),
+                                        Timepoint(14960949, 'end'),
+                                        Timepoint(15010609, 'start'),
+                                        Timepoint(15047392, 'end'),
+                                        Timepoint(15096930, 'start'),
+                                        Timepoint(15133834, 'end'),
+                                        Timepoint(15183251, 'start'),
+                                        Timepoint(15220276, 'end'),
+                                        Timepoint(15269573, 'start'),
+                                        Timepoint(15306718, 'end'),
+                                        Timepoint(15355895, 'start'),
+                                        Timepoint(15393160, 'end'),
+                                        Timepoint(15442217, 'start'),
+                                        Timepoint(15479602, 'end'),
+                                        Timepoint(15528539, 'start'),
+                                        Timepoint(15566043, 'end'),
+                                        Timepoint(15614862, 'start'),
+                                        Timepoint(15652484, 'end'),
+                                        Timepoint(15701186, 'start'),
+                                        Timepoint(15724800, 'end')
+                                      ])
 
         slice_dict = {}
         slice_dict['foo'] = [0,600]
@@ -47,5 +69,6 @@ class Test_23032013(object):
         print self.r1
         print self.r2
         print self.r3
+        assert(False)
 
 
