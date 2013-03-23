@@ -25,6 +25,8 @@ class TestFullScheduler_v5(object):
         s5 = copy.copy(s2)
         s6 = copy.copy(s1)
         s7 = copy.copy(s1)
+        s8 = copy.copy(s1)
+        s9 = copy.copy(s2)
 
         self.r1 = Reservation_v3(1, 1, {'foo': s1})
         self.r2 = Reservation_v3(2, 2, {'bar': s2})
@@ -34,6 +36,8 @@ class TestFullScheduler_v5(object):
         self.r6 = Reservation_v3(1, 2, {'bar': s5})
         self.r7 = Reservation_v3(1, 1, {'bar': s6, 'foo' : s5})
         self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar' : s7})
+        self.r9 = Reservation_v3(1, 1, {'foo': s8})
+        self.r10 = Reservation_v3(2, 2, {'bar': s9})
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -46,13 +50,18 @@ class TestFullScheduler_v5(object):
         self.cr9 = CompoundReservation_v2([self.r4, self.r1, self.r3], 'oneof')
         self.cr10 = CompoundReservation_v2([self.r7])
         self.cr11 = CompoundReservation_v2([self.r8])
+        self.cr12 = CompoundReservation_v2([self.r9, self.r10], 'oneof')
 
         self.gpw = {}
-        self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
+        self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(10, 'end')]
         
         self.gpw2 = {}
-        self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
-        self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
+        self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
+        self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
+
+        self.gpw3 = {}
+        self.gpw3['foo'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
+        self.gpw3['bar'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
 
         slice_dict = {}
         slice_dict['foo'] = [0,1]
@@ -69,7 +78,9 @@ class TestFullScheduler_v5(object):
                                     self.gpw2, [], slice_dict)
         self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
-        
+        self.fs7 = FullScheduler_v5([self.cr12],
+                                    self.gpw3, [], slice_dict)
+
 
     def test_schedule_all_1(self):
         d = self.fs1.schedule_all()
@@ -100,10 +111,12 @@ class TestFullScheduler_v5(object):
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
         
+
     def test_schedule_all_3(self):
         d = self.fs3.schedule_all()
         assert_equal(self.r4.scheduled, False)
         assert_equal(self.r5.scheduled, True)
+
 
     def test_schedule_all_4(self):
         d = self.fs4.schedule_all()
@@ -145,3 +158,10 @@ class TestFullScheduler_v5(object):
         slice_dict['goo'] = [90000,60]
         fs = FullScheduler_v5([cr], gpw, [], slice_dict)
         schedule = fs.schedule_all()
+
+
+    def test_schedule_all_gaw(self):
+        d = self.fs7.schedule_all()
+        assert_equal(self.r9.scheduled, False)
+        assert_equal(self.r10.scheduled, False)
+        
