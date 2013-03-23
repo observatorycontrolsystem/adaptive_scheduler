@@ -65,6 +65,7 @@ class SlicedIPScheduler(Scheduler):
                 slice_alignment = self.time_slicing_dict[resource][0]
                 slice_length = self.time_slicing_dict[resource][1]
                 r.slices_dict[resource], r.internal_starts_dict[resource] = self.get_slices( r.free_windows_dict[resource], slice_alignment, slice_length, r.duration)
+#                print r.resID, resource, r.slices_dict[resource], r.internal_starts_dict[resource]
                 w_idx = 0
                 for w in r.slices_dict[resource]:
                     Yik_idx = len(self.Yik)
@@ -79,6 +80,7 @@ class SlicedIPScheduler(Scheduler):
                             self.aikt[key].append(Yik_idx)
                         else:
                             self.aikt[key] = [Yik_idx]
+
 
     def unpack_result(self, r):
         #        print r.xf
@@ -122,11 +124,12 @@ class SlicedIPScheduler(Scheduler):
                     start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
                     # use the actual start as an internal start (may or may not align w/ slice_alignment)
                     internal_start = t.time
+                end_time = internal_start + duration
             elif t.type == 'end': 
                 if t.time < slice_alignment:
                     continue
                 while t.time - start >= duration:
-                    tmp = range(start, t.time, slice_length)
+                    tmp = range(start, internal_start+duration, slice_length)
                     slices.append(tmp)
                     internal_starts.append(internal_start)
                     start += slice_length

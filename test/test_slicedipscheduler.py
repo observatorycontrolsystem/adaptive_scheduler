@@ -156,4 +156,29 @@ class TestSlicedIPScheduler(object):
         assert_equal(si[0], 17)
         assert_equal(si[1], 20)
         
+    
+    def test_get_slices_8(self):
+        i = Intervals([Timepoint(1, 'start'), Timepoint(4, 'end')])
+        s, si = self.fs1.get_slices(i, 0, 1, 1)
+        assert_equal(s[0][0], 1)
+        assert_equal(s[1][0], 2)
+        assert_equal(s[2][0], 3)
+        assert_equal(si[0], 1)
+        assert_equal(si[1], 2)
+        assert_equal(si[2], 3)
 
+
+    def test_get_slices_9(self):
+        i = Intervals([Timepoint(2, 'start'), Timepoint(5, 'end')])
+        s, si = self.fs1.get_slices(i, 0, 1, 3)
+        assert_equal(s[0][0], 2)
+        assert_equal(s[0][1], 3)
+        assert_equal(s[0][2], 4)
+        assert_equal(si[0], 2)
+
+
+    def test_get_slices_10(self):
+        i = Intervals([Timepoint(2, 'start'), Timepoint(5, 'end')])
+        s, si = self.fs1.get_slices(i, 0, 10, 3)
+        assert_equal(s[0][0], 0)
+        assert_equal(si[0], 2)

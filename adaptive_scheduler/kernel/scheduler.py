@@ -89,10 +89,10 @@ class Scheduler(object):
             reservation.clean_up_free_windows(resource)
             if reservation.free_windows_dict[resource].is_empty():
                 del(reservation.free_windows_dict[resource])
-        if len(reservation.free_windows_dict.keys()) == 0:
-            return False
-        else:
+        if reservation.free_windows_dict.keys():
             return True
+        else:
+            return False
 
 
     def convert_compound_to_simple(self):

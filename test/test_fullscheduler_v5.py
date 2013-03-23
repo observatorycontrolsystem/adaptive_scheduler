@@ -27,6 +27,11 @@ class TestFullScheduler_v5(object):
         s7 = copy.copy(s1)
         s8 = copy.copy(s1)
         s9 = copy.copy(s2)
+        s10 = Intervals([Timepoint(1, 'start'), 
+                         Timepoint(10, 'end')])
+        s11 = copy.copy(s10)
+        s12 = copy.copy(s10)
+        s13 = copy.copy(s10)
 
         self.r1 = Reservation_v3(1, 1, {'foo': s1})
         self.r2 = Reservation_v3(2, 2, {'bar': s2})
@@ -38,6 +43,10 @@ class TestFullScheduler_v5(object):
         self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar' : s7})
         self.r9 = Reservation_v3(1, 1, {'foo': s8})
         self.r10 = Reservation_v3(2, 2, {'bar': s9})
+        self.r11 = Reservation_v3(1, 1, {'bar': s10})
+        self.r12 = Reservation_v3(1, 1, {'bar': s11})
+        self.r13 = Reservation_v3(1, 1, {'bar': s12})        
+        self.r14 = Reservation_v3(1, 1, {'bar': s13})
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -51,6 +60,11 @@ class TestFullScheduler_v5(object):
         self.cr10 = CompoundReservation_v2([self.r7])
         self.cr11 = CompoundReservation_v2([self.r8])
         self.cr12 = CompoundReservation_v2([self.r9, self.r10], 'oneof')
+        self.cr13 = CompoundReservation_v2([self.r11])
+        self.cr14 = CompoundReservation_v2([self.r12])
+        self.cr15 = CompoundReservation_v2([self.r13])
+        self.cr16 = CompoundReservation_v2([self.r14])
+
 
         self.gpw = {}
         self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(10, 'end')]
@@ -63,9 +77,13 @@ class TestFullScheduler_v5(object):
         self.gpw3['foo'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
         self.gpw3['bar'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
 
+        self.gpw4 = {}
+        self.gpw4['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
+
         slice_dict = {}
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
+
         self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
         self.fs2 = FullScheduler_v5([self.cr1, self.cr4],
@@ -80,6 +98,18 @@ class TestFullScheduler_v5(object):
                                     self.gpw2, [], slice_dict)
         self.fs7 = FullScheduler_v5([self.cr12],
                                     self.gpw3, [], slice_dict)
+        self.fs8 = FullScheduler_v5([self.cr13, self.cr14, self.cr15, self.cr16],
+                                    self.gpw4, [], slice_dict)
+
+
+    def test_schedule_all_4inarow(self):
+#        print self.fs8.reservation_list
+        self.fs8.schedule_all()
+#        print self.fs8.reservation_list
+        assert_equal(self.r11.scheduled, True)
+        assert_equal(self.r12.scheduled, True)
+        assert_equal(self.r13.scheduled, True)
+        assert_equal(self.r14.scheduled, True)
 
 
     def test_schedule_all_1(self):
