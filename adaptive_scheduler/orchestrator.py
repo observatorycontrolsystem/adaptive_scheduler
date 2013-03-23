@@ -250,8 +250,6 @@ def main(requests, sched_client):
     kernel_dump_fh.close()
     log.info("Wrote kernel input dump to %s", kernel_dump_file)
 
-    exit()
-
     kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
