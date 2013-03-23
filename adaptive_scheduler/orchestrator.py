@@ -233,6 +233,10 @@ def main(requests, sched_client):
     for t in tels:
         time_slicing_dict[t] = [0, 600]
 
+    import jsonpickle
+    to_schedule_json = jsonpickle.encode(to_schedule)
+    import ipdb
+    import ipdb.set_trace()
     kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
