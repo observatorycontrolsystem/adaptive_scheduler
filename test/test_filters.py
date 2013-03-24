@@ -9,6 +9,8 @@ from copy       import deepcopy
 
 from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
                                                  Windows, Telescope )
+
+import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
                                                  filter_on_expiry,
                                                  filter_out_past_windows,
@@ -61,9 +63,7 @@ class TestExpiryFilter(object):
         assert_not_equal(ur1, ur3)
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_unexpired_request_not_filtered(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
+    def test_unexpired_request_not_filtered(self):
 
         ur_list = [
                     self.create_user_request(self.future_expiry1),
@@ -74,10 +74,7 @@ class TestExpiryFilter(object):
         assert_equal(received_ur_list, ur_list)
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_expired_request_is_filtered(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
-
+    def test_expired_request_is_filtered(self):
         ur_list = [
                     self.create_user_request(self.past_expiry),
                     self.create_user_request(self.future_expiry1),
@@ -96,6 +93,7 @@ class TestWindowFilters(object):
         self.current_time    = datetime(2013, 2, 27)
         self.semester_end    = datetime(2013, 10, 1)
         self.resource_name = "Martin"
+        adaptive_scheduler.request_filters.now = self.current_time
 
 
     def create_user_request(self, window_dicts, operator='and'):
@@ -138,9 +136,7 @@ class TestWindowFilters(object):
         return ur1, window_list
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_filters_out_only_past_windows(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
+    def test_filters_out_only_past_windows(self):
 
         window_dict1 = {
                          'start' : "2013-01-01 00:00:00",
@@ -163,9 +159,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows, expected_window)
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_filters_out_only_past_windows_straddling_boundary(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
+    def test_filters_out_only_past_windows_straddling_boundary(self):
 
         window_dict1 = {
                          'start' : "2013-02-26 11:30:00",
@@ -183,6 +177,7 @@ class TestWindowFilters(object):
 
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
+        print received_windows
 
         expected_window = [window_list[0], window_list[1]]
         assert_equal(received_windows, expected_window)
@@ -215,9 +210,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_truncates_lower_crossing_windows(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
+    def test_truncates_lower_crossing_windows(self):
 
         # Crosses self.current time, so should be truncated
         window_dict1 = {
@@ -464,9 +457,7 @@ class TestWindowFilters(object):
         assert_equal(len(received_ur_list), 1)
 
 
-    @patch("adaptive_scheduler.request_filters.datetime")
-    def test_run_all_filters(self, mock_datetime):
-        mock_datetime.utcnow.return_value = self.current_time
+    def test_run_all_filters(self):
         window_dict1 = {
                          'start' : "2013-03-01 00:00:00",
                          'end'   : "2013-03-01 01:30:00",

@@ -191,7 +191,7 @@ def main(requests, sched_client):
 
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
-    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs)
+    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now)
 
     # Construct visibility objects for each telescope
     visibility_from = construct_visibilities(tels, now, semester_end)

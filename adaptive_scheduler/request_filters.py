@@ -56,6 +56,8 @@ from adaptive_scheduler.printing import pluralise as pl
 import logging
 log = logging.getLogger(__name__)
 
+# Comparator for all filters
+now = datetime.utcnow()
 
 def log_urs(fn):
     def wrap(ur_list):
@@ -71,7 +73,10 @@ def log_urs(fn):
 
 
 
-def filter_and_set_unschedulable_urs(client, ur_list):
+def filter_and_set_unschedulable_urs(client, ur_list, user_now):
+    global now
+    now = user_now
+
     initial_urs     = set(ur_list)
     schedulable_urs = set(run_all_filters(ur_list))
 
@@ -121,7 +126,7 @@ def run_all_filters(ur_list):
 @log_urs
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
-    now = datetime.utcnow()
+#    now = datetime.utcnow()
     filter_test = lambda w, ur: w.end > now
 
     return _for_all_ur_windows(ur_list, filter_test)
@@ -131,7 +136,7 @@ def filter_out_past_windows(ur_list):
 def truncate_lower_crossing_windows(ur_list):
     '''Case 2: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
-    now = datetime.utcnow()
+#    now = datetime.utcnow()
 
     def truncate_lower_crossing(w, ur):
         if w.start < now < w.end:
@@ -202,7 +207,7 @@ def _for_all_ur_windows(ur_list, filter_test):
 @log_urs
 def filter_on_expiry(ur_list):
     '''Case 7: Return only URs which haven't expired.'''
-    now = datetime.utcnow()
+#    now = datetime.utcnow()
 
     return [ ur for ur in ur_list if ur.expires > now ]
 
