@@ -126,7 +126,6 @@ def run_all_filters(ur_list):
 @log_urs
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
-#    now = datetime.utcnow()
     filter_test = lambda w, ur: w.end > now
 
     return _for_all_ur_windows(ur_list, filter_test)
@@ -136,7 +135,6 @@ def filter_out_past_windows(ur_list):
 def truncate_lower_crossing_windows(ur_list):
     '''Case 2: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
-#    now = datetime.utcnow()
 
     def truncate_lower_crossing(w, ur):
         if w.start < now < w.end:
@@ -207,7 +205,6 @@ def _for_all_ur_windows(ur_list, filter_test):
 @log_urs
 def filter_on_expiry(ur_list):
     '''Case 7: Return only URs which haven't expired.'''
-#    now = datetime.utcnow()
 
     return [ ur for ur in ur_list if ur.expires > now ]
 
