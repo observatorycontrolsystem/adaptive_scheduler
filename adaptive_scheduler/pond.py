@@ -181,10 +181,15 @@ class Block(object):
                 # one yet if the specific name was provided, and we need it to find
                 # the AG...
 
-                ag_match    = mapping.find_by_camera(specific_camera)
-                specific_ag = ag_match[0]['autoguider']
+                if not molecule.ag_name:
+                    ag_match    = mapping.find_by_camera(specific_camera)
+                    specific_ag = ag_match[0]['autoguider']
 
-                log.debug("Autoguider resolved as '%s'", specific_ag)
+                    log.debug("Autoguider resolved as '%s'", specific_ag)
+                else:
+                    specific_ag = molecule.ag_name
+                    log.debug("Using provided autoguider '%s'", specific_ag)
+
                 obs.ag_name = specific_ag
 
             observations.append(obs)

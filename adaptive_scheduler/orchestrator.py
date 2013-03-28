@@ -82,8 +82,7 @@ def get_requests_from_db(url, telescope_class):
     log.info("Asking DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
     sc           = SchedulerClient(url)
 
-    json_ur_list = sc.retrieve(search, debug=True)
-    ur_list      = json.loads(json_ur_list)
+    ur_list = sc.retrieve(search, debug=True)
 
     write_requests_to_file_as_json(ur_list, 'retrieved_urs.dat')
 
@@ -151,6 +150,7 @@ def summarise_urs(user_reqs):
 def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
     now = datetime.utcnow()
+#    now = datetime(2013, 3, 23, 17)
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
@@ -233,7 +233,7 @@ def main(requests, sched_client):
     # TODO: Move this to a config file
     time_slicing_dict = {}
     for t in tels:
-        time_slicing_dict[t] = [0, 600]
+        time_slicing_dict[t] = [0, 300]
 
 
     json_dump = {

@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
-    sleep_duration = 20
+    sleep_duration = 60
 
     # Acquire and collapse the requests
 #    request_db_url = 'http://pluto.lco.gtn:8001/'
