@@ -1,0 +1,14 @@
+--extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/
+numpy
+rise_set
+scipy
+openopt==0.45
+nose
+ipdb==0.7
+ipython==0.10
+lcogtpond==0.1.4.SNAPSHOT
+mock==1.0.1
+reqdbclient
+jsonpickle
+cvxopt==1.1.2
+
