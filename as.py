@@ -54,7 +54,8 @@ if __name__ == '__main__':
     # Acquire and collapse the requests
 #    request_db_url = 'http://pluto.lco.gtn:8001/'
 #    request_db_url = 'http://localhost:8001/'
-    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
+#    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
+    request_db_url = 'http://scheduler-dev.lco.gtn/requestdb/'
 
     scheduler_client = SchedulerClient(request_db_url)
 
