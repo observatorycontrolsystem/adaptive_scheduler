@@ -467,6 +467,8 @@ class ModelBuilder(object):
                        request_number = req_dict['request_number'],
                      )
 
+        req.received_state = req_dict['state']
+
         return req
 
 
