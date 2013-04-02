@@ -138,8 +138,9 @@ def summarise_urs(user_reqs):
         w_total = sum([r.n_windows() for r in ur.requests])
         _, w_str = pl(w_total, 'Window')
         r_total, r_str = pl(len(ur.requests), 'Request')
-        log.debug('%s: %s (%d %s, %d %s)', ur.tracking_number, r_nums,
-                  r_total, r_str, w_total, w_str)
+        r_states = [r.state for r in ur.requests]
+        log.debug('%s: %s (%d %s, %d %s) %s', ur.tracking_number, r_nums,
+                  r_total, r_str, w_total, w_str, r_states)
 
     return
 
