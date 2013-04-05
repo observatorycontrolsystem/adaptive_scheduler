@@ -23,9 +23,9 @@ import sys
 VERSION = '1.0.0'
 
 # Set up and configure an application scope logger
-logging.config.fileConfig('logging.conf')
+#logging.config.fileConfig('logging.conf')
+import logger_config
 log = logging.getLogger('adaptive_scheduler')
-
 
 # Set up signal handling for graceful shutdown
 run_flag = True
@@ -52,14 +52,12 @@ if __name__ == '__main__':
     sleep_duration = 60
 
     # Acquire and collapse the requests
-#    request_db_url = 'http://pluto.lco.gtn:8001/'
-#    request_db_url = 'http://localhost:8001/'
-#    request_db_url = 'http://zwalker-linux.lco.gtn:8001/'
-    request_db_url = 'http://scheduler-dev.lco.gtn/requestdb/'
+    request_db_url = 'http://localhost:8001/'
+#    request_db_url = 'http://scheduler-dev.lco.gtn/requestdb/'
 
     scheduler_client = SchedulerClient(request_db_url)
 
-    scheduler_client.set_dirty_flag()
+#    scheduler_client.set_dirty_flag()
 
 
     while run_flag:
@@ -86,8 +84,6 @@ if __name__ == '__main__':
                                               dirty_response['last_updated'])
             log.info(msg)
 
-#            raw_input("DEBUG: Press enter to continue")
-
             # TODO: Log request receiving errors
             log.info("Clearing dirty flag")
             scheduler_client.clear_dirty_flag()
@@ -109,6 +105,7 @@ if __name__ == '__main__':
                 log.warn("Skipping this scheduling cycle")
         else:
             log.info("Request DB is still clean - nothing has changed")
-            log.info("Sleeping for %d seconds", sleep_duration)
-            time.sleep(sleep_duration)
+
+        log.info("Sleeping for %d seconds", sleep_duration)
+        time.sleep(sleep_duration)
 

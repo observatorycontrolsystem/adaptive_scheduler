@@ -90,7 +90,6 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now):
             # Only blacklist child Requests with no windows
             # (the UR could be unschedulable due to type, but that is a parent
             # issue, not the child's)
-            # TODO: Set the state of the parent (not implemented at Req DB yet)
             if not r.has_windows():
                 # TODO: Contemplate errors
                 msg =  "Request %s (UR %s) is UNSCHEDULABLE;" % (ur.tracking_number,
@@ -100,8 +99,13 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now):
                 unschedulable_r_numbers.append(r.request_number)
 
 
+
     # Update the state of all the unschedulable Requests in the DB in one go
     client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
+
+    # Update the state of all the unschedulable User Requests in the DB in one go
+    unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
+    client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
 
     return schedulable_urs
 

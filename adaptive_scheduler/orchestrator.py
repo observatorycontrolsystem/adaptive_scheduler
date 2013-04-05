@@ -36,16 +36,19 @@ from adaptive_scheduler.semester_service import get_semester_block, get_semester
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.utils import timeit
+from adaptive_scheduler.log   import UserRequestLogger, UserRequestHandler
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
 
 
-# Set up and configure a module scope logger
+# Set up and configure a module scope logger, and a UR-specific logger
 import logging
-log = logging.getLogger(__name__)
+log          = logging.getLogger(__name__)
+multi_ur_log = logging.getLogger('ur_logger')
 
-log.debug("Imported %s", __name__)
+ur_log = UserRequestLogger(multi_ur_log)
+
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -139,8 +142,14 @@ def summarise_urs(user_reqs):
         _, w_str = pl(w_total, 'Window')
         r_total, r_str = pl(len(ur.requests), 'Request')
         r_states = [r.received_state for r in ur.requests]
-        log.debug('%s: %s (%d %s, %d %s) %s', ur.tracking_number, r_nums,
+
+        sum_str = '%s: %s (%d %s, %d %s) %s'
+        log.debug(sum_str, ur.tracking_number, r_nums,
                   r_total, r_str, w_total, w_str, r_states)
+        ur_log.error(sum_str % (ur.tracking_number, r_nums,
+                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
+        ur_log.info('your face is dumb', ur.tracking_number)
+        ur_log.error('your error face is dumb', ur.tracking_number)
 
     return
 
@@ -151,7 +160,6 @@ def summarise_urs(user_reqs):
 def main(requests, sched_client):
     semester_start, semester_end = get_semester_block()
     now = datetime.utcnow()
-#    now = datetime(2013, 3, 23, 17)
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
