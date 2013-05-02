@@ -11,6 +11,7 @@ from nose.tools import assert_equal
 import copy, random
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as CurrentScheduler
 from util import *
+from time import time
 
 class TestStress_realistic(object):
 
@@ -89,9 +90,11 @@ class TestStress_realistic(object):
                 
             cr_list.append(cr)
 
-
+        tstart =  time()
         fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
         s = fs.schedule_all()
+        elapsed = time() - tstart
+        print "elapsed time: ", elapsed
         u = Util()
         #u.get_coverage_count_plot(s)
         u.find_overlaps(s)
