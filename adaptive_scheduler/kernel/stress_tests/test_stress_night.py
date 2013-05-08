@@ -21,6 +21,7 @@ class TestStressNights(object):
 
     def setup(self):
         sp = StressTestNightParams()
+        self.outputfname = sp.outputfname
         self.numresources = sp.numresources
         self.numreservations = sp.numreservations
         self.numdays = sp.numdays
@@ -70,9 +71,9 @@ class TestStressNights(object):
 
 
     def generate_reservation(self):
-        start_day = random.randint(0, self.numdays)
-        start_time = random.randint(0, self.night_length)
+        start_day = random.randint(0, self.numdays-1)
         duration = random.randint(self.min_duration, self.max_duration)
+        start_time = random.randint(0, self.night_length-duration)
         priority = random.randint(self.min_priority, self.max_priority)
         slack = random.randint(self.min_slack, self.max_slack)
         resource = str(random.randint(0,self.numresources-1))
@@ -90,23 +91,22 @@ class TestStressNights(object):
         cr_list = []
         for i in range(0, self.numreservations):
             reservation = self.generate_reservation()
+            reslist = [reservation]
             restype = random.randint(1,self.max_restype)
             if restype == 1:
-                cr = CompoundReservation_v2([reservation])
+                cr = CompoundReservation_v2(reslist)
             elif restype == 2 and not self.no_oneofs:
                 resnum = random.randint(self.oneof_elt_num_min-1, 
-                                        self.oneof_elt_num_max)
-                reslist = [reservation]
+                                        self.oneof_elt_num_max-1)
                 for j in range(resnum):
                     reslist.append(self.generate_reservation())
-                cr = CompoundReservation_v2([reslist],'oneof')
+                cr = CompoundReservation_v2(reslist,'oneof')
             else: 
                 resnum = random.randint(self.and_elt_num_min-1, 
-                                        self.and_elt_num_max)
-                reslist = [reservation]
+                                        self.and_elt_num_max-1)
                 for j in range(resnum):
                     reslist.append(self.generate_reservation())
-                cr = CompoundReservation_v2([reslist],'and')
+                cr = CompoundReservation_v2(reslist,'and')
                 
             cr_list.append(cr)
 
@@ -114,7 +114,7 @@ class TestStressNights(object):
         fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
         s = fs.schedule_all()
         elapsed = time() - tstart
-        print "elapsed time: ", elapsed
+        print len(s['0']), elapsed
         u = Util()
         #u.get_coverage_count_plot(s)
         u.find_overlaps(s)
