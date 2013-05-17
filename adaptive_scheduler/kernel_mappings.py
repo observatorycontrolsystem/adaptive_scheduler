@@ -112,11 +112,16 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
 
-        visibility = visibility_from[resource_name]
+#        visibility = visibility_from[resource_name]
+        visibility = visibility_from[resource_name][0]
 
         # Find when it's dark, and when the target is up
-        rs_dark_intervals = visibility.get_dark_intervals()
-        rs_up_intervals   = visibility.get_target_intervals(rs_target)
+#        rs_dark_intervals = visibility.get_dark_intervals()
+#        rs_up_intervals   = visibility.get_target_intervals(rs_target)
+
+        rs_dark_intervals = visibility_from[resource_name][1]()
+        rs_up_intervals   = visibility_from[resource_name][2](rs_target)
+
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
@@ -257,7 +262,7 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
     return to_schedule
 
 
-def construct_resource_windows(visibility_from, semester_start):
+def construct_resource_windows_orig(visibility_from, semester_start):
     '''Construct the set of epoch time windows for each resource, during which that
        resource is available.'''
 
@@ -271,15 +276,36 @@ def construct_resource_windows(visibility_from, semester_start):
     return resource_windows
 
 
+def construct_resource_windows(visibility_from, semester_start):
+    '''Construct the set of epoch time windows for each resource, during which that
+       resource is available.'''
+
+    resource_windows = {}
+    for tel_name, visibility_tuple in visibility_from.iteritems():
+        rs_dark_intervals = visibility_tuple[1]()
+        dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
+        ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
+        resource_windows[tel_name] = ep_dark_intervals
+
+    return resource_windows
+
+
 def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
     '''Construct Visibility objects for each telescope.'''
+
+    from memoize import Memoize
 
     visibility_from = {}
     for tel_name, tel in tels.iteritems():
         rs_telescope = telescope_to_rise_set_telescope(tel)
-        visibility_from[tel_name] = Visibility(rs_telescope, semester_start,
-                                               semester_end, tel.horizon,
-                                               twilight)
+        visibility = Visibility(rs_telescope, semester_start,
+                                semester_end, tel.horizon,
+                                twilight)
+        get_dark = Memoize(visibility.get_dark_intervals)
+        get_target = Memoize(visibility.get_target_intervals)
+#        get_dark = visibility.get_dark_intervals
+#        get_target = visibility.get_target_intervals
+        visibility_from[tel_name] = (Visibility, get_dark, get_target)
 
     return visibility_from
 
