@@ -16,8 +16,6 @@ import json
 import ast
 from datetime import datetime
 
-import jsonpickle
-
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
 from adaptive_scheduler.model2          import ModelBuilder
@@ -104,6 +102,25 @@ def write_requests_to_file(requests, filename):
     out_fh.close()
 
 
+def dump_kernel_input(to_schedule, resource_windows, contractual_obligations,
+                      time_slicing_dict):
+    json_dump = {
+                  'to_schedule' : to_schedule,
+                  'resource_windows' : resource_windows,
+                  'contractual_obligations' : contractual_obligations,
+                  'time_slicing_dict' : time_slicing_dict
+                }
+
+
+    kernel_dump_file = 'kernel.dump'
+    kernel_dump_fh = open(kernel_dump_file, 'w')
+    kernel_dump_fh.write(jsonpickle.encode(json_dump))
+    kernel_dump_fh.close()
+    log.info("Wrote kernel input dump to %s", kernel_dump_file)
+
+    return
+
+
 def collapse_requests(requests):
     collapsed_reqs = []
     for i, req_dict in enumerate(requests):
@@ -157,7 +174,7 @@ def summarise_urs(user_reqs):
 # TODO: Add configuration options, refactor into smaller chunks
 # TODO: Remove hard-coded options
 @timeit
-def main(requests, sched_client):
+def main(requests, sched_client, visibility_from=None, dry_run=False):
     semester_start, semester_end = get_semester_block()
     now = datetime.utcnow()
     date_fmt = '%Y-%m-%d'
@@ -200,10 +217,12 @@ def main(requests, sched_client):
 
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
-    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now)
+    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
 
     # Construct visibility objects for each telescope
-    visibility_from = construct_visibilities(tels, now, semester_end)
+    if not visibility_from:
+        visibility_from = construct_visibilities(tels, now, semester_end)
+
 
     # Do another check on duration and operator soundness, after dark/rise checking
     user_reqs = prefilter_for_kernel(user_reqs, visibility_from)
@@ -221,12 +240,9 @@ def main(requests, sched_client):
     # Translate when telescopes are available into kernel speak
     resource_windows = construct_resource_windows(visibility_from, semester_start)
 
-    resource_windows = construct_global_availability(now, semester_start, running_at_tel, resource_windows)
-
-    # Dump the variables to be scheduled, for offline analysis if necessary
-    contractual_obligations = []
-    dump_scheduler_input(scheduler_dump_file, to_schedule, resource_windows,
-                         contractual_obligations)
+    # Filter a second time to remove (now) unschedulable Requests
+    global_windows = construct_global_availability(now, semester_start,
+                                                   running_at_tel, resource_windows)
 
     print_compound_reservations(to_schedule)
 
@@ -235,7 +251,6 @@ def main(requests, sched_client):
         log.info("Nothing to schedule! Skipping kernel call...")
         return
 
-    # Filter a second time to remove (now) unschedulable Requests
 
     # Instantiate and run the scheduler
     # TODO: Set alignment to start of first night on each resource
@@ -244,22 +259,9 @@ def main(requests, sched_client):
     for t in tels:
         time_slicing_dict[t] = [0, 300]
 
+    contractual_obligations = []
 
-    json_dump = {
-                  'to_schedule' : to_schedule,
-                  'resource_windows' : resource_windows,
-                  'contractual_obligations' : contractual_obligations,
-                  'time_slicing_dict' : time_slicing_dict
-                }
-
-
-    kernel_dump_file = 'kernel.dump'
-    kernel_dump_fh = open(kernel_dump_file, 'w')
-    kernel_dump_fh.write(jsonpickle.encode(json_dump))
-    kernel_dump_fh.close()
-    log.info("Wrote kernel input dump to %s", kernel_dump_file)
-
-    kernel   = FullScheduler(to_schedule, resource_windows, contractual_obligations,
+    kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
 
@@ -267,16 +269,20 @@ def main(requests, sched_client):
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    n_deleted = cancel_schedule(tels, now, semester_end)
+    n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-    n_submitted = send_schedule_to_pond(schedule, semester_start)
+    n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)
 
     log.info("------------------")
     log.info("Scheduling Summary")
+    if dry_run:
+        log.info("(DRY-RUN: No delete or submit took place)")
     log.info("------------------")
     log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
     log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
     log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
     log.info("Scheduling complete.")
+
+    return visibility_from
 
