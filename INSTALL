@@ -1,0 +1,35 @@
+# Installation instructions for the Adaptive Scheduler
+# Eric Saunders, May 2013
+
+The Adaptive Scheduler's Python dependencies are summarised in requirements.pip.
+
+Dependencies below based on grepping the history on scheduler-dev.lco.gtn. Ubuntu
+notes based on installation on pluto.lco.gtn.
+
+Scheduler machine set up
+------------------------
+CENTOS:
+    yum -yq install acpid bc bind-utils crontabs einarc fsvs ipv6calc irqbalance logrotate logwatch man man-pages mlocate nagios-plugins-disk nagios-plugins-load nagios-plugins-nrpe nagios-plugins-dns nagios-plugins-ntp nagios-plugins-procs nagios-plugins-ssh nagios-plugins-swap nano nc net-snmp nfs-utils nrpe ntp parted perl rng-utils rsync screen sendmail sendmail-cf setuptool smartmontools subversion sudo sudosh2 symlinks  systemimager-client systemimager-`uname -i`initrd_template tcsh time traceroute usbutils vim-enhanced vixie-cron which
+    yum install openssl httpd httpd-devel zlib-devel
+    yum install -y tigervnc-server xinetd gdm gnome-desktop xorg-x11-fonts-Type1
+    yum groupinstall "Desktop"
+    yum groupinstall "Development tools"
+    yum install subversion subversion-devel ctags apr apr-devel gcc gdbm gdbm-devel pcre pcre-devel
+
+
+Additional dependencies
+-----------------------
+* Python 2.7
+    CENTOS: yum install bzip2-devel openssl-devel ncurses-devel sqlite-devel
+    UBUNTU: sudo apt-get install libbz2-dev libssl-dev libreadline-dev libsqlite3-dev
+* MySQL
+    CENTOS: yum install mysql mysql-devel mysql-client
+* Fortran compiler (rise_set/SciPy)
+    CENTOS: yum install gcc-gfortran libgfortran
+    UBUNTU: sudo apt-get install gfortran
+* Nagios
+    CENTOS: yum install nagios-nrpe
+* SciPy - Requires blas, blas-devel, lapack, lapack-devel
+    CENTOS: yum install blas blas-devel lapack lapack-devel
+    UBUNTU: sudo apt-get install libblas3gf, libblas-dev, liblapack3gf, liblapack-dev
+
