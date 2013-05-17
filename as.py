@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 '''
-as.py - Run the adaptive scheduler in single use, non-persistent mode.
+as.py - Run the adaptive scheduler on continuous loop.
+
+Example usage (testing)
+    python as.py --requestdb='http://localhost:8001/'
+
+Example usage (production)
+    python as.py --requestdb='http://scheduler-dev.lco.gtn/requestdb/'
 
 Author: Eric Saunders
 July 2012
@@ -12,7 +18,7 @@ from adaptive_scheduler.orchestrator import main, get_requests_from_db
 from adaptive_scheduler.printing     import pluralise as pl
 from reqdb.client import SchedulerClient, ConnectionError
 
-from optparse import OptionParser
+import argparse
 from datetime import datetime
 import logging
 import logging.config
@@ -20,7 +26,8 @@ import signal
 import time
 import sys
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
+DRY_RUN = False
 
 # Set up and configure an application scope logger
 #logging.config.fileConfig('logging.conf')
@@ -46,20 +53,37 @@ def kill_handler(signal, frame):
 
 
 if __name__ == '__main__':
+#    arg_parser = argparse.ArgumentParser(description="Run the Adaptive Scheduler")
+    arg_parser = argparse.ArgumentParser(
+                                formatter_class=argparse.RawDescriptionHelpFormatter,
+                                description=__doc__)
+    arg_parser.add_argument("-s", "--sleep", type=int, default=60,
+                            help="Sleep period between scheduling runs, in seconds")
+    arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
+                            help="Request DB endpoint URL")
+    arg_parser.add_argument("-d", "--dry-run", action="store_true",
+                            help="Perform a trial run with no changes made")
 
+    args = arg_parser.parse_args()
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
-    sleep_duration = 60
+
+    sleep_duration = args.sleep
+    log.info("Sleep period between scheduling runs set at %ds" % sleep_duration)
+    DRY_RUN = args.dry_run
+
+    if DRY_RUN:
+        log.info("Running in simulation mode - no DB changes will be made")
 
     # Acquire and collapse the requests
-    request_db_url = 'http://localhost:8001/'
-#    request_db_url = 'http://scheduler-dev.lco.gtn/requestdb/'
+    request_db_url = args.requestdb
 
     scheduler_client = SchedulerClient(request_db_url)
 
-#    scheduler_client.set_dirty_flag()
+    scheduler_client.set_dirty_flag()
 
 
+    visibility_from = {}
     while run_flag:
         dirty_response = dict(dirty=False)
         try:
@@ -96,7 +120,7 @@ if __name__ == '__main__':
 
                 # Run the scheduling loop, if there are any User Requests
                 if len(requests):
-                    main(requests, scheduler_client)
+                    visibility_from = main(requests, scheduler_client, visibility_from, dry_run=DRY_RUN)
                 else:
                     log.warn("Recieved no User Requests! Skipping this scheduling cycle")
                 sys.stdout.flush()
