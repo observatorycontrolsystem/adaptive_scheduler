@@ -42,8 +42,8 @@ log = logging.getLogger(__name__)
 
 class Block(object):
 
-    def __init__(self, location, start, end, group_id,
-                 tracking_number, request_number, priority=0):
+    def __init__(self, location, start, end, group_id, tracking_number,
+                 request_number, priority=0, store_in_db=True):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
@@ -52,6 +52,7 @@ class Block(object):
         self.tracking_number = tracking_number
         self.request_number = request_number
         self.priority  = priority
+        self.store_in_db = store_in_db
 
         self.proposal  = Proposal()
         self.molecules = []
@@ -231,9 +232,14 @@ class Block(object):
         if not self.pond_block:
             self.create_pond_block()
 
-        self.pond_block.save()
-        msg = "Sent Request %s (part of UR %s) to POND" % (self.request_number,
-                                                           self.tracking_number)
+        msg = "Request %s (part of UR %s) to POND" % (self.request_number,
+                                                      self.tracking_number)
+        if self.store_in_db:
+            self.pond_block.save()
+            msg = "Sent " + msg
+        else:
+            msg = "Dry-run: Would have sent " + msg
+
         log.debug(msg)
 
         return
@@ -272,14 +278,20 @@ def make_simple_pond_schedule(schedule, semester_start):
 
 
 @timeit
-def send_schedule_to_pond(schedule, semester_start):
+def send_schedule_to_pond(schedule, semester_start, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
     n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
         _, block_str = pl(n_submitted, 'block')
-        log.info("Submitting %d %s to %s...", n_submitted, block_str, resource_name)
+
+        msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
+        if dry_run:
+            msg = "Dry-run: Would be submitting " + msg
+        else:
+            msg = "Submitting " + msg
+        log.info(msg)
 
         for res in schedule[resource_name]:
             res_start, res_end = get_reservation_datetimes(res, semester_start)
@@ -291,6 +303,7 @@ def send_schedule_to_pond(schedule, semester_start):
                            tracking_number = res.compound_request.tracking_number,
                            request_number  = res.request.request_number,
                            priority        = res.priority,
+                           store_in_db     = not dry_run,
                          )
 
             block.add_proposal(res.compound_request.proposal)
@@ -392,7 +405,7 @@ def get_deletable_blocks(start, end, site, obs, tel):
     return to_delete
 
 @timeit
-def cancel_schedule(tels, start, end):
+def cancel_schedule(tels, start, end, dry_run=False):
     n_deleted_total = 0
     for full_tel_name in tels:
         tel, obs, site = full_tel_name.split('.')
@@ -400,19 +413,27 @@ def cancel_schedule(tels, start, end):
                                                              start, end)
 
         n_deleted = cancel_schedule_at_resource(start, end,
-                                                site, obs, tel)
+                                                site, obs, tel, dry_run)
+
         _, block_str = pl(n_deleted, 'block')
-        log.info("Cancelled %d %s at %s", n_deleted, block_str, full_tel_name)
+        msg = "%d %s at %s" % (n_deleted, block_str, full_tel_name)
+        if dry_run:
+            msg = "Dry-run: Would have cancelled " + msg
+        else:
+            msg = "Cancelled " + msg
+        log.info(msg)
+
         n_deleted_total += n_deleted
 
     return n_deleted_total
 
 
-def cancel_schedule_at_resource(start, end, site, obs, tel):
+def cancel_schedule_at_resource(start, end, site, obs, tel, dry_run=False):
     to_delete = get_deletable_blocks(start, end, site, obs, tel)
 
-    for block in to_delete:
-        block.cancel(reason="Superceded by new schedule")
+    if not dry_run:
+        for block in to_delete:
+            block.cancel(reason="Superceded by new schedule")
 
     return len(to_delete)
 
