@@ -121,6 +121,7 @@ def run_all_filters(ur_list):
     ur_list = truncate_lower_crossing_windows(ur_list)
     ur_list = truncate_upper_crossing_windows(ur_list)
     ur_list = filter_out_future_windows(ur_list)
+    ur_list = truncate_for_max_airmass_constraint_windows(ur_list)
     ur_list = filter_on_duration(ur_list)
     ur_list = filter_on_type(ur_list)
 
@@ -172,6 +173,55 @@ def truncate_upper_crossing_windows(ur_list):
 
 
 @log_urs
+def truncate_for_max_airmass_constraint_windows(ur_list):
+    ''' Case 4.5 Truncate the the upper and lower bounds of the available 
+    windows to conform to the a provided airmass constraint.'''
+    
+    def truncate_for_max_airmass_constraint(w, r):
+        '''Modify start and end times based on airmass constraint'''
+        airmass_window = trim_window_for_airmass_constraint(w, r)
+        if not airmass_window:
+            return False
+
+        return True
+    
+    filter_test = truncate_for_max_airmass_constraint
+    
+    return _for_all_ur_windows(ur_list, filter_test)
+
+
+def trim_window_for_airmass_constraint(window, request):
+    '''Return trimmed window given airmass constriant.
+    Return None if window does not overlap with target at needed airmass
+    '''
+    ra = 
+    dec =
+    airmass = 
+    latitude = 
+    longitude = 
+    elevation = 
+    reference_date = window.start
+
+    max_zenith_distance = math.acos(1 / airmass) 
+    
+    no_overlap=True
+    # TODO : calculate window intersection
+    airmass_window_start =
+    airmass_window_end = 
+    
+    if no_overlap:
+        return None
+    
+    if w.start < airmass_window_start:
+        w.start = airmass_window_start
+    if airmass_window_end < w.end:
+        w.end = airmass_window_end
+    
+    return window
+                
+
+
+@log_urs
 def filter_out_future_windows(ur_list):
     '''Case 5: The window lies beyond the scheduling horizon.'''
     filter_test = lambda w, ur: w.start < ur.scheduling_horizon()
@@ -200,7 +250,7 @@ def _for_all_ur_windows(ur_list, filter_test):
     '''Loop over all Requests of each UserRequest provided, and execute the supplied
        filter condition on each one.'''
     for ur in ur_list:
-        for r in ur.requests:
+#        for r in ur.requests:
             ur.filter_requests(filter_test)
 
     return ur_list
