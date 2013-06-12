@@ -43,7 +43,9 @@ log = logging.getLogger(__name__)
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
-                 request_number, priority=0, store_in_db=True):
+                 request_number, priority=0, max_airmass=None,
+                 min_lunar_distance=None, max_lunar_phase=None,
+                 max_seeing=None, min_transparency=None, store_in_db=True):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
@@ -52,6 +54,11 @@ class Block(object):
         self.tracking_number = tracking_number
         self.request_number = request_number
         self.priority  = priority
+        self.max_airmass = max_airmass
+        self.min_lunar_distance = min_lunar_distance
+        self.max_lunar_phase = max_lunar_phase
+        self.max_seeing = max_seeing
+        self.min_transparency = min_transparency
         self.store_in_db = store_in_db
 
         self.proposal  = Proposal()
@@ -110,14 +117,28 @@ class Block(object):
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
         telescope, observatory, site = self.split_location()
-        pond_block = PondBlock.build(
-                                      start       = self.start,
-                                      end         = self.end,
-                                      site        = site,
-                                      observatory = observatory,
-                                      telescope   = telescope,
-                                      priority    = self.priority
-                                    )
+        block_build_args = dict(
+                                start       = self.start,
+                                end         = self.end,
+                                site        = site,
+                                observatory = observatory,
+                                telescope   = telescope,
+                                priority    = self.priority
+                                )
+        
+        # If constraints are provided, include them in the block
+        if self.max_airmass:
+            block_build_args['airmass'] = self.max_airmass
+        if self.min_lunar_distance:
+            block_build_args['lunar_dist'] = self.min_lunar_distance
+        if self.max_lunar_phase:
+            block_build_args['lunar_phase'] = self.max_lunar_phase
+        if self.max_seeing:
+            block_build_args['seeing'] = self.max_seeing
+        if self.min_transparency:
+            block_build_args['trans'] = self.min_transparency
+             
+        pond_block = PondBlock.build(**block_build_args)
 
         # 2a) Construct the Pointing Coordinate
         coord = pointing.ra_dec(
