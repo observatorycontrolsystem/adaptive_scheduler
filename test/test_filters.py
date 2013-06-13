@@ -117,6 +117,7 @@ class TestWindowFilters(object):
                           target         = None,
                           molecules      = None,
                           windows        = windows,
+                          constraints    = None,
                           request_number = None
                         )
             req_list.append(r)

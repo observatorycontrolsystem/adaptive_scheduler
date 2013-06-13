@@ -125,7 +125,7 @@ class Block(object):
                                 telescope   = telescope,
                                 priority    = self.priority
                                 )
-        
+
         # If constraints are provided, include them in the block
         if self.max_airmass:
             block_build_args['airmass'] = self.max_airmass
@@ -137,7 +137,7 @@ class Block(object):
             block_build_args['seeing'] = self.max_seeing
         if self.min_transparency:
             block_build_args['trans'] = self.min_transparency
-             
+
         pond_block = PondBlock.build(**block_build_args)
 
         # 2a) Construct the Pointing Coordinate
@@ -317,14 +317,19 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
         for res in schedule[resource_name]:
             res_start, res_end = get_reservation_datetimes(res, semester_start)
             block = Block(
-                           location        = res.scheduled_resource,
-                           start           = res_start,
-                           end             = res_end,
-                           group_id        = res.compound_request.group_id,
-                           tracking_number = res.compound_request.tracking_number,
-                           request_number  = res.request.request_number,
-                           priority        = res.priority,
-                           store_in_db     = not dry_run,
+                           location           = res.scheduled_resource,
+                           start              = res_start,
+                           end                = res_end,
+                           group_id           = res.compound_request.group_id,
+                           tracking_number    = res.compound_request.tracking_number,
+                           request_number     = res.request.request_number,
+                           priority           = res.priority,
+                           max_airmass        = res.request.constraints.max_airmass,
+                           min_lunar_distance = res.request.constraints.min_lunar_distance,
+                           max_lunar_phase    = res.request.constraints.max_lunar_phase,
+                           max_seeing         = res.request.constraints.max_seeing,
+                           min_transparency   = res.request.constraints.min_transparency,
+                           store_in_db        = not dry_run,
                          )
 
             block.add_proposal(res.compound_request.proposal)

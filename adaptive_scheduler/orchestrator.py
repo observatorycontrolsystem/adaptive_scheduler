@@ -225,7 +225,8 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
 
     # Do another check on duration and operator soundness, after dark/rise checking
-    user_reqs = prefilter_for_kernel(user_reqs, visibility_from)
+    user_reqs = prefilter_for_kernel(user_reqs, visibility_from, tels,
+                                     now, semester_end)
 
     log.info('Filtering complete. Ready to construct Reservations.')
     summarise_urs(user_reqs)

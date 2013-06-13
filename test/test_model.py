@@ -8,7 +8,7 @@ from datetime import datetime
 from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Target, Telescope, Proposal, Molecule,
                                              Request, CompoundRequest, Windows,
-                                             Window,
+                                             Window, Constraints,
                                              _LocationExpander )
 from adaptive_scheduler.exceptions import InvalidRequestError
 
@@ -76,6 +76,16 @@ class TestDuration(object):
                                   exposure_time   = 20,
                                   priority        = 1
                                 )
+        self.molecule3 = Molecule(
+                                  type            = 'expose_n',
+                                  exposure_count  = 300,
+                                  bin_x           = 2,
+                                  bin_y           = 2,
+                                  instrument_name = 'KB12',
+                                  filter          = 'BSSL-UX-020',
+                                  exposure_time   = 42,
+                                  priority        = 1
+                                )
         self.complex_mols = [
                               Molecule(
                                 exposure_time   = 180.0,
@@ -99,31 +109,43 @@ class TestDuration(object):
                                 bin_y          = 2,
                               ),
                            ]
+        constraints = Constraints({})
         self.request1  = Request(
                                 target         = None,
                                 molecules      = [self.molecule1],
                                 windows        = None,
+                                constraints    = constraints,
                                 request_number = None)
         self.request2  = Request(
                                 target         = None,
                                 molecules      = [self.molecule2],
                                 windows        = None,
+                                constraints    = constraints,
                                 request_number = None)
         self.request3  = Request(
                                 target         = None,
+                                molecules      = [self.molecule3],
+                                windows        = None,
+                                constraints    = constraints,
+                                request_number = None)
+        self.request4  = Request(
+                                target         = None,
                                 molecules      = self.complex_mols,
                                 windows        = None,
+                                constraints    = constraints,
                                 request_number = None)
 
     def test_get_simple_duration(self):
-        assert_equal(self.request1.get_duration(), 140.0)
-
+        assert_equal(self.request1.get_duration(), 141.0)
 
     def test_get_medium_duration(self):
-        assert_equal(self.request2.get_duration(), 905.0)
+        assert_equal(self.request2.get_duration(), 910.0)
+
+    def test_long_exposure_seq(self):
+        assert_equal(self.request3.get_duration(), 17355.0)
 
     def test_get_complex_duration(self):
-        assert_equal(self.request3.get_duration(), 1530.0)
+        assert_equal(self.request4.get_duration(), 1535.0)
 
 
 class TestRequest(object):
@@ -176,18 +198,22 @@ class TestRequest(object):
     @raises(InvalidRequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
+        constraints = Constraints({})
         request = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows,
+                          constraints    = constraints,
                           request_number = self.request_number)
         compound_request = CompoundRequest(junk_res_type, [request])
 
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
+        constraints = Constraints({})
         request = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows,
+                          constraints    = constraints,
                           request_number = self.request_number)
         compound_request = CompoundRequest(valid_res_type, [request])
 
