@@ -80,7 +80,7 @@ class RequestBuilder(object):
 
 
     def build_window(self, dt):
-        TWO_HOURS = timedelta(hours=2)
+        ONE_DAY = timedelta(days=1)
         start = dt - TWO_HOURS
         end   = dt + TWO_HOURS
 
