@@ -331,7 +331,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                            airmass=None):
     '''Construct Visibility objects for each telescope.'''
 
-    from memoize import Memoize
+    from adaptive_scheduler.memoize import Memoize
 
 
     visibility_from = {}
