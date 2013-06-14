@@ -79,6 +79,9 @@ class Target(DataContainer):
     dec = property(get_dec, set_dec)
 
 
+class Constraints(DataContainer):
+    pass
+
 
 class Molecule(DataContainer):
     #TODO: This is really an expose_n molecule, so should be specialised
@@ -181,11 +184,12 @@ class Request(DefaultMixin):
         telescope - a Telescope object (lat/long information)
     '''
 
-    def __init__(self, target, molecules, windows, request_number):
+    def __init__(self, target, molecules, windows, constraints, request_number):
 
         self.target         = target
         self.molecules      = molecules
         self.windows        = windows
+        self.constraints    = constraints
         self.request_number = request_number
 
     def get_duration(self):
@@ -196,9 +200,12 @@ class Request(DefaultMixin):
         #TODO: Placeholder for more sophisticated overhead scheme
 
         # Pick sensible sounding overheads, in seconds
-        overhead_per_exposure = 15.0 * 4
-        filter_change_time    = 15
-        front_padding         = 90
+        readout_per_exp        = 60    # Unbinned readout time per frame
+        fixed_overhead_per_exp = 0.5   # Camera-query overhead (binning independent)
+        filter_change_time     = 15    # Time to change a filter
+        front_padding          = 90    # Guesstimate of sequencer/site agent set-up time
+                                       # (upper bound)
+
         duration = 0
 
         # Find number of filter changes, and calculate total filter overhead
@@ -213,8 +220,9 @@ class Request(DefaultMixin):
         filter_overhead = n_filter_changes * filter_change_time
 
         for mol in self.molecules:
-            binned_overhead_per_exposure = overhead_per_exposure / (mol.bin_x * mol.bin_y)
-            mol_duration  = mol.exposure_count * (mol.exposure_time + binned_overhead_per_exposure)
+            binned_overhead_per_exp = readout_per_exp / (mol.bin_x * mol.bin_y)
+            total_overhead_per_exp  = binned_overhead_per_exp + fixed_overhead_per_exp
+            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
 
             duration     += mol_duration
 
@@ -459,11 +467,14 @@ class ModelBuilder(object):
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
 
+        constraints = Constraints(req_dict['constraints'])
+
 
         req = Request(
                        target         = target,
                        molecules      = molecules,
                        windows        = windows,
+                       constraints    = constraints,
                        request_number = req_dict['request_number'],
                      )
 

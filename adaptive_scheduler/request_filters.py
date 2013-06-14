@@ -72,7 +72,6 @@ def log_urs(fn):
     return wrap
 
 
-
 def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
     global now
     now = user_now
@@ -200,7 +199,6 @@ def _for_all_ur_windows(ur_list, filter_test):
     '''Loop over all Requests of each UserRequest provided, and execute the supplied
        filter condition on each one.'''
     for ur in ur_list:
-        for r in ur.requests:
             ur.filter_requests(filter_test)
 
     return ur_list

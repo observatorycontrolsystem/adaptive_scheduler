@@ -1,10 +1,10 @@
 #!/usr/bin/python
 from __future__ import division
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_almost_equals
 
 from adaptive_scheduler.model2 import (Telescope, Target, Request, Window, Windows,
-                                       Molecule)
+                                       Molecule, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
                                       normalised_epoch_to_datetime)
@@ -12,7 +12,8 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 rise_set_to_kernel_intervals,
                                                 make_dark_up_kernel_intervals,
                                                 construct_global_availability,
-                                                normalise_dt_intervals)
+                                                normalise_dt_intervals,
+                                                set_airmass_limit)
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 
@@ -58,10 +59,13 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
+        constraints = Constraints({})
+
         req  = Request(
                        target    = self.target,
                        molecules = [self.mol],
                        windows   = dt_windows,
+                       constraints = constraints,
                        request_number = '1'
                       )
 
@@ -95,10 +99,12 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
+        constraints = Constraints({})
         req  = Request(
                         target     = self.target,
                         molecules  = [self.mol],
                         windows    = dt_windows,
+                        constraints = constraints,
                         request_number = '1'
                       )
 
@@ -141,10 +147,12 @@ class TestKernelMappings(object):
         for w in windows:
             dt_windows.append(Window(w, self.tels[resource_name]))
 
+        constraints = Constraints({})
         req  = Request(
                        target     = self.target,
                        molecules  = [self.mol],
                        windows    = dt_windows,
+                       constraints = constraints,
                        request_number = '1'
                       )
 
@@ -216,3 +224,38 @@ class TestKernelMappings(object):
         assert_equal(r0, dt0)
         assert_equal(r1, dt2)
         assert_equal(r3, dt1)
+
+
+
+    def test_set_airmass_limit_no_airmass(self):
+        class Tel(object): pass
+
+        t = Tel()
+        t.horizon = 30
+
+        expected = t.horizon
+        assert_equal(set_airmass_limit(None, t), expected)
+
+
+    def test_set_airmass_limit_airmass_worse_than_horizon(self):
+        class Tel(object): pass
+
+        t = Tel()
+        t.horizon = 30
+
+        airmass = 3
+
+        expected = t.horizon
+        assert_equal(set_airmass_limit(airmass, t), expected)
+
+
+    def test_set_airmass_limit_airmass_better_than_horizon(self):
+        class Tel(object): pass
+
+        t = Tel()
+        t.horizon = 30
+
+        airmass = 1.2
+
+        expected = 56.44
+        assert_almost_equals(set_airmass_limit(airmass, t), expected, places=2)

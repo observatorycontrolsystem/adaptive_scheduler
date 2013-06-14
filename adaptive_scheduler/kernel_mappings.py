@@ -39,6 +39,7 @@ from adaptive_scheduler.printing import print_req_summary
 from adaptive_scheduler.model2   import Window, Windows
 from adaptive_scheduler.request_filters import filter_on_duration, filter_on_type
 
+import math
 
 
 def target_to_rise_set_target(target):
@@ -188,7 +189,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     return compound_res
 
 
-def prefilter_for_kernel(crs, visibility_from):
+def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_end):
     ''' After throwing out and marking URs as UNSCHEDULABLE, reduce windows by considering
         dark time and target visibility. Remove any URs that are now too small to hold their
         duration after this consideration, so they are not passed to the kernel.
@@ -197,32 +198,43 @@ def prefilter_for_kernel(crs, visibility_from):
         if the network subsequently changes (e.g. a telescope becomes available), then the Request
         may then be schedulable.
     '''
+
+    # Although filtering on visibility is strictly redundant, we leave it in for now to identify
+    # when an object that would have been visible has been dropped from consideration due to
+    # the airmass constraint
     crs = filter_on_visibility(crs, visibility_from)
+    crs = filter_on_airmass(crs, tels, semester_start, semester_end)
+#    print list(crs)[0].requests[0].windows.size()
     crs = filter_on_duration(crs)
     crs = filter_on_type(crs)
 
     return crs
 
 
-def filter_on_visibility(crs, visibility_from):
+def filter_on_airmass(crs, tels, semester_start, semester_end):
     for cr in crs:
-        dark_ups = compute_intersections(cr, visibility_from)
-        for req, intersections_for_resource in dark_ups:
-            r_windows   = intervals_to_windows(req, intersections_for_resource)
-            req.windows = r_windows
+        for r in cr.requests:
+            visibility_from = construct_visibilities(tels, semester_start, semester_end,
+                                                     airmass=r.constraints.max_airmass)
+            r = compute_intersections(r, visibility_from)
 
     return crs
 
 
-def compute_intersections(c_req, visibility_from):
-    # Find the dark/up intervals for each Request in this CompoundRequest
-    dark_ups = []
-    for req in c_req.requests:
-        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
-                                                                    verbose=True)
-        dark_ups.append((req, intersections_for_resource))
+def filter_on_visibility(crs, visibility_from):
+    for cr in crs:
+        for r in cr.requests:
+            r = compute_intersections(r, visibility_from)
 
-    return dark_ups
+    return crs
+
+
+def compute_intersections(req, visibility_from):
+    # Find the dark/up intervals for each Request in this CompoundRequest
+    intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+                                                                verbose=True)
+    req.windows = intervals_to_windows(req, intersections_for_resource)
+    return req
 
 
 def intervals_to_windows(req, intersections_for_resource):
@@ -290,16 +302,44 @@ def construct_resource_windows(visibility_from, semester_start):
     return resource_windows
 
 
-def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
+def set_airmass_limit(airmass, tel):
+    ''' Compare the provided maximum airmass limit with the horizon of a telescope, and
+        return the effective horizon for rise/set purposes (whichever is higher elevation). If
+        no airmass is provided, we default to the horizon.
+
+        airmass = 1 / cos(zenith)
+        horizon = 90 - zenith'''
+
+    if not airmass:
+        return tel.horizon
+
+
+    # We convert the horizon to airmass, not vice versa, to avoid small angle problems if a
+    # very large airmass is provided
+    zenith_distance = 90 - tel.horizon
+    horizon_airmass = 1 / math.cos(math.radians(zenith_distance))
+
+    effective_horizon = tel.horizon
+    if airmass < horizon_airmass:
+        effective_horizon = 90 - math.degrees(math.acos(1 / airmass))
+
+    return effective_horizon
+
+
+
+def construct_visibilities(tels, semester_start, semester_end, twilight='nautical',
+                           airmass=None):
     '''Construct Visibility objects for each telescope.'''
 
     from memoize import Memoize
 
+
     visibility_from = {}
     for tel_name, tel in tels.iteritems():
+        effective_horizon = set_airmass_limit(airmass, tel)
         rs_telescope = telescope_to_rise_set_telescope(tel)
         visibility = Visibility(rs_telescope, semester_start,
-                                semester_end, tel.horizon,
+                                semester_end, effective_horizon,
                                 twilight)
         get_dark = Memoize(visibility.get_dark_intervals)
         get_target = Memoize(visibility.get_target_intervals)
