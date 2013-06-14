@@ -1,0 +1,550 @@
+2013-04-19 21:15:42.404    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 21:17:35.117   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 112.71 sec
+2013-04-19 22:06:28.234    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 22:08:16.228   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 107.99 sec
+2013-04-19 22:08:52.067    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 22:10:32.639   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.57 sec
+2013-04-19 22:11:29.944    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 22:13:09.346   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 99.40 sec
+2013-04-19 22:14:01.095    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 22:15:45.283   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 104.19 sec
+2013-04-19 22:30:08.705    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 22:31:58.485   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 109.78 sec
+2013-04-19 23:08:45.232    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:10:29.425   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 104.19 sec
+2013-04-19 23:11:25.562    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:13:12.806   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 107.24 sec
+2013-04-19 23:14:10.789    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:16:02.124   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 111.33 sec
+2013-04-19 23:16:50.031    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:19:01.508   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 131.48 sec
+2013-04-19 23:19:36.535    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:21:18.822   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 102.29 sec
+2013-04-19 23:22:14.321    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:24:05.072   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 110.75 sec
+2013-04-19 23:25:02.076    INFO:              as: Got 86 User Requests from Request DB
+2013-04-19 23:26:53.142   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 111.07 sec
+2013-04-20 00:05:50.014    INFO:              as: Got 86 User Requests from Request DB
+2013-04-20 00:07:30.763   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.75 sec
+2013-04-20 00:08:25.914    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:10:06.413   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.50 sec
+2013-04-20 00:10:40.934    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:12:38.159   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 117.23 sec
+2013-04-20 00:13:13.014    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:14:57.356   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 104.34 sec
+2013-04-20 00:15:57.039    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:17:50.020   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 112.98 sec
+2013-04-20 00:18:45.327    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:20:24.711   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 99.38 sec
+2013-04-20 00:21:00.494    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:23:05.021   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 124.53 sec
+2013-04-20 00:23:40.655    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:25:21.326   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.67 sec
+2013-04-20 00:26:17.430    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:29:00.925   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 163.50 sec
+2013-04-20 00:29:36.817    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:31:30.233   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 113.42 sec
+2013-04-20 00:32:25.562    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:34:10.265   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 104.70 sec
+2013-04-20 00:34:58.747    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:36:39.206   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.46 sec
+2013-04-20 00:37:16.811    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:39:23.551   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 126.74 sec
+2013-04-20 00:39:58.391    INFO:              as: Got 85 User Requests from Request DB
+2013-04-20 00:41:37.264   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 98.87 sec
+2013-04-20 00:42:33.187    INFO:              as: Got 84 User Requests from Request DB
+2013-04-20 00:44:21.436   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 108.25 sec
+2013-04-20 00:45:25.043    INFO:              as: Got 84 User Requests from Request DB
+2013-04-20 00:47:17.671   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 112.63 sec
+2013-04-20 00:48:12.534    INFO:              as: Got 84 User Requests from Request DB
+2013-04-20 00:49:53.908   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 101.37 sec
+2013-04-20 01:30:31.127    INFO:              as: Got 83 User Requests from Request DB
+2013-04-20 01:32:11.486   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.36 sec
+2013-04-20 01:32:52.439    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:34:39.690   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 107.25 sec
+2013-04-20 01:35:13.760    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:37:09.702   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 115.94 sec
+2013-04-20 01:37:44.268    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:39:19.829   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.56 sec
+2013-04-20 01:40:09.994    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:41:48.973   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 98.98 sec
+2013-04-20 01:42:47.779    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:44:33.570   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 105.79 sec
+2013-04-20 01:45:30.508    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:47:05.336   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 94.83 sec
+2013-04-20 01:47:45.190    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:49:27.108   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 101.92 sec
+2013-04-20 01:50:07.566    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:51:43.984   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 96.42 sec
+2013-04-20 01:52:30.214    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:54:12.050   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 101.84 sec
+2013-04-20 01:54:56.528    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:56:40.493   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 103.96 sec
+2013-04-20 01:57:23.983    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 01:58:59.539   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.56 sec
+2013-04-20 02:00:01.723    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:01:39.458   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.74 sec
+2013-04-20 02:02:21.066    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:04:10.485   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 109.42 sec
+2013-04-20 02:04:52.381    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:06:30.527   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 98.15 sec
+2013-04-20 02:07:22.717    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:08:59.739   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.02 sec
+2013-04-20 02:09:32.538    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:11:07.756   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.22 sec
+2013-04-20 02:34:44.500    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:36:22.925   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 98.43 sec
+2013-04-20 02:37:16.985    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:38:51.784   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 94.80 sec
+2013-04-20 02:39:26.314    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:41:00.602   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 94.29 sec
+2013-04-20 02:41:53.225    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:43:30.394   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.17 sec
+2013-04-20 02:44:28.779    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:46:03.254   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 94.47 sec
+2013-04-20 02:46:43.628    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:48:18.737   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.11 sec
+2013-04-20 02:49:10.969    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:50:45.559   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 94.59 sec
+2013-04-20 02:51:19.563    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:52:56.488   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 96.92 sec
+2013-04-20 02:53:47.589    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:55:24.804   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.22 sec
+2013-04-20 02:56:03.596    INFO:              as: Got 81 User Requests from Request DB
+2013-04-20 02:57:39.453   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.86 sec
+2013-04-20 03:33:32.156    INFO:              as: Got 79 User Requests from Request DB
+2013-04-20 03:35:13.459   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 101.30 sec
+2013-04-20 03:35:54.210    INFO:              as: Got 77 User Requests from Request DB
+2013-04-20 03:37:24.446   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 90.24 sec
+2013-04-20 03:37:57.148    INFO:              as: Got 77 User Requests from Request DB
+2013-04-20 03:39:46.640   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 109.49 sec
+2013-04-20 03:40:20.311    INFO:              as: Got 77 User Requests from Request DB
+2013-04-20 03:41:58.302   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.99 sec
+2013-04-20 03:42:56.847    INFO:              as: Got 77 User Requests from Request DB
+2013-04-20 03:44:27.612   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 90.76 sec
+2013-04-20 03:45:01.343    INFO:              as: Got 76 User Requests from Request DB
+2013-04-20 03:47:01.753   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 120.41 sec
+2013-04-20 04:26:38.220    INFO:              as: Got 72 User Requests from Request DB
+2013-04-20 04:28:15.432   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.21 sec
+2013-04-20 04:28:52.835    INFO:              as: Got 69 User Requests from Request DB
+2013-04-20 04:30:03.288   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 70.45 sec
+2013-04-20 04:30:33.371    INFO:              as: Got 69 User Requests from Request DB
+2013-04-20 04:31:45.492   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 72.12 sec
+2013-04-20 04:32:26.603    INFO:              as: Got 68 User Requests from Request DB
+2013-04-20 04:33:40.140   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 73.54 sec
+2013-04-20 05:14:20.253    INFO:              as: Got 67 User Requests from Request DB
+2013-04-20 05:15:29.109   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 68.86 sec
+2013-04-20 05:53:13.491    INFO:              as: Got 65 User Requests from Request DB
+2013-04-20 05:54:18.008   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 64.52 sec
+2013-04-20 06:32:36.908    INFO:              as: Got 59 User Requests from Request DB
+2013-04-20 06:33:38.390   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 61.48 sec
+2013-04-20 06:34:02.977    INFO:              as: Got 55 User Requests from Request DB
+2013-04-20 06:35:03.624   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 60.65 sec
+2013-04-20 16:26:21.084    INFO:              as: Got 22 User Requests from Request DB
+2013-04-20 16:26:56.798   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.71 sec
+2013-04-20 16:27:07.084    INFO:              as: Got 23 User Requests from Request DB
+2013-04-20 16:27:33.560   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 26.48 sec
+2013-04-20 16:27:44.626    INFO:              as: Got 26 User Requests from Request DB
+2013-04-20 16:28:17.690   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.06 sec
+2013-04-20 16:30:37.296    INFO:              as: Got 27 User Requests from Request DB
+2013-04-20 16:31:13.013   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.72 sec
+2013-04-20 16:33:38.330    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 16:34:12.686   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.36 sec
+2013-04-20 20:14:16.714    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 20:14:52.749   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.03 sec
+2013-04-20 21:09:53.660    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 21:10:28.837   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.18 sec
+2013-04-20 22:06:04.725    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:06:39.367   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.64 sec
+2013-04-20 22:06:51.164    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:07:25.051   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.89 sec
+2013-04-20 22:34:00.298    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:34:44.831   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 44.53 sec
+2013-04-20 22:35:00.011    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:35:34.819   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.81 sec
+2013-04-20 22:35:46.956    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:36:25.895   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.94 sec
+2013-04-20 22:36:38.672    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:37:13.121   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.45 sec
+2013-04-20 22:40:14.378    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:40:48.218   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.84 sec
+2013-04-20 22:41:01.582    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:41:40.022   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.44 sec
+2013-04-20 22:41:52.107    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:42:26.107   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.00 sec
+2013-04-20 22:42:59.172    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:43:34.558   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.39 sec
+2013-04-20 22:44:05.931    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:44:39.864   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.93 sec
+2013-04-20 22:44:52.254    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:45:26.954   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.70 sec
+2013-04-20 22:45:41.605    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:46:15.364   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.76 sec
+2013-04-20 22:46:28.562    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:47:03.997   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.43 sec
+2013-04-20 22:49:29.661    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:50:04.408   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.75 sec
+2013-04-20 22:50:16.488    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:50:58.793   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 42.31 sec
+2013-04-20 22:51:11.499    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:51:45.877   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.38 sec
+2013-04-20 22:52:05.212    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 22:52:39.410   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.20 sec
+2013-04-20 23:32:31.554    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:33:10.687   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 39.13 sec
+2013-04-20 23:33:23.317    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:33:59.841   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.52 sec
+2013-04-20 23:34:12.845    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:35:02.249   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 49.40 sec
+2013-04-20 23:35:17.531    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:35:54.167   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.64 sec
+2013-04-20 23:36:06.121    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:36:43.877   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.76 sec
+2013-04-20 23:36:58.585    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:37:47.600   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 49.02 sec
+2013-04-20 23:38:00.441    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:38:35.436   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.99 sec
+2013-04-20 23:38:47.861    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:39:25.911   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.05 sec
+2013-04-20 23:39:38.011    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:40:28.479   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 50.47 sec
+2013-04-20 23:44:01.275    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:44:50.480   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 49.20 sec
+2013-04-20 23:45:05.131    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:45:40.843   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.71 sec
+2013-04-20 23:45:54.052    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:46:34.124   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 40.07 sec
+2013-04-20 23:46:46.626    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:47:36.357   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 49.73 sec
+2013-04-20 23:47:50.338    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:48:24.793   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.45 sec
+2013-04-20 23:48:36.977    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:49:15.716   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.74 sec
+2013-04-20 23:49:28.006    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:50:04.840   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.83 sec
+2013-04-20 23:50:27.371    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:51:05.189   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.82 sec
+2013-04-20 23:51:17.930    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:51:54.179   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.25 sec
+2013-04-20 23:52:07.279    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:52:42.720   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.44 sec
+2013-04-20 23:52:55.320    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:53:35.228   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 39.91 sec
+2013-04-20 23:53:47.490    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:54:23.101   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.61 sec
+2013-04-20 23:54:46.582    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:55:20.934   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.35 sec
+2013-04-20 23:55:33.246    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:56:18.282   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 45.04 sec
+2013-04-20 23:56:31.682    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:57:06.088   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.41 sec
+2013-04-20 23:57:17.876    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:57:59.511   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 41.64 sec
+2013-04-20 23:58:13.558    INFO:              as: Got 29 User Requests from Request DB
+2013-04-20 23:58:48.409   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.85 sec
+2013-04-20 23:59:29.042    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:00:03.490   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.45 sec
+2013-04-21 00:00:15.981    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:01:09.972   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 53.99 sec
+2013-04-21 00:01:26.965    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:02:01.976   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.01 sec
+2013-04-21 00:02:29.533    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:03:04.517   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.98 sec
+2013-04-21 00:03:23.683    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:03:59.428   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.74 sec
+2013-04-21 00:04:15.413    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:05:04.473   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 49.06 sec
+2013-04-21 00:05:22.244    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:05:57.014   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.77 sec
+2013-04-21 00:06:09.106    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:06:45.526   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.42 sec
+2013-04-21 00:06:58.158    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:07:32.628   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.47 sec
+2013-04-21 00:07:49.395    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:08:26.130   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.73 sec
+2013-04-21 00:08:38.265    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:09:28.503   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 50.24 sec
+2013-04-21 00:09:41.677    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:10:16.205   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.53 sec
+2013-04-21 00:10:28.445    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:11:10.088   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 41.64 sec
+2013-04-21 00:11:27.958    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:12:02.499   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.54 sec
+2013-04-21 00:12:18.865    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:13:01.189   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 42.32 sec
+2013-04-21 00:13:13.353    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:14:03.865   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 50.51 sec
+2013-04-21 00:53:10.893    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:53:56.005   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 45.11 sec
+2013-04-21 00:54:09.948    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:54:44.241   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.29 sec
+2013-04-21 00:54:56.259    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:55:39.106   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 42.85 sec
+2013-04-21 00:55:51.339    INFO:              as: Got 29 User Requests from Request DB
+2013-04-21 00:56:26.002   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.66 sec
+2013-04-21 00:56:53.861    INFO:              as: Got 28 User Requests from Request DB
+2013-04-21 00:57:31.360   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.50 sec
+2013-04-21 00:57:47.520    INFO:              as: Got 28 User Requests from Request DB
+2013-04-21 00:58:28.384   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 40.86 sec
+2013-04-21 00:58:39.915    INFO:              as: Got 28 User Requests from Request DB
+2013-04-21 00:59:15.645   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 35.73 sec
+2013-04-21 01:38:01.508    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:38:34.087   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.58 sec
+2013-04-21 01:38:46.818    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:39:20.023   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.20 sec
+2013-04-21 01:39:31.625    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:40:04.680   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.06 sec
+2013-04-21 01:40:16.374    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:40:50.986   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.61 sec
+2013-04-21 01:41:02.522    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:41:34.083   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.56 sec
+2013-04-21 01:41:54.698    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:42:36.039   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 41.34 sec
+2013-04-21 01:42:47.411    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:43:20.697   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.29 sec
+2013-04-21 01:43:32.104    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:44:03.529   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.42 sec
+2013-04-21 01:44:14.800    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:44:49.534   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.73 sec
+2013-04-21 01:45:02.522    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:45:33.918   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.40 sec
+2013-04-21 01:45:53.474    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:46:24.634   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.16 sec
+2013-04-21 01:46:36.222    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:47:15.654   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 39.43 sec
+2013-04-21 01:47:28.349    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:48:00.692   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.34 sec
+2013-04-21 01:48:14.566    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:48:52.094   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.53 sec
+2013-04-21 01:49:03.705    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:49:35.518   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.81 sec
+2013-04-21 01:49:57.620    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:50:29.350   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.73 sec
+2013-04-21 01:53:03.302    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:53:47.164   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 43.86 sec
+2013-04-21 01:53:59.561    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:54:34.266   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.71 sec
+2013-04-21 01:54:45.698    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:55:24.458   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.76 sec
+2013-04-21 01:55:38.055    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:56:09.973   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.92 sec
+2013-04-21 01:56:31.742    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:57:09.138   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.40 sec
+2013-04-21 01:57:20.340    INFO:              as: Got 27 User Requests from Request DB
+2013-04-21 01:58:00.717   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 40.38 sec
+2013-04-21 01:58:12.524    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 01:58:43.451   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.93 sec
+2013-04-21 01:59:03.716    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 01:59:36.583   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.87 sec
+2013-04-21 01:59:48.047    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:00:32.674   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 44.63 sec
+2013-04-21 02:00:45.929    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:01:16.597   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.67 sec
+2013-04-21 02:01:27.610    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:02:00.310   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.70 sec
+2013-04-21 02:02:11.917    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:02:44.758   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.84 sec
+2013-04-21 02:02:58.998    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:03:31.303   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.31 sec
+2013-04-21 02:03:43.205    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:04:14.547   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.34 sec
+2013-04-21 02:04:34.456    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:05:05.813   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.36 sec
+2013-04-21 02:05:19.691    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:06:02.238   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 42.55 sec
+2013-04-21 02:06:14.618    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:06:45.995   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.38 sec
+2013-04-21 02:06:59.510    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:07:39.592   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 40.08 sec
+2013-04-21 02:07:52.504    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:08:23.826   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.32 sec
+2013-04-21 02:09:07.452    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:09:38.673   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.22 sec
+2013-04-21 02:09:50.426    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:10:29.339   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.91 sec
+2013-04-21 02:10:42.555    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:11:14.753   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.20 sec
+2013-04-21 02:11:29.182    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:12:15.069   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 45.89 sec
+2013-04-21 02:12:27.515    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:12:59.364   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.85 sec
+2013-04-21 02:13:19.889    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:13:54.790   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.90 sec
+2013-04-21 02:14:07.882    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:14:40.883   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.00 sec
+2013-04-21 02:14:53.905    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:15:25.492   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.59 sec
+2013-04-21 02:15:36.843    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:16:18.820   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 41.98 sec
+2013-04-21 02:16:29.996    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:17:00.901   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.91 sec
+2013-04-21 02:17:13.026    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:17:45.980   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.95 sec
+2013-04-21 02:17:57.250    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:18:28.070   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.82 sec
+2013-04-21 02:18:40.112    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:19:13.895   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 33.78 sec
+2013-04-21 02:19:24.981    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:19:59.585   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.60 sec
+2013-04-21 02:20:23.026    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:20:54.309   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.28 sec
+2013-04-21 02:21:11.071    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:21:47.316   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.24 sec
+2013-04-21 02:21:58.895    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:22:30.106   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.21 sec
+2013-04-21 02:22:41.146    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:23:17.529   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.38 sec
+2013-04-21 02:23:29.478    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:24:01.202   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.72 sec
+2013-04-21 02:24:22.482    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:24:53.636   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.15 sec
+2013-04-21 02:25:04.890    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:25:45.590   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 40.70 sec
+2013-04-21 02:26:00.366    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:26:41.450   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 41.08 sec
+2013-04-21 02:26:55.582    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:27:33.251   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.67 sec
+2013-04-21 02:27:44.540    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:28:15.275   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.73 sec
+2013-04-21 02:28:42.881    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:29:13.848   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.97 sec
+2013-04-21 02:29:24.991    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:29:56.523   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.53 sec
+2013-04-21 02:30:16.604    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:30:48.777   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 32.17 sec
+2013-04-21 02:31:00.555    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:31:30.606   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.05 sec
+2013-04-21 02:31:53.762    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:32:24.224   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.46 sec
+2013-04-21 02:32:38.231    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:33:15.241   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.01 sec
+2013-04-21 02:33:27.560    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:33:58.781   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.22 sec
+2013-04-21 02:34:10.182    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:34:49.914   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 39.73 sec
+2013-04-21 02:35:03.478    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:35:33.863   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.39 sec
+2013-04-21 02:35:46.936    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:36:24.090   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.15 sec
+2013-04-21 02:36:35.213    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:37:05.702   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.49 sec
+2013-04-21 02:37:16.647    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:37:55.544   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 38.90 sec
+2013-04-21 02:38:06.646    INFO:              as: Got 26 User Requests from Request DB
+2013-04-21 02:38:38.216   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.57 sec
+2013-04-21 03:18:00.009    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 03:18:31.511   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.50 sec
+2013-04-21 03:18:42.251    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 03:19:20.073   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 37.82 sec
+2013-04-21 03:19:32.512    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 03:20:03.208   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 30.70 sec
+2013-04-21 03:20:14.061    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 03:20:48.278   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 34.22 sec
+2013-04-21 03:58:56.901    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 03:59:27.915   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 31.01 sec
+2013-04-21 03:59:39.476    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 04:00:16.120   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.64 sec
+2013-04-21 04:00:27.056    INFO:              as: Got 25 User Requests from Request DB
+2013-04-21 04:00:57.044   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 29.99 sec
+2013-04-21 04:37:22.001    INFO:              as: Got 20 User Requests from Request DB
+2013-04-21 04:37:46.475   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 24.47 sec
+2013-04-21 04:37:55.719    INFO:              as: Got 20 User Requests from Request DB
+2013-04-21 04:38:18.160   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 22.44 sec
+2013-04-21 04:38:35.802    INFO:              as: Got 19 User Requests from Request DB
+2013-04-21 04:39:02.169   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 26.37 sec
+2013-04-22 03:44:01.288    INFO:              as: Got 7 User Requests from Request DB
+2013-04-22 03:44:12.424   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 11.14 sec
+2013-04-24 17:38:47.881    INFO:              as: Got 3 User Requests from Request DB
+2013-04-24 17:38:54.129   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 6.25 sec
+2013-04-24 17:40:57.959    INFO:              as: Got 7 User Requests from Request DB
+2013-04-24 17:41:07.138   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 9.18 sec
+2013-04-24 20:01:37.329    INFO:              as: Got 14 User Requests from Request DB
+2013-04-24 20:01:54.937   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 17.61 sec
+2013-04-24 20:40:08.538    INFO:              as: Got 15 User Requests from Request DB
+2013-04-24 20:40:29.357   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 20.82 sec
+2013-04-24 20:40:37.091    INFO:              as: Got 16 User Requests from Request DB
+2013-04-24 20:40:56.277   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 19.18 sec
+2013-04-24 20:41:03.963    INFO:              as: Got 17 User Requests from Request DB
+2013-04-24 20:41:25.024   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 21.06 sec
+2013-04-24 20:47:58.151    INFO:              as: Got 20 User Requests from Request DB
+2013-04-24 20:48:20.635   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 22.48 sec
+2013-04-24 23:41:12.984    INFO:              as: Got 20 User Requests from Request DB
+2013-04-24 23:41:36.528   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 23.54 sec
+2013-04-25 00:28:21.150    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 00:28:45.887   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 24.74 sec
+2013-04-25 01:14:59.883    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 01:15:24.560   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 24.68 sec
+2013-04-25 02:01:59.722    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 02:02:22.696   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 22.97 sec
+2013-04-25 02:49:16.113    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 02:49:41.467   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 25.35 sec
+2013-04-25 03:36:24.112    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 03:36:47.772   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 23.66 sec
+2013-04-25 04:23:44.525    INFO:              as: Got 20 User Requests from Request DB
+2013-04-25 04:24:06.951   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 22.43 sec
+2013-04-25 12:01:16.968    INFO:              as: Got 33 User Requests from Request DB
+2013-04-25 12:01:53.416   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 36.45 sec
+2013-04-25 16:01:33.943    INFO:              as: Got 49 User Requests from Request DB
+2013-04-25 16:02:31.453   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 57.51 sec
+2013-04-25 19:50:40.000    INFO:              as: Got 49 User Requests from Request DB
+2013-04-25 19:51:36.822   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 56.82 sec
+2013-04-25 20:01:00.287    INFO:              as: Got 65 User Requests from Request DB
+2013-04-25 20:02:13.686   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 73.40 sec
+2013-04-25 20:46:42.292    INFO:              as: Got 65 User Requests from Request DB
+2013-04-25 20:47:56.276   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 73.98 sec
+2013-04-25 21:30:07.878    INFO:              as: Got 63 User Requests from Request DB
+2013-04-25 21:31:22.008   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 74.13 sec
+2013-04-26 12:00:15.383    INFO:              as: Got 51 User Requests from Request DB
+2013-04-26 12:01:13.032   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 57.65 sec
+2013-04-26 16:01:15.322    INFO:              as: Got 69 User Requests from Request DB
+2013-04-26 16:02:33.406   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 78.08 sec
+2013-04-26 16:13:25.201    INFO:              as: Got 70 User Requests from Request DB
+2013-04-26 16:14:45.000   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 79.80 sec
+2013-04-26 20:00:33.232    INFO:              as: Got 88 User Requests from Request DB
+2013-04-26 20:02:13.742   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.51 sec
+2013-04-26 21:01:58.898    INFO:              as: Got 89 User Requests from Request DB
+2013-04-26 21:03:39.041   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 100.14 sec
+2013-04-26 22:45:09.717    INFO:              as: Got 83 User Requests from Request DB
+2013-04-26 22:46:43.324   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 93.61 sec
+2013-04-26 22:48:22.811    INFO:              as: Got 84 User Requests from Request DB
+2013-04-26 22:49:59.880   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 97.07 sec
+2013-04-26 23:38:34.968    INFO:              as: Got 83 User Requests from Request DB
+2013-04-26 23:41:10.003   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 155.03 sec
+2013-04-26 23:41:46.042    INFO:              as: Got 82 User Requests from Request DB
+2013-04-26 23:43:21.486   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.44 sec
+2013-04-27 12:01:20.880    INFO:              as: Got 65 User Requests from Request DB
+2013-04-27 12:02:21.148   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 60.27 sec
+2013-04-27 16:01:13.336    INFO:              as: Got 79 User Requests from Request DB
+2013-04-27 16:02:46.081   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 92.74 sec
+2013-04-27 20:01:37.932    INFO:              as: Got 101 User Requests from Request DB
+2013-04-27 20:03:30.554   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 112.62 sec
+2013-04-28 02:28:06.573    INFO:              as: Got 83 User Requests from Request DB
+2013-04-28 02:29:42.350   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 95.78 sec
+2013-04-28 12:00:39.033    INFO:              as: Got 81 User Requests from Request DB
+2013-04-28 12:01:57.113   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 78.08 sec
+2013-04-28 16:01:41.426    INFO:              as: Got 90 User Requests from Request DB
+2013-04-28 16:03:19.809   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 98.38 sec
+2013-04-28 17:41:09.944    INFO:              as: Got 91 User Requests from Request DB
+2013-04-28 17:42:52.968   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 103.02 sec
+2013-04-28 17:46:43.537    INFO:              as: Got 92 User Requests from Request DB
+2013-04-28 17:48:31.465   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 107.93 sec
+2013-04-28 20:00:57.867    INFO:              as: Got 110 User Requests from Request DB
+2013-04-28 20:03:00.256   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 122.39 sec
+2013-04-29 02:10:29.354    INFO:              as: Got 92 User Requests from Request DB
+2013-04-29 02:12:14.085   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 104.73 sec
+2013-04-29 04:42:35.933    INFO:              as: Got 72 User Requests from Request DB
+2013-04-29 04:43:49.861   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 73.93 sec
+2013-04-29 12:01:31.200    INFO:              as: Got 68 User Requests from Request DB
+2013-04-29 12:02:36.138   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 64.94 sec
+2013-04-29 15:54:44.476    INFO:              as: Got 60 User Requests from Request DB
+2013-04-29 15:55:50.186   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 65.71 sec
+2013-04-29 15:56:15.875    INFO:              as: Got 60 User Requests from Request DB
+2013-04-29 15:57:21.474   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 65.60 sec
+2013-04-29 16:00:41.900    INFO:              as: Got 69 User Requests from Request DB
+2013-04-29 16:01:56.808   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 74.91 sec
+2013-04-29 20:02:12.310    INFO:              as: Got 78 User Requests from Request DB
+2013-04-29 20:03:39.766   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 87.46 sec
+2013-04-29 22:21:00.357    INFO:              as: Got 69 User Requests from Request DB
+2013-04-29 22:22:16.988   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 76.63 sec
+2013-04-29 22:29:18.916    INFO:              as: Got 68 User Requests from Request DB
+2013-04-29 22:30:37.547   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 78.63 sec
