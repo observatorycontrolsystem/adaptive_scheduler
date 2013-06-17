@@ -80,8 +80,13 @@ class Target(DataContainer):
 
 
 class Constraints(DataContainer):
-    pass
-
+    def __init__(self, *args, **kwargs):
+        self.max_airmass        = None
+        self.min_lunar_distance = None
+        self.max_lunar_phase    = None
+        self.max_seeing         = None
+        self.min_transparency   = None
+        DataContainer.__init__(self, *args, **kwargs)
 
 class Molecule(DataContainer):
     #TODO: This is really an expose_n molecule, so should be specialised
