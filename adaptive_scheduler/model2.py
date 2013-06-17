@@ -149,7 +149,7 @@ class Windows(DefaultMixin):
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
-        req_fields = ('proposal_id', 'user_id', 'tag_id', 'priority')
+        req_fields = ('proposal_id', 'user_id', 'tag_id', 'observer_name', 'priority')
         missing_fields = []
 
         for field in req_fields:
