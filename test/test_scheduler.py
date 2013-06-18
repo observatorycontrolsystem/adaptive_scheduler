@@ -6,6 +6,7 @@ test_scheduler.py
 Author: Sotiria Lampoudi
 Dec 2012
 '''
+# TODO: write test for make_windows_consistent()
 
 from nose.tools import assert_equal
 import copy

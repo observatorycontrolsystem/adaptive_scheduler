@@ -11,7 +11,7 @@ resource.
 '''
 
 import copy, random
-from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as CurrentScheduler
+from adaptive_scheduler.kernel.fullscheduler_v3 import FullScheduler_v3 as CurrentScheduler
 from util import *
 from time import time
 from params_1 import StressTestParams
@@ -98,15 +98,25 @@ class TestStress(object):
             cr_list.append(cr)
 
         tstart =  time()
+# commented out code is for running the same thing over and over
+        # for foo in range(100):
+        #     fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
+        #     s = fs.schedule_all()
+        #     elapsed = time() - tstart
+        #     print len(s['0']), elapsed
+        #     for r in s['0']:
+        #             r.unschedule()
         fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
+#        fs = CurrentScheduler(cr_list, self.gpw, [])
         s = fs.schedule_all()
         elapsed = time() - tstart
         print len(s['0']), elapsed
+
         u = Util()
         #u.get_coverage_count_plot(s)
         u.find_overlaps(s)
 
 
-    def run_many(self, howmany=1000):
-        for i in range(howmany):
-            self.run_1()
+    # def run_many(self, howmany=1000):
+    #     for i in range(howmany):
+    #         self.run_1()

@@ -21,6 +21,8 @@ class FullScheduler_v1(BipartiteScheduler):
     def schedule_contended_reservations_pass(self, current_order):
         self.current_order = current_order
         reservation_list   = filter(self.order_equals, self.unscheduled_reservation_list)
+        # make sure reservations know about previous passes
+        self.make_free_windows_consistent(reservation_list)
         if len(reservation_list) > 1:
             bs = HopcroftKarpScheduler(reservation_list, self.resource_list)
             scheduled_reservations = bs.schedule()
@@ -29,7 +31,7 @@ class FullScheduler_v1(BipartiteScheduler):
                 scheduled_reservations = reservation_list
         for r in scheduled_reservations:
             self.commit_reservation_to_schedule(r)
-
+            
 
     def schedule_contractual_obligations(self):
         # TODO

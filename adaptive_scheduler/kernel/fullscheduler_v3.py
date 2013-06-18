@@ -24,6 +24,7 @@ class FullScheduler_v3(BipartiteScheduler):
         self.current_order = current_order
         reservation_list   = filter(self.order_equals, self.unscheduled_reservation_list)
         reservation_list.sort(reverse=True)
+        self.make_free_windows_consistent(reservation_list)
         scheduled_reservations = []
         if len(reservation_list) > 1:
             bs = HungarianScheduler(reservation_list, self.resource_list)

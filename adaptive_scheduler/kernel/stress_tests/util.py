@@ -48,7 +48,7 @@ class Util(object):
 	    if tp.type == 'end':
 		current_height -= 1
          if overlap_count:
-            print 'ERROR: schedule with overlap for resource ', resource
+            print 'ERROR: schedule with ', overlap_count, ' overlaps for resource ', resource
             print schedule[resource]
             overlap_counts.append(overlap_count)
       oc_sum = 0

@@ -56,6 +56,15 @@ class Scheduler(object):
             for resource in reservation.free_windows_dict.keys():
                 self.reservations_by_resource_dict[resource].append(reservation)
 
+    def make_free_windows_consistent(self, reservation_list):
+        '''Use this when some windows have been made busy in the global 
+        schedule, but there are reservations that don't know about it. This
+        could also be done in commit, but it's not required by all schedulers
+        (only multi-pass ones), so it's better to keep it separate.'''
+        for reservation in reservation_list:
+            for resource in reservation.free_windows_dict.keys():
+                reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].subtract(self.schedule_dict_busy[resource])
+
 
     def order_equals(self, x):
         if (x.order == self.current_order):
@@ -134,7 +143,8 @@ class Scheduler(object):
             self.schedule_dict_free[r.scheduled_resource] = self.schedule_dict_free[r.scheduled_resource].subtract(interval)
             # remove from list of unscheduled reservations
             self.unscheduled_reservation_list.remove(r)
-            # TODO? remove scheduled time from free windows of other reservations?
+            # if we need to remove scheduled time from free windows of other 
+            # reservations, then we need to call self.make_windows_consistent()
 
 
     def uncommit_reservation_from_schedule(self, r):
