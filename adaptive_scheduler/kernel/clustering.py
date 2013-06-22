@@ -26,8 +26,8 @@ class Clustering(object):
         # must return number of clusters
         #number_of_clusters = self.cut_into_n_by_priority(n)
         #number_of_clusters = self.cluster_into_n_by_priority(n)
-#        number_of_clusters = self.cluster_adaptively_by_what('priority')
-        number_of_clusters = self.cluster_adaptively_by_what('duration')
+        number_of_clusters = self.cluster_adaptively_by_what('priority')
+#        number_of_clusters = self.cluster_adaptively_by_what('duration')
         return number_of_clusters
 
 

@@ -106,8 +106,8 @@ class TestStress(object):
         #     print len(s['0']), elapsed
         #     for r in s['0']:
         #             r.unschedule()
-        fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
-#        fs = CurrentScheduler(cr_list, self.gpw, [])
+#        fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
+        fs = CurrentScheduler(cr_list, self.gpw, [])
         s = fs.schedule_all()
         elapsed = time() - tstart
         print len(s['0']), elapsed

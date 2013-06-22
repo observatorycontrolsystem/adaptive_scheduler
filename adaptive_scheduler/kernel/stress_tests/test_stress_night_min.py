@@ -25,7 +25,7 @@ class TestStressNights(object):
         self.numresources = sp.numresources
         self.numreservations = sp.numreservations
         self.numdays = sp.numdays
-        self.tfinal = sp.numdays * 24 * 60 * 60
+        self.tfinal = sp.tfinal
         self.night_length = sp.night_length
 
         self.min_duration = sp.duration_range[0]
@@ -39,14 +39,13 @@ class TestStressNights(object):
         self.slice_dict = {}
         tmp1 = []
         for i in range(self.numdays):
-            tmp1.append(Timepoint(i*24*60*60, 'start'))
-            tmp1.append(Timepoint(i*24*60*60 + self.night_length, 
+            tmp1.append(Timepoint(i*24*60, 'start'))
+            tmp1.append(Timepoint(i*24*60 + self.night_length, 
                                   'end'))
         r = str(0)
         self.gpw[r] = Intervals(tmp1)
         self.slice_dict[r] = [0,sp.slice_length]
 
-        # TODO: offset the nights?
         for i in range(1,self.numresources): 
             tmp2 = copy.deepcopy(tmp1)
             r = str(i)
@@ -56,13 +55,13 @@ class TestStressNights(object):
         self.no_oneofs = False
         self.no_ands = False
         self.max_restype = 1
-        if sp.oneof_elt_num_range[0] == sp.oneof_elt_num_range[1]:
+        if sp.oneof_elt_num_range[0] < 2: #== sp.oneof_elt_num_range[1]:
             self.no_oneofs = True
         else:
             self.oneof_elt_num_min = sp.oneof_elt_num_range[0] 
             self.oneof_elt_num_max = sp.oneof_elt_num_range[1] 
             self.max_restype += 1
-        if sp.and_elt_num_range[0] == sp.and_elt_num_range[1]:
+        if sp.and_elt_num_range[0] < 2: #== sp.and_elt_num_range[1]:
             self.no_ands = True
         else:
             self.and_elt_num_min = sp.and_elt_num_range[0] 
@@ -78,7 +77,7 @@ class TestStressNights(object):
         slack = random.randint(self.min_slack, self.max_slack)
         resource = str(random.randint(0,self.numresources-1))
 
-        start = start_day*24*60*60 + start_time
+        start = start_day*24*60 + start_time
         window = Intervals([Timepoint(start, 'start'),
                             Timepoint(start+duration+slack, 'end')])
         reservation = Reservation_v3(priority, duration, {resource: window})
@@ -98,12 +97,14 @@ class TestStressNights(object):
             elif restype == 2 and not self.no_oneofs:
                 resnum = random.randint(self.oneof_elt_num_min-1, 
                                         self.oneof_elt_num_max-1)
+                
                 for j in range(resnum):
                     reslist.append(self.generate_reservation())
                 cr = CompoundReservation_v2(reslist,'oneof')
             else: 
                 resnum = random.randint(self.and_elt_num_min-1, 
                                         self.and_elt_num_max-1)
+                
                 for j in range(resnum):
                     reslist.append(self.generate_reservation())
                 cr = CompoundReservation_v2(reslist,'and')
@@ -114,7 +115,10 @@ class TestStressNights(object):
         fs = CurrentScheduler(cr_list, self.gpw, [], self.slice_dict)
         s = fs.schedule_all()
         elapsed = time() - tstart
-        print len(s['0']), elapsed
         u = Util()
         #u.get_coverage_count_plot(s)
         u.find_overlaps(s)
+	sched_count = sum(len(s[k]) for k in s.keys())
+	utilization = u.get_total_scheduled_time(s)
+	res_count_in = len(fs.reservation_list)
+	print res_count_in, sched_count, utilization, elapsed

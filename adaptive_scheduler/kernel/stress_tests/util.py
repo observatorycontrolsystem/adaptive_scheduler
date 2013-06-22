@@ -11,7 +11,15 @@ from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.reservation_v3 import *
 
 class Util(object):
-   
+
+   def get_total_scheduled_time(self, schedule):
+      sum = 0
+      for resource in schedule.keys():
+         for reservation in schedule[resource]:
+            sum += reservation.duration
+      return sum
+
+
    def get_coverage_count_plot(self, schedule):
       for resource in schedule.keys():
          print resource

@@ -35,10 +35,14 @@ class SlicedIPScheduler(Scheduler):
         self.Yik = [] # maps idx -> [resID, window idx, priority, resource]
         self.aikt = {} # maps slice -> Yik idxs
 	self.schedulerIDstring = 'slicedIPscheduler'
+        self.hashes = set()
 
 
     def hash_slice(self, start, resource, slice_length):
-        return "resource_"+resource+"_start_"+repr(start)+"_length_"+repr(slice_length)
+        string = "resource_"+resource+"_start_"+repr(start)+"_length_"+repr(slice_length)
+        exists = string in self.hashes
+        self.hashes.add(string)
+        return string, exists
         
 
     def unhash_slice(self, mystr):
@@ -75,8 +79,9 @@ class SlicedIPScheduler(Scheduler):
                     for s in w:
                         # build aikt
                         # working with slice: (s,r.resource)
-                        key = self.hash_slice(s, resource, slice_length)
-                        if key in self.aikt.keys():
+                        key, exists = self.hash_slice(s, resource, slice_length)
+#                        if key in self.aikt.keys():
+                        if exists:
                             self.aikt[key].append(Yik_idx)
                         else:
                             self.aikt[key] = [Yik_idx]

@@ -29,8 +29,9 @@ class FullScheduler_v1(BipartiteScheduler):
         else:
             if reservation_list[0].schedule_anywhere():
                 scheduled_reservations = reservation_list
-        for r in scheduled_reservations:
-            self.commit_reservation_to_schedule(r)
+        if scheduled_reservations:
+            for r in scheduled_reservations:
+                self.commit_reservation_to_schedule(r)
             
 
     def schedule_contractual_obligations(self):
