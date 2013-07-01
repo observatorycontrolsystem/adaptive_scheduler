@@ -10,5 +10,5 @@ lcogtpond==0.1.4.SNAPSHOT
 mock==1.0.1
 reqdbclient
 jsonpickle
-#cvxopt==1.1.2
+cvxopt==1.1.2
 
