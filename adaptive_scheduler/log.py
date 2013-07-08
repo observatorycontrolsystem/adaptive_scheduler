@@ -13,6 +13,7 @@ April 2013
 '''
 
 import logging
+import os.path
 
 
 class MultiFileHandler(logging.FileHandler):
@@ -38,14 +39,15 @@ class MultiFileHandler(logging.FileHandler):
 
 
 class UserRequestHandler(MultiFileHandler):
-    def __init__(self, tracking_number, mode='a', encoding=None, delay=0):
-        filename = tracking_number + '.log'
+    def __init__(self, tracking_number, mode='a', logdir = '.', encoding=None, delay=0):
+        filename = os.path.join(logdir, tracking_number + '.log')
         MultiFileHandler.__init__(self, filename, mode, encoding, delay)
+        self.logdir = logdir
         self.tracking_number  = tracking_number
 
     def emit(self, record):
         if hasattr(record, 'tracking_number'):
-            record.file_id = record.tracking_number + '.log'
+            record.file_id = os.path.join(self.logdir, record.tracking_number + '.log')
         MultiFileHandler.emit(self, record)
 
 
