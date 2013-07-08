@@ -14,7 +14,7 @@ class TestPond(object):
 
     def setup(self):
         # Metadata missing proposal and tag parameters
-        self.proposal = Proposal(user_name='Eric')
+        self.proposal = Proposal(observer_name='Eric Saunders')
 
         # Molecule missing a binning parameter
         self.mol1 = Molecule(
@@ -88,10 +88,9 @@ class TestPond(object):
 
         scheduled_block.add_proposal(
                                       Proposal(
-                                                user_name      = 'Eric Saunders',
+                                                observer_name  = 'Eric Saunders',
                                                 user_id        = 'esaunders',
-                                                proposal_name  = 'Scheduler Testing',
-                                                proposal_id    = 'test',
+                                                proposal_id    = 'Scheduler Testing',
                                                 tag_id         = 'admin',
                                                 priority       = 2,
                                               )
