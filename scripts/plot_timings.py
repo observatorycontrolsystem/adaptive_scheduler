@@ -61,7 +61,7 @@ def plot_all(timed_funcs):
     for key, timing_data in timed_funcs.iteritems():
         x,y   = zip(*timing_data)
         key = key.replace('_','')
-        ax.plot(x,y,'.',label=key)
+        ax.plot(x,y,'.-',label=key)
 
     ax.set_title(filename)
     ax.set_xlabel('Timestamp')
