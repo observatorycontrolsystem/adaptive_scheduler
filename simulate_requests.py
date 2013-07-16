@@ -29,7 +29,7 @@ def get_proposal():
 
     proposal = {
                  'proposal_id'   : 'LCOSchedulerTest',
-                 'user_id'       : 'eric.saunders',
+                 'user_id'       : 'esaunders@lcogt.net',
                  'tag_id'        : 'LCOGT',
                  'priority'      : 20               # 'TAC priority': LARGER means MORE IMPORTANT
                }
@@ -80,7 +80,8 @@ class RequestBuilder(object):
 
 
     def build_window(self, dt):
-        ONE_DAY = timedelta(days=1)
+        ONE_DAY   = timedelta(days=1)
+        TWO_HOURS = timedelta(hours=2)
         start = dt - TWO_HOURS
         end   = dt + TWO_HOURS
 
@@ -140,6 +141,7 @@ if __name__ == '__main__':
         ur.operator = 'single'
         ur.set_proposal(get_proposal())
 
-        client = SchedulerClient('http://localhost:8001/requestdb/')
+#        client = SchedulerClient('http://localhost:8001/requestdb/')
+        client = SchedulerClient('http://localhost:8001/')
         response_data = client.submit(ur, debug=True)
         client.print_submit_response()

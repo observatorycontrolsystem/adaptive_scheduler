@@ -34,7 +34,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
-                                          epoch_to_datetime )
+                                          epoch_to_datetime, timeit )
 from adaptive_scheduler.printing import print_req_summary
 from adaptive_scheduler.model2   import Window, Windows
 from adaptive_scheduler.request_filters import filter_on_duration, filter_on_type
@@ -189,6 +189,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     return compound_res
 
 
+@timeit
 def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_end):
     ''' After throwing out and marking URs as UNSCHEDULABLE, reduce windows by considering
         dark time and target visibility. Remove any URs that are now too small to hold their
@@ -252,6 +253,7 @@ def intervals_to_windows(req, intersections_for_resource):
     return windows
 
 
+@timeit
 def make_compound_reservations(compound_requests, visibility_from, semester_start):
     '''Parse a list of compoundRequests, and produce a corresponding list of
        CompoundReservations.'''
@@ -351,9 +353,9 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
 
 
 def construct_global_availability(now, semester_start, running_at_tel, resource_windows):
-    '''Use the cutoff time to make unavailable portions of each resource where an observation
-       is running. Normalise and intersect with the resource windows to get a final global
-       availability for each resource.
+    '''Use the cutoff time to make unavailable portions of each resource where an
+       observation is running. Normalise and intersect with the resource windows to
+       get a final global availability for each resource.
     '''
 
     for tel_name in running_at_tel:

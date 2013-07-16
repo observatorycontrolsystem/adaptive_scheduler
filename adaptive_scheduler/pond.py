@@ -40,6 +40,9 @@ from lcogtpond.schedule                import Schedule
 import logging
 log = logging.getLogger(__name__)
 
+#TODO: Remove me
+xx = 1
+
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
@@ -262,6 +265,11 @@ class Block(object):
             msg = "Dry-run: Would have sent " + msg
 
         log.debug(msg)
+        #TODO: Remove me
+        global xx
+        fh = open(str(xx) + '.tmp', 'a')
+        fh.write(msg + '\n')
+        fh.close()
 
         return
 
@@ -301,11 +309,17 @@ def make_simple_pond_schedule(schedule, semester_start):
 @timeit
 def send_schedule_to_pond(schedule, semester_start, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
+    size = 0
+    for res in schedule:
+        size += len(schedule[res])
+    print "3rd time:", size
 
     n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
+        print resource_name, n_submitted
         _, block_str = pl(n_submitted, 'block')
+        #import ipdb; ipdb.set_trace()
 
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
         if dry_run:
@@ -323,7 +337,8 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
                            group_id           = res.compound_request.group_id,
                            tracking_number    = res.compound_request.tracking_number,
                            request_number     = res.request.request_number,
-                           priority           = res.priority,
+                           # Hard-code all scheduler output to a highish number, for now
+                           priority           = 30,
                            max_airmass        = res.request.constraints.max_airmass,
                            min_lunar_distance = res.request.constraints.min_lunar_distance,
                            max_lunar_phase    = res.request.constraints.max_lunar_phase,
@@ -343,6 +358,10 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
             pond_block = block.send_to_pond()
 
         n_submitted_total += n_submitted
+
+    #TODO: Remove me
+    global xx
+    xx += 1
 
     return n_submitted_total
 
@@ -459,7 +478,7 @@ def cancel_schedule_at_resource(start, end, site, obs, tel, dry_run=False):
 
     if not dry_run:
         for block in to_delete:
-            block.cancel(reason="Superceded by new schedule")
+            block.cancel(reason="Superceded by new schedule", delete=True)
 
     return len(to_delete)
 

@@ -10,19 +10,30 @@ edited December 2011: removed resource field
 '''
 
 class Timepoint(object):
-   def __init__(self, time, type):
-      # type should be 'start' or 'end'
-      self.time     = time
-      self.type     = type
+    def __init__(self, time, type):
+        # type should be 'start' or 'end'
+        self.time     = time
+        self.type     = type
 
 
-   def __lt__(self, other):
-      if self.time == other.time:
-         if self.type == other.type:
-            return False
-         elif self.type == 'end':
-            return True
-         else:
-            return False
-      else:
-         return self.time < other.time
+    def __lt__(self, other):
+        if self.time == other.time:
+            if self.type == other.type:
+                return False
+            elif self.type == 'end':
+                return True
+            else:
+                return False
+        else:
+            return self.time < other.time
+
+
+    def __repr__(self):
+        return str(self.serialise())
+
+    def serialise(self):
+        return dict(
+                    # TODO: Remove int cast after debugging
+                     time = int(self.time),
+                     type = str(self.type)
+                   )

@@ -85,7 +85,8 @@ def get_requests_from_db(url, telescope_class):
 
     ur_list = sc.retrieve(search, debug=True)
 
-    write_requests_to_file_as_json(ur_list, 'retrieved_urs.dat')
+    in_fh = open('retrieved_urs.dat', 'r')
+    ur_list = json.load(in_fh)
 
     return ur_list
 
@@ -176,7 +177,8 @@ def summarise_urs(user_reqs):
 @timeit
 def main(requests, sched_client, visibility_from=None, dry_run=False):
     semester_start, semester_end = get_semester_block()
-    now = datetime.utcnow()
+#    now = datetime.utcnow()
+    now = datetime(2013, 7, 9, 22, 46, 13, 870821)
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
@@ -221,14 +223,17 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
     # Construct visibility objects for each telescope
     if not visibility_from:
-        visibility_from = construct_visibilities(tels, now, semester_end)
+        visibility_from = construct_visibilities(tels, semester_start, semester_end)
 
 
     # Do another check on duration and operator soundness, after dark/rise checking
     user_reqs = prefilter_for_kernel(user_reqs, visibility_from, tels,
                                      now, semester_end)
 
-    log.info('Filtering complete. Ready to construct Reservations.')
+    log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
+    #TODO:Remove me
+    debug_fh = open('run.tmp', 'w')
+    debug_fh.write('After prefilter: %d URs\n' % len(user_reqs))
     summarise_urs(user_reqs)
 
     # Remove running blocks from consideration, and get the availability edge
@@ -237,11 +242,12 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     # Convert CompoundRequests -> CompoundReservations
     to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                              semester_start)
+    debug_fh.write('Made: %d compound reservations\n' % len(to_schedule))
 
     # Translate when telescopes are available into kernel speak
     resource_windows = construct_resource_windows(visibility_from, semester_start)
 
-    # Filter a second time to remove (now) unschedulable Requests
+    # Intersect and mask out time where Blocks are currently running
     global_windows = construct_global_availability(now, semester_start,
                                                    running_at_tel, resource_windows)
 
@@ -262,9 +268,41 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
     contractual_obligations = []
 
+    args_filename = 'input_args.%s.tmp' % datetime.utcnow().strftime(format = '%Y-%m-%d_%H_%M_%S')
+
+    args_fh = open(args_filename, 'w')
+    print "Dumping kernel args to %s" % args_filename
+    to_schedule_serial = [x.serialise() for x in to_schedule]
+    global_windows_serial = dict([(k, v.serialise()) for k,v in global_windows.items()])
+
+    args_fh.write(json.dumps({
+                                     'to_schedule' : to_schedule_serial,
+#                                     'global_windows' : global_windows_serial,
+#                                     'contractual_obligations' : contractual_obligations,
+#                                     'time_slicing_dict' : time_slicing_dict
+                                     }))
+    args_fh.close()
+
+    #print "Size of to_schedule", len(to_schedule)
+    #total_tps = 0
+    #for tel in global_windows:
+    #    total_tps += len(global_windows[tel].timepoints)
+    #print "Size of global_windows", total_tps
+
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
+    size = 0
+    for res in schedule:
+        size += len(schedule[res])
+    print "1st time:", size
+    if size != 30:
+        import ipdb; ipdb.set_trace()
+
+
+    x = []
+    [x.extend(a) for a in schedule.values()]
+    log.info("Scheduling completed. Final schedule has %d Reservations." % len(x))
 
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
@@ -273,6 +311,10 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
+    size = 0
+    for res in schedule:
+        size += len(schedule[res])
+    print "2nd time:", size
     n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)
 
     log.info("------------------")
