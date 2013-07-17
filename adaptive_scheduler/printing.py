@@ -18,9 +18,9 @@ import logging
 log = logging.getLogger(__name__)
 
 def print_reservation(res):
-    print res
+    log.debug(res)
     for resource, interval in res.possible_windows_dict.iteritems():
-        print "Possible windows: %s -> %s" % ( resource, interval )
+        log.debug("Possible windows: %s -> %s" % ( resource, interval ))
 
     return
 
@@ -111,13 +111,12 @@ def print_compound_reservations(to_schedule):
 
 def print_schedule(schedule, semester_start=None, semester_end=None):
 
-    print "Scheduling completed. Final schedule:"
     if semester_start and semester_end:
         epoch_start = datetime_to_normalised_epoch(semester_start, semester_start)
         epoch_end   = datetime_to_normalised_epoch(semester_end, semester_start)
 
-        print "Scheduling for semester %s to %s" % (semester_start, semester_end)
-        print "Scheduling for normalised epoch %s to %s" % (epoch_start, epoch_end)
+        log.info("Scheduling for semester %s to %s" % (semester_start, semester_end))
+        log.info("Scheduling for normalised epoch %s to %s" % (epoch_start, epoch_end))
 
     for resource_reservations in schedule.values():
         for res in resource_reservations:

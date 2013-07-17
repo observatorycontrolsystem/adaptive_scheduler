@@ -26,6 +26,7 @@ import copy
 
 class Intervals(object):
 
+
     IntervalsID = 0
     def __init__(self, timepoints, type=None):
         # type should be 'busy' or 'free'
@@ -45,6 +46,19 @@ class Intervals(object):
             else:
                 string += repr(t.time) + "(end) "
         return string
+
+
+    def __repr__(self):
+        return str(self.serialise())
+
+
+    def serialise(self):
+        serialised_timepoints = [v.serialise() for v in self.timepoints]
+        return dict(
+                         timepoints  = serialised_timepoints,
+                         type        = str(self.type),
+                        )
+
 
 
     def is_empty(self):

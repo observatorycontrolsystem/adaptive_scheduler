@@ -103,18 +103,19 @@ class Reservation_v3(object):
 
 
     def __repr__(self):
-        str = "Reservation ID: {0} \
-        \n\tpriority: {1} \
-        \n\tduration: {2} \
-        \n\tpossible windows dict: {3}\
-        \n\tis scheduled: {4}\n".format(self.resID, self.priority, 
-                                        self.duration,  
-                                        self.possible_windows_dict, 
-					self.scheduled)
-        if self.scheduled:
-            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n". format(self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
-        return str
-                    
+        return str(self.serialise())
+
+
+    def serialise(self):
+        serialised_windows = dict([(k, v.serialise()) for k,v in self.possible_windows_dict.items()])
+        return dict(
+#                          resID                 = self.resID,
+                      priority              = self.priority,
+                      duration              = self.duration,
+                      possible_windows_dict = serialised_windows,
+                      scheduled             = self.scheduled
+                    )
+
 
     def __lt__(self, other):
         ''' Higher priority number is higher priority. 
@@ -237,3 +238,16 @@ class CompoundReservation_v2(object):
         else:
             return False
 
+
+    def __repr__(self):
+        return str(self.serialise())
+
+    def serialise(self):
+        reservation_list_repr = [r.serialise() for r in self.reservation_list]
+
+        return dict(
+                     type             = str(self.type),
+                     size             = int(self.size),
+                     scheduled        = bool(self.scheduled),
+                     reservation_list = reservation_list_repr
+                    )
