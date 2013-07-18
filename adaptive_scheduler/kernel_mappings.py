@@ -38,6 +38,7 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
 from adaptive_scheduler.printing import print_req_summary
 from adaptive_scheduler.model2   import Window, Windows
 from adaptive_scheduler.request_filters import filter_on_duration, filter_on_type
+from adaptive_scheduler.memoize import Memoize
 
 import math
 
@@ -113,15 +114,13 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
 
-#        visibility = visibility_from[resource_name]
         visibility = visibility_from[resource_name][0]
 
         # Find when it's dark, and when the target is up
-#        rs_dark_intervals = visibility.get_dark_intervals()
-#        rs_up_intervals   = visibility.get_target_intervals(rs_target)
-
         rs_dark_intervals = visibility_from[resource_name][1]()
-        rs_up_intervals   = visibility_from[resource_name][2](rs_target)
+        rs_up_intervals   = visibility_from[resource_name][2](target=rs_target,
+                                                              up=True,
+                                                              airmass=req.constraints.max_airmass)
 
 
         # Convert the rise_set intervals into kernel speak
@@ -204,8 +203,7 @@ def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_en
     # when an object that would have been visible has been dropped from consideration due to
     # the airmass constraint
     crs = filter_on_visibility(crs, visibility_from)
-    crs = filter_on_airmass(crs, tels, semester_start, semester_end)
-#    print list(crs)[0].requests[0].windows.size()
+#    crs = filter_on_airmass(crs, tels, semester_start, semester_end)
     crs = filter_on_duration(crs)
     crs = filter_on_type(crs)
 
@@ -215,8 +213,7 @@ def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_en
 def filter_on_airmass(crs, tels, semester_start, semester_end):
     for cr in crs:
         for r in cr.requests:
-            visibility_from = construct_visibilities(tels, semester_start, semester_end,
-                                                     airmass=r.constraints.max_airmass)
+            visibility_from = construct_visibilities(tels, semester_start, semester_end)
             r = compute_intersections(r, visibility_from)
 
     return crs
@@ -304,50 +301,21 @@ def construct_resource_windows(visibility_from, semester_start):
     return resource_windows
 
 
-def set_airmass_limit(airmass, tel):
-    ''' Compare the provided maximum airmass limit with the horizon of a telescope, and
-        return the effective horizon for rise/set purposes (whichever is higher elevation). If
-        no airmass is provided, we default to the horizon.
 
-        airmass = 1 / cos(zenith)
-        horizon = 90 - zenith'''
-
-    if not airmass:
-        return tel.horizon
-
-
-    # We convert the horizon to airmass, not vice versa, to avoid small angle problems if a
-    # very large airmass is provided
-    zenith_distance = 90 - tel.horizon
-    horizon_airmass = 1 / math.cos(math.radians(zenith_distance))
-
-    effective_horizon = tel.horizon
-    if airmass < horizon_airmass:
-        effective_horizon = 90 - math.degrees(math.acos(1 / airmass))
-
-    return effective_horizon
-
-
-
-def construct_visibilities(tels, semester_start, semester_end, twilight='nautical',
-                           airmass=None):
+def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
     '''Construct Visibility objects for each telescope.'''
-
-    from adaptive_scheduler.memoize import Memoize
-
 
     visibility_from = {}
     for tel_name, tel in tels.iteritems():
-        effective_horizon = set_airmass_limit(airmass, tel)
         rs_telescope = telescope_to_rise_set_telescope(tel)
         visibility = Visibility(rs_telescope, semester_start,
-                                semester_end, effective_horizon,
+                                semester_end, tel.horizon,
                                 twilight)
-        get_dark = Memoize(visibility.get_dark_intervals)
+#        get_dark   = Memoize(visibility.get_dark_intervals)
         get_target = Memoize(visibility.get_target_intervals)
-#        get_dark = visibility.get_dark_intervals
+        get_dark = visibility.get_dark_intervals
 #        get_target = visibility.get_target_intervals
-        visibility_from[tel_name] = (Visibility, get_dark, get_target)
+        visibility_from[tel_name] = (visibility, get_dark, get_target)
 
     return visibility_from
 
