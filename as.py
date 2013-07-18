@@ -83,7 +83,6 @@ if __name__ == '__main__':
 
 
     visibility_from = {}
-    i = 0
     while run_flag:
         dirty_response = dict(dirty=False)
         try:
@@ -120,13 +119,7 @@ if __name__ == '__main__':
 
                 # Run the scheduling loop, if there are any User Requests
                 if len(requests):
-                    if i==0:
-                        old_reqs = list(requests)
-                        i += 1
-                    assert(requests==old_reqs)
-                    old_reqs = list(requests)
                     visibility_from = main(requests, scheduler_client, visibility_from, dry_run=DRY_RUN)
-                    visibility_from = {}
                 else:
                     log.warn("Received no User Requests! Skipping this scheduling cycle")
                 sys.stdout.flush()
