@@ -309,15 +309,10 @@ def make_simple_pond_schedule(schedule, semester_start):
 @timeit
 def send_schedule_to_pond(schedule, semester_start, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
-    size = 0
-    for res in schedule:
-        size += len(schedule[res])
-    print "3rd time:", size
 
     n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
-        print resource_name, n_submitted
         _, block_str = pl(n_submitted, 'block')
         #import ipdb; ipdb.set_trace()
 

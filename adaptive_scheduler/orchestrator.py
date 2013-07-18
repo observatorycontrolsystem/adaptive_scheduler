@@ -143,7 +143,6 @@ def open_debugger_on_unusual_run(schedule):
     size = 0
     for res in schedule:
         size += len(schedule[res])
-    print "1st time:", size
     if size != 30:
         import ipdb; ipdb.set_trace()
 
@@ -297,10 +296,6 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-    size = 0
-    for res in schedule:
-        size += len(schedule[res])
-    print "2nd time:", size
     n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)
 
     log.info("------------------")
