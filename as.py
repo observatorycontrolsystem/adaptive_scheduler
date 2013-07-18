@@ -26,7 +26,7 @@ import signal
 import time
 import sys
 
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 DRY_RUN = False
 
 # Set up and configure an application scope logger
