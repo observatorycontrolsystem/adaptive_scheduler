@@ -16,6 +16,7 @@ from __future__ import division
 
 from adaptive_scheduler.orchestrator import main, get_requests_from_db
 from adaptive_scheduler.printing     import pluralise as pl
+from adaptive_scheduler.utils        import timeit
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
@@ -51,6 +52,17 @@ def kill_handler(signal, frame):
 #signal.signal(signal.SIGTERM, kill_handler)
 
 
+@timeit
+def get_dirty_flag():
+    dirty_response = dict(dirty=False)
+    try:
+        dirty_response = scheduler_client.get_dirty_flag()
+    except ConnectionError as e:
+        log.warn("Error retrieving dirty flag from DB: %s", e)
+        log.warn("Skipping this scheduling cycle")
+
+    return dirty_response
+
 
 if __name__ == '__main__':
 #    arg_parser = argparse.ArgumentParser(description="Run the Adaptive Scheduler")
@@ -84,12 +96,8 @@ if __name__ == '__main__':
 
     visibility_from = {}
     while run_flag:
-        dirty_response = dict(dirty=False)
-        try:
-            dirty_response = scheduler_client.get_dirty_flag()
-        except ConnectionError as e:
-            log.warn("Error retrieving dirty flag from DB: %s", e)
-            log.warn("Skipping this scheduling cycle")
+        dirty_response = get_dirty_flag()
+
 
         #TODO: HACK to handle not a real error returned from Request DB
         try:
