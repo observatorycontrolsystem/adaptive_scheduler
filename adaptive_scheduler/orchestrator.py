@@ -14,7 +14,7 @@ from __future__ import division
 import sys
 import json
 import ast
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
@@ -204,8 +204,7 @@ def summarise_urs(user_reqs):
 @timeit
 def main(requests, sched_client, visibility_from=None, dry_run=False):
     semester_start, semester_end = get_semester_block()
-#    now = datetime.utcnow()
-    now = datetime(2013, 7, 9, 22, 46, 13, 870821)
+    now = datetime.utcnow() + timedelta(minutes=6)
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
