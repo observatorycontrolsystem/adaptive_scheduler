@@ -27,13 +27,20 @@ class Timepoint(object):
         else:
             return self.time < other.time
 
+    def __eq__(self, other):
+        if type(other) is type(self):
+            print "gpt here"
+            return self.serialise() == other.serialise()
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def __repr__(self):
         return str(self.serialise())
 
     def serialise(self):
         return dict(
-                    # TODO: Remove int cast after debugging
-                     time = int(self.time),
-                     type = str(self.type)
+                     time = self.time,
+                     type = self.type
                    )
