@@ -332,7 +332,7 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
                            group_id           = res.compound_request.group_id,
                            tracking_number    = res.compound_request.tracking_number,
                            request_number     = res.request.request_number,
-                           # Hard-code all scheduler output to a highish number, for now
+                           # Hard-code all scheduler output to a highish number for now
                            priority           = 30,
                            max_airmass        = res.request.constraints.max_airmass,
                            min_lunar_distance = res.request.constraints.min_lunar_distance,
