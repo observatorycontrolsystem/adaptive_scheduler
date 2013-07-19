@@ -1,6 +1,7 @@
 from __future__ import division
 
 from nose.tools import assert_equal, raises
+from nose import SkipTest
 from mock       import patch, Mock
 
 from adaptive_scheduler.pond  import (Block, IncompleteBlockError, cancel_blocks,
@@ -319,6 +320,7 @@ class TestPondInteractions(object):
 
 
     def test_build_block(self):
+        raise SkipTest
         reservation = Reservation(
                                    priority = None,
                                    duration = 10,
