@@ -16,6 +16,7 @@ from __future__ import division
 
 from adaptive_scheduler.orchestrator import main, get_requests_from_db
 from adaptive_scheduler.printing     import pluralise as pl
+from adaptive_scheduler.utils        import timeit
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
@@ -26,7 +27,7 @@ import signal
 import time
 import sys
 
-VERSION = '1.1.0'
+VERSION = '1.2.0'
 DRY_RUN = False
 
 # Set up and configure an application scope logger
@@ -50,6 +51,17 @@ def kill_handler(signal, frame):
 #signal.signal(signal.SIGINT, ctrl_c_handler)
 #signal.signal(signal.SIGTERM, kill_handler)
 
+
+@timeit
+def get_dirty_flag():
+    dirty_response = dict(dirty=False)
+    try:
+        dirty_response = scheduler_client.get_dirty_flag()
+    except ConnectionError as e:
+        log.warn("Error retrieving dirty flag from DB: %s", e)
+        log.warn("Skipping this scheduling cycle")
+
+    return dirty_response
 
 
 if __name__ == '__main__':
@@ -83,14 +95,9 @@ if __name__ == '__main__':
 
 
     visibility_from = {}
-    i = 0
     while run_flag:
-        dirty_response = dict(dirty=False)
-        try:
-            dirty_response = scheduler_client.get_dirty_flag()
-        except ConnectionError as e:
-            log.warn("Error retrieving dirty flag from DB: %s", e)
-            log.warn("Skipping this scheduling cycle")
+        dirty_response = get_dirty_flag()
+
 
         #TODO: HACK to handle not a real error returned from Request DB
         try:
@@ -120,13 +127,7 @@ if __name__ == '__main__':
 
                 # Run the scheduling loop, if there are any User Requests
                 if len(requests):
-                    if i==0:
-                        old_reqs = list(requests)
-                        i += 1
-                    assert(requests==old_reqs)
-                    old_reqs = list(requests)
                     visibility_from = main(requests, scheduler_client, visibility_from, dry_run=DRY_RUN)
-                    visibility_from = {}
                 else:
                     log.warn("Received no User Requests! Skipping this scheduling cycle")
                 sys.stdout.flush()

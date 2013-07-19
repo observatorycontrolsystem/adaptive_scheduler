@@ -162,5 +162,6 @@ class TestPond(object):
         junk = 'junk'
 
         cancel_schedule(tels, junk, junk)
-        block_mock.cancel.assert_called_once_with(reason="Superceded by new schedule")
+        block_mock.cancel.assert_called_once_with(reason="Superceded by new schedule",
+                                                  delete=True)
 

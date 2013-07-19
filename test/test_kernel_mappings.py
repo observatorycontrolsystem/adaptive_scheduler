@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import division
 
-from nose.tools import assert_equal, assert_almost_equals
+from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (Telescope, Target, Request, Window, Windows,
                                        Molecule, Constraints)
@@ -12,10 +12,13 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 rise_set_to_kernel_intervals,
                                                 make_dark_up_kernel_intervals,
                                                 construct_global_availability,
-                                                normalise_dt_intervals,
-                                                set_airmass_limit)
+                                                normalise_dt_intervals)
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
+from adaptive_scheduler.memoize import Memoize
+from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.angle import Angle
+from rise_set.visibility import Visibility
 
 from datetime import datetime
 
@@ -45,6 +48,31 @@ class TestKernelMappings(object):
                             )
 
         self.mol = Molecule()
+
+
+    def make_constrained_request(self, airmass=None):
+        # A one day user supplied window
+        window_dict = {
+                        'start' : datetime(2011, 11, 1, 6, 0, 0),
+                        'end'   : datetime(2011, 11, 2, 6, 0, 0)
+                      }
+        resource_name = '1m0a.doma.bpl'
+        resource = self.tels[resource_name]
+
+        window = Window(window_dict, resource)
+        dt_windows = Windows()
+        dt_windows.append(window)
+
+        constraints = Constraints(max_airmass=airmass)
+        req  = Request(
+                        target         = self.target,
+                        molecules      = [self.mol],
+                        windows        = dt_windows,
+                        constraints    = constraints,
+                        request_number = '1'
+                      )
+
+        return req
 
 
     def test_make_dark_up_kernel_intervals(self):
@@ -110,7 +138,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from, True)
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -121,6 +149,7 @@ class TestKernelMappings(object):
                              datetime.strptime('2011-11-02 02:01:50.419578', format),
                              datetime.strptime('2011-11-02 06:00:00.0', format),
                             )
+
 
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.iteritems():
@@ -227,35 +256,86 @@ class TestKernelMappings(object):
 
 
 
-    def test_set_airmass_limit_no_airmass(self):
-        class Tel(object): pass
+    def test_airmass_is_honoured_high_airmass(self):
+        airmass = 3.0
+        req_airmass3   = self.make_constrained_request(airmass)
+        req_no_airmass = self.make_constrained_request()
 
-        t = Tel()
-        t.horizon = 30
+        visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        expected = t.horizon
-        assert_equal(set_airmass_limit(None, t), expected)
+        received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
+                                                            visibility_from, True)
+        timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
+        received_airmass3 = make_dark_up_kernel_intervals(req_airmass3,
+                                                          visibility_from, True)
+        timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].timepoints
 
-    def test_set_airmass_limit_airmass_worse_than_horizon(self):
-        class Tel(object): pass
-
-        t = Tel()
-        t.horizon = 30
-
-        airmass = 3
-
-        expected = t.horizon
-        assert_equal(set_airmass_limit(airmass, t), expected)
+        assert_equal(timepoints_no_airmass, timepoints_airmass3)
 
 
-    def test_set_airmass_limit_airmass_better_than_horizon(self):
-        class Tel(object): pass
+    def test_airmass_is_honoured_low_airmass(self):
+        airmass = 1.0
+        req_airmass1   = self.make_constrained_request(airmass)
+        req_no_airmass = self.make_constrained_request()
 
-        t = Tel()
-        t.horizon = 30
+        visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        airmass = 1.2
+        received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
+                                                            visibility_from, True)
+        timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
-        expected = 56.44
-        assert_almost_equals(set_airmass_limit(airmass, t), expected, places=2)
+        received_airmass1 = make_dark_up_kernel_intervals(req_airmass1,
+                                                          visibility_from, True)
+        timepoints_airmass1 = received_airmass1['1m0a.doma.bpl'].timepoints
+
+        assert_not_equal(timepoints_no_airmass, timepoints_airmass1)
+        assert_equal(len(timepoints_airmass1), 0)
+
+
+class TestVisibility(object):
+    '''Integration tests for rise_set - memoization interaction'''
+
+    def setup(self):
+        self.capella = {
+                     'ra'                : RightAscension('05 16 41.36'),
+                     'dec'               : Declination('+45 59 52.8'),
+                     'epoch'             : 2000,
+                   }
+        self.bpl        = {
+                          'latitude'  : Angle(degrees = 34.4332222222),
+                          'longitude' : Angle(degrees = -119.863045833)
+                          }
+        self.start_date = datetime(year=2011, month=2, day=9)
+        self.end_date   = datetime(year=2011, month=2, day=11)
+        self.horizon    = 0
+        self.twilight   = 'sunrise'
+
+        self.visibility = Visibility(self.bpl, self.start_date, self.end_date,
+                                     self.horizon, self.twilight)
+
+
+    def test_memoize_preserves_correct_output_no_airmass(self):
+        received = self.visibility.get_target_intervals(self.capella, up=True)
+        memoized_func = Memoize(self.visibility.get_target_intervals)
+        mem_received = memoized_func(self.capella, up=True)
+
+        assert_equal(received, mem_received)
+
+
+    def test_memoize_preserves_correct_output_with_airmass(self):
+        received = self.visibility.get_target_intervals(self.capella, up=True,
+                                                        airmass=2.0)
+        memoized_func = Memoize(self.visibility.get_target_intervals)
+        mem_received = memoized_func(self.capella, up=True, airmass=2.0)
+
+        assert_equal(received, mem_received)
+
+
+    def test_memoize_preserves_correct_output_with_differing_airmass(self):
+        received = self.visibility.get_target_intervals(self.capella, up=True,
+                                                        airmass=2.0)
+        memoized_func = Memoize(self.visibility.get_target_intervals)
+        mem_received = memoized_func(self.capella, up=True, airmass=1.0)
+
+        assert_not_equal(received, mem_received)

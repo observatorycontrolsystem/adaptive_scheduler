@@ -14,7 +14,7 @@ from __future__ import division
 import sys
 import json
 import ast
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
@@ -85,9 +85,6 @@ def get_requests_from_db(url, telescope_class):
 
     ur_list = sc.retrieve(search, debug=True)
 
-    in_fh = open('retrieved_urs.dat', 'r')
-    ur_list = json.load(in_fh)
-
     return ur_list
 
 
@@ -118,6 +115,36 @@ def dump_kernel_input(to_schedule, resource_windows, contractual_obligations,
     kernel_dump_fh.write(jsonpickle.encode(json_dump))
     kernel_dump_fh.close()
     log.info("Wrote kernel input dump to %s", kernel_dump_file)
+
+    return
+
+
+def dump_kernel_input2(to_schedule, global_windows, contractual_obligations, time_slicing_dict):
+    args_filename = 'input_args.%s.tmp' % datetime.utcnow().strftime(format = '%Y-%m-%d_%H_%M_%S')
+
+    args_fh = open(args_filename, 'w')
+    print "Dumping kernel args to %s" % args_filename
+
+    to_schedule_serial = [x.serialise() for x in to_schedule]
+    global_windows_serial = dict([(k, v.serialise()) for k,v in global_windows.items()])
+
+    args_fh.write(json.dumps({
+                                     'to_schedule' : to_schedule_serial,
+                                     'global_windows' : global_windows_serial,
+                                     'contractual_obligations' : contractual_obligations,
+                                     'time_slicing_dict' : time_slicing_dict
+                                     }))
+    args_fh.close()
+
+    return
+
+
+def open_debugger_on_unusual_run(schedule):
+    size = 0
+    for res in schedule:
+        size += len(schedule[res])
+    if size != 30:
+        import ipdb; ipdb.set_trace()
 
     return
 
@@ -177,8 +204,7 @@ def summarise_urs(user_reqs):
 @timeit
 def main(requests, sched_client, visibility_from=None, dry_run=False):
     semester_start, semester_end = get_semester_block()
-#    now = datetime.utcnow()
-    now = datetime(2013, 7, 9, 22, 46, 13, 870821)
+    now = datetime.utcnow() + timedelta(minutes=6)
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
@@ -195,13 +221,6 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     scheduler_dump_file = 'to_schedule.pickle'
 
     mb = ModelBuilder(tel_file)
-
-#    user_reqs = []
-#    for serialised_ur in collapsed_reqs:
-#        proposal_data = serialised_ur['proposal']
-#        del(serialised_ur['proposal'])
-#        ur = request_factory.parse(serialised_ur, proposal_data)
-#        user_reqs.append(ur)
 
     user_reqs = []
     for serialised_req in collapsed_reqs:
@@ -231,9 +250,6 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
                                      now, semester_end)
 
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
-    #TODO:Remove me
-    debug_fh = open('run.tmp', 'w')
-    debug_fh.write('After prefilter: %d URs\n' % len(user_reqs))
     summarise_urs(user_reqs)
 
     # Remove running blocks from consideration, and get the availability edge
@@ -242,7 +258,6 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     # Convert CompoundRequests -> CompoundReservations
     to_schedule = make_compound_reservations(user_reqs, visibility_from,
                                              semester_start)
-    debug_fh.write('Made: %d compound reservations\n' % len(to_schedule))
 
     # Translate when telescopes are available into kernel speak
     resource_windows = construct_resource_windows(visibility_from, semester_start)
@@ -253,14 +268,11 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
     print_compound_reservations(to_schedule)
 
-
     if not to_schedule:
         log.info("Nothing to schedule! Skipping kernel call...")
         return
 
-
     # Instantiate and run the scheduler
-    # TODO: Set alignment to start of first night on each resource
     # TODO: Move this to a config file
     time_slicing_dict = {}
     for t in tels:
@@ -268,37 +280,9 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
     contractual_obligations = []
 
-    args_filename = 'input_args.%s.tmp' % datetime.utcnow().strftime(format = '%Y-%m-%d_%H_%M_%S')
-
-    args_fh = open(args_filename, 'w')
-    print "Dumping kernel args to %s" % args_filename
-    to_schedule_serial = [x.serialise() for x in to_schedule]
-    global_windows_serial = dict([(k, v.serialise()) for k,v in global_windows.items()])
-
-    args_fh.write(json.dumps({
-                                     'to_schedule' : to_schedule_serial,
-#                                     'global_windows' : global_windows_serial,
-#                                     'contractual_obligations' : contractual_obligations,
-#                                     'time_slicing_dict' : time_slicing_dict
-                                     }))
-    args_fh.close()
-
-    #print "Size of to_schedule", len(to_schedule)
-    #total_tps = 0
-    #for tel in global_windows:
-    #    total_tps += len(global_windows[tel].timepoints)
-    #print "Size of global_windows", total_tps
-
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
-    size = 0
-    for res in schedule:
-        size += len(schedule[res])
-    print "1st time:", size
-    if size != 30:
-        import ipdb; ipdb.set_trace()
-
 
     x = []
     [x.extend(a) for a in schedule.values()]
@@ -311,10 +295,6 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
     n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-    size = 0
-    for res in schedule:
-        size += len(schedule[res])
-    print "2nd time:", size
     n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)
 
     log.info("------------------")
