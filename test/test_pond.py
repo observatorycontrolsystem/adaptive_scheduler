@@ -3,10 +3,18 @@ from __future__ import division
 from nose.tools import assert_equal, raises
 from mock       import patch, Mock
 
-from adaptive_scheduler.pond  import (Block, IncompleteBlockError, cancel_schedule)
-from adaptive_scheduler.model2 import (Proposal, Molecule, Target)
+from adaptive_scheduler.pond  import (Block, IncompleteBlockError, cancel_blocks,
+                                      get_deletable_blocks, cancel_schedule,
+                                      send_blocks_to_pond, build_block,
+                                      send_schedule_to_pond)
+from adaptive_scheduler.model2 import (Proposal, Molecule, Target, Request,
+                                       UserRequest, Constraints)
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+
+import lcogtpond
 
 from datetime import datetime
+import collections
 
 
 
@@ -154,14 +162,199 @@ class TestPond(object):
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))
 
 
+
+
+class TestPondInteractions(object):
+    def setup(self):
+        self.start = datetime(2013, 7, 18, 0, 0, 0)
+        self.end   = datetime(2013, 9, 18, 0, 0, 0)
+        self.site  = 'lsc'
+        self.obs   = 'doma'
+        self.tel   = '1m0a'
+
+    @patch('lcogtpond.block.Block.cancel_blocks')
+    def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
+        dry_run = True
+        FakeBlock = collections.namedtuple('FakeBlock', 'id')
+        to_delete = [FakeBlock(id=id) for id in range(10)]
+
+        cancel_blocks(to_delete, dry_run)
+        assert_equal(func_mock.called, False)
+
+
+    @patch('lcogtpond.block.Block.cancel_blocks')
+    def test_cancel_blocks_called_when_dry_run(self, func_mock):
+        dry_run = False
+        reason = 'Superceded by new schedule'
+        FakeBlock = collections.namedtuple('FakeBlock', 'id')
+        ids = range(10)
+        to_delete = [FakeBlock(id=id) for id in ids]
+
+        cancel_blocks(to_delete, dry_run)
+        func_mock.assert_called_once_with(ids, reason=reason, delete=True)
+
+
+    def make_fake_block(self, start_dt, tracking_num_set):
+        class FakeBlock(object):
+            def __init__(self, start_dt, tracking_num_set):
+                self.start = start_dt
+                self._tracking_num_set = tracking_num_set
+
+            def tracking_num_set(self):
+                return self._tracking_num_set
+
+            def __repr__(self):
+                return "FakeBlock (%s, %s)" % (self.start, self.tracking_num_set())
+
+        return FakeBlock(start_dt, tracking_num_set)
+
+
+    def configure_mocks(self, func_mock, cutoff_dt, fake_block_list):
+        mock_schedule          = Mock(spec=lcogtpond.schedule.Schedule)
+        func_mock.return_value = mock_schedule
+        mock_schedule.end_of_overlap.return_value = cutoff_dt
+
+        block_list           = fake_block_list
+        mock_schedule.blocks = block_list
+
+        return block_list
+
+
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_delete_blocks_that_exceed_cutoff(self, func_mock):
+        cutoff_dt    = datetime(2013, 8, 18, 0, 0, 0)
+
+        # Should be deleted (so return it)
+        block_start1 = datetime(2013, 8, 19, 0, 0, 0)
+        fake_block1  = self.make_fake_block(block_start1, tracking_num_set=True)
+
+        # Should not be deleted (so don't return it)
+        block_start2 = datetime(2013, 8, 17, 0, 0, 0)
+        fake_block2  = self.make_fake_block(block_start2, tracking_num_set=True)
+
+        # Should not be deleted (no tracking number)
+        block_start3 = datetime(2013, 8, 17, 0, 0, 0)
+        fake_block3  = self.make_fake_block(block_start2, tracking_num_set=False)
+
+        # Should not be deleted (no tracking number)
+        block_start4 = datetime(2013, 8, 19, 0, 0, 0)
+        fake_block4  = self.make_fake_block(block_start2, tracking_num_set=False)
+
+        block_list = self.configure_mocks(func_mock, cutoff_dt,
+                                          [fake_block1, fake_block2])
+
+        to_delete = get_deletable_blocks(self.start, self.end, self.site,
+                                         self.obs, self.tel)
+
+        assert_equal(to_delete, [fake_block1])
+
+
     @patch('adaptive_scheduler.pond.get_deletable_blocks')
-    def test_cancel_schedule(self, func_mock):
-        block_mock = Mock()
-        func_mock.return_value = [block_mock]
-        tels = ['1m0a.doma.tst']
-        junk = 'junk'
+    @patch('adaptive_scheduler.pond.cancel_blocks')
+    def test_cancel_schedule(self, func_mock1, func_mock2):
+        tels = ['1m0a.doma.lsc']
+        dry_run = False
 
-        cancel_schedule(tels, junk, junk)
-        block_mock.cancel.assert_called_once_with(reason="Superceded by new schedule",
-                                                  delete=True)
+        delete_list = [1, 2, 3]
 
+        func_mock2.return_value = delete_list
+
+        n_deleted = cancel_schedule(tels, self.start, self.end, dry_run)
+
+        func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel)
+        func_mock1.assert_called_with(delete_list, False)
+        assert_equal(n_deleted, len(delete_list))
+
+
+
+    @patch('lcogtpond.block.Block.save_blocks')
+    def test_dont_send_blocks_if_dry_run(self, mock_func):
+        dry_run = True
+
+        blocks = [Mock()]
+
+        send_blocks_to_pond(blocks, dry_run)
+        assert not mock_func.called, 'Dry run flag was ignored'
+
+
+    @patch('lcogtpond.block.Block.save_blocks')
+    def test_blocks_are_saved_to_pond(self, mock_func):
+        dry_run = False
+
+        mock_block = Mock(spec=Block)
+        mock_block.create_pond_block.return_value = 'placeholder'
+        mock_block.request_number  = '0000000001'
+        mock_block.tracking_number = '0000000001'
+
+        blocks = [mock_block]
+
+        send_blocks_to_pond(blocks, dry_run)
+
+        mock_func.assert_called_with(['placeholder'])
+
+
+
+    @patch('adaptive_scheduler.pond.send_blocks_to_pond')
+    @patch('adaptive_scheduler.pond.build_block')
+    def test_dont_send_schedule_to_pond_if_dry_run(self, mock_func1, mock_func2):
+
+        mock_res_list = [Mock(), Mock()]
+
+        schedule = {
+                     '1m0a.doma.lsc' : mock_res_list
+                   }
+
+        # Choose a value that isn't True or False, since we only want to check the
+        # value makes it through to the second mock
+        dry_run = 123
+
+        # Each time the mock is called, do this. This allows us to build up a list
+        # to test.
+        mock_func1.side_effect = lambda w,x,y,z : w
+
+        n_submitted_total = send_schedule_to_pond(schedule, self.start, dry_run)
+
+        assert_equal(n_submitted_total, 2)
+        mock_func2.assert_called_once_with(mock_res_list, dry_run)
+
+
+    def test_build_block(self):
+        reservation = Reservation(
+                                   priority = None,
+                                   duration = 10,
+                                   possible_windows_dict = {}
+                                 )
+        reservation.scheduled_start = 0
+
+        proposal = Proposal()
+        target   = Target()
+
+        compound_request = UserRequest(
+                                            operator = 'single',
+                                            requests = None,
+                                            proposal = proposal,
+                                            expires  = None,
+                                            tracking_number = None,
+                                            group_id = None
+                                          )
+
+        constraints = Constraints(
+                                   max_airmass        = None,
+                                   min_lunar_distance = None,
+                                   max_lunar_phase    = None,
+                                   max_seeing         = None,
+                                   min_transparency   = None
+                                 )
+
+        request = Request(
+                           target         = target,
+                           molecules      = [],
+                           windows        = None,
+                           constraints    = constraints,
+                           request_number = None
+                           )
+
+        received = build_block(reservation, request, compound_request, self.start)
+        missing = received.list_missing_fields()
+        print "Missing %r fields" % missing
+        1/0
