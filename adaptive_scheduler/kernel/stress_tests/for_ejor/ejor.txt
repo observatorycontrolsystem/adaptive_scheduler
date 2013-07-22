@@ -1,0 +1,11 @@
+Data used for ejor paper: 
+(1)
+test_alt_slicing.py with params_3.py
+output is in alt_sli-3-times2.txt
+script is in sli_octave_script
+
+(2)
+test_stress_night_min.py with params_night_1.py
+output is in nights.txt
+
+

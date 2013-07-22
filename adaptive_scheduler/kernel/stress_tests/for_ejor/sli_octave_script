@@ -1,0 +1,77 @@
+d=load('alt_sli-3-times2.txt');
+
+x=[1,2,5,10,30,60,120,180];
+
+d1=d(d(:,1)==1,:);
+d2=d(d(:,1)==2,:);
+d5=d(d(:,1)==5,:);
+d10=d(d(:,1)==10,:);
+d30=d(d(:,1)==30,:);
+d60=d(d(:,1)==60,:);
+d120=d(d(:,1)==120,:);
+d180=d(d(:,1)==180,:);
+
+counts=[d1(:,2), d2(:,2), d5(:,2), d10(:,2), d30(:,2), d60(:,2), d120(:,2), d180(:,2)];
+utilizations=[d1(:,3), d2(:,3), d5(:,3), d10(:,3), d30(:,3), d60(:,3), d120(:,3), d180(:,3)];
+times=[d1(:,4), d2(:,4), d5(:,4), d10(:,4), d30(:,4), d60(:,4), d120(:,4), d180(:,4)];
+
+h=figure(1);
+plot(x,mean(utilizations), '-o','linewidth', 4 )
+FS = findall(h,'-property','FontSize');
+set(FS,'FontSize',12);
+xlabel('slot size (minutes)', "fontsize", 12);
+ylabel('utilization (minutes)', "fontsize", 12);
+H = 3; W = 4;
+set(h,'PaperUnits','inches')
+set(h,'PaperOrientation','portrait');
+set(h,'PaperSize',[H,W])
+set(h,'PaperPosition',[0,0,W,H])
+print(h,'-deps','util.eps');
+
+h=figure(1);
+plot(x,mean(counts), '-o','linewidth', 4 )
+FS = findall(h,'-property','FontSize');
+set(FS,'FontSize',12);
+xlabel('slot size (minutes)', "fontsize", 12);
+ylabel('number of reservations scheduled', "fontsize", 12);
+H = 3; W = 4;
+set(h,'PaperUnits','inches')
+set(h,'PaperOrientation','portrait');
+set(h,'PaperSize',[H,W])
+set(h,'PaperPosition',[0,0,W,H])
+print(h,'-deps','counts.eps');
+
+h=figure(1);
+semilogy(x,mean(times), '-o','linewidth', 4 )
+FS = findall(h,'-property','FontSize');
+set(FS,'FontSize',12);
+xlabel('slot size (minutes)', "fontsize", 12);
+ylabel('runtime (seconds)', "fontsize", 12);
+H = 3; W = 4;
+set(h,'PaperUnits','inches')
+set(h,'PaperOrientation','portrait');
+set(h,'PaperSize',[H,W])
+set(h,'PaperPosition',[0,0,W,H])
+print(h,'-deps','times.eps');
+
+
+d120=d(d(:,1)==120,:);
+d180=d(d(:,1)==180,:);
+d240=d(d(:,1)==240,:);
+d300=d(d(:,1)==300,:);
+d360=d(d(:,1)==360,:);
+d420=d(d(:,1)==420,:);
+d480=d(d(:,1)==480,:);
+d540=d(d(:,1)==540,:);
+d600=d(d(:,1)==600,:);
+d1200=d(d(:,1)==1200,:);
+d1800=d(d(:,1)==1800,:);
+d1500=d(d(:,1)==1500,:);
+d2100=d(d(:,1)==2100,:);
+
+
+
+counts=[d120(:,2), d180(:,2), d240(:,2), d300(:,2), d360(:,2), d420(:,2), d480(:,2), d540(:,2), d600(:,2), d1200(:,2), d1500(:,2), d1800(:,2), d2100(:,2)];
+utilizations =[d120(:,3), d180(:,3), d240(:,3), d300(:,3), d360(:,3), d420(:,3), d480(:,3), d540(:,3), d600(:,3), d1200(:,3), d1500(:,3), d1800(:,3), d2100(:,3)];
+times =[d120(:,4), d180(:,4), d240(:,4), d300(:,4), d360(:,4), d420(:,4), d480(:,4), d540(:,4), d600(:,4), d1200(:,4), d1500(:,4), d1800(:,4), d2100(:,4)];
+
