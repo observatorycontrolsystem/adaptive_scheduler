@@ -33,6 +33,7 @@ from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
+from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import Expose
 from lcogtpond.schedule                import Schedule
 
@@ -40,15 +41,19 @@ from lcogtpond.schedule                import Schedule
 import logging
 log = logging.getLogger(__name__)
 
-#TODO: Remove me
-xx = 1
+
+def log_info_dry_run(msg, dry_run):
+    if dry_run:
+        msg = "DRY-RUN: " + msg
+    log.info(msg)
+
 
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
                  request_number, priority=0, max_airmass=None,
                  min_lunar_distance=None, max_lunar_phase=None,
-                 max_seeing=None, min_transparency=None, store_in_db=True):
+                 max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location  = location
         self.start     = start
@@ -62,7 +67,6 @@ class Block(object):
         self.max_lunar_phase = max_lunar_phase
         self.max_seeing = max_seeing
         self.min_transparency = min_transparency
-        self.store_in_db = store_in_db
 
         self.proposal  = Proposal()
         self.molecules = []
@@ -112,6 +116,9 @@ class Block(object):
         self.target = target
 
     def create_pond_block(self):
+        if self.pond_block:
+            return self.pond_block
+
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
@@ -252,26 +259,26 @@ class Block(object):
         return (self.location, self.location, self.location)
 
 
-    def send_to_pond(self):
-        if not self.pond_block:
-            self.create_pond_block()
-
-        msg = "Request %s (part of UR %s) to POND" % (self.request_number,
-                                                      self.tracking_number)
-        if self.store_in_db:
-            self.pond_block.save()
-            msg = "Sent " + msg
-        else:
+def send_blocks_to_pond(blocks, dry_run=False):
+    pond_blocks = []
+    for block in blocks:
+        pond_blocks.append(block.create_pond_block())
+        msg = "Request %s (part of UR %s) to POND" % (block.request_number,
+                                                      block.tracking_number)
+        if dry_run:
             msg = "Dry-run: Would have sent " + msg
-
+        else:
+            msg = "Sent " + msg
         log.debug(msg)
-        #TODO: Remove me
-        global xx
-        fh = open(str(xx) + '.tmp', 'a')
-        fh.write(msg + '\n')
-        fh.close()
 
-        return
+
+    if not dry_run:
+        try:
+            PondBlock.save_blocks(pond_blocks)
+        except BlockSaveException as e:
+            log.error(e)
+
+    return
 
 
 
@@ -306,57 +313,58 @@ def make_simple_pond_schedule(schedule, semester_start):
     return pond_blocks
 
 
+def build_block(reservation, request, compound_request, semester_start):
+    res_start, res_end = get_reservation_datetimes(reservation, semester_start)
+    block = Block(
+                   location           = reservation.scheduled_resource,
+                   start              = res_start,
+                   end                = res_end,
+                   group_id           = compound_request.group_id,
+                   tracking_number    = compound_request.tracking_number,
+                   request_number     = request.request_number,
+                   # Hard-code all scheduler output to a highish number, for now
+                   priority           = 30,
+                   max_airmass        = request.constraints.max_airmass,
+                   min_lunar_distance = request.constraints.min_lunar_distance,
+                   max_lunar_phase    = request.constraints.max_lunar_phase,
+                   max_seeing         = request.constraints.max_seeing,
+                   min_transparency   = request.constraints.min_transparency,
+                 )
+
+    block.add_proposal(compound_request.proposal)
+    for molecule in request.molecules:
+        block.add_molecule(molecule)
+    block.add_target(request.target)
+
+    log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
+                                     block.request_number, block.tracking_number,
+                                     block.start, block.end, block.priority)
+
+    return block
+
+
 @timeit
 def send_schedule_to_pond(schedule, semester_start, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
     n_submitted_total = 0
+    blocks = []
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
+
         _, block_str = pl(n_submitted, 'block')
-        #import ipdb; ipdb.set_trace()
-
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
-        if dry_run:
-            msg = "Dry-run: Would be submitting " + msg
-        else:
-            msg = "Submitting " + msg
-        log.info(msg)
+        log_info_dry_run(msg, dry_run)
 
-        for res in schedule[resource_name]:
-            res_start, res_end = get_reservation_datetimes(res, semester_start)
-            block = Block(
-                           location           = res.scheduled_resource,
-                           start              = res_start,
-                           end                = res_end,
-                           group_id           = res.compound_request.group_id,
-                           tracking_number    = res.compound_request.tracking_number,
-                           request_number     = res.request.request_number,
-                           # Hard-code all scheduler output to a highish number for now
-                           priority           = 30,
-                           max_airmass        = res.request.constraints.max_airmass,
-                           min_lunar_distance = res.request.constraints.min_lunar_distance,
-                           max_lunar_phase    = res.request.constraints.max_lunar_phase,
-                           max_seeing         = res.request.constraints.max_seeing,
-                           min_transparency   = res.request.constraints.min_transparency,
-                           store_in_db        = not dry_run,
-                         )
+        for reservation in schedule[resource_name]:
+            block = build_block(reservation, reservation.request,
+                                reservation.compound_request, semester_start)
 
-            block.add_proposal(res.compound_request.proposal)
-            for molecule in res.request.molecules:
-                block.add_molecule(molecule)
-            block.add_target(res.request.target)
-
-            log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
-                                             block.request_number, block.tracking_number,
-                                             block.start, block.end, block.priority)
-            pond_block = block.send_to_pond()
-
+            blocks.append(block)
         n_submitted_total += n_submitted
 
-    #TODO: Remove me
-    global xx
-    xx += 1
+    send_blocks_to_pond(blocks, dry_run)
+
 
     return n_submitted_total
 
@@ -431,6 +439,7 @@ def get_deletable_blocks(start, end, site, obs, tel):
     schedule  = Schedule.get(start=start, end=end, site=site,
                              observatory=obs, telescope=tel,
                              canceled_blocks=False)
+
     cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start >= cutoff_dt and
                                                b.tracking_num_set()]
@@ -444,36 +453,42 @@ def get_deletable_blocks(start, end, site, obs, tel):
 
     return to_delete
 
+
 @timeit
 def cancel_schedule(tels, start, end, dry_run=False):
-    n_deleted_total = 0
+    all_to_delete = []
     for full_tel_name in tels:
         tel, obs, site = full_tel_name.split('.')
         log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
                                                              start, end)
+        to_delete = get_deletable_blocks(start, end, site, obs, tel)
+        n_to_delete = len(to_delete)
+        all_to_delete.extend(to_delete)
 
-        n_deleted = cancel_schedule_at_resource(start, end,
-                                                site, obs, tel, dry_run)
-
-        _, block_str = pl(n_deleted, 'block')
-        msg = "%d %s at %s" % (n_deleted, block_str, full_tel_name)
+        _, block_str = pl(n_to_delete, 'block')
+        msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
         if dry_run:
             msg = "Dry-run: Would have cancelled " + msg
         else:
             msg = "Cancelled " + msg
         log.info(msg)
 
-        n_deleted_total += n_deleted
 
-    return n_deleted_total
+    cancel_blocks(all_to_delete, dry_run)
+
+    return len(all_to_delete)
 
 
-def cancel_schedule_at_resource(start, end, site, obs, tel, dry_run=False):
-    to_delete = get_deletable_blocks(start, end, site, obs, tel)
+def cancel_blocks(to_delete, dry_run=False):
 
-    if not dry_run:
-        for block in to_delete:
-            block.cancel(reason="Superceded by new schedule", delete=True)
+    if dry_run:
+        return len(to_delete)
+
+    ids = [b.id for b in to_delete]
+    try:
+        PondBlock.cancel_blocks(ids, reason="Superceded by new schedule", delete=True)
+    except BlockCancelException as e:
+        log.error(e)
 
     return len(to_delete)
 
