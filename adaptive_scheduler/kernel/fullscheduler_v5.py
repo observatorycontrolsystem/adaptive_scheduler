@@ -57,7 +57,7 @@ class FullScheduler_v5(SlicedIPScheduler):
 #            A = numpy.zeros((A_numrows, len(self.Yik)), dtype=numpy.int)
 #        except ValueError:
 #            print "Number of A rows: ", A_numrows
-        b = numpy.zeros(A_numrows, dtype=numpy.int)
+        b = numpy.zeros(A_numrows, dtype=numpy.int16)
         # build A & b
         row = 0
 
@@ -114,7 +114,7 @@ class FullScheduler_v5(SlicedIPScheduler):
             Aeq_rows = []
             Aeq_cols = []
             Aeq_data = []
-            beq = numpy.zeros(Aeq_numrows, dtype=numpy.int)
+            beq = numpy.zeros(Aeq_numrows, dtype=numpy.int16)
             row = 0
             for c in self.and_constraints:
                 constraint_size = len(c)
@@ -137,20 +137,33 @@ class FullScheduler_v5(SlicedIPScheduler):
                     right_idx += 1
                     row += 1
 #            print Aeq_numrows
-            Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))   
+            Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))
 
         # bounds:
-        lb = numpy.zeros(len(self.Yik), dtype=numpy.int)
-        ub = numpy.ones(len(self.Yik), dtype=numpy.int)
+        lb = numpy.zeros(len(self.Yik), dtype=numpy.int16)
+        ub = numpy.ones(len(self.Yik), dtype=numpy.int16)
 
         # objective function:
         f = numpy.zeros(len(self.Yik))
+        f = numpy.zeros(len(self.Yik), dtype=numpy.int16)
         row = 0
         for entry in self.Yik:
-            f[row] = - entry[2] #priority
+            f[row] = entry[2] #priority
             row += 1
+
         p = LP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
 #        r = p.minimize('pclp') 
-        r = p.minimize('glpk', iprint=-1)
+        r = p.maximize('glpk', iprint=-1)
 #        r = p.minimize('lpsolve')
         return self.unpack_result(r)
+
+
+def print_matrix_size(matrix):
+    print "Matrix shape:", matrix.shape
+    print "Matrix size (bytes):", matrix.nbytes * matrix.dtype.itemsize
+    print "Matrix type:", matrix.dtype
+
+def print_sparse_matrix_size(matrix):
+    print "Matrix shape:", matrix.shape
+    print "Matrix size (bytes):", matrix.getnnz() * matrix.dtype.itemsize
+    print "Matrix type:", matrix.dtype

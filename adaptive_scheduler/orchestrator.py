@@ -200,7 +200,6 @@ def summarise_urs(user_reqs):
 
 
 # TODO: Add configuration options, refactor into smaller chunks
-# TODO: Remove hard-coded options
 @timeit
 def main(requests, sched_client, visibility_from=None, dry_run=False):
     semester_start, semester_end = get_semester_block()
