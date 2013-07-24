@@ -37,7 +37,10 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           epoch_to_datetime, timeit )
 from adaptive_scheduler.printing import print_req_summary
 from adaptive_scheduler.model2   import Window, Windows
-from adaptive_scheduler.request_filters import filter_on_duration, filter_on_type
+from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
+                                                truncate_upper_crossing_windows,
+                                                filter_out_future_windows,
+                                                log_windows)
 from adaptive_scheduler.memoize import Memoize
 
 import math
@@ -189,7 +192,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
 
 
 @timeit
-def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_end):
+def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, scheduling_horizon):
     ''' After throwing out and marking URs as UNSCHEDULABLE, reduce windows by considering
         dark time and target visibility. Remove any URs that are now too small to hold their
         duration after this consideration, so they are not passed to the kernel.
@@ -199,26 +202,24 @@ def prefilter_for_kernel(crs, visibility_from, tels, semester_start, semester_en
         may then be schedulable.
     '''
 
-    # Although filtering on visibility is strictly redundant, we leave it in for now to identify
-    # when an object that would have been visible has been dropped from consideration due to
-    # the airmass constraint
+    # Filter windows that are beyond the short-term scheduling horizon
+    crs = truncate_upper_crossing_windows(crs, horizon=scheduling_horizon)
+    crs = filter_out_future_windows(crs, horizon=scheduling_horizon)
+    # Clean up Requests without any windows
+    crs = filter_on_type(crs)
+
+    # Filter on rise_set/airmass
     crs = filter_on_visibility(crs, visibility_from)
-#    crs = filter_on_airmass(crs, tels, semester_start, semester_end)
+
+    # Clean up now impossible Requests
     crs = filter_on_duration(crs)
     crs = filter_on_type(crs)
 
     return crs
 
 
-def filter_on_airmass(crs, tels, semester_start, semester_end):
-    for cr in crs:
-        for r in cr.requests:
-            visibility_from = construct_visibilities(tels, semester_start, semester_end)
-            r = compute_intersections(r, visibility_from)
 
-    return crs
-
-
+@log_windows
 def filter_on_visibility(crs, visibility_from):
     for cr in crs:
         for r in cr.requests:

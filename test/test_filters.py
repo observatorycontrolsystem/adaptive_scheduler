@@ -211,6 +211,34 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
+    @patch("adaptive_scheduler.model2.semester_service")
+    def test_filters_out_only_future_windows(self, mock_semester_service):
+        mock_semester_service.get_semester_end.return_value = self.semester_end
+
+        horizon = datetime(2013, 7, 1)
+        # Comes after self.current_time, so should not be filtered
+        window_dict1 = {
+                         'start' : "2013-06-01 00:00:00",
+                         'end'   : "2013-06-01 01:00:00",
+                       }
+        # Comes after effective horizon, so should be filtered
+        window_dict2 = {
+                         'start' : "2013-08-01 00:00:00",
+                         'end'   : "2013-09-01 01:00:00",
+                       }
+
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows)
+
+        received_ur_list = filter_out_future_windows([ur1], horizon=horizon)
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, self.resource_name)
+
+        expected_window = window_list[0]
+        assert_equal(received_windows, [expected_window])
+
+
     def test_truncates_lower_crossing_windows(self):
 
         # Crosses self.current time, so should be truncated
@@ -247,6 +275,29 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, self.resource_name)
 
         assert_equal(received_windows[0].end, self.semester_end)
+
+
+    @patch("adaptive_scheduler.model2.semester_service")
+    def test_truncates_upper_crossing_windows_extra_horizon(self, mock_semester_service):
+        mock_semester_service.get_semester_end.return_value = self.semester_end
+
+        horizon = datetime(2013, 7, 1)
+        # Crosses effective horizon, so should be truncated
+        window_dict1 = {
+                         'start' : "2013-06-01 00:00:00",
+                         'end'   : "2013-11-01 01:00:00",
+                       }
+        windows = [ (window_dict1,) ]
+        ur1, window_list = self.create_user_request(windows)
+        ur1.expires = datetime(2013, 12, 1)
+
+
+        received_ur_list = truncate_upper_crossing_windows([ur1], horizon=horizon)
+
+        request = received_ur_list[0].requests[0]
+        received_windows = get_windows_from_request(request, self.resource_name)
+
+        assert_equal(received_windows[0].end, horizon)
 
 
     def test_filter_on_duration_window_larger_tdelta(self):

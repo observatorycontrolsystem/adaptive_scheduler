@@ -310,6 +310,14 @@ class CompoundRequest(DefaultMixin):
             log.debug("Windows after  = %s", n_after)
 
 
+    def n_windows(self):
+        n_windows = 0
+        for request in self.requests:
+            n_windows += request.windows.size()
+
+        return n_windows
+
+
     def is_schedulable(self):
 #        return self._is_schedulable_hard()
         return self._is_schedulable_easy()

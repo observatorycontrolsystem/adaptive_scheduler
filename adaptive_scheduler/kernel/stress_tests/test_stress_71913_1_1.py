@@ -1,13 +1,11 @@
 #!/usr/bin/env python
 
 '''
-test_stress_night.py
-
 Author: Sotiria Lampoudi
-May 2013
+July 2013
 
-This tester makes un-staggered nights on each resource, and the number of 
-reservations is specified per night.
+This tester makes staggered nights (by 4 hrs) on each resource. 
+The reservations can go on any resource, any night in the entire global window.
 '''
 
 from nose.tools import assert_equal
@@ -15,7 +13,7 @@ import copy, random
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as CurrentScheduler
 from util import *
 from time import time
-from params_night_1 import StressTestNightParams
+from params_71913_1_1 import StressTestNightParams
 
 class TestStressNights(object):
 
@@ -37,21 +35,18 @@ class TestStressNights(object):
 
         self.gpw = {}
         self.slice_dict = {}
-        tmp1 = []
-        for i in range(self.numdays):
-            tmp1.append(Timepoint(i*24*60, 'start'))
-            tmp1.append(Timepoint(i*24*60 + self.night_length, 
-                                  'end'))
-        r = str(0)
-        self.gpw[r] = Intervals(tmp1)
-        self.slice_dict[r] = [0,sp.slice_length]
+        tmps_dict = {}
+        for j in range(0,self.numresources):
+            r = str(j)
+            tmps_dict[r] = []
+            for i in range(self.numdays):
+                tmps_dict[r].append(Timepoint((i+j*4)*24*60, 'start'))
+                tmps_dict[r].append(Timepoint((i+j*4)*24*60 + 
+                                              self.night_length, 
+                                              'end'))
+                self.gpw[r] = Intervals(tmps_dict[r])
+                self.slice_dict[r] = [0,sp.slice_length]
 
-        for i in range(1,self.numresources): 
-            tmp2 = copy.deepcopy(tmp1)
-            r = str(i)
-            self.gpw[r] = Intervals(tmp2)
-            self.slice_dict[r] = [0,sp.slice_length]
-        
         self.no_oneofs = False
         self.no_ands = False
         self.max_restype = 1
@@ -70,17 +65,24 @@ class TestStressNights(object):
 
 
     def generate_reservation(self):
-        start_day = random.randint(0, self.numdays-1)
-        duration = random.randint(self.min_duration, self.max_duration)
-        start_time = random.randint(0, self.night_length-duration)
-        priority = random.randint(self.min_priority, self.max_priority)
-        slack = random.randint(self.min_slack, self.max_slack)
-        resource = str(random.randint(0,self.numresources-1))
+     #   start_day = random.randint(0, self.numdays-1)
+     #   duration = random.randint(self.min_duration, self.max_duration)
+     #   start_time = random.randint(0, self.night_length-duration)
+     #   priority = random.randint(self.min_priority, self.max_priority)
+     #   slack = random.randint(self.min_slack, self.max_slack)
+     #   resource = str(random.randint(0,self.numresources-1))
 
-        start = start_day*24*60 + start_time
-        window = Intervals([Timepoint(start, 'start'),
-                            Timepoint(start+duration+slack, 'end')])
-        reservation = Reservation_v3(priority, duration, {resource: window})
+#        start = start_day*24*60 
+#        window = Intervals([Timepoint(start, 'start'),
+#                            Timepoint(start+duration+slack, 'end')])
+        tmps_dict = {}
+        for j in range(0,self.numresources):
+            r = str(j)
+            tmps_dict[r] =  Intervals([Timepoint(0, 'start'),
+                                       Timepoint(self.tfinal, 'end')])
+
+#        reservation = Reservation_v3(priority, duration, {resource: window})
+        reservation = Reservation_v3(1, 30, tmps_dict)
         return reservation
          
 

@@ -59,13 +59,28 @@ log = logging.getLogger(__name__)
 # Comparator for all filters
 now = datetime.utcnow()
 
+
+def log_windows(fn):
+    def wrap(ur_list, *args, **kwargs):
+
+        n_windows_before = sum([ur.n_windows() for ur in ur_list])
+        ur_list          = fn(ur_list, *args, **kwargs)
+        n_windows_after  = sum([ur.n_windows() for ur in ur_list])
+
+        log.info("%s: windows in (%d); windows out (%d)", fn.__name__, n_windows_before,
+                                                                        n_windows_after)
+        return ur_list
+
+    return wrap
+
+
 def log_urs(fn):
-    def wrap(ur_list):
+    def wrap(ur_list, *args, **kwargs):
         in_size  = len(ur_list)
-        ur_list  = fn(ur_list)
+        ur_list  = fn(ur_list, *args, **kwargs)
         out_size = len(ur_list)
 
-        log.debug("%s: URs in (%d); URs out (%d)", fn.__name__, in_size, out_size)
+        log.info("%s: URs in (%d); URs out (%d)", fn.__name__, in_size, out_size)
 
         return ur_list
 
@@ -73,6 +88,7 @@ def log_urs(fn):
 
 
 def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
+    #TODO: Make set_now() function
     global now
     now = user_now
 
@@ -128,7 +144,7 @@ def run_all_filters(ur_list):
 
 # A) Window Filters
 #------------------
-@log_urs
+@log_windows
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
     filter_test = lambda w, ur: w.end > now
@@ -136,7 +152,7 @@ def filter_out_past_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
-@log_urs
+@log_windows
 def truncate_lower_crossing_windows(ur_list):
     '''Case 2: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
@@ -152,16 +168,19 @@ def truncate_lower_crossing_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
-@log_urs
-def truncate_upper_crossing_windows(ur_list):
+@log_windows
+def truncate_upper_crossing_windows(ur_list, horizon=None):
     '''Case 4: The window starts at a schedulable time, but finishes beyond the
-       scheduling horizon (semester end or expiry date). Remove the unschedulable
-       portion of the window.'''
+       scheduling horizon (provided, or semester end, or expiry date). Remove the
+       unschedulable portion of the window.'''
 
     def truncate_upper_crossing(w, ur):
-        horizon = ur.scheduling_horizon()
-        if w.start < horizon < w.end:
-            w.end = horizon
+        effective_horizon = ur.scheduling_horizon()
+        if horizon:
+            if horizon < effective_horizon:
+                effective_horizon = horizon
+        if w.start < effective_horizon < w.end:
+            w.end = effective_horizon
 
         return True
 
@@ -170,15 +189,24 @@ def truncate_upper_crossing_windows(ur_list):
     return _for_all_ur_windows(ur_list, filter_test)
 
 
-@log_urs
-def filter_out_future_windows(ur_list):
+@log_windows
+def filter_out_future_windows(ur_list, horizon=None):
     '''Case 5: The window lies beyond the scheduling horizon.'''
-    filter_test = lambda w, ur: w.start < ur.scheduling_horizon()
+
+    def filter_on_future(w, ur):
+        effective_horizon = ur.scheduling_horizon()
+        if horizon:
+            if horizon < effective_horizon:
+                effective_horizon = horizon
+
+        return w.start < effective_horizon
+
+    filter_test = filter_on_future
 
     return _for_all_ur_windows(ur_list, filter_test)
 
 
-@log_urs
+@log_windows
 def filter_on_duration(ur_list):
     '''Case 6: Return only windows which are larger than the UR's duration.'''
     def filter_on_duration(w, ur):
