@@ -22,7 +22,7 @@ from adaptive_scheduler.model2          import ModelBuilder
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
-                                                 prefilter_for_kernel,
+                                                 filter_for_kernel,
                                                  construct_global_availability )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations )
@@ -202,13 +202,16 @@ def summarise_urs(user_reqs):
 # TODO: Add configuration options, refactor into smaller chunks
 @timeit
 def main(requests, sched_client, visibility_from=None, dry_run=False):
+    ONE_MONTH = timedelta(weeks=4)
     semester_start, semester_end = get_semester_block()
     now = datetime.utcnow() + timedelta(minutes=6)
+    scheduling_horizon = now + ONE_MONTH
     date_fmt = '%Y-%m-%d'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
                                                      semester_start.strftime(date_fmt),
                                                      semester_end.strftime(date_fmt))
+    log.info("Scheduling horizon is %s", scheduling_horizon.strftime(date_fmt))
 
     log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
 
@@ -245,8 +248,8 @@ def main(requests, sched_client, visibility_from=None, dry_run=False):
 
 
     # Do another check on duration and operator soundness, after dark/rise checking
-    user_reqs = prefilter_for_kernel(user_reqs, visibility_from, tels,
-                                     now, semester_end)
+    user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
+                                  now, semester_end, scheduling_horizon)
 
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
     summarise_urs(user_reqs)
