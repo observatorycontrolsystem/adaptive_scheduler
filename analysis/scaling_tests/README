@@ -1,0 +1,31 @@
+scaling tests - A set of experiments to measure scheduling scaling performance
+Eric Saunders, July 2013
+
+matrix.dat  - Size of the matrices being sent to the LP solver.
+timings.dat - Measured run-time of each function.
+
+Test 1
+------
+A one week scheduling horizon.
+Fully random target coordinates.
+All targets have a full user window, to the horizon (actual window depends on coords).
+One continuous scheduling run (no CTRL-C).
+No dirty flag setting without adding more Requests.
+
+
+Test 2
+------
+Rerunning the input load at the end of test 1.
+155 Requests in. Kernel saw 141 after filtering.
+Strange timing results point to cache coherency issue in memoizing (fractional rounding?).
+Wildly varying numbers of submissions point to ongoing unknown bug.
+CPU time of schedeule_all() is reliable; all others are suspect.
+
+Test 3
+------
+A one week scheduling horizon.
+Fully random target coordinates.
+One target has a full user window, to the horizon (actual window depends on coords).
+All other targets have one day windows.
+One continuous scheduling run (no CTRL-C).
+No dirty flag setting without adding more Requests.
