@@ -1,15 +1,14 @@
+--index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/thirdparty/
 --extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/
---extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/thirdparty/
 numpy
 rise_set
 scipy
-openopt==0.45
+#openopt==0.45
 nose
 ipdb==0.7
-ipython==0.10
+ipython
 lcogtpond
 mock==1.0.1
 reqdbclient
-jsonpickle
-cvxopt==1.1.2
+#cvxopt==1.1.2
 

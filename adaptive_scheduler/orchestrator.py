@@ -111,7 +111,7 @@ def dump_kernel_input(to_schedule, resource_windows, contractual_obligations,
 
     kernel_dump_file = 'kernel.dump'
     kernel_dump_fh = open(kernel_dump_file, 'w')
-    kernel_dump_fh.write(jsonpickle.encode(json_dump))
+#    kernel_dump_fh.write(jsonpickle.encode(json_dump))
     kernel_dump_fh.close()
     log.info("Wrote kernel input dump to %s", kernel_dump_file)
 
