@@ -151,12 +151,57 @@ class FullScheduler_v5(SlicedIPScheduler):
             f[row] = entry[2] #priority
             row += 1
 
+        dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub,
+                          len(self.compound_reservation_list))
         p = LP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub)
 #        r = p.minimize('pclp') 
         r = p.maximize('glpk', iprint=-1)
 #        r = p.minimize('lpsolve')
         return self.unpack_result(r)
 
+
+def dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub, n_res):
+
+    # Don't write the header if the file already exists
+    import os.path
+    path_to_file = 'matrix_sizes.dat'
+    write_header = True
+    if os.path.isfile(path_to_file):
+        write_header = False
+
+    from datetime import datetime
+    date_time_fmt = '%Y-%m-%d %H:%M:%S'
+    now = datetime.utcnow()
+    now_str = now.strftime(date_time_fmt)
+
+    out_fh  = open(path_to_file, 'a')
+    fmt_str = "%-6s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s\n"
+
+    out_hdr = fmt_str % ('N res',
+                         'F shape',  'F size',
+                         'A shape',  'A size',
+                         'b shape',  'b size',
+                         'lb shape', 'lb size',
+                         'ub shape', 'ub size',
+                         'Ran at')
+    out_str = fmt_str % (n_res,
+                         f.shape,  m_size(f),
+                         A.shape,  sm_size(A),
+                         b.shape,  m_size(b),
+                         lb.shape, m_size(lb),
+                         ub.shape, m_size(ub),
+                         now_str)
+    if write_header:
+        out_fh.write(out_hdr)
+    out_fh.write(out_str)
+
+    out_fh.close()
+
+def m_size(m):
+    return m.nbytes * m.dtype.itemsize
+
+def sm_size(m):
+    return m.getnnz() * m.dtype.itemsize
 
 def print_matrix_size(matrix):
     print "Matrix shape:", matrix.shape
