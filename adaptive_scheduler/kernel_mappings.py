@@ -310,7 +310,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                                 semester_end, tel.horizon,
                                 twilight)
 #        get_dark   = Memoize(visibility.get_dark_intervals)
-        get_target = Memoize(visibility.get_target_intervals, name=tel_name)
+        get_target = Memoize(visibility.get_target_intervals)
         get_dark = visibility.get_dark_intervals
 #        get_target = visibility.get_target_intervals
         visibility_from[tel_name] = (visibility, get_dark, get_target)

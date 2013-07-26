@@ -175,15 +175,15 @@ def dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub, n_res):
     now_str = now.strftime(date_time_fmt)
 
     out_fh  = open(path_to_file, 'a')
-    fmt_str = "%-6s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s %-13s\n"
+    fmt_str = "%-6s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-13s\n"
 
-    out_hdr = fmt_str % ('N res',
-                         'F shape',  'F size',
-                         'A shape',  'A size',
-                         'b shape',  'b size',
-                         'lb shape', 'lb size',
-                         'ub shape', 'ub size',
-                         'Ran at')
+    out_hdr = fmt_str % ('N_res',
+                         'F_shape',  'F_size',
+                         'A_shape',  'A_size',
+                         'b_shape',  'b_size',
+                         'lb_shape', 'lb_size',
+                         'ub_shape', 'ub_size',
+                         'Ran_at')
     out_str = fmt_str % (n_res,
                          f.shape,  m_size(f),
                          A.shape,  sm_size(A),

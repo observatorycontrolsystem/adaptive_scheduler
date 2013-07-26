@@ -1,0 +1,78 @@
+# List of telescopes available for scheduling.
+# Coordinates in degrees (East +ve longitude).
+# Horizon limits in degrees from the ground
+#
+# This file describes a simulated maximum 1m buildout with current money
+# 3xCPT, 3xLSC, 2xELP, 2xCOJ
+[
+    {
+        'name'      : '1m0a.doma.cpt',
+        'tel_class' : '1m0',
+        'latitude'  : -32.3805542,
+        'longitude' :  20.8101815,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.domb.cpt',
+        'tel_class' : '1m0',
+        'latitude'  : -32.3805542,
+        'longitude' :  20.8100352,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.domc.cpt',
+        'tel_class' : '1m0',
+        'latitude'  : -32.3806616944,
+        'longitude' :  20.8101083333,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.doma.lsc',
+        'tel_class' : '1m0',
+        'latitude'  : -30.1673833333,
+        'longitude' : -70.8047888889,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.domb.lsc',
+        'tel_class' : '1m0',
+        'latitude'  : -30.1673305556,
+        'longitude' : -70.8046611111,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.domc.lsc',
+        'tel_class' : '1m0',
+        'latitude'  : -30.1673305556,
+        'longitude' : -70.8046611111,
+        'horizon'   : 30,
+    },
+    {
+        'name'      : '1m0a.doma.elp',
+        'tel_class' : '1m0',
+        'latitude'  : 30.6801,
+        'longitude' : -104.015194444,
+        'horizon'   : 22,
+    },
+    {
+        'name'      : '1m0a.domb.elp',
+        'tel_class' : '1m0',
+        'latitude'  : 34.433157,
+        'longitude' : -119.86308,
+        'horizon'   : 25,
+    },
+    {
+        'name'      : '1m0a.doma.coj',
+        'tel_class' : '1m0',
+        'latitude'  : 31.272932,
+        'longitude' : 149.070648,
+        'horizon'   : 25,
+    },
+    {
+        'name'      : '1m0a.domb.coj',
+        'tel_class' : '1m0',
+        'latitude'  : 31.272932,
+        'longitude' : 149.070648,
+        'horizon'   : 25,
+    },
+]

@@ -29,7 +29,6 @@ class Timepoint(object):
 
     def __eq__(self, other):
         if type(other) is type(self):
-            print "gpt here"
             return self.serialise() == other.serialise()
         return False
 
