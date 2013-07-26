@@ -107,6 +107,8 @@ if __name__ == '__main__':
     else:
         now = datetime.utcnow() + timedelta(minutes=6)
 
+    log.info("Using a 'now' of %s", now)
+
     semester_start, semester_end = get_semester_block(dt=now)
 
     # Acquire and collapse the requests
