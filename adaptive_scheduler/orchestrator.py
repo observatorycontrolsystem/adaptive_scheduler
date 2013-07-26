@@ -73,15 +73,14 @@ def get_requests_from_json(req_filename, telescope_class):
         return json.loads(req_data)
 
 @timeit
-def get_requests_from_db(url, telescope_class):
-    sem_start, sem_end = get_semester_block()
+def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     format = '%Y-%m-%d %H:%M:%S'
 
     search = SearchQuery()
     search.set_date(start=sem_start.strftime(format), end=sem_end.strftime(format))
 
     log.info("Asking DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
-    sc           = SchedulerClient(url)
+    sc  = SchedulerClient(url)
 
     ur_list = sc.retrieve(search, debug=True)
 
@@ -201,25 +200,24 @@ def summarise_urs(user_reqs):
 
 # TODO: Add configuration options, refactor into smaller chunks
 @timeit
-def main(requests, sched_client, visibility_from=None, dry_run=False):
+def main(requests, sched_client, now, semester_start, semester_end, tel_file,
+         visibility_from=None, dry_run=False):
     ONE_MONTH = timedelta(weeks=4)
-    semester_start, semester_end = get_semester_block()
-    now = datetime.utcnow() + timedelta(minutes=6)
-    scheduling_horizon = now + ONE_MONTH
-    date_fmt = '%Y-%m-%d'
+    ONE_WEEK  = timedelta(weeks=1)
+    scheduling_horizon = now + ONE_WEEK
+    date_fmt      = '%Y-%m-%d'
+    date_time_fmt = '%Y-%m-%d %H:%M:%S'
 
     log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
                                                      semester_start.strftime(date_fmt),
                                                      semester_end.strftime(date_fmt))
-    log.info("Scheduling horizon is %s", scheduling_horizon.strftime(date_fmt))
+    log.info("Scheduling horizon is %s", scheduling_horizon.strftime(date_time_fmt))
 
     log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
 
-    # Configuration files
-    tel_file            = 'telescopes.dat'
     scheduler_dump_file = 'to_schedule.pickle'
 
     mb = ModelBuilder(tel_file)

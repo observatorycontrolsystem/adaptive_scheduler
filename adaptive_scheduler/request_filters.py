@@ -174,8 +174,10 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
        scheduling horizon (provided, or semester end, or expiry date). Remove the
        unschedulable portion of the window.'''
 
+    global now
+
     def truncate_upper_crossing(w, ur):
-        effective_horizon = ur.scheduling_horizon()
+        effective_horizon = ur.scheduling_horizon(now)
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon
@@ -193,8 +195,10 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
 def filter_out_future_windows(ur_list, horizon=None):
     '''Case 5: The window lies beyond the scheduling horizon.'''
 
+    global now
+
     def filter_on_future(w, ur):
-        effective_horizon = ur.scheduling_horizon()
+        effective_horizon = ur.scheduling_horizon(now)
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon

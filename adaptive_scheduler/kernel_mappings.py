@@ -24,6 +24,7 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
+from rise_set.astrometry      import make_target
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
@@ -50,10 +51,7 @@ def target_to_rise_set_target(target):
     '''Convert scheduler Target to rise_set target dict.'''
 
     # TODO: Change to default_dict, expand to allow proper motion etc.
-    target_dict = {
-                    'ra'    : target.ra,
-                    'dec'   : target.dec,
-                   }
+    target_dict = make_target(target.ra, target.dec)
 
     return target_dict
 
@@ -218,7 +216,6 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
     return crs
 
 
-
 @log_windows
 def filter_on_visibility(crs, visibility_from):
     for cr in crs:
@@ -231,7 +228,7 @@ def filter_on_visibility(crs, visibility_from):
 def compute_intersections(req, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
     intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
-                                                                verbose=True)
+                                                               verbose=True)
     req.windows = intervals_to_windows(req, intersections_for_resource)
     return req
 
@@ -313,7 +310,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                                 semester_end, tel.horizon,
                                 twilight)
 #        get_dark   = Memoize(visibility.get_dark_intervals)
-        get_target = Memoize(visibility.get_target_intervals)
+        get_target = Memoize(visibility.get_target_intervals, name=tel_name)
         get_dark = visibility.get_dark_intervals
 #        get_target = visibility.get_target_intervals
         visibility_from[tel_name] = (visibility, get_dark, get_target)

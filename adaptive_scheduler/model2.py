@@ -381,8 +381,8 @@ class UserRequest(CompoundRequest, DefaultMixin):
     # Define properties
     priority = property(get_priority)
 
-    def scheduling_horizon(self):
-        sem_end = semester_service.get_semester_end()
+    def scheduling_horizon(self, now=None):
+        sem_end = semester_service.get_semester_end(now)
         if self.expires and self.expires < sem_end:
             return self.expires
         return sem_end

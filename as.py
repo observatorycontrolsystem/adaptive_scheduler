@@ -14,13 +14,14 @@ July 2012
 from __future__ import division
 
 
-from adaptive_scheduler.orchestrator import main, get_requests_from_db
-from adaptive_scheduler.printing     import pluralise as pl
-from adaptive_scheduler.utils        import timeit
+from adaptive_scheduler.orchestrator     import main, get_requests_from_db
+from adaptive_scheduler.printing         import pluralise as pl
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
+from adaptive_scheduler.semester_service import get_semester_block
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 import logging.config
 import signal
@@ -75,7 +76,12 @@ if __name__ == '__main__':
                             help="Request DB endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
+    arg_parser.add_argument("-n", "--now", type=str,
+                            help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
+    arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat',
+                            help="Available telescopes file (default=telescopes.dat)")
 
+    # Handle command line arguments
     args = arg_parser.parse_args()
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
@@ -86,6 +92,21 @@ if __name__ == '__main__':
 
     if DRY_RUN:
         log.info("Running in simulation mode - no DB changes will be made")
+
+    log.info("Using available telescopes file '%s'", args.telescopes)
+
+    if args.now:
+        try:
+            now = iso_string_to_datetime(args.now)
+        except ValueError as e:
+            log.critical(e)
+            log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
+            log.critical("Aborting scheduler run.")
+            sys.exit()
+    else:
+        now = datetime.utcnow() + timedelta(minutes=6)
+
+    semester_start, semester_end = get_semester_block(dt=now)
 
     # Acquire and collapse the requests
     request_db_url = args.requestdb
@@ -120,14 +141,17 @@ if __name__ == '__main__':
             scheduler_client.clear_dirty_flag()
 
             try:
-                requests = get_requests_from_db(scheduler_client.url, 'dummy arg')
+                requests = get_requests_from_db(scheduler_client.url, 'dummy arg',
+                                                semester_start, semester_end)
                 log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
 
                 # TODO: What about if we don't get stuff successfully - need to set flag
 
                 # Run the scheduling loop, if there are any User Requests
                 if len(requests):
-                    visibility_from = main(requests, scheduler_client, visibility_from, dry_run=DRY_RUN)
+                    visibility_from = main(requests, scheduler_client, now,
+                                           semester_start, semester_end,
+                                           args.telescopes, visibility_from, dry_run=DRY_RUN)
                 else:
                     log.warn("Received no User Requests! Skipping this scheduling cycle")
                 sys.stdout.flush()

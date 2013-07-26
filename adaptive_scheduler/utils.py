@@ -13,6 +13,13 @@ import time
 import logging
 
 log = logging.getLogger(__name__)
+fh  = logging.FileHandler('timings.dat')
+fh.setLevel(logging.INFO)
+formatter = logging.Formatter(fmt='%(asctime)s.%(msecs).03d %(levelname)7s: %(module)15s: %(message)s',
+                              datefmt='%Y-%m-%d %H:%M:%S')
+fh.setFormatter(formatter)
+
+log.addHandler(fh)
 
 
 class ReprMixin(object):
