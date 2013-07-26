@@ -11,9 +11,10 @@ May 2013
 import argparse
 import ast
 from datetime import datetime, timedelta
-from random import randrange
+import random
 
 from rise_set.astrometry import calc_apparent_sidereal_time
+from rise_set.sky_coordinates import RightAscension, Declination
 from reqdb.requests import Request, UserRequest
 from reqdb.client import SchedulerClient
 
@@ -44,21 +45,18 @@ def random_date(start, end):
     """
     delta = end - start
     int_delta = (delta.days * 24 * 60 * 60) + delta.seconds
-    random_second = randrange(int_delta)
+    random_second = random.randrange(int_delta)
     return start + timedelta(seconds=random_second)
 
 
 class RequestBuilder(object):
 
-    def __init__(self, telescope, global_start, global_end):
-        self.tel_info = telescope
-        tel_name, obs, site = telescope['name'].split('.')
+    def __init__(self, global_start, global_end):
+
         self.location = {
-                          'telescope_class' : telescope['tel_class'],
-                          'site'            : site,
-                          'observatory'     : obs,
-                          'telescope'       : tel_name
-                        }
+                      'telescope_class' : '1m0',
+                      }
+
         self.molecule = {
              # Required fields
              'exposure_time'   : 600,         # Exposure time, in secs
@@ -69,22 +67,21 @@ class RequestBuilder(object):
         self.global_end   = global_end
 
 
-    def build(self, dt):
+    def build(self, start, end, random_target=False):
+
         req = Request()
         req.set_location(self.location)
         req.add_molecule(self.molecule)
-        req.set_target(self.build_zenith_target(dt))
-        req.add_window(self.build_window(dt))
+
+        if random_target:
+            req.set_target(self.build_random_target())
+
+        req.add_window(self.build_window(start, end))
 
         return req
 
 
-    def build_window(self, dt):
-        ONE_DAY   = timedelta(days=1)
-        TWO_HOURS = timedelta(hours=2)
-        start = dt - TWO_HOURS
-        end   = dt + TWO_HOURS
-
+    def build_window(self, start, end):
         if start < self.global_start:
             start = self.global_start
 
@@ -97,6 +94,20 @@ class RequestBuilder(object):
                   }
 
         return window
+
+
+    def build_random_target(self):
+        random_ra  = RightAscension(degrees=random.uniform(0, 359.9999999))
+        random_dec = Declination(degrees=random.uniform(-89.99999999, 89.9999999))
+
+        target = {
+               # Required fields
+               'name'              : 'Simulated target',
+               'ra'                : random_ra.in_degrees(),            # In decimal degrees
+               'dec'               : random_dec.in_degrees(),           # In decimal degrees
+        }
+
+        return target
 
 
     def build_zenith_target(self, dt):
@@ -116,25 +127,37 @@ class RequestBuilder(object):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Fill the Request DB with simulated Requests")
     parser.add_argument("n", type=int, help="Number of User Requests to create")
+    parser.add_argument("--random-target", help="Generate fully randomised RA/Decs",
+                    action="store_true")
 
     args = parser.parse_args()
 
     TWO_WEEKS  = timedelta(days=14)
     TWO_MONTHS = timedelta(days=60)
+    SIX_MONTHS = timedelta(days=180)
 
-    start_date = datetime.utcnow() + TWO_MONTHS
-    end_date   = start_date + TWO_WEEKS
+    # We expect RA range 1-13 to be visible
+    SEMESTER_2013B_START = datetime(2013, 10, 1)
 
-    locations = file_to_dicts('telescopes.dat')
+#    start_date = datetime.utcnow() + TWO_MONTHS
+    start_date = SEMESTER_2013B_START
+    end_date   = start_date + SIX_MONTHS
+
+#    locations = file_to_dicts('telescopes.dat.max_1ms')
 
     print "Making %d User Requests, starting between %s and %s" % (args.n, start_date, end_date)
 
-    for i in range(args.n):
-        r_builder = RequestBuilder(locations[0], start_date, end_date)
+    if args.random_target:
+        print "Constructing fully randomised RA/Decs"
+    else:
+        print "Placing targets at approximate zenith"
 
-        random_start = random_date(start_date, end_date)
-        print "%d) %s" % (i, random_start)
-        req = r_builder.build(random_start)
+
+    r_builder = RequestBuilder(start_date, end_date)
+    for i in range(args.n):
+
+        print "%d) %s" % (i, start_date)
+        req = r_builder.build(start_date, end_date, random_target=args.random_target)
 
         ur = UserRequest(group_id='Simulated Request')
         ur.add_request(req)
