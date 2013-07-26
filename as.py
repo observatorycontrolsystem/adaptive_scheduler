@@ -4,6 +4,7 @@ as.py - Run the adaptive scheduler on continuous loop.
 
 Example usage (testing)
     python as.py --requestdb='http://localhost:8001/'
+    python as.py  -r http://localhost:8001/ -s 10 --dry-run --now '2013-10-01 00:00:00' --telescopes=telescopes-simulated_full_1m_network.dat
 
 Example usage (production)
     python as.py --requestdb='http://scheduler-dev.lco.gtn/requestdb/'
@@ -28,7 +29,7 @@ import signal
 import time
 import sys
 
-VERSION = '1.2.0'
+VERSION = '1.2.1'
 DRY_RUN = False
 
 # Set up and configure an application scope logger
