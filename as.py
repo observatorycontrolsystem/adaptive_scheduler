@@ -96,24 +96,8 @@ if __name__ == '__main__':
 
     log.info("Using available telescopes file '%s'", args.telescopes)
 
-    if args.now:
-        try:
-            now = iso_string_to_datetime(args.now)
-        except ValueError as e:
-            log.critical(e)
-            log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
-            log.critical("Aborting scheduler run.")
-            sys.exit()
-    else:
-        now = datetime.utcnow() + timedelta(minutes=6)
 
-    log.info("Using a 'now' of %s", now)
-
-    semester_start, semester_end = get_semester_block(dt=now)
-
-    # Acquire and collapse the requests
     request_db_url = args.requestdb
-
     scheduler_client = SchedulerClient(request_db_url)
     scheduler_client.set_dirty_flag()
 
@@ -122,6 +106,22 @@ if __name__ == '__main__':
     while run_flag:
         dirty_response = get_dirty_flag()
 
+        # Use a static command line datetime if provided...
+        if args.now:
+            try:
+                now = iso_string_to_datetime(args.now)
+            except ValueError as e:
+                log.critical(e)
+                log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
+                log.critical("Aborting scheduler run.")
+                sys.exit()
+        # ...otherwise offset 'now' to account for the duration of the scheduling run
+        else:
+            now = datetime.utcnow() + timedelta(minutes=6)
+
+        log.info("Using a 'now' of %s", now)
+
+        semester_start, semester_end = get_semester_block(dt=now)
 
         #TODO: HACK to handle not a real error returned from Request DB
         try:
