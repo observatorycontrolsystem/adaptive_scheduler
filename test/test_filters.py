@@ -37,9 +37,9 @@ class TestExpiryFilter(object):
 
     def setup(self):
         self.past_expiry     = datetime(2013, 1, 1)
-        self.current_time    = datetime(2013, 2, 27)
         self.future_expiry1  = datetime(2013, 7, 27)
-        self.future_expiry2  = datetime(2013, 7, 28)
+        self.future_expiry1  = datetime.utcnow() + timedelta(weeks=12)
+        self.future_expiry2  = datetime.utcnow() + timedelta(weeks=13)
 
 
     def create_user_request(self, expiry_dt):
