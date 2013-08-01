@@ -99,6 +99,8 @@ if __name__ == '__main__':
 
     request_db_url = args.requestdb
     scheduler_client = SchedulerClient(request_db_url)
+
+    # Force a reschedule when first started
     scheduler_client.set_dirty_flag()
 
 
@@ -139,9 +141,15 @@ if __name__ == '__main__':
                                               dirty_response['last_updated'])
             log.info(msg)
 
-            # TODO: Log request receiving errors
             log.info("Clearing dirty flag")
-            scheduler_client.clear_dirty_flag()
+            try:
+                scheduler_client.clear_dirty_flag()
+            except ConnectionError as e:
+                log.critical("Error clearing dirty flag on DB: %s", e)
+                log.critical("Aborting current scheduling loop.")
+                log.info(" Sleeping for %d seconds", sleep_duration)
+                time.sleep(sleep_duration)
+                continue
 
             try:
                 requests = get_requests_from_db(scheduler_client.url, 'dummy arg',
