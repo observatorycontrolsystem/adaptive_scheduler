@@ -15,7 +15,7 @@ July 2012
 from __future__ import division
 
 
-from adaptive_scheduler.orchestrator     import main, get_requests_from_db
+from adaptive_scheduler.orchestrator     import run_scheduler, get_requests_from_db
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
@@ -29,8 +29,7 @@ import signal
 import time
 import sys
 
-VERSION = '1.2.1'
-DRY_RUN = False
+VERSION = '1.2.2'
 
 # Set up and configure an application scope logger
 #logging.config.fileConfig('logging.conf')
@@ -55,7 +54,7 @@ def kill_handler(signal, frame):
 
 
 @timeit
-def get_dirty_flag():
+def get_dirty_flag(scheduler_client):
     dirty_response = dict(dirty=False)
     try:
         dirty_response = scheduler_client.get_dirty_flag()
@@ -63,11 +62,23 @@ def get_dirty_flag():
         log.warn("Error retrieving dirty flag from DB: %s", e)
         log.warn("Skipping this scheduling cycle")
 
+    #TODO: HACK to handle not a real error returned from Request DB
+    if request_db_dirty_flag_is_invalid(dirty_response):
+        dirty_response = dict(dirty=False)
+
+    if dirty_response['dirty'] is False:
+        log.info("Request DB is still clean - nothing has changed")
+
+    else:
+        msg  = "Got dirty flag (DB needs reading) with timestamp"
+        msg += " %s (last updated %s)" % (dirty_response['timestamp'],
+                                          dirty_response['last_updated'])
+        log.info(msg)
+
     return dirty_response
 
 
-if __name__ == '__main__':
-#    arg_parser = argparse.ArgumentParser(description="Run the Adaptive Scheduler")
+def parse_args(argv):
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
@@ -81,97 +92,136 @@ if __name__ == '__main__':
                             help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
     arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat',
                             help="Available telescopes file (default=telescopes.dat)")
+    arg_parser.add_argument("-o", "--run-once", action="store_true",
+                            help="Only run the scheduling loop once, then exit")
 
     # Handle command line arguments
-    args = arg_parser.parse_args()
+    args = arg_parser.parse_args(argv)
+
+    if args.dry_run:
+        log.info("Running in simulation mode - no DB changes will be made")
+    log.info("Using available telescopes file '%s'", args.telescopes)
+    log.info("Sleep period between scheduling runs set at %ds" % args.sleep)
+
+    return args
+
+
+def determine_scheduler_now(args):
+    '''Use a static command line datetime if provided, or default to utcnow, with a
+       little extra to cover the scheduler's run time.'''
+    if args.now:
+        try:
+            now = iso_string_to_datetime(args.now)
+        except ValueError as e:
+            log.critical(e)
+            log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
+            log.critical("Aborting scheduler run.")
+            sys.exit()
+    # ...otherwise offset 'now' to account for the duration of the scheduling run
+    else:
+        now = datetime.utcnow() + timedelta(minutes=6)
+
+    log.info("Using a 'now' of %s", now)
+
+    return now
+
+
+def request_db_dirty_flag_is_invalid(dirty_response):
+    try:
+        dirty_response['dirty']
+        return False
+    except TypeError as e:
+        log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
+        return True
+
+
+def clear_dirty_flag(scheduler_client, args):
+    # Clear the dirty flag
+    log.info("Clearing dirty flag")
+    try:
+        scheduler_client.clear_dirty_flag()
+        return True
+    except ConnectionError as e:
+        log.critical("Error clearing dirty flag on DB: %s", e)
+        log.critical("Aborting current scheduling loop.")
+        log.info(" Sleeping for %d seconds", args.sleep)
+        time.sleep(args.sleep)
+
+        return False
+
+
+def get_requests(scheduler_client, now):
+    # Try and get the requests
+    semester_start, semester_end = get_semester_block(dt=now)
+    try:
+        requests = get_requests_from_db(scheduler_client.url, 'dummy arg',
+                                        semester_start, semester_end)
+        log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
+        return requests
+
+    except ConnectionError as e:
+        log.warn("Error retrieving Requests from DB: %s", e)
+        log.warn("Skipping this scheduling cycle")
+        return []
+
+
+def create_new_schedule(scheduler_client, args, visibility_from):
+    # Use a static command line datetime if provided...
+    now = determine_scheduler_now(args)
+
+    requests = get_requests(scheduler_client, now)
+
+    # Run the scheduling loop, if there are any User Requests
+    if requests:
+        semester_start, semester_end = get_semester_block(dt=now)
+        visibility_from = run_scheduler(requests, scheduler_client, now,
+                                        semester_start, semester_end,
+                                        args.telescopes,
+                                        visibility_from, dry_run=args.dry_run)
+    else:
+        log.warn("Received no User Requests! Skipping this scheduling cycle")
+    sys.stdout.flush()
+
+
+    return visibility_from
+
+
+def was_dirty_and_cleared(scheduler_client, args):
+    dirty_response = get_dirty_flag(scheduler_client)
+
+    if dirty_response['dirty'] is True:
+        if clear_dirty_flag(scheduler_client, args):
+            return True
+
+    return False
+
+
+def main(argv):
+    global run_flag
+    args = parse_args(argv)
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
 
-    sleep_duration = args.sleep
-    log.info("Sleep period between scheduling runs set at %ds" % sleep_duration)
-    DRY_RUN = args.dry_run
-
-    if DRY_RUN:
-        log.info("Running in simulation mode - no DB changes will be made")
-
-    log.info("Using available telescopes file '%s'", args.telescopes)
-
-
-    request_db_url = args.requestdb
+    request_db_url   = args.requestdb
     scheduler_client = SchedulerClient(request_db_url)
 
     # Force a reschedule when first started
     scheduler_client.set_dirty_flag()
 
-
     visibility_from = {}
     while run_flag:
-        dirty_response = get_dirty_flag()
 
-        # Use a static command line datetime if provided...
-        if args.now:
-            try:
-                now = iso_string_to_datetime(args.now)
-            except ValueError as e:
-                log.critical(e)
-                log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
-                log.critical("Aborting scheduler run.")
-                sys.exit()
-        # ...otherwise offset 'now' to account for the duration of the scheduling run
-        else:
-            now = datetime.utcnow() + timedelta(minutes=6)
+        if was_dirty_and_cleared(scheduler_client, args):
+            visibility_from = create_new_schedule(scheduler_client, args, visibility_from)
 
-        log.info("Using a 'now' of %s", now)
+        if args.run_once:
+            run_flag = False
 
-        semester_start, semester_end = get_semester_block(dt=now)
+        log.info("Sleeping for %d seconds", args.sleep)
+        time.sleep(args.sleep)
 
-        #TODO: HACK to handle not a real error returned from Request DB
-        try:
-            if dirty_response['dirty'] is True:
-                log.critical("hi. Please fix me.")
-        except TypeError as e:
-            log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
-            log.info(" Sleeping for %d seconds", sleep_duration)
-            time.sleep(sleep_duration)
-            continue
 
-        if dirty_response['dirty'] is True:
-            msg  = "Got dirty flag (DB needs reading) with timestamp"
-            msg += " %s (last updated %s)" % (dirty_response['timestamp'],
-                                              dirty_response['last_updated'])
-            log.info(msg)
 
-            log.info("Clearing dirty flag")
-            try:
-                scheduler_client.clear_dirty_flag()
-            except ConnectionError as e:
-                log.critical("Error clearing dirty flag on DB: %s", e)
-                log.critical("Aborting current scheduling loop.")
-                log.info(" Sleeping for %d seconds", sleep_duration)
-                time.sleep(sleep_duration)
-                continue
-
-            try:
-                requests = get_requests_from_db(scheduler_client.url, 'dummy arg',
-                                                semester_start, semester_end)
-                log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
-
-                # TODO: What about if we don't get stuff successfully - need to set flag
-
-                # Run the scheduling loop, if there are any User Requests
-                if len(requests):
-                    visibility_from = main(requests, scheduler_client, now,
-                                           semester_start, semester_end,
-                                           args.telescopes, visibility_from, dry_run=DRY_RUN)
-                else:
-                    log.warn("Received no User Requests! Skipping this scheduling cycle")
-                sys.stdout.flush()
-            except ConnectionError as e:
-                log.warn("Error retrieving Requests from DB: %s", e)
-                log.warn("Skipping this scheduling cycle")
-        else:
-            log.info("Request DB is still clean - nothing has changed")
-
-        log.info("Sleeping for %d seconds", sleep_duration)
-        time.sleep(sleep_duration)
+if __name__ == '__main__':
+    main(sys.argv[1:])
 

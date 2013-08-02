@@ -200,8 +200,8 @@ def summarise_urs(user_reqs):
 
 # TODO: Add configuration options, refactor into smaller chunks
 @timeit
-def main(requests, sched_client, now, semester_start, semester_end, tel_file,
-         visibility_from=None, dry_run=False):
+def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
+                  visibility_from=None, dry_run=False):
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
