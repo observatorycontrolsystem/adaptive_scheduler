@@ -168,7 +168,9 @@ class Proposal(DataContainer):
 
 
 class Telescope(DataContainer):
-    pass
+    def __init__(self, *initial_data, **kwargs):
+        kwargs['events'] = []
+        DataContainer.__init__(self, *initial_data, **kwargs)
 
 
 

@@ -398,3 +398,14 @@ class TestWindows(object):
         assert_equal(windows.size(), 1)
 
 
+
+class TestTelescope(object):
+
+    def __init__(self):
+        pass
+
+
+    def test_telescope_has_empty_events_list(self):
+        telescope = Telescope()
+
+        assert_equal(telescope.events, [])

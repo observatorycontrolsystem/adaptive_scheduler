@@ -35,6 +35,7 @@ from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullS
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.utils import timeit
 from adaptive_scheduler.log   import UserRequestLogger, UserRequestHandler
+from adaptive_scheduler.monitoring.network_status import network_status
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -198,6 +199,21 @@ def summarise_urs(user_reqs):
     return
 
 
+def update_telescope_network_status(tels):
+
+    current_events = network_status()
+
+    for telescope_name, telescope in tels.iteritems():
+        if telescope_name in current_events:
+            telescope.events.extend(current_events[telescope_name])
+            msg = "Found network event for '%s' - removing from consideration (%s)" % (
+                                                                telescope_name,
+                                                                current_events[telescope_name])
+            log.info(msg)
+
+    return
+
+
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
@@ -236,6 +252,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     for t in sorted(tels):
         log.debug(str(t))
 
+    update_telescope_network_status(tels)
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)

@@ -46,6 +46,9 @@ from adaptive_scheduler.memoize import Memoize
 
 import math
 
+# Set up and configure a module scope logger
+import logging
+log = logging.getLogger(__name__)
 
 def target_to_rise_set_target(target):
     '''Convert scheduler Target to rise_set target dict.'''
@@ -299,6 +302,8 @@ def construct_resource_windows(visibility_from, semester_start):
     return resource_windows
 
 
+def make_empty_list(*args, **kwargs):
+    return []
 
 def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
     '''Construct Visibility objects for each telescope.'''
@@ -309,10 +314,13 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         visibility = Visibility(rs_telescope, semester_start,
                                 semester_end, tel.horizon,
                                 twilight)
-#        get_dark   = Memoize(visibility.get_dark_intervals)
         get_target = Memoize(visibility.get_target_intervals)
         get_dark = visibility.get_dark_intervals
-#        get_target = visibility.get_target_intervals
+
+        if tel.events:
+            get_dark   = make_empty_list
+            get_target = make_empty_list
+            log.info("Bypassing visibility calcs for %s" % tel_name)
         visibility_from[tel_name] = (visibility, get_dark, get_target)
 
     return visibility_from
