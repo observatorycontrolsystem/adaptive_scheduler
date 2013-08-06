@@ -198,7 +198,7 @@ def summarise_urs(user_reqs):
     return
 
 
-# TODO: Add configuration options, refactor into smaller chunks
+# TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
                   visibility_from=None, dry_run=False):

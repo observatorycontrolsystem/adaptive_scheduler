@@ -52,6 +52,7 @@ def kill_handler(signal, frame):
 #signal.signal(signal.SIGINT, ctrl_c_handler)
 #signal.signal(signal.SIGTERM, kill_handler)
 
+# TODO: Write unit tests for these methods
 
 @timeit
 def get_dirty_flag(scheduler_client):
