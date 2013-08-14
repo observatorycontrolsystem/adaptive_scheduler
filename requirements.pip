@@ -11,4 +11,8 @@ lcogtpond
 mock==1.0.1
 reqdbclient
 #cvxopt==1.1.2
+sqlalchemy
+MySQL-python
+munkres
+pysqlite
 
