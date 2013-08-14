@@ -19,6 +19,7 @@ from adaptive_scheduler.orchestrator     import run_scheduler, get_requests_from
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
+from adaptive_scheduler.monitoring.network_status import Network
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
@@ -166,7 +167,7 @@ def get_requests(scheduler_client, now):
         return []
 
 
-def create_new_schedule(scheduler_client, args, visibility_from):
+def create_new_schedule(scheduler_client, args, visibility_from, current_events):
     # Use a static command line datetime if provided...
     now = determine_scheduler_now(args)
 
@@ -177,7 +178,7 @@ def create_new_schedule(scheduler_client, args, visibility_from):
         semester_start, semester_end = get_semester_block(dt=now)
         visibility_from = run_scheduler(requests, scheduler_client, now,
                                         semester_start, semester_end,
-                                        args.telescopes,
+                                        args.telescopes, current_events,
                                         visibility_from, dry_run=args.dry_run)
     else:
         log.warn("Received no User Requests! Skipping this scheduling cycle")
@@ -197,6 +198,22 @@ def was_dirty_and_cleared(scheduler_client, args):
     return False
 
 
+def scheduler_rerun_required(scheduler_client, args, network):
+    db_is_dirty         = False
+    network_has_changed = False
+
+    if was_dirty_and_cleared(scheduler_client, args):
+        log.info("Dirty flag was found set and cleared.")
+        db_is_dirty = True
+
+    if network.has_changed():
+        log.info("Telescope network events were found.")
+        network_has_changed = True
+
+    return db_is_dirty or network_has_changed
+
+
+
 def main(argv):
     global run_flag
     args = parse_args(argv)
@@ -206,14 +223,18 @@ def main(argv):
     request_db_url   = args.requestdb
     scheduler_client = SchedulerClient(request_db_url)
 
+    network = Network()
+
     # Force a reschedule when first started
     scheduler_client.set_dirty_flag()
 
     visibility_from = {}
     while run_flag:
+        current_events = network.update()
 
-        if was_dirty_and_cleared(scheduler_client, args):
-            visibility_from = create_new_schedule(scheduler_client, args, visibility_from)
+        if scheduler_rerun_required(scheduler_client, args, network):
+            visibility_from = create_new_schedule(scheduler_client, args,
+                                                  visibility_from, current_events)
 
         if args.run_once:
             run_flag = False

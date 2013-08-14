@@ -16,11 +16,18 @@ from datetime import datetime
 DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester3.lco.gtn/harvest'
 DEFAULT_ENGINE = create_engine(DEFAULT_URL)
 
+class ConnectionError(Exception):
+    pass
+
 def get_datum(datum, instance=None, engine=None):
     ''' Get data from telemetry database. '''
-    engine  = engine or DEFAULT_ENGINE
-    results = _query_db(datum, instance, engine)
-    return [_convert_datum(datum) for datum in results]
+
+    try:
+        engine  = engine or DEFAULT_ENGINE
+        results = _query_db(datum, instance, engine)
+        return [_convert_datum(datum) for datum in results]
+    except Exception as e:
+        raise ConnectionError(e)
 
 def _query_db(datum, instance, engine):
     ''' Retrieve datum from database.

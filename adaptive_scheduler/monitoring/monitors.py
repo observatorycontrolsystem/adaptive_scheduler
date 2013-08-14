@@ -41,6 +41,7 @@ class NetworkStateMonitor(object):
                 for resource in resource_list:
                     events.append((resource, event))
 
+        # This assumes we only have one event per resource (the last one wins)
         return dict(events)
 
     @abc.abstractmethod
