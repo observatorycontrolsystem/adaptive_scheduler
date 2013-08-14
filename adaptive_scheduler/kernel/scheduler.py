@@ -42,7 +42,7 @@ class Scheduler(object):
             # busy intervals
             self.schedule_dict_busy[resource] = Intervals([], 'busy')
         # free intervals
-        self.schedule_dict_free = copy.copy(globally_possible_windows_dict)
+        self.schedule_dict_free = copy.deepcopy(globally_possible_windows_dict)
         
         self.and_constraints   = []        
         self.oneof_constraints = []

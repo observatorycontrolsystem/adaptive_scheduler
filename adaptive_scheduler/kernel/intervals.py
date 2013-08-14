@@ -18,24 +18,37 @@ Author: Sotiria Lampoudi
 August 2011
 edited: November 2011 -- added .add(), .find_interval_of_length() methods
 bugfixes in clean_up() and subtract() in November 2011
+Aug 2013: added sanity checks and exception raising.
 '''
 
 from timepoint import *
 import math
 import copy
 
+
+class IntervalsError(Exception):
+    pass
+
+
+
 class Intervals(object):
 
-
-    IntervalsID = 0
     def __init__(self, timepoints, type=None):
         # type should be 'busy' or 'free'
         self.timepoints       = timepoints
+        self.type             = type
         self.timepoints.sort()
         self.clean_up()
-        self.type             = type
-        Intervals.IntervalsID = Intervals.IntervalsID+1
-        self.IntervalsID      = Intervals.IntervalsID
+        
+
+    def sanity_check(self):
+        if self.timepoints:
+            if len(self.timepoints)%2 == 1:
+                raise IntervalsError('odd number of timepoints in Intervals')
+            if self.timepoints[0].type == 'end':
+                raise IntervalsError('Intervals starting with END')
+            if self.timepoints[-1].type == 'start':
+                raise IntervalsError('Intervals ending with START')
 
 
     def __str__(self):
@@ -58,7 +71,6 @@ class Intervals(object):
                          timepoints  = serialised_timepoints,
                          type        = str(self.type),
                         )
-
 
 
     def is_empty(self):
@@ -176,9 +188,7 @@ class Intervals(object):
                         clean_tps.append(t)
                     flag -= 1
             self.timepoints = clean_tps
-            # # remove first tp if it's an end
-            # if self.timepoints[0].type == 'end':
-            #     self.timepoints.pop(0)
+            self.sanity_check()
 
 
     def complement(self, absolute_start, absolute_end):
@@ -218,6 +228,7 @@ class Intervals(object):
             self.type = 'busy'
         elif self.type == 'busy':
             self.type = 'free'
+
 
     def intersect(self, list_of_others):
         ''' Intersects Intervals in list_of_others with self. Returns
@@ -294,6 +305,7 @@ class Intervals(object):
             return rci
         else:
             return Intervals([], type)
+
 
 class IntervalsUtility(object):
 

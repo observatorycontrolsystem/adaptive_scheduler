@@ -29,7 +29,7 @@ class Reservation_v3(object):
         self.possible_windows_dict = possible_windows_dict
         # free_windows keeps track of which of the possible_windows 
         # are free.
-        self.free_windows_dict    = copy.copy(self.possible_windows_dict)
+        self.free_windows_dict    = copy.deepcopy(self.possible_windows_dict)
         # clean up free windows by removing ones that are too small:
         for resource in self.free_windows_dict.keys():
             self.clean_up_free_windows(resource)
