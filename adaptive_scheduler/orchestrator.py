@@ -198,10 +198,23 @@ def summarise_urs(user_reqs):
     return
 
 
+def update_telescope_events(tels, current_events):
+
+    for telescope_name, telescope in tels.iteritems():
+        if telescope_name in current_events:
+            telescope.events.extend(current_events[telescope_name])
+            msg = "Found network event for '%s' - removing from consideration (%s)" % (
+                                                                telescope_name,
+                                                                current_events[telescope_name])
+            log.info(msg)
+
+    return
+
+
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
-                  visibility_from=None, dry_run=False):
+                  current_events, visibility_from=None, dry_run=False):
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
@@ -236,6 +249,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     for t in sorted(tels):
         log.debug(str(t))
 
+    update_telescope_events(tels, current_events)
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
