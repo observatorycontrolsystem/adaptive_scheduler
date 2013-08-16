@@ -190,10 +190,9 @@ def summarise_urs(user_reqs):
         sum_str = '%s: %s (%d %s, %d %s) %s'
         log.debug(sum_str, ur.tracking_number, r_nums,
                   r_total, r_str, w_total, w_str, r_states)
-        ur_log.error(sum_str % (ur.tracking_number, r_nums,
-                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
-        ur_log.info('your face is dumb', ur.tracking_number)
-        ur_log.error('your error face is dumb', ur.tracking_number)
+        msg = "Received from Request DB " + sum_str
+#        ur_log.info(msg % (ur.tracking_number, r_nums,
+#                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
 
     return
 

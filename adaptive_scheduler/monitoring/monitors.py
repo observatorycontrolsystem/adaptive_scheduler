@@ -138,8 +138,13 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         ok_to_open, countdown, interlock = datum
 
         timestamp_measured = ok_to_open.timestamp_measured
-        delta_time         = timedelta(seconds=float(countdown.value))
-        end_time           = timestamp_measured + delta_time
+        try:
+            delta_time = timedelta(seconds=float(countdown.value))
+        except ValueError as e:
+            log.warn("Garbage data in incoming event: %s", e)
+            delta_time = timedelta(seconds=0)
+
+        end_time = timestamp_measured + delta_time
         event = Event(
                        type       = "NOT OK TO OPEN",
                        reason     = interlock.value,
