@@ -19,6 +19,10 @@ from adaptive_scheduler.monitoring.telemetry import get_datum
 Event = collections.namedtuple('Event', ['type', 'reason', 'start_time',
                                          'end_time'])
 
+# Set up and configure a module scope logger
+import logging
+log = logging.getLogger(__name__)
+
 class NetworkStateMonitor(object):
     '''Abstract class for monitoring changes to the telescope network.'''
 
