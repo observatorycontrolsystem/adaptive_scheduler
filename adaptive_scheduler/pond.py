@@ -187,6 +187,9 @@ class Block(object):
                 specific_camera = inst_match[0]['camera']
                 log.debug("Instrument resolved as '%s'", specific_camera)
 
+            if not molecule.defocus:
+                molecule.defocus = 0.0
+
             obs = Expose.build(
                                 # Meta data
                                 tracking_num = self.tracking_number,
@@ -204,6 +207,7 @@ class Block(object):
                                 filters = molecule.filter,
                                 pointing = pond_pointing,
                                 priority = molecule.priority,
+                                defocus  = molecule.defocus,
                               )
 
             # Resolve the Autoguider if necessary
