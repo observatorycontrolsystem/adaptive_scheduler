@@ -31,7 +31,8 @@ class TestPond(object):
                               exposure_count  = 1,
                               instrument_name = 'KB12',
                               filter          = 'BSSL-UX-020',
-                              ag_mode         = 'OFF'
+                              ag_mode         = 'OFF',
+                              defocus         = 0.0,
                             )
 
 
@@ -127,6 +128,7 @@ class TestPond(object):
                                                 exposure_time   = 30,
                                                 priority        = 1,
                                                 ag_mode         = 'OFF',
+                                                defocus         = 0.0,
                                                )
                                      )
 
