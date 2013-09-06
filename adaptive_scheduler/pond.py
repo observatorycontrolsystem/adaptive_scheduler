@@ -126,7 +126,7 @@ class Block(object):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
-            raise IncompleteBlockError(str(missing_fields))
+            raise IncompleteBlockError(missing_fields)
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
@@ -279,15 +279,24 @@ class Block(object):
 def send_blocks_to_pond(blocks, dry_run=False):
     pond_blocks = []
     for block in blocks:
-        pond_blocks.append(block.create_pond_block())
-        msg = "Request %s (part of UR %s) to POND" % (block.request_number,
-                                                      block.tracking_number)
-        if dry_run:
-            msg = "Dry-run: Would have sent " + msg
-        else:
-            msg = "Sent " + msg
-        log.debug(msg)
-        ur_log.info(msg, block.tracking_number)
+        try:
+            pond_blocks.append(block.create_pond_block())
+            msg = "Request %s (part of UR %s) to POND" % (block.request_number,
+                                                          block.tracking_number)
+            if dry_run:
+                msg = "Dry-run: Would have sent " + msg
+            else:
+                msg = "Sent " + msg
+            log.debug(msg)
+            ur_log.info(msg, block.tracking_number)
+        except IncompleteBlockError as e:
+            msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
+                                                               block.request_number,
+                                                               block.tracking_number)
+            log.error(msg)
+            ur_log.error(msg)
+            log.error(e)
+            ur_log.error(e, block.tracking_number)
 
 
     if not dry_run:
@@ -515,20 +524,4 @@ def cancel_blocks(to_delete, dry_run=False):
 
 class IncompleteBlockError(Exception):
     '''Raised when a block is missing required parameters.'''
-
-    def __init__(self, value):
-        self.value = value
-        self.msg = "The following fields are missing in this Block.\n"
-
-    def __str__(self):
-        return self.value
-
-    def a__str__(self):
-        message = "The following fields are missing in this Block.\n"
-        for param_type in self.value:
-            message += "%s:\n" % param_type
-
-            for parameter in self.value[param_type]:
-                message += "    %s\n" % parameter
-
-        return message
+    pass
