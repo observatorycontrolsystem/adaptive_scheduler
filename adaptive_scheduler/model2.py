@@ -325,9 +325,6 @@ class CompoundRequest(DefaultMixin):
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
                 n_after += len(r.windows.windows_for_resource[resource_name])
 
-            log.debug("Windows before = %s", n_before)
-            log.debug("Windows after  = %s", n_after)
-
 
     def n_windows(self):
         n_windows = 0

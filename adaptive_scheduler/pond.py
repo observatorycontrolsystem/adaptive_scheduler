@@ -36,10 +36,14 @@ from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import Expose
 from lcogtpond.schedule                import Schedule
+from adaptive_scheduler.log            import UserRequestLogger
 
 # Set up and configure a module scope logger
 import logging
 log = logging.getLogger(__name__)
+
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
 
 
 def log_info_dry_run(msg, dry_run):
@@ -171,11 +175,14 @@ class Block(object):
 
 
         for i, molecule in enumerate(self.molecules):
-            log.debug("Building molecule %d/%d (%dx%.03d %s)", i+1,
+            mol_summary_msg = "Building molecule %d/%d (%dx%.03d %s)" % (i+1,
                                                             len(self.molecules),
                                                             molecule.exposure_count,
                                                             molecule.exposure_time,
                                                             molecule.filter)
+            log.debug(mol_summary_msg)
+            ur_log.debug(mol_summary_msg, self.tracking_number)
+
             specific_camera = molecule.instrument_name
             if molecule.instrument_name in generic_camera_names:
                 tel_class = telescope[:-1]
@@ -185,7 +192,9 @@ class Block(object):
                                                                       telescope,
                                                                       search)
                 specific_camera = inst_match[0]['camera']
-                log.debug("Instrument resolved as '%s'", specific_camera)
+                msg = "Instrument resolved as '%s'" % specific_camera
+                log.debug(msg)
+                ur_log.debug(msg, self.tracking_number)
 
             if not molecule.defocus:
                 molecule.defocus = 0.0
@@ -193,7 +202,7 @@ class Block(object):
             obs = Expose.build(
                                 # Meta data
                                 tracking_num = self.tracking_number,
-                                request_num = self.request_number,
+                                request_num  = self.request_number,
                                 tag = self.proposal.tag_id,
                                 user = self.proposal.observer_name,
                                 proposal = self.proposal.proposal_id,
@@ -221,10 +230,14 @@ class Block(object):
                     ag_match    = mapping.find_by_camera(specific_camera)
                     specific_ag = ag_match[0]['autoguider']
 
-                    log.debug("Autoguider resolved as '%s'", specific_ag)
+                    msg = "Autoguider resolved as '%s'" % specific_ag
+                    log.debug(msg)
+                    ur_log.debug(msg, self.tracking_number)
                 else:
                     specific_ag = molecule.ag_name
-                    log.debug("Using provided autoguider '%s'", specific_ag)
+                    msg = "Using provided autoguider '%s'" % specific_ag
+                    log.debug(msg)
+                    ur_log.debug(msg, self.tracking_number)
 
                 obs.ag_name = specific_ag
 
@@ -274,6 +287,7 @@ def send_blocks_to_pond(blocks, dry_run=False):
         else:
             msg = "Sent " + msg
         log.debug(msg)
+        ur_log.info(msg, block.tracking_number)
 
 
     if not dry_run:
@@ -453,7 +467,9 @@ def get_deletable_blocks(start, end, site, obs, tel):
                                                               start, end)
     log.info("%d/%d were placed by the scheduler and will be deleted", len(to_delete),
                                                                        len(schedule.blocks))
-    log.debug([b.tracking_num_set() for b in to_delete])
+    if to_delete:
+        to_delete_nums = [b.tracking_num_set() for b in to_delete]
+        log.debug("Deleting: %s", to_delete_nums)
 
     return to_delete
 

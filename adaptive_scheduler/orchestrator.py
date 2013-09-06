@@ -25,7 +25,8 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  filter_for_kernel,
                                                  construct_global_availability )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
-from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations )
+from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations,
+                                          summarise_urs, log_full_ur, log_windows)
 from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks )
@@ -34,7 +35,7 @@ from adaptive_scheduler.semester_service import get_semester_block, get_semester
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.utils import timeit
-from adaptive_scheduler.log   import UserRequestLogger, UserRequestHandler
+from adaptive_scheduler.log   import UserRequestLogger
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -167,8 +168,8 @@ def collapse_requests(requests):
                                                                   depth_finder.max_depth)
 
             else:
-                log.debug("Request %d has depth %d - continuing.", i,
-                                                                  depth_finder.max_depth)
+#                log.debug("Request %d has depth %d - continuing.", i,
+#                                                                  depth_finder.max_depth)
                 collapsed_reqs.append(tc.collapsed_tree)
 
         else:
@@ -176,25 +177,6 @@ def collapse_requests(requests):
 
 
     return collapsed_reqs
-
-
-def summarise_urs(user_reqs):
-    log.debug("User Request breakdown:")
-    for ur in user_reqs:
-        r_nums  = [r.request_number for r in ur.requests]
-        w_total = sum([r.n_windows() for r in ur.requests])
-        _, w_str = pl(w_total, 'Window')
-        r_total, r_str = pl(len(ur.requests), 'Request')
-        r_states = [r.received_state for r in ur.requests]
-
-        sum_str = '%s: %s (%d %s, %d %s) %s'
-        log.debug(sum_str, ur.tracking_number, r_nums,
-                  r_total, r_str, w_total, w_str, r_states)
-        msg = "Received from Request DB " + sum_str
-#        ur_log.info(msg % (ur.tracking_number, r_nums,
-#                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
-
-    return
 
 
 def update_telescope_events(tels, current_events):
@@ -240,7 +222,10 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         user_reqs.append(user_req)
 
     # Summarise the User Requests we've received
-    summarise_urs(user_reqs)
+    summarise_urs(user_reqs, log_msg="Received from Request DB")
+    for ur in user_reqs:
+        log_full_ur(ur)
+        log_windows(ur, log_msg="Initial windows:")
 
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
@@ -251,19 +236,29 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     update_telescope_events(tels, current_events)
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
+    log.info("Filtering for unschedulability")
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
+    log.info("Completed unschedulable filters")
+    summarise_urs(user_reqs, log_msg="Passed unschedulable filters:")
+    for ur in user_reqs:
+        log_windows(ur, log_msg="Remaining windows:")
 
     # Construct visibility objects for each telescope
+    log.info("Constructing telescope visibilities")
     if not visibility_from:
         visibility_from = construct_visibilities(tels, semester_start, semester_end)
 
 
     # Do another check on duration and operator soundness, after dark/rise checking
+    log.info("Filtering on dark/rise_set")
     user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
                                   now, semester_end, scheduling_horizon)
+    log.info("Completed dark/rise_set filters")
+    summarise_urs(user_reqs, log_msg="Passed dark/rise filters:")
+    for ur in user_reqs:
+        log_windows(ur, log_msg="Remaining windows:")
 
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
-    summarise_urs(user_reqs)
 
     # Remove running blocks from consideration, and get the availability edge
     user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
@@ -293,6 +288,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     contractual_obligations = []
 
+    log.info("Instantiating and running kernel")
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
