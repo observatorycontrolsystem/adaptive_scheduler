@@ -382,6 +382,10 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
 
             blocks.append(block)
 
+    send_blocks_to_pond(blocks, dry_run)
+
+    # Summarise what was supposed to have been sent
+    # TODO: Get this from send_blocks_to_pond, since some blocks might not make it
     n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
@@ -389,8 +393,6 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
         log_info_dry_run(msg, dry_run)
         n_submitted_total += n_submitted
-
-    send_blocks_to_pond(blocks, dry_run)
 
 
     return n_submitted_total
