@@ -78,8 +78,12 @@ class Target(DataContainer):
     ra  = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
+    def __repr__(self):
+        return "Target(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
+
 
 class Constraints(DataContainer):
+    #TODO: Make this a named tuple
     def __init__(self, *args, **kwargs):
         self.max_airmass        = None
         self.min_lunar_distance = None
@@ -87,6 +91,10 @@ class Constraints(DataContainer):
         self.max_seeing         = None
         self.min_transparency   = None
         DataContainer.__init__(self, *args, **kwargs)
+
+
+    def __repr__(self):
+        return "Constraints(airmass=%s)" % self.max_airmass
 
 class Molecule(DataContainer):
     #TODO: This is really an expose_n molecule, so should be specialised
@@ -123,6 +131,9 @@ class Window(DefaultMixin):
     def get_resource_name(self):
         return self.resource.name
 
+    def __repr__(self):
+        return "Window (%s, %s)" % (self.start, self.end)
+
 
 
 class Windows(DefaultMixin):
@@ -149,6 +160,12 @@ class Windows(DefaultMixin):
             all_windows += windows
 
         return len(all_windows)
+
+    def __iter__(self):
+        for resource_name, windows in self.windows_for_resource.iteritems():
+            yield resource_name, windows
+
+
 
 
 
