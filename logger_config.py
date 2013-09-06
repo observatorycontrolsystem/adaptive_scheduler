@@ -21,7 +21,7 @@ log.addHandler(sh)
 
 multi_ur_log = logging.getLogger('ur_logger')
 multi_ur_log.setLevel(logging.DEBUG)
-#log.propagate=False
+multi_ur_log.propagate=False
 
 uh = UserRequestHandler(tracking_number='0000000001', logdir='logs')
 uh.setLevel(logging.DEBUG)
