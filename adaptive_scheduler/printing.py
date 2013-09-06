@@ -9,6 +9,7 @@ December 2011
 '''
 
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
+from adaptive_scheduler.log   import UserRequestLogger
 from datetime import timedelta
 
 INDENT = "    "
@@ -16,6 +17,54 @@ INDENT = "    "
 # Set up and configure a module scope logger
 import logging
 log = logging.getLogger(__name__)
+
+
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
+
+
+def summarise_urs(user_reqs, log_msg):
+    log.debug("User Request breakdown:")
+    for ur in user_reqs:
+        r_nums  = [r.request_number for r in ur.requests]
+        w_total = sum([r.n_windows() for r in ur.requests])
+        _, w_str = pluralise(w_total, 'Window')
+        r_total, r_str = pluralise(len(ur.requests), 'Request')
+        r_states = [r.received_state for r in ur.requests]
+
+        sum_str = ' %s: %s (%d %s, %d %s) %s'
+        log.debug(sum_str, ur.tracking_number, r_nums,
+                  r_total, r_str, w_total, w_str, r_states)
+        msg = log_msg + sum_str
+        ur_log.info(msg % (ur.tracking_number, r_nums,
+                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
+
+    return
+
+def log_windows(ur, log_msg):
+    for r in ur.requests:
+        for w in r.windows:
+            ur_log.info("%s %s" % (log_msg, w), ur.tracking_number)
+
+
+def log_full_ur(ur):
+    ur_log.info("Total duration = %s" % ur.duration, ur.tracking_number)
+    ur_log.info("Expires = %s" % ur.expires, ur.tracking_number)
+    ur_log.info("Priority = %s" % ur.priority, ur.tracking_number)
+    ur_log.info("Operator = %s" % ur.operator, ur.tracking_number)
+    ur_log.info("Scheduling horizon = %s" % ur.scheduling_horizon(), ur.tracking_number)
+
+    for r in ur.requests:
+        ur_log.info("Request %s: duration = %ss" % (r.request_number, r.duration),
+                    ur.tracking_number)
+        ur_log.info("Request %s: target = %s" % (r.request_number, r.target),
+                    ur.tracking_number)
+        ur_log.info("Request %s: constraints = %s" % (r.request_number, r.constraints),
+                    ur.tracking_number)
+
+
+
+
 
 def print_reservation(res):
     log.debug(res)
