@@ -374,7 +374,6 @@ def build_block(reservation, request, compound_request, semester_start):
 def send_schedule_to_pond(schedule, semester_start, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
-    n_submitted_total = 0
     blocks = []
     for resource_name in schedule:
         for reservation in schedule[resource_name]:
@@ -382,13 +381,14 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
                                 reservation.compound_request, semester_start)
 
             blocks.append(block)
-        n_submitted_total += n_submitted
 
+    n_submitted_total = 0
     for resource_name in schedule:
         n_submitted = len(schedule[resource_name])
         _, block_str = pl(n_submitted, 'block')
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
         log_info_dry_run(msg, dry_run)
+        n_submitted_total += n_submitted
 
     send_blocks_to_pond(blocks, dry_run)
 
