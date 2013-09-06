@@ -62,6 +62,7 @@ class RequestBuilder(object):
              'exposure_time'   : 600,         # Exposure time, in secs
              'exposure_count'  : 2,           # The number of consecutive exposures
              'filter'          : 'V',         # The generic filter name
+             'type'            : 'STANDARD',
            }
         self.global_start = global_start
         self.global_end   = global_end

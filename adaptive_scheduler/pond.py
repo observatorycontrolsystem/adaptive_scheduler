@@ -34,7 +34,7 @@ from adaptive_scheduler.printing       import pluralise as pl
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import Expose
+from lcogtpond.molecule                import Expose, Standard
 from lcogtpond.schedule                import Schedule
 from adaptive_scheduler.log            import UserRequestLogger
 
@@ -199,25 +199,62 @@ class Block(object):
             if not molecule.defocus:
                 molecule.defocus = 0.0
 
-            obs = Expose.build(
-                                # Meta data
-                                tracking_num = self.tracking_number,
-                                request_num  = self.request_number,
-                                tag = self.proposal.tag_id,
-                                user = self.proposal.observer_name,
-                                proposal = self.proposal.proposal_id,
-                                group = self.group_id,
-                                # Observation details
-                                exp_cnt  = molecule.exposure_count,
-                                exp_time = molecule.exposure_time,
-                                # TODO: Allow bin_x and bin_y
-                                bin = molecule.bin_x,
-                                inst_name = specific_camera,
-                                filters = molecule.filter,
-                                pointing = pond_pointing,
-                                priority = molecule.priority,
-                                defocus  = molecule.defocus,
-                              )
+
+            # Create a Standard molecule if that was specified
+            if molecule.type.upper() == 'STANDARD':
+                msg = "Creating a STANDARD molecule"
+                ur_log.debug(msg, self.tracking_number)
+                obs = Standard.build(
+                                    # Meta data
+                                    tracking_num = self.tracking_number,
+                                    request_num  = self.request_number,
+                                    tag = self.proposal.tag_id,
+                                    user = self.proposal.observer_name,
+                                    proposal = self.proposal.proposal_id,
+                                    group = self.group_id,
+                                    # Observation details
+                                    exp_cnt  = molecule.exposure_count,
+                                    exp_time = molecule.exposure_time,
+                                    # TODO: Allow bin_x and bin_y
+                                    bin = molecule.bin_x,
+                                    inst_name = specific_camera,
+                                    filters = molecule.filter,
+                                    pointing = pond_pointing,
+                                    priority = molecule.priority,
+                                    defocus  = molecule.defocus,
+                                  )
+
+            # Otherwise, default to creating an Expose molecule
+            else:
+                # Note if an unsupported type was provided
+                if not molecule.type.upper() == 'EXPOSE':
+                    msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % molecule.type
+                    log.warn(msg)
+                    ur_log.warn(msg, self.tracking_number)
+                else:
+                    msg = "Creating a STANDARD molecule"
+                    ur_log.debug(msg, self.tracking_number)
+
+
+                obs = Expose.build(
+                                    # Meta data
+                                    tracking_num = self.tracking_number,
+                                    request_num  = self.request_number,
+                                    tag = self.proposal.tag_id,
+                                    user = self.proposal.observer_name,
+                                    proposal = self.proposal.proposal_id,
+                                    group = self.group_id,
+                                    # Observation details
+                                    exp_cnt  = molecule.exposure_count,
+                                    exp_time = molecule.exposure_time,
+                                    # TODO: Allow bin_x and bin_y
+                                    bin = molecule.bin_x,
+                                    inst_name = specific_camera,
+                                    filters = molecule.filter,
+                                    pointing = pond_pointing,
+                                    priority = molecule.priority,
+                                    defocus  = molecule.defocus,
+                                  )
 
             # Resolve the Autoguider if necessary
             if molecule.ag_mode != 'OFF':
