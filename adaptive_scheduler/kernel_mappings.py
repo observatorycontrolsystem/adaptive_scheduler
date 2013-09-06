@@ -139,18 +139,20 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         try:
             assert(rs_up_intervals == rs_up_no_cache)
         except AssertionError as e:
-            # TODO: This Req number hack will break once CRs are introduced!
-            msg = "Cache violation detected: Request number=%s" % req.request_number
-            log.error(msg)
-            ur_log.error(msg, req.request_number)
+            # Only log this if it's a collision
+            if rs_up_intervals:
+                # TODO: This Req number hack will break once CRs are introduced!
+                msg = "Cache violation detected: Request number=%s" % req.request_number
+                log.error(msg)
+                ur_log.error(msg, req.request_number)
 
-            msg = "Cached intervals = %s" % rs_up_intervals
-            log.error(msg)
-            ur_log.error(msg, req.request_number)
+                msg = "Cached intervals = %s" % rs_up_intervals
+                log.error(msg)
+                ur_log.error(msg, req.request_number)
 
-            msg = "Uncached intervals = %s" % rs_up_no_cache
-            log.error(msg)
-            ur_log.error(msg, req.request_number)
+                msg = "Uncached intervals = %s" % rs_up_no_cache
+                log.error(msg)
+                ur_log.error(msg, req.request_number)
 
 
         # Convert the rise_set intervals into kernel speak
