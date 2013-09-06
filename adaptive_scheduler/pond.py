@@ -126,7 +126,7 @@ class Block(object):
         # Check we have everything we need
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
-            raise IncompleteBlockError(missing_fields)
+            raise IncompleteBlockError(str(missing_fields))
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock

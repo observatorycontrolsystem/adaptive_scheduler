@@ -43,6 +43,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 filter_out_future_windows,
                                                 log_windows)
 from adaptive_scheduler.memoize import Memoize
+from adaptive_scheduler.log   import UserRequestLogger
 
 import math
 
