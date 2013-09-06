@@ -137,11 +137,13 @@ if __name__ == '__main__':
     SIX_MONTHS = timedelta(days=180)
 
     # We expect RA range 1-13 to be visible
-    SEMESTER_2013B_START = datetime(2013, 10, 1)
+#    SEMESTER_2013B_START = datetime(2013, 10, 1)
+    SEMESTER_2013B_START = datetime(2013, 9, 4)
 
 #    start_date = datetime.utcnow() + TWO_MONTHS
     start_date = SEMESTER_2013B_START
-    end_date   = start_date + SIX_MONTHS
+#    end_date   = start_date + SIX_MONTHS
+    end_date   = start_date + TWO_WEEKS
 
 #    locations = file_to_dicts('telescopes.dat.max_1ms')
 
