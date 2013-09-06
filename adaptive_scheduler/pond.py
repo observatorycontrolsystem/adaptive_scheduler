@@ -232,7 +232,7 @@ class Block(object):
                     log.warn(msg)
                     ur_log.warn(msg, self.tracking_number)
                 else:
-                    msg = "Creating a STANDARD molecule"
+                    msg = "Creating an EXPOSE molecule"
                     ur_log.debug(msg, self.tracking_number)
 
 
