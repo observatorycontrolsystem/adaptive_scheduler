@@ -50,6 +50,9 @@ import math
 import logging
 log = logging.getLogger(__name__)
 
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
+
 def target_to_rise_set_target(target):
     '''Convert scheduler Target to rise_set target dict.'''
 
@@ -126,6 +129,28 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
                                                               up=True,
                                                               airmass=req.constraints.max_airmass)
 
+        # TODO: Remove this once caching is fixed - it is slow
+        # Check the uncached calculation matches
+        rs_up_no_cache = visibility_from[resource_name][0].get_target_intervals(
+                                                  target=rs_target,
+                                                  up=True,
+                                                  airmass=req.constraints.max_airmass)
+        try:
+            assert(rs_up_intervals == rs_up_no_cache)
+        except AssertionError as e:
+            # TODO: This Req number hack will break once CRs are introduced!
+            msg = "Cache violation detected: Request number=%s" % req.request_number
+            log.error(msg)
+            ur_log.error(msg, req.request_number)
+
+            msg = "Cached intervals = %s" % rs_up_intervals
+            log.error(msg)
+            ur_log.error(msg, req.request_number)
+
+            msg = "Uncached intervals = %s" % rs_up_no_cache
+            log.error(msg)
+            ur_log.error(msg, req.request_number)
+
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
@@ -139,11 +164,6 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         user_intervals = req_window_to_kernel_intervals(user_windows)
         intersection   = intersection.intersect([user_intervals])
         intersections_for_resource[resource_name] = intersection
-
-        # Print some summary info
-        if verbose==True:
-            print_req_summary(req, resource_name, user_intervals,
-                              rs_dark_intervals, rs_up_intervals, intersection)
 
 
     return intersections_for_resource
