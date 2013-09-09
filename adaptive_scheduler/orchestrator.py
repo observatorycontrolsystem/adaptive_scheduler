@@ -251,6 +251,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     # Do another check on duration and operator soundness, after dark/rise checking
     log.info("Filtering on dark/rise_set")
+
     user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
                                   now, semester_end, scheduling_horizon)
     log.info("Completed dark/rise_set filters")
