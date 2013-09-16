@@ -26,12 +26,6 @@ from adaptive_scheduler.request_filters import (
 def get_windows_from_request(request, resource_name):
     return request.windows.windows_for_resource[resource_name]
 
-def fake_get_duration_as_timedelta(self):
-    return timedelta(hours=1)
-
-def fake_get_duration_as_float(self):
-    # One hour, in seconds
-    return 3600.0
 
 class TestExpiryFilter(object):
 
@@ -310,9 +304,9 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration_as_timedelta)
-
-        received_ur_list = filter_on_duration([ur1])
+        with patch.object(Request, 'duration') as mock_duration:
+            mock_duration.__get__ = Mock(return_value=3600.0)
+            received_ur_list = filter_on_duration([ur1])
 
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
@@ -330,9 +324,9 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration_as_float)
-
-        received_ur_list = filter_on_duration([ur1])
+        with patch.object(Request, 'duration') as mock_duration:
+            mock_duration.__get__ = Mock(return_value=3600.0)
+            received_ur_list = filter_on_duration([ur1])
 
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
@@ -350,7 +344,9 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration_as_timedelta)
+        with patch.object(Request, 'duration') as mock_duration:
+            mock_duration.__get__ = Mock(return_value=3600.0)
+            received_ur_list = filter_on_duration([ur1])
 
         received_ur_list = filter_on_duration([ur1])
 
@@ -370,9 +366,9 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
 
-        UserRequest.duration = property(fake_get_duration_as_float)
-
-        received_ur_list = filter_on_duration([ur1])
+        with patch.object(Request, 'duration') as mock_duration:
+            mock_duration.__get__ = Mock(return_value=3600.0)
+            received_ur_list = filter_on_duration([ur1])
 
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
@@ -517,6 +513,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
         ur1.expires = datetime(2013, 12, 1)
-        received_ur_list = run_all_filters([ur1])
+        with patch.object(Request, 'duration') as mock_duration:
+            mock_duration.__get__ = Mock(return_value=3600.0)
+            received_ur_list = run_all_filters([ur1])
 
         assert_equal(len(received_ur_list), 1)
