@@ -18,10 +18,12 @@ from datetime import datetime, timedelta
 
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
-from adaptive_scheduler.model2          import ModelBuilder
+from adaptive_scheduler.model2          import ( ModelBuilder, filter_out_compounds,
+                                                 differentiate_by_type )
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
+                                                 make_many_type_compound_reservations,
                                                  filter_for_kernel,
                                                  construct_global_availability )
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
@@ -195,7 +197,8 @@ def update_telescope_events(tels, current_events):
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
-                  current_events, visibility_from=None, dry_run=False):
+                  current_events, visibility_from=None, dry_run=False, no_weather=False,
+                  no_compounds=False):
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
@@ -224,8 +227,14 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     # Summarise the User Requests we've received
     summarise_urs(user_reqs, log_msg="Received from Request DB")
     for ur in user_reqs:
-        log_full_ur(ur)
+        log_full_ur(ur, now)
         log_windows(ur, log_msg="Initial windows:")
+
+
+    if no_compounds:
+        log.info("Compound Request support (and/oneof/many) disabled at the command line")
+        log.info("Only Compound Requests of type 'single' will be considered")
+        user_reqs = filter_out_compounds(user_reqs)
 
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
@@ -233,7 +242,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     for t in sorted(tels):
         log.debug(str(t))
 
-    update_telescope_events(tels, current_events)
+    # Look for weather events unless weather monitoring has been disabled
+    if no_weather:
+        log.info("Weather monitoring disabled on the command line")
+    else:
+        update_telescope_events(tels, current_events)
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
     log.info("Filtering for unschedulability")
@@ -265,8 +278,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
 
     # Convert CompoundRequests -> CompoundReservations
-    to_schedule = make_compound_reservations(user_reqs, visibility_from,
-                                             semester_start)
+    many_urs, other_urs = differentiate_by_type('many', user_reqs)
+    to_schedule_many  = make_many_type_compound_reservations(many_urs, visibility_from,
+                                                            semester_start)
+    to_schedule_other = make_compound_reservations(other_urs, visibility_from, semester_start)
+    to_schedule = to_schedule_many + to_schedule_other
 
     # Translate when telescopes are available into kernel speak
     resource_windows = construct_resource_windows(visibility_from, semester_start)

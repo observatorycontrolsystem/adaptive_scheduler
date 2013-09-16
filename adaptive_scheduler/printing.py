@@ -47,12 +47,12 @@ def log_windows(ur, log_msg):
             ur_log.info("%s %s" % (log_msg, w), ur.tracking_number)
 
 
-def log_full_ur(ur):
+def log_full_ur(ur, now):
     ur_log.info("Total duration = %s" % ur.duration, ur.tracking_number)
     ur_log.info("Expires = %s" % ur.expires, ur.tracking_number)
     ur_log.info("Priority = %s" % ur.priority, ur.tracking_number)
     ur_log.info("Operator = %s" % ur.operator, ur.tracking_number)
-    ur_log.info("Scheduling horizon = %s" % ur.scheduling_horizon(), ur.tracking_number)
+    ur_log.info("Scheduling horizon = %s" % ur.scheduling_horizon(now), ur.tracking_number)
 
     for r in ur.requests:
         ur_log.info("Request %s: duration = %ss" % (r.request_number, r.duration),

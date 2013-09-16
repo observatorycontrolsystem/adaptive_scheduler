@@ -94,6 +94,10 @@ def parse_args(argv):
                             help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
     arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat',
                             help="Available telescopes file (default=telescopes.dat)")
+    arg_parser.add_argument("-w", "--noweather", action="store_true",
+                            help="Disable weather checking")
+    arg_parser.add_argument("-c", "--nocompounds", action="store_true",
+                            help="Disable support for and/oneof/many Request types")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
 
@@ -179,7 +183,9 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
         visibility_from = run_scheduler(requests, scheduler_client, now,
                                         semester_start, semester_end,
                                         args.telescopes, current_events,
-                                        visibility_from, dry_run=args.dry_run)
+                                        visibility_from, dry_run=args.dry_run,
+                                        no_weather=args.noweather,
+                                        no_compounds=args.nocompounds)
     else:
         log.warn("Received no User Requests! Skipping this scheduling cycle")
     sys.stdout.flush()

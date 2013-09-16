@@ -3,12 +3,14 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (Telescope, Target, Request, Window, Windows,
-                                       Molecule, Constraints)
+from adaptive_scheduler.model2 import (Telescope, Target, Request, CompoundRequest,
+                                       Window, Windows, Molecule, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
                                       normalised_epoch_to_datetime)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
+                                                construct_compound_reservation,
+                                                construct_many_compound_reservation,
                                                 rise_set_to_kernel_intervals,
                                                 make_dark_up_kernel_intervals,
                                                 construct_global_availability,
@@ -47,7 +49,13 @@ class TestKernelMappings(object):
                               dec = 45.280338888888885
                             )
 
-        self.mol = Molecule()
+        self.mol = Molecule(
+                             filter ='B',
+                             bin_x  = 2,
+                             bin_y  = 2,
+                             exposure_count = 1,
+                             exposure_time  = 30,
+                           )
 
 
     def make_constrained_request(self, airmass=None):
@@ -73,6 +81,84 @@ class TestKernelMappings(object):
                       )
 
         return req
+
+
+    def make_compound_request(self, requests, operator):
+        cr = CompoundRequest(
+                              operator = operator,
+                              requests = requests
+                            )
+
+        return cr
+
+
+    def make_intersection_dict(self):
+        timepoints = [
+                       Timepoint(
+                                  time= datetime(2011, 11, 1, 6, 0, 0),
+                                  type='start'
+                                ),
+                       Timepoint(
+                                  time= datetime(2011, 11, 1, 7, 0, 0),
+                                  type='end'
+                                ),
+                     ]
+        intervals = Intervals(timepoints)
+
+        intersection_dict = {
+                              '1m0a.doma.coj' : intervals
+                            }
+
+        return intersection_dict
+
+
+    def make_dt_intervals_list(self):
+        dt_intervals_list = [
+                              self.make_intersection_dict(),
+                              self.make_intersection_dict(),
+                            ]
+
+        return dt_intervals_list
+
+    def test_construct_compound_reservation(self):
+        request           = self.make_constrained_request()
+        requests          = [request, request]
+        operator          = 'and'
+        compound_request  = self.make_compound_request(requests, operator)
+        dt_intervals_list = self.make_dt_intervals_list()
+        sem_start         = self.start
+
+        #TODO: Replace with cleaner mock patching
+        compound_request.priority = 1
+
+        received = construct_compound_reservation(compound_request,
+                                                  dt_intervals_list,
+                                                  sem_start)
+
+        assert_equal(len(received.reservation_list), len(requests))
+        assert_equal(received.type, operator)
+
+
+    def test_construct_many_compound_reservation(self):
+        request           = self.make_constrained_request()
+        requests          = [request, request]
+        operator          = 'many'
+        compound_request  = self.make_compound_request(requests, operator)
+        intersection_dict = self.make_intersection_dict()
+        sem_start         = self.start
+
+        #TODO: Replace with cleaner mock patching
+        compound_request.priority = 1
+
+        received = construct_many_compound_reservation(
+                                               compound_request,
+                                               child_idx=0,
+                                               intersection_dict=intersection_dict,
+                                               sem_start=sem_start)
+
+        assert_equal(len(received.reservation_list), 1)
+        assert_equal(received.type, 'single')
+
 
 
     def test_make_dark_up_kernel_intervals(self):

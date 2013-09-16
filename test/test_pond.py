@@ -271,7 +271,8 @@ class TestPondInteractions(object):
 
 
     @patch('lcogtpond.block.Block.save_blocks')
-    def test_dont_send_blocks_if_dry_run(self, mock_func):
+    @patch('adaptive_scheduler.pond.ur_log')
+    def test_dont_send_blocks_if_dry_run(self, mock_func, mock_func2):
         dry_run = True
 
         blocks = [Mock()]
