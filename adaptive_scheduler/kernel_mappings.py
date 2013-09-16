@@ -37,7 +37,7 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
                                           epoch_to_datetime, timeit )
 from adaptive_scheduler.printing import print_req_summary
-from adaptive_scheduler.model2   import Window, Windows
+from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
@@ -173,7 +173,7 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
 
 
 def construct_compound_reservation(compound_request, dt_intervals_list, sem_start):
-    '''Convert a CompoundRequest into a CompoundReservation, translating datetimes
+    '''Convert a UserRequest into a CompoundReservation, translating datetimes
        to kernel epoch times.
     '''
 
@@ -182,29 +182,18 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     for intersection_dict in dt_intervals_list:
 
         request = compound_request.requests[idx]
-        window_dict = {}
 
-        # Build the normalised Windows data structure for the kernel
-        for resource_name, dark_up_intervals in intersection_dict.iteritems():
-            # Convert timepoints into normalised epoch time
-            epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
-
-            # Construct Reservations
-            # Priority comes from the parent CompoundRequest
-            # Each Reservation represents the set of available windows of opportunity
-            # The resource is governed by the timepoint.resource attribute
-            window_dict[resource_name] = epoch_intervals
+        window_dict = translate_request_windows_to_kernel_windows(intersection_dict,
+                                                                  sem_start)
 
         # Construct the kernel Reservation
-        reservations.append( Reservation(compound_request.priority,
-                                         request.duration,
-                                         window_dict
-                                         ) )
-
+        res = Reservation(compound_request.priority, request.duration, window_dict)
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack
-        reservations[-1].compound_request = compound_request
-        reservations[-1].request          = request
+        res.compound_request = compound_request
+        res.request          = request
+
+        reservations.append(res)
 
         idx += 1
 
@@ -213,6 +202,45 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
     compound_res = CompoundReservation(reservations, compound_request.operator)
 
     return compound_res
+
+def construct_many_compound_reservation(many_c_req, child_idx,
+                                        intersection_dict, sem_start):
+    '''Take a Request child of a CompoundRequest of type 'many', and convert it into
+       a CompoundReservation of type 'single', translating datetimes to kernel epoch times.
+    '''
+
+    request = many_c_req.requests[child_idx]
+    window_dict = translate_request_windows_to_kernel_windows(intersection_dict,
+                                                              sem_start)
+
+    # Construct the kernel Reservation
+    res = Reservation(many_c_req.priority, request.duration, window_dict)
+    # Store the original requests for recovery after scheduling
+    # TODO: Do this with a field provided for this purpose, not this hack
+    res.compound_request = many_c_req
+    res.request          = request
+
+    # Create a CR of type 'single' for kernel scheduling
+    compound_res = CompoundReservation([res], 'single')
+
+    return compound_res
+
+
+def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
+    window_dict = {}
+
+    # Build the normalised Windows data structure for the kernel
+    for resource_name, dark_up_intervals in intersection_dict.iteritems():
+        # Convert timepoints into normalised epoch time
+        epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
+
+        # Construct Reservations
+        # Priority comes from the parent CompoundRequest
+        # Each Reservation represents the set of available windows of opportunity
+        # The resource is governed by the timepoint.resource attribute
+        window_dict[resource_name] = epoch_intervals
+
+    return window_dict
 
 
 @timeit
@@ -225,12 +253,30 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
         if the network subsequently changes (e.g. a telescope becomes available), then the Request
         may then be schedulable.
     '''
+    singles, compounds = differentiate_by_type('single', crs)
+    log.info("Identified %d singles" % len(singles))
+    log.info("Identified %d compounds" % len(compounds))
 
     # Filter windows that are beyond the short-term scheduling horizon
-    crs = truncate_upper_crossing_windows(crs, horizon=scheduling_horizon)
-    crs = filter_out_future_windows(crs, horizon=scheduling_horizon)
+    log.info("Filtering URs of type 'single'")
+    singles = truncate_upper_crossing_windows(singles, horizon=scheduling_horizon)
+    singles = filter_out_future_windows(singles, horizon=scheduling_horizon)
     # Clean up Requests without any windows
-    crs = filter_on_type(crs)
+    singles = filter_on_type(singles)
+    log.info("After filtering, %d singles remain" % len(singles))
+
+
+    # Compounds (and/oneof/many) are not constrained to the short-term scheduling horizon
+    log.info("Filtering compound URs of type 'and', 'oneof' or 'many'")
+    compounds = truncate_upper_crossing_windows(compounds)
+    compounds = filter_out_future_windows(compounds)
+    # Clean up Requests without any windows
+    compounds = filter_on_type(compounds)
+    log.info("After filtering, %d compounds remain" % len(compounds))
+
+    crs = singles + compounds
+    log.info("After filtering all singles and compounds, %d URs remain" % len(crs))
+
 
     # Filter on rise_set/airmass
     crs = filter_on_visibility(crs, visibility_from)
@@ -276,23 +322,50 @@ def intervals_to_windows(req, intersections_for_resource):
 
 @timeit
 def make_compound_reservations(compound_requests, visibility_from, semester_start):
-    '''Parse a list of compoundRequests, and produce a corresponding list of
+    '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
 
     # TODO: Generalise to handle arbitrary nesting.
     to_schedule = []
     for c_req in compound_requests:
 
-        # Find the dark/up intervals for each Request in this CompoundRequest
-        dark_ups = []
-        for req in c_req.requests:
-            intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
-                                                                       verbose=False)
-            dark_ups.append(intersections_for_resource)
+        dark_ups = find_dark_ups_of_children(c_req, visibility_from)
 
         # Make and store the CompoundReservation
         compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)
         to_schedule.append(compound_res)
+
+    return to_schedule
+
+
+def find_dark_ups_of_children(c_req, visibility_from):
+    # Find the dark/up intervals for each Request in this CompoundRequest
+    dark_ups = []
+    for req in c_req.requests:
+        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+                                                                   verbose=False)
+        dark_ups.append(intersections_for_resource)
+
+    return dark_ups
+
+
+@timeit
+def make_many_type_compound_reservations(many_compound_requests, visibility_from,
+                                         semester_start):
+    '''Parse a list of CompoundRequests of type 'many', and produce a corresponding
+       list of CompoundReservations. Each 'many' will produce one CompoundReservation
+       per Request child.'''
+    to_schedule = []
+    for many_c_req in many_compound_requests:
+        dark_ups = find_dark_ups_of_children(many_c_req, visibility_from)
+
+        # Produce a distinct CR for each R in a 'many'
+        # We do this because the kernel knows nothing about 'many', and will treat
+        # the scheduling of the children as completely independent
+        for child_idx, dark_up in enumerate(dark_ups):
+            compound_res = construct_many_compound_reservation(many_c_req, child_idx,
+                                                               dark_up, semester_start)
+            to_schedule.append(compound_res)
 
     return to_schedule
 
