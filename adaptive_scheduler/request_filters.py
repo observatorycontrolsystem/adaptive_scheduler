@@ -147,7 +147,7 @@ def run_all_filters(ur_list):
 @log_windows
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
-    filter_test = lambda w, ur: w.end > now
+    filter_test = lambda w, ur, r: w.end > now
 
     return _for_all_ur_windows(ur_list, filter_test)
 
@@ -157,7 +157,7 @@ def truncate_lower_crossing_windows(ur_list):
     '''Case 2: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
 
-    def truncate_lower_crossing(w, ur):
+    def truncate_lower_crossing(w, ur, r):
         if w.start < now < w.end:
             w.start = now
 
@@ -176,7 +176,7 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
 
     global now
 
-    def truncate_upper_crossing(w, ur):
+    def truncate_upper_crossing(w, ur, r):
         effective_horizon = ur.scheduling_horizon(now)
         if horizon:
             if horizon < effective_horizon:
@@ -197,7 +197,7 @@ def filter_out_future_windows(ur_list, horizon=None):
 
     global now
 
-    def filter_on_future(w, ur):
+    def filter_on_future(w, ur, r):
         effective_horizon = ur.scheduling_horizon(now)
         if horizon:
             if horizon < effective_horizon:
@@ -207,18 +207,18 @@ def filter_out_future_windows(ur_list, horizon=None):
 
     filter_test = filter_on_future
 
-    return _for_all_ur_windows(ur_list, filter_test)
+    return  _for_all_ur_windows(ur_list, filter_test)
 
 
 @log_windows
 def filter_on_duration(ur_list):
-    '''Case 6: Return only windows which are larger than the UR's duration.'''
-    def filter_on_duration(w, ur):
+    '''Case 6: Return only windows which are larger than the UR's child R durations.'''
+    def filter_on_duration(w, ur, r):
         # Transparently handle either float (in seconds) or datetime durations
         try:
-            duration = timedelta(seconds=ur.duration)
+            duration = timedelta(seconds=r.duration)
         except TypeError as e:
-            duration = ur.duration
+            duration = r.duration
 
         return w.end - w.start > duration
 
