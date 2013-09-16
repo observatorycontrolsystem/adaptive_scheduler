@@ -36,7 +36,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
                                           epoch_to_datetime, timeit )
-from adaptive_scheduler.printing import print_req_summary
+from adaptive_scheduler.printing import print_req_summary, plural_str as pl
 from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
@@ -129,31 +129,6 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         rs_up_intervals   = visibility_from[resource_name][2](target=rs_target,
                                                               up=True,
                                                               airmass=req.constraints.max_airmass)
-
-        # TODO: Remove this once caching is fixed - it is slow
-        # Check the uncached calculation matches
-        rs_up_no_cache = visibility_from[resource_name][0].get_target_intervals(
-                                                  target=rs_target,
-                                                  up=True,
-                                                  airmass=req.constraints.max_airmass)
-        try:
-            assert(rs_up_intervals == rs_up_no_cache)
-        except AssertionError as e:
-            # Only log this if it's a collision
-            if rs_up_intervals:
-                # TODO: This Req number hack will break once CRs are introduced!
-                msg = "Cache violation detected: Request number=%s" % req.request_number
-                log.error(msg)
-                ur_log.error(msg, req.request_number)
-
-                msg = "Cached intervals = %s" % rs_up_intervals
-                log.error(msg)
-                ur_log.error(msg, req.request_number)
-
-                msg = "Uncached intervals = %s" % rs_up_no_cache
-                log.error(msg)
-                ur_log.error(msg, req.request_number)
-
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
@@ -254,8 +229,8 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
         may then be schedulable.
     '''
     singles, compounds = differentiate_by_type('single', crs)
-    log.info("Identified %d singles" % len(singles))
-    log.info("Identified %d compounds" % len(compounds))
+    log.info("Identified %s" % pl(len(singles), 'single'))
+    log.info("Identified %s" % pl(len(compounds), 'compound'))
 
     # Filter windows that are beyond the short-term scheduling horizon
     log.info("Filtering URs of type 'single'")

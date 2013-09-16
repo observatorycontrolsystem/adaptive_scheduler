@@ -423,8 +423,9 @@ def send_schedule_to_pond(schedule, semester_start, dry_run=False):
 
     # Summarise what was supposed to have been sent
     # TODO: Get this from send_blocks_to_pond, since some blocks might not make it
+    # The sorting is just a way to iterate through the output in a human-readable way
     n_submitted_total = 0
-    for resource_name in schedule:
+    for resource_name in sorted(schedule, key=lambda x: x[::-1]):
         n_submitted = len(schedule[resource_name])
         _, block_str = pl(n_submitted, 'block')
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)

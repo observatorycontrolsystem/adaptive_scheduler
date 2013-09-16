@@ -19,7 +19,7 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
 from adaptive_scheduler.model2          import ( ModelBuilder, filter_out_compounds,
-                                                 differentiate_by_type )
+                                                 differentiate_by_type, n_requests )
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
@@ -29,7 +29,8 @@ from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
 from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations,
                                           summarise_urs, log_full_ur, log_windows)
-from adaptive_scheduler.printing import pluralise as pl
+from adaptive_scheduler.printing import pluralise
+from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks )
 from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
@@ -210,7 +211,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
                                                      semester_end.strftime(date_fmt))
     log.info("Scheduling horizon is %s", scheduling_horizon.strftime(date_time_fmt))
 
-    log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
+    log.info("Received %s from Request DB", pl(len(requests), 'User Request'))
 
     # Collapse each request tree
     collapsed_reqs = collapse_requests(requests)
@@ -225,6 +226,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         user_reqs.append(user_req)
 
     # Summarise the User Requests we've received
+    n_urs, n_rs = n_requests(user_reqs)
+
+    log.info("Deserialised %s (%s) from Request DB", pl(n_urs, 'User Request'),
+                                                     pl(n_rs, 'Request'))
+
     summarise_urs(user_reqs, log_msg="Received from Request DB")
     for ur in user_reqs:
         log_full_ur(ur, now)
@@ -328,9 +334,10 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     if dry_run:
         log.info("(DRY-RUN: No delete or submit took place)")
     log.info("------------------")
-    log.info("Received %d %s from Request DB", *pl(len(requests), 'User Request'))
-    log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
-    log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
+    log.info("Received %s (%s) from Request DB", pl(n_urs, 'User Request'),
+                                                       pl(n_rs, 'Request'))
+    log.info("In total, deleted %d previously scheduled %s", *pluralise(n_deleted, 'block'))
+    log.info("Submitted %d new %s to the POND", *pluralise(n_submitted, 'block'))
     log.info("Scheduling complete.")
 
     return visibility_from

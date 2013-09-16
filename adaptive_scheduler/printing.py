@@ -74,6 +74,11 @@ def print_reservation(res):
     return
 
 
+def plural_str(n, string):
+    n, string = pluralise(n, string)
+    return "%d %s" % (n, string)
+
+
 def pluralise(n, string):
     if n != 1:
         string += 's'

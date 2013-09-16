@@ -24,6 +24,13 @@ import logging
 log = logging.getLogger(__name__)
 
 
+def n_requests(user_reqs):
+    n_urs  = len(user_reqs)
+    n_rs   = sum([ur.n_requests() for ur in user_reqs])
+
+    return n_urs, n_rs
+
+
 def filter_out_compounds(user_reqs):
     '''Given a list of UserRequests, return a list containing only UserRequests of
        type 'single'.'''
@@ -365,6 +372,10 @@ class CompoundRequest(DefaultMixin):
         for r in self.requests:
             for resource_name, windows in r.windows.windows_for_resource.items():
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self, r)]
+
+
+    def n_requests(self):
+        return len(self.requests)
 
 
     def n_windows(self):

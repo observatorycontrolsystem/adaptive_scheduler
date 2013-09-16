@@ -7,7 +7,7 @@ import logging
 from adaptive_scheduler.log import UserRequestHandler, UserRequestLogger
 
 log = logging.getLogger('adaptive_scheduler')
-log.setLevel(logging.DEBUG)
+log.setLevel(logging.INFO)
 log.propagate=False
 
 sh = logging.StreamHandler()
