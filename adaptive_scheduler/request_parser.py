@@ -55,7 +55,7 @@ class TreeCollapser(object):
         '''
 
         # Only allow a restricted set of types
-        valid_operators = ('single', 'and', 'oneof')
+        valid_operators = ('single', 'and', 'oneof', 'many')
         if node['operator'] not in valid_operators:
             error = "Provided operator '%s' is not one of %s." % (
                                                                    node['operator'],

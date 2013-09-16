@@ -23,6 +23,51 @@ import ast
 import logging
 log = logging.getLogger(__name__)
 
+
+def filter_out_compounds(user_reqs):
+    '''Given a list of UserRequests, return a list containing only UserRequests of
+       type 'single'.'''
+    single_urs = []
+    for ur in user_reqs:
+        if ur.operator != 'single':
+            msg = "UR %s is of type %s - removing from consideration" % (ur.tracking_number, ur.operator)
+            log.warning(msg)
+        else:
+            single_urs.append(ur)
+
+    return single_urs
+
+
+def filter_compounds_by_type(crs):
+    '''Given a list of CompoundRequests, Return a dictionary that sorts them by type.'''
+    crs_by_type = {
+                    'single' : [],
+                    'many'   : [],
+                    'and'    : [],
+                    'oneof'  : [],
+                  }
+
+    for cr in crs:
+        crs_by_type[cr.operator].append(cr)
+
+    return crs_by_type
+
+
+def differentiate_by_type(cr_type, crs):
+    '''Given an operator type and a list of CompoundRequests, split the list into two
+       lists, the chosen type, and the remainder.
+       Valid operator types are 'single', 'and', 'oneof', 'many'.'''
+    chosen_type = []
+    other_types = []
+    for cr in crs:
+        if cr.operator == cr_type:
+            chosen_type.append(cr)
+        else:
+            other_types.append(cr)
+
+    return chosen_type, other_types
+
+
 def file_to_dicts(filename):
     fh = open(filename, 'r')
     data = fh.read()
@@ -167,8 +212,6 @@ class Windows(DefaultMixin):
 
 
 
-
-
 class Proposal(DataContainer):
     def list_missing_fields(self):
         req_fields = ('proposal_id', 'user_id', 'tag_id', 'observer_name', 'priority')
@@ -281,7 +324,9 @@ class CompoundRequest(DefaultMixin):
         requests - a list of Request objects. There must be at least one.
     '''
 
-    valid_types = CompoundReservation.valid_types
+    _many_type = { 'many' : 'As many as possible of the provided blocks are to be scheduled' }
+    valid_types = dict(CompoundReservation.valid_types)
+    valid_types.update(_many_type)
 
     def __init__(self, operator, requests):
         self.operator  = self._validate_type(operator)
@@ -318,12 +363,8 @@ class CompoundRequest(DefaultMixin):
 
     def filter_requests(self, filter_test):
         for r in self.requests:
-            n_before = 0
-            n_after  = 0
             for resource_name, windows in r.windows.windows_for_resource.items():
-                n_before += len(windows)
-                r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self)]
-                n_after += len(r.windows.windows_for_resource[resource_name])
+                r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self, r)]
 
 
     def n_windows(self):
@@ -346,7 +387,7 @@ class CompoundRequest(DefaultMixin):
                     if not r.has_windows():
                         return False
 
-            elif self.operator == 'oneof' or self.operator == 'single':
+            elif self.operator in ('oneof', 'single', 'many'):
                 is_ok_to_return = False
                 for r in self.requests:
                     if r.has_windows():
@@ -354,11 +395,13 @@ class CompoundRequest(DefaultMixin):
 
             return is_ok_to_return
 
+
     def _is_schedulable_hard(self):
         is_ok_to_return = {
                             'and'    : (False, lambda r: not r.has_windows()),
                             'oneof'  : (True,  lambda r: r.has_windows()),
-                            'single' : (True,  lambda r: r.has_windows())
+                            'single' : (True,  lambda r: r.has_windows()),
+                            'many'   : (True,  lambda r: r.has_windows())
                           }
 
         for r in self.requests:
@@ -397,7 +440,7 @@ class UserRequest(CompoundRequest, DefaultMixin):
     # Define properties
     priority = property(get_priority)
 
-    def scheduling_horizon(self, now=None):
+    def scheduling_horizon(self, now):
         sem_end = semester_service.get_semester_end(now)
         if self.expires and self.expires < sem_end:
             return self.expires
