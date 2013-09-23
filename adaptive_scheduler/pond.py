@@ -26,17 +26,19 @@ Author: Eric Saunders
 February 2012
 '''
 from datetime import datetime
+import time
 
 from adaptive_scheduler.model2         import Proposal, Target
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
+from adaptive_scheduler.log            import UserRequestLogger
+
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import Expose, Standard
 from lcogtpond.schedule                import Schedule
-from adaptive_scheduler.log            import UserRequestLogger
 
 # Set up and configure a module scope logger
 import logging
@@ -530,7 +532,27 @@ def cancel_schedule(tels, start, end, dry_run=False):
         tel, obs, site = full_tel_name.split('.')
         log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
                                                              start, end)
-        to_delete = get_deletable_blocks(start, end, site, obs, tel)
+        retries_available = 6
+        while(retries_available):
+            try:
+                to_delete = get_deletable_blocks(start, end, site, obs, tel)
+                retries_available = 0
+
+            # TODO: This throws a protobuf.socketrpc.error.RpcError - fix POND client to
+            # TODO: return a POND client error instead
+            except Exception as e:
+                retry_delay = 10
+                log.warn("POND RPC Error: %s", str(e))
+
+                retries_available -= 1
+                if not retries_available:
+                    log.warn("Retries exhausted - aborting current scheduler run")
+                    raise BlockDeletionException(str(e))
+                else:
+                    log.warn("Sleeping for %s seconds" % retry_delay)
+                    time.sleep(retry_delay)
+                    log.warn("Will try %d more times" % retries_available)
+
         n_to_delete = len(to_delete)
         all_to_delete.extend(to_delete)
 
@@ -564,4 +586,8 @@ def cancel_blocks(to_delete, dry_run=False):
 
 class IncompleteBlockError(Exception):
     '''Raised when a block is missing required parameters.'''
+    pass
+
+class BlockDeletionException(Exception):
+    '''Placeholder until POND client raises this exception on our behalf.'''
     pass
