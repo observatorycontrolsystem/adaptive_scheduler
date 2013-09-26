@@ -54,6 +54,38 @@ def log_info_dry_run(msg, dry_run):
     log.info(msg)
 
 
+def retry_or_reraise(max_tries=6, delay=10):
+    def wrapper(fn):
+        def inner_func(*args, **kwargs):
+            retries_available = max_tries
+            while(retries_available):
+                try:
+                    result = fn(*args, **kwargs)
+                    retries_available = 0
+
+                # TODO: This throws a protobuf.socketrpc.error.RpcError - fix POND client to
+                # TODO: return a POND client error instead
+                # TODO: See #6578
+                except Exception as e:
+                    log.warn("POND RPC Error: %s", str(e))
+
+                    retries_available -= 1
+                    if not retries_available:
+                        log.warn("Retries exhausted - aborting current scheduler run")
+                        raise BlockDeletionException(str(e))
+                    else:
+                        log.warn("Sleeping for %s seconds" % delay)
+                        time.sleep(delay)
+                        log.warn("Will try %d more times" % retries_available)
+
+            return result
+
+        return inner_func
+
+    return wrapper
+
+
+
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
@@ -491,6 +523,7 @@ def get_network_running_blocks(tels, start, end):
     return running_at_tel
 
 
+@retry_or_reraise(max_tries=6, delay=10)
 def get_running_blocks(start, end, site, obs, tel):
     schedule  = Schedule.get(start=start, end=end, site=site,
                              observatory=obs, telescope=tel,
@@ -503,6 +536,7 @@ def get_running_blocks(start, end, site, obs, tel):
     return cutoff_dt, running
 
 
+@retry_or_reraise(max_tries=6, delay=10)
 def get_deletable_blocks(start, end, site, obs, tel):
     # Only retrieve blocks which have not been cancelled
     schedule  = Schedule.get(start=start, end=end, site=site,
@@ -532,26 +566,8 @@ def cancel_schedule(tels, start, end, dry_run=False):
         tel, obs, site = full_tel_name.split('.')
         log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
                                                              start, end)
-        retries_available = 6
-        while(retries_available):
-            try:
-                to_delete = get_deletable_blocks(start, end, site, obs, tel)
-                retries_available = 0
 
-            # TODO: This throws a protobuf.socketrpc.error.RpcError - fix POND client to
-            # TODO: return a POND client error instead
-            except Exception as e:
-                retry_delay = 10
-                log.warn("POND RPC Error: %s", str(e))
-
-                retries_available -= 1
-                if not retries_available:
-                    log.warn("Retries exhausted - aborting current scheduler run")
-                    raise BlockDeletionException(str(e))
-                else:
-                    log.warn("Sleeping for %s seconds" % retry_delay)
-                    time.sleep(retry_delay)
-                    log.warn("Will try %d more times" % retries_available)
+        to_delete = get_deletable_blocks(start, end, site, obs, tel)
 
         n_to_delete = len(to_delete)
         all_to_delete.extend(to_delete)

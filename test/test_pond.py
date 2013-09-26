@@ -2,12 +2,13 @@ from __future__ import division
 
 from nose.tools import assert_equal, raises
 from nose import SkipTest
-from mock       import patch, Mock
+from mock       import patch, Mock, MagicMock
 
-from adaptive_scheduler.pond  import (Block, IncompleteBlockError, cancel_blocks,
+from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
+                                      BlockDeletionException, cancel_blocks,
                                       get_deletable_blocks, cancel_schedule,
                                       send_blocks_to_pond, build_block,
-                                      send_schedule_to_pond)
+                                      send_schedule_to_pond, retry_or_reraise)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target, Request,
                                        UserRequest, Constraints)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -16,6 +17,62 @@ import lcogtpond
 
 from datetime import datetime
 import collections
+
+
+def add_two_numbers(x, y):
+    return x + y
+
+@retry_or_reraise(max_tries=1, delay=1)
+def decorated_add_two_numbers(x, y):
+    return x + y
+
+class TestRetryDecorator(object):
+
+    def setup(self):
+        fn        = add_two_numbers
+        self.decorator = retry_or_reraise(max_tries=4, delay=1)
+
+        self.decorated = self.decorator(fn)
+
+
+    def test_happy_path_args(self):
+
+        received = self.decorated(2, 3)
+
+        assert_equal(received, 5)
+
+
+    def test_happy_path_kwargs(self):
+        fn = add_two_numbers
+        received = self.decorated(x=2, y=3)
+
+        assert_equal(received, 5)
+
+
+    def test_happy_path_args_and_kwargs(self):
+        fn = add_two_numbers
+        received = self.decorated(2, y=3)
+
+        assert_equal(received, 5)
+
+
+    def test_decorated(self):
+        received = decorated_add_two_numbers(2, 3)
+
+        assert_equal(received, 5)
+
+
+    @patch('time.sleep')
+    def test_exception_sleep_and_retries_on_failure(self, sleep_mock):
+        mock_fn = MagicMock(side_effect=KeyError('foo'))
+        decorated = self.decorator(mock_fn)
+
+        try:
+            received = decorated(2, 3)
+            assert False, 'Should have got a BlockDeletionException here'
+        except BlockDeletionException as e:
+            sleep_mock.assert_called_with(1)
+            assert_equal(sleep_mock.call_count, 3)
 
 
 
