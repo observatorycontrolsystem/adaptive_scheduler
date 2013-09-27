@@ -113,7 +113,7 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
+def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
     '''Find the set of intervals where the target of the provided request it is both
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
@@ -123,13 +123,19 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
 
-        visibility = visibility_from[resource_name][0]
 
         # Find when it's dark, and when the target is up
-        rs_dark_intervals = visibility_from[resource_name][1]()
-        rs_up_intervals   = visibility_from[resource_name][2](target=rs_target,
-                                                              up=True,
-                                                              airmass=req.constraints.max_airmass)
+        tel = tels[resource_name]
+        if tel.events:
+            rs_dark_intervals = []
+            rs_up_intervals   = []
+        else:
+            visibility = visibility_from[resource_name][0]
+            rs_dark_intervals = visibility_from[resource_name][1]()
+            rs_up_intervals   = visibility_from[resource_name][2](
+                                                 target=rs_target,
+                                                 up=True,
+                                                 airmass=req.constraints.max_airmass)
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
@@ -221,14 +227,14 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 @timeit
 def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, scheduling_horizon):
-    ''' After throwing out and marking URs as UNSCHEDULABLE, reduce windows by considering
-        dark time and target visibility. Remove any URs that are now too small to hold their
-        duration after this consideration, so they are not passed to the kernel.
-        NOTE: We do this as an explicit additional filtering step, because we do not want to
-        set the UNSCHEDULABLE flag for these Requests. This is because the step is network-dependent;
-        if the network subsequently changes (e.g. a telescope becomes available), then the Request
-        may then be schedulable.
-    '''
+    '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
+       considering dark time and target visibility. Remove any URs that are now too
+       small to hold their duration after this consideration, so they are not passed
+       to the kernel.
+       NOTE: We do this as an explicit additional filtering step, because we do not
+       want to set the UNSCHEDULABLE flag for these Requests. This is because the
+       step is network-dependent; if the network subsequently changes (e.g. a
+       telescope becomes available), then the Request may then be schedulable.'''
     singles, compounds = differentiate_by_type('single', crs)
     log.info("Identified %s" % pl(len(singles), 'single'))
     log.info("Identified %s" % pl(len(compounds), 'compound'))
@@ -256,7 +262,7 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 
 
     # Filter on rise_set/airmass
-    crs = filter_on_visibility(crs, visibility_from)
+    crs = filter_on_visibility(crs, tels, visibility_from)
 
     # Clean up now impossible Requests
     crs = filter_on_duration(crs)
@@ -266,17 +272,18 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 
 
 @log_windows
-def filter_on_visibility(crs, visibility_from):
+def filter_on_visibility(crs, tels, visibility_from):
     for cr in crs:
         for r in cr.requests:
-            r = compute_intersections(r, visibility_from)
+            r = compute_intersections(r, tels, visibility_from)
 
     return crs
 
 
-def compute_intersections(req, visibility_from):
+def compute_intersections(req, tels, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
-    intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+    intersections_for_resource = make_dark_up_kernel_intervals(req, tels,
+                                                               visibility_from,
                                                                verbose=True)
     req.windows = intervals_to_windows(req, intersections_for_resource)
     return req
@@ -298,7 +305,7 @@ def intervals_to_windows(req, intersections_for_resource):
 
 
 @timeit
-def make_compound_reservations(compound_requests, visibility_from, semester_start):
+def make_compound_reservations(compound_requests, tels, visibility_from, semester_start):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
 
@@ -306,7 +313,7 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
     to_schedule = []
     for c_req in compound_requests:
 
-        dark_ups = find_dark_ups_of_children(c_req, visibility_from)
+        dark_ups = find_dark_ups_of_children(c_req, tels, visibility_from)
 
         # Make and store the CompoundReservation
         compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)
@@ -315,11 +322,12 @@ def make_compound_reservations(compound_requests, visibility_from, semester_star
     return to_schedule
 
 
-def find_dark_ups_of_children(c_req, visibility_from):
+def find_dark_ups_of_children(c_req, tels, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
     dark_ups = []
     for req in c_req.requests:
-        intersections_for_resource = make_dark_up_kernel_intervals(req, visibility_from,
+        intersections_for_resource = make_dark_up_kernel_intervals(req, tels,
+                                                                   visibility_from,
                                                                    verbose=False)
         dark_ups.append(intersections_for_resource)
 
@@ -327,14 +335,14 @@ def find_dark_ups_of_children(c_req, visibility_from):
 
 
 @timeit
-def make_many_type_compound_reservations(many_compound_requests, visibility_from,
+def make_many_type_compound_reservations(many_compound_requests, tels, visibility_from,
                                          semester_start):
     '''Parse a list of CompoundRequests of type 'many', and produce a corresponding
        list of CompoundReservations. Each 'many' will produce one CompoundReservation
        per Request child.'''
     to_schedule = []
     for many_c_req in many_compound_requests:
-        dark_ups = find_dark_ups_of_children(many_c_req, visibility_from)
+        dark_ups = find_dark_ups_of_children(many_c_req, tels, visibility_from)
 
         # Produce a distinct CR for each R in a 'many'
         # We do this because the kernel knows nothing about 'many', and will treat
@@ -390,10 +398,6 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         get_target = Memoize(visibility.get_target_intervals)
         get_dark = visibility.get_dark_intervals
 
-        if tel.events:
-            get_dark   = make_empty_list
-            get_target = make_empty_list
-            log.info("Bypassing visibility calcs for %s" % tel_name)
         visibility_from[tel_name] = (visibility, get_dark, get_target)
 
     return visibility_from

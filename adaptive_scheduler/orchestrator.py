@@ -277,6 +277,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     # Do another check on duration and operator soundness, after dark/rise checking
     log.info("Filtering on dark/rise_set")
+
+    for tel_name, tel in tels.iteritems():
+        if tel.events:
+            log.info("Bypassing visibility calcs for %s" % tel_name)
+
     user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
                                   now, semester_end, scheduling_horizon)
     log.info("Completed dark/rise_set filters")
@@ -295,9 +300,10 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     # Convert CompoundRequests -> CompoundReservations
     many_urs, other_urs = differentiate_by_type('many', user_reqs)
-    to_schedule_many  = make_many_type_compound_reservations(many_urs, visibility_from,
+    to_schedule_many  = make_many_type_compound_reservations(many_urs, tels, visibility_from,
                                                             semester_start)
-    to_schedule_other = make_compound_reservations(other_urs, visibility_from, semester_start)
+    to_schedule_other = make_compound_reservations(other_urs, tels, visibility_from,
+                                                   semester_start)
     to_schedule = to_schedule_many + to_schedule_other
 
     # Translate when telescopes are available into kernel speak
