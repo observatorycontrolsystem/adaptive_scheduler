@@ -41,6 +41,7 @@ def summarise_urs(user_reqs, log_msg):
 
     return
 
+
 def log_windows(ur, log_msg):
     for r in ur.requests:
         for w in r.windows:
@@ -61,8 +62,6 @@ def log_full_ur(ur, now):
                     ur.tracking_number)
         ur_log.info("Request %s: constraints = %s" % (r.request_number, r.constraints),
                     ur.tracking_number)
-
-
 
 
 

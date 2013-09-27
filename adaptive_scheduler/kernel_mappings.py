@@ -41,6 +41,7 @@ from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
+                                                drop_empty_requests,
                                                 log_windows)
 from adaptive_scheduler.memoize import Memoize
 from adaptive_scheduler.log   import UserRequestLogger
@@ -247,6 +248,7 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
     compounds = filter_out_future_windows(compounds)
     # Clean up Requests without any windows
     compounds = filter_on_type(compounds)
+    compounds = drop_empty_requests(compounds)
     log.info("After filtering, %d compounds remain" % len(compounds))
 
     crs = singles + compounds

@@ -1,6 +1,7 @@
 #!/usr/bin/python
 from __future__ import division
 
+import mock
 from nose.tools import assert_equal, raises
 from datetime import datetime
 
@@ -149,7 +150,7 @@ class TestDuration(object):
 
 
 class TestRequest(object):
-    '''Unit tests for the adaptive scheduler request object.'''
+    '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
         self.target = Target(
@@ -216,6 +217,34 @@ class TestRequest(object):
                           constraints    = constraints,
                           request_number = self.request_number)
         compound_request = CompoundRequest(valid_res_type, [request])
+
+
+
+class TestCompoundRequest(object):
+    '''Unit tests for the adaptive scheduler CompoundRequest object.'''
+
+    def setup(self):
+        pass
+
+
+    def test_drop_empty_children(self):
+        r_mock1 = mock.MagicMock()
+        r_mock1.has_windows.return_value = True
+
+        r_mock2 = mock.MagicMock()
+        r_mock2.has_windows.return_value = False
+
+        cr = CompoundRequest(
+                              operator='many',
+                              requests=[r_mock1, r_mock2]
+                            )
+
+        cr.drop_empty_children()
+
+        assert_equal(len(cr.requests), 1)
+        assert_equal(cr.requests[0], r_mock1)
+
+
 
 
 

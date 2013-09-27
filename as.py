@@ -84,6 +84,7 @@ def parse_args(argv):
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
+
     arg_parser.add_argument("-s", "--sleep", type=int, default=60,
                             help="Sleep period between scheduling runs, in seconds")
     arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
@@ -96,8 +97,10 @@ def parse_args(argv):
                             help="Available telescopes file (default=telescopes.dat)")
     arg_parser.add_argument("-w", "--noweather", action="store_true",
                             help="Disable weather checking")
-    arg_parser.add_argument("-c", "--nocompounds", action="store_true",
-                            help="Disable support for and/oneof/many Request types")
+    arg_parser.add_argument("--nosingles", action="store_true",
+                                help="Ignore the 'single' Request type")
+    arg_parser.add_argument("--nocompounds", action="store_true",
+                                help="Ignore the 'and', 'oneof' and 'many' Request types")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
 
@@ -185,6 +188,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                                         args.telescopes, current_events,
                                         visibility_from, dry_run=args.dry_run,
                                         no_weather=args.noweather,
+                                        no_singles=args.nosingles,
                                         no_compounds=args.nocompounds)
     else:
         log.warn("Received no User Requests! Skipping this scheduling cycle")

@@ -53,8 +53,12 @@ February 2013
 
 from datetime import datetime, timedelta
 from adaptive_scheduler.printing import pluralise as pl
+from adaptive_scheduler.log      import UserRequestLogger
 import logging
 log = logging.getLogger(__name__)
+
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
 
 # Comparator for all filters
 now = datetime.utcnow()
@@ -138,6 +142,7 @@ def run_all_filters(ur_list):
     ur_list = filter_out_future_windows(ur_list)
     ur_list = filter_on_duration(ur_list)
     ur_list = filter_on_type(ur_list)
+    ur_list = drop_empty_requests(ur_list)
 
     return ur_list
 
@@ -232,6 +237,21 @@ def _for_all_ur_windows(ur_list, filter_test):
        filter condition on each one.'''
     for ur in ur_list:
             ur.filter_requests(filter_test)
+
+    return ur_list
+
+
+
+# Request Filters
+#---------------------
+def drop_empty_requests(ur_list):
+    '''Delete child Requests which have no windows remaining.'''
+
+    for ur in ur_list:
+        dropped = ur.drop_empty_children()
+        for removed_r in dropped:
+            ur_log.info("Dropped Request %s: no windows remaining" % removed_r.request_number,
+                        ur.tracking_number)
 
     return ur_list
 

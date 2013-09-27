@@ -32,7 +32,8 @@ from adaptive_scheduler.printing import ( print_schedule, print_compound_reserva
 from adaptive_scheduler.printing import pluralise
 from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
-                                          blacklist_running_blocks )
+                                          blacklist_running_blocks,
+                                          PondFacadeException )
 from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
@@ -199,7 +200,7 @@ def update_telescope_events(tels, current_events):
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
                   current_events, visibility_from=None, dry_run=False, no_weather=False,
-                  no_compounds=False):
+                  no_singles=False, no_compounds=False):
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
@@ -237,16 +238,22 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         log_windows(ur, log_msg="Initial windows:")
 
 
+    if no_singles:
+        log.info("Compound Request support (single) disabled at the command line")
+        log.info("Compound Requests of type 'single' will be ignored")
+        singles, others = differentiate_by_type(cr_type='single', crs=user_reqs)
+        user_reqs = others
+
     if no_compounds:
         log.info("Compound Request support (and/oneof/many) disabled at the command line")
-        log.info("Only Compound Requests of type 'single' will be considered")
+        log.info("Compound Requests of type 'and', 'oneof' or 'many' will be ignored")
         user_reqs = filter_out_compounds(user_reqs)
 
     # TODO: Swap to tels2
     tels = mb.tel_network.telescopes
-    log.debug("Available telescopes:")
+    log.info("Available telescopes:")
     for t in sorted(tels):
-        log.debug(str(t))
+        log.info(str(t))
 
     # Look for weather events unless weather monitoring has been disabled
     if no_weather:
@@ -270,7 +277,6 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     # Do another check on duration and operator soundness, after dark/rise checking
     log.info("Filtering on dark/rise_set")
-
     user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
                                   now, semester_end, scheduling_horizon)
     log.info("Completed dark/rise_set filters")
@@ -281,7 +287,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
 
     # Remove running blocks from consideration, and get the availability edge
-    user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
+    try:
+        user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
+    except PondFacadeException as e:
+        log.error("Could not determine running blocks from POND - aborting run")
+        return visibility_from
 
     # Convert CompoundRequests -> CompoundReservations
     many_urs, other_urs = differentiate_by_type('many', user_reqs)
@@ -324,7 +334,11 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     print_schedule(schedule, semester_start, semester_end)
 
     # Clean out all existing scheduled blocks
-    n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
+    try:
+        n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
+    except PondFacadeException as e:
+        log.error("Could not cancel schedule - aborting run")
+        return visibility_from
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)

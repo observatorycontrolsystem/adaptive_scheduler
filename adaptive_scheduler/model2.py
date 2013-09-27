@@ -331,7 +331,7 @@ class CompoundRequest(DefaultMixin):
         requests - a list of Request objects. There must be at least one.
     '''
 
-    _many_type = { 'many' : 'As many as possible of the provided blocks are to be scheduled' }
+    _many_type  = { 'many' : 'As many as possible of the provided blocks are to be scheduled' }
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
@@ -389,6 +389,20 @@ class CompoundRequest(DefaultMixin):
     def is_schedulable(self):
 #        return self._is_schedulable_hard()
         return self._is_schedulable_easy()
+
+
+    def drop_empty_children(self):
+        to_keep = []
+        dropped = []
+        for r in self.requests:
+            if r.has_windows():
+                to_keep.append(r)
+            else:
+                dropped.append(r)
+
+        self.requests = to_keep
+
+        return dropped
 
 
     def _is_schedulable_easy(self):
