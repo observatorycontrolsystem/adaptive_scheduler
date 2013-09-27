@@ -5,7 +5,7 @@ from nose import SkipTest
 from mock       import patch, Mock, MagicMock
 
 from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
-                                      BlockDeletionException, cancel_blocks,
+                                      PondFacadeException, cancel_blocks,
                                       get_deletable_blocks, cancel_schedule,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise)
@@ -69,8 +69,8 @@ class TestRetryDecorator(object):
 
         try:
             received = decorated(2, 3)
-            assert False, 'Should have got a BlockDeletionException here'
-        except BlockDeletionException as e:
+            assert False, 'Should have got a PondFacadeException here'
+        except PondFacadeException as e:
             sleep_mock.assert_called_with(1)
             assert_equal(sleep_mock.call_count, 3)
 

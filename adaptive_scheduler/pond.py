@@ -55,6 +55,8 @@ def log_info_dry_run(msg, dry_run):
 
 
 def retry_or_reraise(max_tries=6, delay=10):
+    '''Decorator to retry a POND operation several times, intended for sporadic
+       outages. If max_tries is reached, we give up and raise a PondFacadeException.'''
     def wrapper(fn):
         def inner_func(*args, **kwargs):
             retries_available = max_tries
@@ -67,12 +69,12 @@ def retry_or_reraise(max_tries=6, delay=10):
                 # TODO: return a POND client error instead
                 # TODO: See #6578
                 except Exception as e:
-                    log.warn("POND RPC Error: %s", str(e))
+                    log.warn("POND RPC Error: %s", repr(e))
 
                     retries_available -= 1
                     if not retries_available:
                         log.warn("Retries exhausted - aborting current scheduler run")
-                        raise BlockDeletionException(str(e))
+                        raise PondFacadeException(str(e))
                     else:
                         log.warn("Sleeping for %s seconds" % delay)
                         time.sleep(delay)
@@ -604,6 +606,6 @@ class IncompleteBlockError(Exception):
     '''Raised when a block is missing required parameters.'''
     pass
 
-class BlockDeletionException(Exception):
+class PondFacadeException(Exception):
     '''Placeholder until POND client raises this exception on our behalf.'''
     pass
