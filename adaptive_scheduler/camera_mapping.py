@@ -200,6 +200,16 @@ def _convert_camel_case(input_value):
     return output_value.strip('_ ').lower()
 
 
+class ConnectionError(Exception):
+    '''Wrapper for URL/HTTP transport or server errors.'''
+
+    def __init__(self, value):
+        self.value = value
+
+    def __str__(self):
+        return self.value
+
+
 if __name__ == '__main__':
     # Update the camera mapping file
     update_mapping()
@@ -237,14 +247,3 @@ if __name__ == '__main__':
     for cam in results:
         print cam['camera']
     print
-
-
-
-class ConnectionError(Exception):
-    '''Wrapper for URL/HTTP transport or server errors.'''
-
-    def __init__(self, value):
-        self.value = value
-
-    def __str__(self):
-        return self.value
