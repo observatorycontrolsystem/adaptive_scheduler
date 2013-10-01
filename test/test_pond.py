@@ -5,13 +5,16 @@ from nose import SkipTest
 from mock       import patch, Mock, MagicMock
 
 from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
+                                      InstrumentResolutionError,
                                       PondFacadeException, cancel_blocks,
                                       get_deletable_blocks, cancel_schedule,
                                       send_blocks_to_pond, build_block,
-                                      send_schedule_to_pond, retry_or_reraise)
+                                      send_schedule_to_pond, retry_or_reraise,
+                                      resolve_instrument, resolve_autoguider)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target, Request,
                                        UserRequest, Constraints)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.camera_mapping import create_camera_mapping
 
 import lcogtpond
 
@@ -92,7 +95,35 @@ class TestPond(object):
                               defocus         = 0.0,
                             )
 
+        self.valid_proposal = Proposal(
+                                        observer_name  = 'Eric Saunders',
+                                        user_id        = 'esaunders',
+                                        proposal_id    = 'Scheduler Testing',
+                                        tag_id         = 'admin',
+                                        priority       = 2,
+                                      )
 
+        self.valid_target = Target(
+                                    name  = 'deneb',
+                                    type  = 'sidereal',
+                                    #ra  = '20 41 25.91',
+                                    #dec = '+45 16 49.22',
+                                    ra  = 310.35795833333333,
+                                    dec = 45.280338888888885
+                                  )
+
+        self.valid_molecule = Molecule(
+                                        type            = 'expose',
+                                        exposure_count  = 1,
+                                        bin_x           = 2,
+                                        bin_y           = 2,
+                                        instrument_name = 'KB12',
+                                        filter          = 'BSSL-UX-020',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        ag_mode         = 'OFF',
+                                        defocus         = 0.0,
+                                       )
 
     def test_proposal_lists_missing_fields(self):
         missing  = self.proposal.list_missing_fields()
@@ -153,41 +184,10 @@ class TestPond(object):
                                  request_number  = '0000000001',
                                )
 
-        scheduled_block.add_proposal(
-                                      Proposal(
-                                                observer_name  = 'Eric Saunders',
-                                                user_id        = 'esaunders',
-                                                proposal_id    = 'Scheduler Testing',
-                                                tag_id         = 'admin',
-                                                priority       = 2,
-                                              )
-                                    )
+        scheduled_block.add_proposal(self.valid_proposal)
+        scheduled_block.add_target(self.valid_target)
 
-        scheduled_block.add_target(
-                                    Target(
-                                            name  = 'deneb',
-                                            type  = 'sidereal',
-                                              #ra  = '20 41 25.91',
-                                              #dec = '+45 16 49.22',
-                                              ra  = 310.35795833333333,
-                                              dec = 45.280338888888885
-                                          )
-                                  )
-
-        scheduled_block.add_molecule(
-                                      Molecule(
-                                                type            = 'expose_n',
-                                                exposure_count  = 1,
-                                                bin_x           = 2,
-                                                bin_y           = 2,
-                                                instrument_name = 'KB12',
-                                                filter          = 'BSSL-UX-020',
-                                                exposure_time   = 30,
-                                                priority        = 1,
-                                                ag_mode         = 'OFF',
-                                                defocus         = 0.0,
-                                               )
-                                     )
+        scheduled_block.add_molecule(self.valid_molecule)
 
 
         scheduled_block.create_pond_block()
@@ -207,7 +207,6 @@ class TestPond(object):
         assert_equal(scheduled_block.split_location(), ('0m4a','aqwb','coj'))
 
 
-
     def test_split_location_duplicates_components_if_it_cant_split(self):
 
         scheduled_block = Block(
@@ -222,6 +221,94 @@ class TestPond(object):
         assert_equal(scheduled_block.split_location(), ('Maui','Maui','Maui'))
 
 
+    def test_create_pond_block(self):
+        block = Block(
+                        location = '0m4a.aqwb.coj',
+                        start    = datetime(2012, 1, 1, 0, 0, 0),
+                        end      = datetime(2012, 1, 2, 0, 0, 0),
+                        group_id = 'related things',
+                        tracking_number = 1,
+                        request_number  = 1,
+                      )
+
+        block.add_proposal(self.valid_proposal)
+        block.add_molecule(self.valid_molecule)
+        block.add_target(self.valid_target)
+        received = block.create_pond_block()
+
+        assert(received)
+
+
+    def test_resolve_instrument_pass_through_if_camera_specified(self):
+        instrument_name = 'kb12'
+        site, obs, tel  = ('lsc', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_instrument(instrument_name, site, obs, tel, mapping)
+
+        assert_equal(received, 'kb12')
+
+
+    def test_scicam_instrument_resolves_to_a_specific_camera(self):
+        instrument_name = 'SCICAM'
+        site, obs, tel  = ('lsc', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_instrument(instrument_name, site, obs, tel, mapping)
+
+        assert_equal(received, 'kb78')
+
+
+    @raises(InstrumentResolutionError)
+    def test_no_matching_instrument_raises_an_exception(self):
+        instrument_name = 'SCICAM'
+        site, obs, tel  = ('looloo', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_instrument(instrument_name, site, obs, tel, mapping)
+
+
+    def test_resolve_autoguider_pass_through_if_camera_specified(self):
+        ag_name         = 'kb12'
+        inst_name       = 'abcd'
+        site, obs, tel  = ('lsc', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, mapping)
+
+        assert_equal(received, 'kb12')
+
+
+    def test_scicam_autoguider_resolves_to_primary_instrument(self):
+        ag_name         = 'SCICAM'
+        inst_name       = 'abcd'
+        site, obs, tel  = ('lsc', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, mapping)
+
+        assert_equal(received, 'kb78')
+
+
+    def test_no_autoguider_resolves_to_preferred_autoguider(self):
+        ag_name         = None
+        inst_name       = 'kb72'
+        site, obs, tel  = ('bpl', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, mapping)
+
+        assert_equal(received, 'efXX')
+
+
+    @raises(InstrumentResolutionError)
+    def test_no_matching_autoguider_raises_an_exception(self):
+        ag_name         = None
+        inst_name       = 'abcd'
+        site, obs, tel  = ('looloo', 'doma', '1m0a')
+        mapping         = create_camera_mapping("camera_mappings.dat")
+
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, mapping)
 
 
 class TestPondInteractions(object):

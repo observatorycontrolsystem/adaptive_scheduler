@@ -87,6 +87,53 @@ def retry_or_reraise(max_tries=6, delay=10):
     return wrapper
 
 
+def resolve_instrument(instrument_name, site, obs, tel, mapping):
+    '''Determine the specific camera name for a given site.'''
+
+    generic_camera_names = ('SCICAM', 'FASTCAM')
+    specific_camera = instrument_name
+    if instrument_name in generic_camera_names:
+        tel_class = tel[:-1]
+        search = tel_class + '-' + instrument_name
+        inst_match = mapping.find_by_camera_type_and_location(site,
+                                                              obs,
+                                                              tel,
+                                                              search)
+
+        if not inst_match:
+            msg = "Couldn't find any instrument for '%s' at %s.%s.%s" % (
+                                                                    instrument_name,
+                                                                    tel, obs, site)
+            raise InstrumentResolutionError(msg)
+        specific_camera = inst_match[0]['camera']
+
+    return specific_camera
+
+
+def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
+    '''Determine the specific autoguider for a given site.
+       If a specific name is provided, pass through and return it.
+       If a generic name (SCICAM) is provided, resolve for self-guiding.
+       If nothing is specified, resolve to the preferred autoguider.'''
+
+    if ag_name:
+        # If SCICAM is provided, we will self-guide
+        # Otherwise, we'll use whatever they suggest
+        specific_ag = resolve_instrument(ag_name, site, obs, tel, mapping)
+    else:
+        # With no autoguider specified, we go with the preferred autoguider
+        ag_match    = mapping.find_by_camera(specific_camera)
+
+        if not ag_match:
+            msg = "Couldn't find any autoguider for '%s' at %s.%s.%s" % (
+                                                                         ag_name, tel,
+                                                                         obs, site)
+            raise InstrumentResolutionError(msg)
+        specific_ag = ag_match[0]['autoguider']
+
+    return specific_ag
+
+
 
 class Block(object):
 
@@ -95,18 +142,18 @@ class Block(object):
                  min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
-        self.location  = location
-        self.start     = start
-        self.end       = end
-        self.group_id  = group_id
-        self.tracking_number = tracking_number
-        self.request_number = request_number
-        self.priority  = priority
-        self.max_airmass = max_airmass
+        self.location           = location
+        self.start              = start
+        self.end                = end
+        self.group_id           = group_id
+        self.tracking_number    = str(tracking_number)
+        self.request_number     = str(request_number)
+        self.priority           = priority
+        self.max_airmass        = max_airmass
         self.min_lunar_distance = min_lunar_distance
-        self.max_lunar_phase = max_lunar_phase
-        self.max_seeing = max_seeing
-        self.min_transparency = min_transparency
+        self.max_lunar_phase    = max_lunar_phase
+        self.max_seeing         = max_seeing
+        self.min_transparency   = min_transparency
 
         self.proposal  = Proposal()
         self.molecules = []
@@ -155,6 +202,7 @@ class Block(object):
     def add_target(self, target):
         self.target = target
 
+
     def create_pond_block(self):
         if self.pond_block:
             return self.pond_block
@@ -163,6 +211,11 @@ class Block(object):
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
             raise IncompleteBlockError(missing_fields)
+
+        molecule_classes = {
+                             'EXPOSE'   : Expose,
+                             'STANDARD' : Standard
+                           }
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
@@ -204,9 +257,6 @@ class Block(object):
         # 3) Construct the Observations
         observations = []
 
-        # TODO: Move this somewhere better!
-        # TODO: And clean up disgusting hacks
-        generic_camera_names = ('SCICAM', 'FASTCAM')
         mapping = create_camera_mapping("camera_mappings.dat")
 
 
@@ -219,18 +269,12 @@ class Block(object):
             log.debug(mol_summary_msg)
             ur_log.debug(mol_summary_msg, self.tracking_number)
 
-            specific_camera = molecule.instrument_name
-            if molecule.instrument_name in generic_camera_names:
-                tel_class = telescope[:-1]
-                search = tel_class + '-' + molecule.instrument_name
-                inst_match = mapping.find_by_camera_type_and_location(site,
-                                                                      observatory,
-                                                                      telescope,
-                                                                      search)
-                specific_camera = inst_match[0]['camera']
-                msg = "Instrument resolved as '%s'" % specific_camera
-                log.debug(msg)
-                ur_log.debug(msg, self.tracking_number)
+            specific_camera = resolve_instrument(molecule.instrument_name, site,
+                                                 observatory, telescope, mapping)
+
+            msg = "Instrument resolved as '%s'" % specific_camera
+            log.debug(msg)
+            ur_log.debug(msg, self.tracking_number)
 
             if not molecule.defocus:
                 molecule.defocus = 0.0
@@ -240,25 +284,7 @@ class Block(object):
             if molecule.type.upper() == 'STANDARD':
                 msg = "Creating a STANDARD molecule"
                 ur_log.debug(msg, self.tracking_number)
-                obs = Standard.build(
-                                    # Meta data
-                                    tracking_num = self.tracking_number,
-                                    request_num  = self.request_number,
-                                    tag = self.proposal.tag_id,
-                                    user = self.proposal.observer_name,
-                                    proposal = self.proposal.proposal_id,
-                                    group = self.group_id,
-                                    # Observation details
-                                    exp_cnt  = molecule.exposure_count,
-                                    exp_time = molecule.exposure_time,
-                                    # TODO: Allow bin_x and bin_y
-                                    bin = molecule.bin_x,
-                                    inst_name = specific_camera,
-                                    filters = molecule.filter,
-                                    pointing = pond_pointing,
-                                    priority = molecule.priority,
-                                    defocus  = molecule.defocus,
-                                  )
+                mol_type = molecule_classes['STANDARD']
 
             # Otherwise, default to creating an Expose molecule
             else:
@@ -271,48 +297,39 @@ class Block(object):
                     msg = "Creating an EXPOSE molecule"
                     ur_log.debug(msg, self.tracking_number)
 
+                mol_type = molecule_classes['EXPOSE']
 
-                obs = Expose.build(
-                                    # Meta data
-                                    tracking_num = self.tracking_number,
-                                    request_num  = self.request_number,
-                                    tag = self.proposal.tag_id,
-                                    user = self.proposal.observer_name,
-                                    proposal = self.proposal.proposal_id,
-                                    group = self.group_id,
-                                    # Observation details
-                                    exp_cnt  = molecule.exposure_count,
-                                    exp_time = molecule.exposure_time,
-                                    # TODO: Allow bin_x and bin_y
-                                    bin = molecule.bin_x,
-                                    inst_name = specific_camera,
-                                    filters = molecule.filter,
-                                    pointing = pond_pointing,
-                                    priority = molecule.priority,
-                                    defocus  = molecule.defocus,
-                                  )
+
+            # Build the specified molecule
+            obs = mol_type.build(
+                                # Meta data
+                                tracking_num = self.tracking_number,
+                                request_num  = self.request_number,
+                                tag          = self.proposal.tag_id,
+                                user         = self.proposal.observer_name,
+                                proposal     = self.proposal.proposal_id,
+                                group        = self.group_id,
+                                # Observation details
+                                exp_cnt      = molecule.exposure_count,
+                                exp_time     = molecule.exposure_time,
+                                # TODO: Allow bin_x and bin_y
+                                bin          = molecule.bin_x,
+                                inst_name    = specific_camera,
+                                filters      = molecule.filter,
+                                pointing     = pond_pointing,
+                                priority     = molecule.priority,
+                                defocus      = molecule.defocus,
+                              )
 
             # Resolve the Autoguider if necessary
             if molecule.ag_mode != 'OFF':
-                # At this point the specific camera was either provided, or has
-                # been resolved. We call the mapping again, because we won't have
-                # one yet if the specific name was provided, and we need it to find
-                # the AG...
-
-                if not molecule.ag_name:
-                    ag_match    = mapping.find_by_camera(specific_camera)
-                    specific_ag = ag_match[0]['autoguider']
-
-                    msg = "Autoguider resolved as '%s'" % specific_ag
-                    log.debug(msg)
-                    ur_log.debug(msg, self.tracking_number)
-                else:
-                    specific_ag = molecule.ag_name
-                    msg = "Using provided autoguider '%s'" % specific_ag
-                    log.debug(msg)
-                    ur_log.debug(msg, self.tracking_number)
-
+                specific_ag = resolve_autoguider(molecule.ag_name, specific_camera,
+                                                 site, observatory, telescope, mapping)
                 obs.ag_name = specific_ag
+
+                msg = "Autoguider resolved as '%s'" % specific_ag
+                log.debug(msg)
+                ur_log.debug(msg, self.tracking_number)
 
             observations.append(obs)
 
@@ -353,16 +370,20 @@ def send_blocks_to_pond(blocks, dry_run=False):
     pond_blocks = []
     for block in blocks:
         try:
-            pond_blocks.append(block.create_pond_block())
-            msg = "Request %s (part of UR %s) to POND" % (block.request_number,
-                                                          block.tracking_number)
+            pb = block.create_pond_block()
+            pond_blocks.append(pb)
+            msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
+                                                                     block.tracking_number,
+                                                                     pb.telescope,
+                                                                     pb.observatory,
+                                                                     pb.site)
             if dry_run:
                 msg = "Dry-run: Would have sent " + msg
             else:
                 msg = "Sent " + msg
             log.debug(msg)
             ur_log.info(msg, block.tracking_number)
-        except IncompleteBlockError as e:
+        except (IncompleteBlockError, InstrumentResolutionError) as e:
             msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
                                                                block.request_number,
                                                                block.tracking_number)
@@ -604,6 +625,10 @@ def cancel_blocks(to_delete, dry_run=False):
 
 class IncompleteBlockError(Exception):
     '''Raised when a block is missing required parameters.'''
+    pass
+
+class InstrumentResolutionError(Exception):
+    '''Raised when no instrument can be determined for a given resource.'''
     pass
 
 class PondFacadeException(Exception):
