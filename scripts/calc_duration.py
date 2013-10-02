@@ -3,8 +3,6 @@
 '''
 calc_duration.py - Simple script to find the duration of a Request.
 
-Tim L's Request 1182 is going straight to UNSCHEDULABLE. Why?
-
 Author: Eric Saunders
 April 2013
 '''
@@ -14,17 +12,18 @@ from adaptive_scheduler.model2 import Request, Molecule
 
 
 m = Molecule(
-              exposure_count=47,
-              exposure_time=10,
+              exposure_count=2,
+              exposure_time=90,
               bin_x=2,
               bin_y=2,
-              filter = 'W'
+              filter = 'V'
             )
 
 target         = None
 windows        = None
 request_number = None
+constraints    = None
 molecules = [m]
-r = Request(target, molecules, windows, request_number)
+r = Request(target, molecules, windows, constraints, request_number)
 print "Duration = %ds (%f min)" % (r.get_duration(), r.get_duration()/60.0)
 
