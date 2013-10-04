@@ -10,7 +10,8 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       get_deletable_blocks, cancel_schedule,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise,
-                                      resolve_instrument, resolve_autoguider)
+                                      resolve_instrument, resolve_autoguider,
+                                      get_network_running_blocks)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target, Request,
                                        UserRequest, Constraints)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -319,28 +320,6 @@ class TestPondInteractions(object):
         self.obs   = 'doma'
         self.tel   = '1m0a'
 
-    @patch('lcogtpond.block.Block.cancel_blocks')
-    def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
-        dry_run = True
-        FakeBlock = collections.namedtuple('FakeBlock', 'id')
-        to_delete = [FakeBlock(id=id) for id in range(10)]
-
-        cancel_blocks(to_delete, dry_run)
-        assert_equal(func_mock.called, False)
-
-
-    @patch('lcogtpond.block.Block.cancel_blocks')
-    def test_cancel_blocks_called_when_dry_run(self, func_mock):
-        dry_run = False
-        reason = 'Superceded by new schedule'
-        FakeBlock = collections.namedtuple('FakeBlock', 'id')
-        ids = range(10)
-        to_delete = [FakeBlock(id=id) for id in ids]
-
-        cancel_blocks(to_delete, dry_run)
-        func_mock.assert_called_once_with(ids, reason=reason, delete=True)
-
-
     def make_fake_block(self, start_dt, tracking_num_set):
         class FakeBlock(object):
             def __init__(self, start_dt, tracking_num_set):
@@ -365,6 +344,28 @@ class TestPondInteractions(object):
         mock_schedule.blocks = block_list
 
         return block_list
+
+
+    @patch('lcogtpond.block.Block.cancel_blocks')
+    def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
+        dry_run = True
+        FakeBlock = collections.namedtuple('FakeBlock', 'id')
+        to_delete = [FakeBlock(id=id) for id in range(10)]
+
+        cancel_blocks(to_delete, dry_run)
+        assert_equal(func_mock.called, False)
+
+
+    @patch('lcogtpond.block.Block.cancel_blocks')
+    def test_cancel_blocks_called_when_dry_run(self, func_mock):
+        dry_run = False
+        reason = 'Superceded by new schedule'
+        FakeBlock = collections.namedtuple('FakeBlock', 'id')
+        ids = range(10)
+        to_delete = [FakeBlock(id=id) for id in ids]
+
+        cancel_blocks(to_delete, dry_run)
+        func_mock.assert_called_once_with(ids, reason=reason, delete=True)
 
 
     @patch('lcogtpond.schedule.Schedule.get')
@@ -430,7 +431,8 @@ class TestPondInteractions(object):
         dry_run = False
 
         mock_block = Mock(spec=Block)
-        mock_block.create_pond_block.return_value = 'placeholder'
+        mock_pond_block = Mock()
+        mock_block.create_pond_block.return_value = mock_pond_block
         mock_block.request_number  = '0000000001'
         mock_block.tracking_number = '0000000001'
 
@@ -438,8 +440,40 @@ class TestPondInteractions(object):
 
         send_blocks_to_pond(blocks, dry_run)
 
-        mock_func.assert_called_with(['placeholder'])
+        mock_func.assert_called_with([mock_pond_block])
 
+
+    @patch('adaptive_scheduler.pond.get_running_blocks')
+    def test_blocks_arent_running_if_weather(self, mock_func1):
+        tel_mock1 = Mock()
+        tel_mock2 = Mock()
+
+        tel_mock1.events = [1, 2, 3]
+        tel_mock2.events = []
+
+        mock_func1.return_value = ('me', ['you'])
+
+        tels = {
+                 '1m0a.doma.lsc' : tel_mock1,
+                 '1m0a.doma.cpt' : tel_mock2
+               }
+        start = datetime(2013, 10, 3)
+        end   = datetime(2013, 11, 3)
+
+        received = get_network_running_blocks(tels, start, end)
+
+        expected = {
+                     '1m0a.doma.lsc' : {
+                                         'cutoff'  : start,
+                                         'running' : []
+                                       },
+                     '1m0a.doma.cpt' : {
+                                         'cutoff'  : 'me',
+                                         'running' : ['you']
+                                       },
+                   }
+
+        assert_equal(received, expected)
 
 
     @patch('adaptive_scheduler.pond.send_blocks_to_pond')

@@ -524,13 +524,18 @@ def blacklist_running_blocks(ur_list, tels, start, end):
 
 def get_network_running_blocks(tels, start, end):
     n_running_total = 0
-    running_at_tel = {}
-    for full_tel_name in tels:
-        tel, obs, site = full_tel_name.split('.')
+    running_at_tel  = {}
+    for full_tel_name, tel in tels.iteritems():
+        tel_name, obs_name, site_name = full_tel_name.split('.')
         log.debug("Acquiring running blocks and first availability at %s",
                                                           full_tel_name)
 
-        cutoff, running = get_running_blocks(start, end, site, obs, tel)
+        if tel.events:
+            cutoff, running = start, []
+        else:
+            cutoff, running = get_running_blocks(start, end, site_name,
+                                                 obs_name, tel_name)
+
         running_at_tel[full_tel_name] = {
                                           'cutoff'  : cutoff,
                                           'running' : running
