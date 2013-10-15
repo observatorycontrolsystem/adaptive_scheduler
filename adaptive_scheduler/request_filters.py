@@ -91,6 +91,15 @@ def log_urs(fn):
     return wrap
 
 
+def _for_all_ur_windows(ur_list, filter_test):
+    '''Loop over all Requests of each UserRequest provided, and execute the supplied
+       filter condition on each one.'''
+    for ur in ur_list:
+            ur.filter_requests(filter_test)
+
+    return ur_list
+
+
 def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
     #TODO: Make set_now() function
     global now
@@ -216,7 +225,7 @@ def filter_out_future_windows(ur_list, horizon=None):
 
 
 @log_windows
-def filter_on_duration(ur_list):
+def filter_on_duration(ur_list, filter_executor=_for_all_ur_windows):
     '''Case 6: Return only windows which are larger than the UR's child R durations.'''
     def filter_on_duration(w, ur, r):
         # Transparently handle either float (in seconds) or datetime durations
@@ -225,20 +234,17 @@ def filter_on_duration(ur_list):
         except TypeError as e:
             duration = r.duration
 
-        return w.end - w.start > duration
+        if w.end - w.start > duration:
+            return True
+        else:
+            tag = 'WindowTooSmall'
+            msg = "Window %s -> %s too small for duration '%s'" % (w.start, w.end, duration)
+            ur.emit_user_feedback(msg, tag)
+            return False
 
     filter_test = filter_on_duration
 
-    return _for_all_ur_windows(ur_list, filter_test)
-
-
-def _for_all_ur_windows(ur_list, filter_test):
-    '''Loop over all Requests of each UserRequest provided, and execute the supplied
-       filter condition on each one.'''
-    for ur in ur_list:
-            ur.filter_requests(filter_test)
-
-    return ur_list
+    return filter_executor(ur_list, filter_test)
 
 
 

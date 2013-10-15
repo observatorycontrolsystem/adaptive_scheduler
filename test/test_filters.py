@@ -376,6 +376,60 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [])
 
 
+    def test_filter_on_duration_emits_user_feedback(self):
+
+        # Trickery to gain access to the inner closure
+        arg_list = []
+        def recording_filter_executor(ur_list, filter_test):
+            arg_list.append(ur_list)
+            arg_list.append(filter_test)
+
+            return ur_list
+
+        ur_list = []
+        filter_on_duration(ur_list, recording_filter_executor)
+
+        w = Mock()
+        w.start = datetime(2013, 10, 1)
+        w.end   = datetime(2013, 10, 3)
+
+        ur = Mock()
+
+        r = Mock()
+        r.duration = 5*24*3600
+
+        arg_list[1](w, ur, r)
+        expected_msg = "Window 2013-10-01 00:00:00 -> 2013-10-03 00:00:00 too small for duration '5 days, 0:00:00'"
+        expected_tag = 'WindowTooSmall'
+        ur.emit_user_feedback.assert_called_with(expected_msg, expected_tag)
+
+
+    def test_filter_on_duration_no_user_feedback_if_ok(self):
+
+        # Trickery to gain access to the inner closure
+        arg_list = []
+        def recording_filter_executor(ur_list, filter_test):
+            arg_list.append(ur_list)
+            arg_list.append(filter_test)
+
+            return ur_list
+
+        ur_list = []
+        filter_on_duration(ur_list, recording_filter_executor)
+
+        w = Mock()
+        w.start = datetime(2013, 10, 1)
+        w.end   = datetime(2013, 10, 3)
+
+        ur = Mock()
+
+        r = Mock()
+        r.duration = 1*24*3600
+
+        arg_list[1](w, ur, r)
+        assert_equal(ur.emit_user_feedback.called, False)
+
+
     def test_filter_on_type_AND_both_requests_have_windows(self):
         window_dict1 = {
                          'start' : "2013-03-01 00:00:00",

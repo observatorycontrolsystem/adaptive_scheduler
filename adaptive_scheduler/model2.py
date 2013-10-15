@@ -15,14 +15,19 @@ from rise_set.sky_coordinates import RightAscension, Declination
 from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.exceptions import InvalidRequestError
-from adaptive_scheduler import semester_service
+from adaptive_scheduler.exceptions            import InvalidRequestError
+from adaptive_scheduler                       import semester_service
+from adaptive_scheduler.log                   import UserRequestLogger
+from adaptive_scheduler.feedback              import UserFeedbackEvent
 
+from datetime import datetime
 import math
 import ast
 import logging
 log = logging.getLogger(__name__)
 
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
 
 def n_requests(user_reqs):
     n_urs  = len(user_reqs)
@@ -453,6 +458,20 @@ class UserRequest(CompoundRequest, DefaultMixin):
         self.expires  = expires
         self.tracking_number = tracking_number
         self.group_id = group_id
+
+
+    def emit_user_feedback(self, msg, tag, timestamp=None):
+        if not timestamp:
+            timestamp = datetime.utcnow()
+
+        originator = 'scheduler'
+        event = UserFeedbackEvent(timestamp, originator, msg, tag)
+
+        logged_msg = str(event)
+
+        ur_log.info(logged_msg, self.tracking_number)
+
+        return
 
 
     def get_priority(self):

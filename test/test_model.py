@@ -8,8 +8,8 @@ from datetime import datetime
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Target, Telescope, Proposal, Molecule,
-                                             Request, CompoundRequest, Windows,
-                                             Window, Constraints,
+                                             Request, CompoundRequest, UserRequest,
+                                             Windows, Window, Constraints,
                                              _LocationExpander )
 from adaptive_scheduler.exceptions import InvalidRequestError
 
@@ -245,6 +245,32 @@ class TestCompoundRequest(object):
         assert_equal(cr.requests[0], r_mock1)
 
 
+class TestUserRequest(object):
+    '''Unit tests for the adaptive scheduler UserRequest object.'''
+
+    def setup(self):
+        pass
+
+    @mock.patch('adaptive_scheduler.model2.ur_log.info')
+    def test_emit_user_feedback(self, mock_log):
+        tracking_number = '0000000005'
+        operator = 'single'
+        ur = UserRequest(
+                          operator = operator,
+                          requests = [],
+                          proposal = None,
+                          expires  = None,
+                          tracking_number = tracking_number,
+                          group_id = None
+                         )
+
+        msg = 'Yo dude'
+        tag = 'MeTag'
+        timestamp = datetime(2013, 10, 15, 1, 1, 1)
+        ur.emit_user_feedback(msg, tag, timestamp)
+
+        mock_log.assert_called_with('UserFeedbackEvent <%s [%s] %s>' % (timestamp, tag, msg),
+                                    tracking_number)
 
 
 

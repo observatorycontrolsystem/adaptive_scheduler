@@ -266,6 +266,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
     log.info("Completed unschedulable filters")
     summarise_urs(user_reqs, log_msg="Passed unschedulable filters:")
+
     for ur in user_reqs:
         log_windows(ur, log_msg="Remaining windows:")
 
