@@ -274,6 +274,9 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 @log_windows
 def filter_on_visibility(crs, tels, visibility_from):
     for cr in crs:
+        tag = 'VisibilityCalculationsInProgress'
+        msg = 'Considering rise/set calculations'
+        cr.emit_user_feedback(msg, tag)
         for r in cr.requests:
             r = compute_intersections(r, tels, visibility_from)
 

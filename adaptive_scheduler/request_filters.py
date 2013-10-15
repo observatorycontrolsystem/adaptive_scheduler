@@ -161,7 +161,14 @@ def run_all_filters(ur_list):
 @log_windows
 def filter_out_past_windows(ur_list):
     '''Case 1: The window exists entirely in the past.'''
-    filter_test = lambda w, ur, r: w.end > now
+    def filter_test(w, ur, r):
+        if w.end > now:
+            return True
+        else:
+            tag = 'WindowInPast'
+            msg = 'Window %s -> %s falls before %s' % (w.start, w.end, now)
+            ur.emit_user_feedback(msg, tag)
+            return False
 
     return _for_all_ur_windows(ur_list, filter_test)
 
@@ -173,6 +180,9 @@ def truncate_lower_crossing_windows(ur_list):
 
     def truncate_lower_crossing(w, ur, r):
         if w.start < now < w.end:
+            tag = 'WindowTruncated'
+            msg = 'Window %s -> %s truncated to %s' % (w.start, w.end, now)
+            ur.emit_user_feedback(msg, tag)
             w.start = now
 
         return True
@@ -196,6 +206,9 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
             if horizon < effective_horizon:
                 effective_horizon = horizon
         if w.start < effective_horizon < w.end:
+            tag = 'WindowTruncated'
+            msg = 'Window %s -> %s truncated to %s' % (w.start, w.end, effective_horizon)
+            ur.emit_user_feedback(msg, tag)
             w.end = effective_horizon
 
         return True
@@ -217,7 +230,15 @@ def filter_out_future_windows(ur_list, horizon=None):
             if horizon < effective_horizon:
                 effective_horizon = horizon
 
-        return w.start < effective_horizon
+        if w.start < effective_horizon:
+            return True
+        else:
+            tag = 'WindowBeyondHorizon'
+            msg = 'Window %s -> %s starts after the scheduling horizon (%s)' % (w.start,
+                                                                                w.end,
+                                                                                effective_horizon)
+            ur.emit_user_feedback(msg, tag)
+            return False
 
     filter_test = filter_on_future
 
@@ -256,8 +277,10 @@ def drop_empty_requests(ur_list):
     for ur in ur_list:
         dropped = ur.drop_empty_children()
         for removed_r in dropped:
-            ur_log.info("Dropped Request %s: no windows remaining" % removed_r.request_number,
-                        ur.tracking_number)
+            tag = 'NoWindowsRemaining'
+            msg = "Dropped Request %s: no windows remaining" % removed_r.request_number
+            ur.emit_user_feedback(msg, tag)
+            ur_log.info(msg, ur.tracking_number)
 
     return ur_list
 
@@ -268,8 +291,17 @@ def drop_empty_requests(ur_list):
 def filter_on_expiry(ur_list):
     '''Case 7: Return only URs which haven't expired.'''
 
-    return [ ur for ur in ur_list if ur.expires > now ]
+    not_expired = []
+    for ur in ur_list:
+        if ur.expires > now:
+            not_expired.append(ur)
+        else:
+            tag = 'UserRequestExpired'
+            msg = 'User Request %s expired on %s (and now = %s)' % (ur.tracking_number,
+                                                                    ur.expires, now)
+            ur.emit_user_feedback(msg, tag)
 
+    return not_expired
 
 @log_urs
 def filter_on_type(ur_list):
@@ -279,6 +311,10 @@ def filter_on_type(ur_list):
     for ur in ur_list:
         if ur.is_schedulable():
             new_ur_list.append(ur)
+        else:
+            tag = 'UserRequestImpossible'
+            msg = 'Dropped UserRequest %s: not enough Requests remaining' % ur.tracking_number
+            ur.emit_user_feedback(msg, tag)
 
     return new_ur_list
 

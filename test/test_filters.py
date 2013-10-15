@@ -42,7 +42,7 @@ class TestExpiryFilter(object):
                            requests = None,
                            proposal = None,
                            expires  = expiry_dt,
-                           tracking_number = None,
+                           tracking_number = '0000000005',
                            group_id = None
                          )
         return ur1
