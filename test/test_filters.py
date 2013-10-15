@@ -124,7 +124,7 @@ class TestWindowFilters(object):
                            requests        = req_list,
                            proposal        = None,
                            expires         = None,
-                           tracking_number = None,
+                           tracking_number = '0000000005',
                            group_id        = None
                          )
 
