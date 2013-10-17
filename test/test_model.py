@@ -251,8 +251,8 @@ class TestUserRequest(object):
     def setup(self):
         pass
 
-    @mock.patch('adaptive_scheduler.model2.ur_log.info')
-    def test_emit_user_feedback(self, mock_log):
+    @mock.patch('adaptive_scheduler.model2.event_bus.fire_event')
+    def test_emit_user_feedback(self, mock_func):
         tracking_number = '0000000005'
         operator = 'single'
         ur = UserRequest(
@@ -269,9 +269,7 @@ class TestUserRequest(object):
         timestamp = datetime(2013, 10, 15, 1, 1, 1)
         ur.emit_user_feedback(msg, tag, timestamp)
 
-        mock_log.assert_called_with('UserFeedbackEvent <%s [%s] %s>' % (timestamp, tag, msg),
-                                    tracking_number)
-
+        assert_equal(mock_func.called, True)
 
 
 class TestLocationExpander(object):

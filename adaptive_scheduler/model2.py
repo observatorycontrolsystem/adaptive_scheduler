@@ -18,7 +18,8 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.exceptions            import InvalidRequestError
 from adaptive_scheduler                       import semester_service
 from adaptive_scheduler.log                   import UserRequestLogger
-from adaptive_scheduler.feedback              import UserFeedbackEvent
+from adaptive_scheduler.feedback              import UserFeedbackLogger
+from adaptive_scheduler.eventbus              import get_eventbus
 
 from datetime import datetime
 import math
@@ -28,6 +29,9 @@ log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
+
+event_bus = get_eventbus()
+
 
 def n_requests(user_reqs):
     n_urs  = len(user_reqs)
@@ -465,11 +469,11 @@ class UserRequest(CompoundRequest, DefaultMixin):
             timestamp = datetime.utcnow()
 
         originator = 'scheduler'
-        event = UserFeedbackEvent(timestamp, originator, msg, tag)
 
-        logged_msg = str(event)
+        event = UserFeedbackLogger.create_event(timestamp, originator, msg,
+                                                tag, self.tracking_number)
 
-        ur_log.info(logged_msg, self.tracking_number)
+        event_bus.fire_event(event)
 
         return
 
