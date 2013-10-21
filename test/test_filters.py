@@ -19,8 +19,11 @@ from adaptive_scheduler.request_filters import (
                                                  truncate_upper_crossing_windows,
                                                  filter_on_duration,
                                                  filter_on_type,
-                                                 run_all_filters
+                                                 run_all_filters,
+                                                 set_rs_and_urs_to_unschedulable
                                                )
+
+from reqdb.client import ConnectionError, RequestDBError
 
 
 def get_windows_from_request(request, resource_name):
@@ -518,3 +521,57 @@ class TestWindowFilters(object):
             received_ur_list = run_all_filters([ur1])
 
         assert_equal(len(received_ur_list), 1)
+
+
+    @patch("adaptive_scheduler.request_filters.log")
+    def test_set_rs_and_urs_to_unschedulable_r1(self, log_mock):
+        client = Mock()
+        r_numbers  = []
+        ur_numbers = []
+        exception_str = 'foo'
+        client.set_request_state = Mock(side_effect=ConnectionError('foo'))
+        set_rs_and_urs_to_unschedulable(client, r_numbers, ur_numbers)
+
+        msg = "Problem setting Request states to UNSCHEDULABLE: %s" % exception_str
+        log_mock.error.assert_called_with(msg)
+
+
+    @patch("adaptive_scheduler.request_filters.log")
+    def test_set_rs_and_urs_to_unschedulable_r2(self, log_mock):
+        client = Mock()
+        r_numbers  = []
+        ur_numbers = []
+        exception_str = 'foo'
+        client.set_request_state = Mock(side_effect=RequestDBError(exception_str))
+        set_rs_and_urs_to_unschedulable(client, r_numbers, ur_numbers)
+
+        msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % exception_str
+        log_mock.error.assert_called_with(msg)
+
+
+    @patch("adaptive_scheduler.request_filters.log")
+    def test_set_rs_and_urs_to_unschedulable_ur1(self, log_mock):
+        client = Mock()
+        r_numbers  = []
+        ur_numbers = []
+        exception_str = 'bar'
+        client.set_user_request_state = Mock(side_effect=ConnectionError(exception_str))
+        set_rs_and_urs_to_unschedulable(client, r_numbers, ur_numbers)
+
+        msg = "Problem setting User Request states to UNSCHEDULABLE: %s" % exception_str
+        log_mock.error.assert_called_with(msg)
+
+
+    @patch("adaptive_scheduler.request_filters.log")
+    def test_set_rs_and_urs_to_unschedulable_ur2(self, log_mock):
+        client = Mock()
+        r_numbers  = []
+        ur_numbers = []
+        exception_str = 'bar'
+        client.set_user_request_state = Mock(side_effect=RequestDBError(exception_str))
+        set_rs_and_urs_to_unschedulable(client, r_numbers, ur_numbers)
+
+        msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % exception_str
+        log_mock.error.assert_called_with(msg)
+
+

@@ -54,6 +54,9 @@ February 2013
 from datetime import datetime, timedelta
 from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.log      import UserRequestLogger
+from reqdb.client                import ConnectionError, RequestDBError
+
+
 import logging
 log = logging.getLogger(__name__)
 
@@ -91,6 +94,28 @@ def log_urs(fn):
     return wrap
 
 
+def set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulable_ur_numbers):
+    # 1) Update the state of all the unschedulable Requests in the DB in one go
+    try:
+        client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
+    except ConnectionError as e:
+        log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
+    except RequestDBError as e:
+        msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
+        log.error(msg)
+
+    # 2) Update the state of all the unschedulable User Requests in the DB in one go
+    try:
+        client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
+    except ConnectionError as e:
+        log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
+    except RequestDBError as e:
+        msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
+        log.error(msg)
+
+    return
+
+
 def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
     #TODO: Make set_now() function
     global now
@@ -111,8 +136,8 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
             # issue, not the child's)
             if not r.has_windows():
                 # TODO: Contemplate errors
-                msg =  "Request %s (UR %s) is UNSCHEDULABLE" % (ur.tracking_number,
-                                                                r.request_number)
+                msg =  "Request %s (UR %s) is UNSCHEDULABLE" % (r.request_number,
+                                                                ur.tracking_number)
                 log.info(msg)
                 unschedulable_r_numbers.append(r.request_number)
 
@@ -121,12 +146,11 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
         log.info("Dry-run: Not updating any Request DB states")
     else:
         log.info("Updating Request DB states")
-        # Update the state of all the unschedulable Requests in the DB in one go
-        client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
 
-        # Update the state of all the unschedulable User Requests in the DB in one go
-        unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
-        client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
+    unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
+
+    set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulable_ur_numbers)
+
 
     return schedulable_urs
 
