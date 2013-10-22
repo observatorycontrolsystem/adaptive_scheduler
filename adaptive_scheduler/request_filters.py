@@ -94,8 +94,8 @@ def log_urs(fn):
     return wrap
 
 
-def set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulable_ur_numbers):
-    # 1) Update the state of all the unschedulable Requests in the DB in one go
+def set_rs_to_unschedulable(client, unschedulable_r_numbers):
+    '''Update the state of all the unschedulable Requests in the DB in one go.'''
     try:
         client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
     except ConnectionError as e:
@@ -104,7 +104,11 @@ def set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulab
         msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
         log.error(msg)
 
-    # 2) Update the state of all the unschedulable User Requests in the DB in one go
+    return
+
+
+def set_urs_to_unschedulable(client, unschedulable_ur_numbers):
+    '''Update the state of all the unschedulable User Requests in the DB in one go.'''
     try:
         client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
     except ConnectionError as e:
@@ -116,18 +120,16 @@ def set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulab
     return
 
 
-def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
-    #TODO: Make set_now() function
-    global now
-    now = user_now
-
-    initial_urs     = set(ur_list)
-    schedulable_urs = set(run_all_filters(ur_list))
-
+def filter_urs(ur_list):
+    initial_urs       = set(ur_list)
+    schedulable_urs   = set(run_all_filters(ur_list))
     unschedulable_urs = initial_urs - schedulable_urs
 
-    log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
+    return schedulable_urs, unschedulable_urs
 
+
+def find_unschedulable_r_numbers(unschedulable_urs):
+    '''TODO: Deprecated - remove me.'''
     unschedulable_r_numbers = []
     for ur in unschedulable_urs:
         for r in ur.requests:
@@ -141,16 +143,38 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
                 log.info(msg)
                 unschedulable_r_numbers.append(r.request_number)
 
+    return unschedulable_r_numbers
+
+
+def find_unschedulable_ur_numbers(unschedulable_urs):
+    unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
+
+    return unschedulable_ur_numbers
+
+
+def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
+    global now
+    now = user_now
+
+    schedulable_urs, unschedulable_urs = filter_urs(ur_list)
+
+    log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
+
+    # Find the child Request numbers of ok URs which need to be marked UNSCHEDULABLE
+    # For example, a MANY where the first child has no window any more
+    dropped_r_numbers = drop_empty_requests(schedulable_urs)
 
     if dry_run:
         log.info("Dry-run: Not updating any Request DB states")
     else:
         log.info("Updating Request DB states")
 
-    unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
+    # Find the tracking numbers of the URs which need to be marked UNSCHEDULABLE
+    unschedulable_ur_numbers = find_unschedulable_ur_numbers(unschedulable_urs)
 
-    set_rs_and_urs_to_unschedulable(client, unschedulable_r_numbers, unschedulable_ur_numbers)
-
+    # Set the states of the Requests and User Requests
+    set_rs_to_unschedulable(client, dropped_r_numbers)
+    set_urs_to_unschedulable(client, unschedulable_ur_numbers)
 
     return schedulable_urs
 
@@ -166,7 +190,6 @@ def run_all_filters(ur_list):
     ur_list = filter_out_future_windows(ur_list)
     ur_list = filter_on_duration(ur_list)
     ur_list = filter_on_type(ur_list)
-    ur_list = drop_empty_requests(ur_list)
 
     return ur_list
 
@@ -265,19 +288,20 @@ def _for_all_ur_windows(ur_list, filter_test):
     return ur_list
 
 
-
 # Request Filters
 #---------------------
 def drop_empty_requests(ur_list):
     '''Delete child Requests which have no windows remaining.'''
 
+    dropped_request_numbers = []
     for ur in ur_list:
         dropped = ur.drop_empty_children()
         for removed_r in dropped:
             ur_log.info("Dropped Request %s: no windows remaining" % removed_r.request_number,
                         ur.tracking_number)
+            dropped_request_numbers.append(removed_r.request_number)
 
-    return ur_list
+    return dropped_request_numbers
 
 
 # User Request Filters
