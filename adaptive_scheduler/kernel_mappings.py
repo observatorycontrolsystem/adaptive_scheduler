@@ -243,18 +243,19 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
     log.info("Filtering URs of type 'single'")
     singles = truncate_upper_crossing_windows(singles, horizon=scheduling_horizon)
     singles = filter_out_future_windows(singles, horizon=scheduling_horizon)
+    #TODO: Add the duration filter here?
     # Clean up Requests without any windows
     singles = filter_on_type(singles)
     log.info("After filtering, %d singles remain" % len(singles))
 
 
     # Compounds (and/oneof/many) are not constrained to the short-term scheduling horizon
+    # TODO: Remove this block after review
     log.info("Filtering compound URs of type 'and', 'oneof' or 'many'")
     compounds = truncate_upper_crossing_windows(compounds)
     compounds = filter_out_future_windows(compounds)
     # Clean up Requests without any windows
     compounds = filter_on_type(compounds)
-    compounds = drop_empty_requests(compounds)
     log.info("After filtering, %d compounds remain" % len(compounds))
 
     crs = singles + compounds
