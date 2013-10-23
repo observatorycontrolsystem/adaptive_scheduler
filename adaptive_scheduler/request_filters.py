@@ -128,24 +128,6 @@ def filter_urs(ur_list):
     return schedulable_urs, unschedulable_urs
 
 
-def find_unschedulable_r_numbers(unschedulable_urs):
-    '''TODO: Deprecated - remove me.'''
-    unschedulable_r_numbers = []
-    for ur in unschedulable_urs:
-        for r in ur.requests:
-            # Only blacklist child Requests with no windows
-            # (the UR could be unschedulable due to type, but that is a parent
-            # issue, not the child's)
-            if not r.has_windows():
-                # TODO: Contemplate errors
-                msg =  "Request %s (UR %s) is UNSCHEDULABLE" % (r.request_number,
-                                                                ur.tracking_number)
-                log.info(msg)
-                unschedulable_r_numbers.append(r.request_number)
-
-    return unschedulable_r_numbers
-
-
 def find_unschedulable_ur_numbers(unschedulable_urs):
     unschedulable_ur_numbers = [ur.tracking_number for ur in unschedulable_urs]
 
