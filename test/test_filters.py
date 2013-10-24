@@ -20,6 +20,7 @@ from adaptive_scheduler.request_filters import (
                                                  filter_on_duration,
                                                  filter_on_type,
                                                  drop_empty_requests,
+                                                 filter_on_pending,
                                                  run_all_filters,
                                                  set_rs_to_unschedulable,
                                                  set_urs_to_unschedulable
@@ -129,7 +130,7 @@ class TestWindowFilters(object):
                            requests        = req_list,
                            proposal        = None,
                            expires         = None,
-                           tracking_number = None,
+                           tracking_number = '0000000005',
                            group_id        = None
                          )
 
@@ -536,6 +537,39 @@ class TestWindowFilters(object):
                          )
         received = drop_empty_requests([ur1])
         assert_equal(received, ['0000000005'])
+
+
+    def test_filter_on_pending(self):
+        request_number = '0000000005'
+        r1  = Request(
+                      target         = None,
+                      molecules      = None,
+                      windows        = Windows(),
+                      constraints    = None,
+                      request_number = request_number,
+                      state          = 'PENDING'
+                    )
+        r2  = Request(
+                      target         = None,
+                      molecules      = None,
+                      windows        = Windows(),
+                      constraints    = None,
+                      request_number = '0000000009',
+                      state          = 'UNSCHEDULABLE'
+                    )
+        ur1 = UserRequest(
+                           operator        = 'single',
+                           requests        = [r1, r2],
+                           proposal        = None,
+                           expires         = None,
+                           tracking_number = '0000000001',
+                           group_id        = None
+                         )
+
+        filter_on_pending([ur1])
+
+        assert_equal(ur1.requests, [r1])
+
 
 
     def test_run_all_filters(self):

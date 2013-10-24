@@ -30,7 +30,7 @@ def summarise_urs(user_reqs, log_msg):
         w_total = sum([r.n_windows() for r in ur.requests])
         _, w_str = pluralise(w_total, 'Window')
         r_total, r_str = pluralise(len(ur.requests), 'Request')
-        r_states = [r.received_state for r in ur.requests]
+        r_states = [r.state for r in ur.requests]
 
         sum_str = ' %s: %s (%d %s, %d %s) %s'
         log.debug(sum_str, ur.tracking_number, r_nums,

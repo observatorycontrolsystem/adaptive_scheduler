@@ -254,17 +254,19 @@ class Request(DefaultMixin):
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
-        duration  - exposure time of each observation. TODO: Clarify what this means.
-        telescope - a Telescope object (lat/long information)
+        constraints - a Constraint object (airmass limit, etc.)
+        request_number - The unique request number of the Request
+        state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, request_number):
+    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING'):
 
         self.target         = target
         self.molecules      = molecules
         self.windows        = windows
         self.constraints    = constraints
         self.request_number = request_number
+        self.state          = state
 
     def get_duration(self):
         '''This is a placeholder for a more sophisticated duration function, that
@@ -396,6 +398,20 @@ class CompoundRequest(DefaultMixin):
         dropped = []
         for r in self.requests:
             if r.has_windows():
+                to_keep.append(r)
+            else:
+                dropped.append(r)
+
+        self.requests = to_keep
+
+        return dropped
+
+
+    def drop_non_pending(self):
+        to_keep = []
+        dropped = []
+        for r in self.requests:
+            if r.state == 'PENDING':
                 to_keep.append(r)
             else:
                 dropped.append(r)
@@ -573,9 +589,8 @@ class ModelBuilder(object):
                        windows        = windows,
                        constraints    = constraints,
                        request_number = req_dict['request_number'],
+                       state          = req_dict['state']
                      )
-
-        req.received_state = req_dict['state']
 
         return req
 

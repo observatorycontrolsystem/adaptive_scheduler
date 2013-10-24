@@ -165,6 +165,7 @@ def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
 def run_all_filters(ur_list):
     '''Execute all the filters, in the correct order. Windows may be discarded or
        truncated during this process. Unschedulable User Requests are discarded.'''
+    ur_list = filter_on_pending(ur_list)
     ur_list = filter_on_expiry(ur_list)
     ur_list = filter_out_past_windows(ur_list)
     ur_list = truncate_lower_crossing_windows(ur_list)
@@ -286,18 +287,26 @@ def drop_empty_requests(ur_list):
     return dropped_request_numbers
 
 
+def filter_on_pending(ur_list):
+    '''Case 7: Drop child Requests which are not in a PENDING state.'''
+    for ur in ur_list:
+        dropped = ur.drop_non_pending()
+        ur_log.info("Dropped %d Requests: not PENDING" % len(dropped), ur.tracking_number)
+
+    return ur_list
+
 # User Request Filters
 #---------------------
 @log_urs
 def filter_on_expiry(ur_list):
-    '''Case 7: Return only URs which haven't expired.'''
+    '''Case 8: Return only URs which haven't expired.'''
 
     return [ ur for ur in ur_list if ur.expires > now ]
 
 
 @log_urs
 def filter_on_type(ur_list):
-    '''Case 8: Only return URs which can still be completed (have enough child
+    '''Case 9: Only return URs which can still be completed (have enough child
        Requests with Windows remaining).'''
     new_ur_list = []
     for ur in ur_list:
