@@ -511,6 +511,16 @@ def blacklist_running_blocks(ur_list, tels, start, end):
                                                      block.end
                                                    )
         log.debug(msg)
+        tag = 'RunningBlock'
+        msg = 'This Request has a running block (id=%d, finishing at %s)' % (
+                                                                             block.id,
+                                                                             block.end
+                                                                            )
+        for ur in ur_list:
+            if ur.tracking_number == block.tracking_num_set()[0]:
+                ur.emit_user_feedback(msg, tag)
+                break
+
 
     all_tns         = [ur.tracking_number for ur in ur_list]
     running_tns     = [block.tracking_num_set()[0] for block in all_running_blocks]

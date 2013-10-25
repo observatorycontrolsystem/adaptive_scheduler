@@ -84,7 +84,7 @@ class _EventBus(object):
         self.listeners_by_type = {}
         self.last_events = {}
 
-    def add_listener(self, listener, persist=False):
+    def add_listener(self, listener, persist=False, event_type=None):
         ''' Add a listener to the event bus. 
 
             The event type this listener is registered against is determined
@@ -95,7 +95,7 @@ class _EventBus(object):
             collection. If persist is True then the reference is stored as a 
             regular strong reference.
         '''
-        listener_event_type = listener.__class__.event_type()
+        listener_event_type = event_type or listener.__class__.event_type()
 
         listeners = self.listeners_by_type.setdefault(listener_event_type, [])
 

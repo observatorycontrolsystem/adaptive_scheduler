@@ -38,6 +38,8 @@ from adaptive_scheduler.semester_service import get_semester_block, get_semester
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
+from adaptive_scheduler.eventbus        import get_eventbus
+from adaptive_scheduler.feedback        import TimingLogger
 from adaptive_scheduler.utils import timeit
 from adaptive_scheduler.log   import UserRequestLogger
 
@@ -52,6 +54,7 @@ multi_ur_log = logging.getLogger('ur_logger')
 
 ur_log = UserRequestLogger(multi_ur_log)
 
+event_bus = get_eventbus()
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -196,11 +199,38 @@ def update_telescope_events(tels, current_events):
     return
 
 
+def report_scheduling_outcome(to_schedule, scheduled_reservations):
+    # Collate the scheduled and unscheduled reservations
+    to_schedule_res = []
+    for comp_res in to_schedule:
+        to_schedule_res.extend(comp_res.reservation_list)
+
+
+    not_scheduled_res = set(to_schedule_res) - set(scheduled_reservations)
+
+    # Emit the messages
+    for res in scheduled_reservations:
+        tag = 'WasScheduled'
+        msg = 'This Request (request number=%s) was scheduled' % res.request.request_number
+        res.compound_request.emit_user_feedback(msg, tag)
+
+    for res in not_scheduled_res:
+        tag = 'WasNotScheduled'
+        msg = 'This Request (request number=%s) was not scheduled (it clashed)' % res.request.request_number
+        res.compound_request.emit_user_feedback(msg, tag)
+
+    return
+
+
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
                   current_events, visibility_from=None, dry_run=False, no_weather=False,
                   no_singles=False, no_compounds=False):
+
+    start_event = TimingLogger.create_start_event(datetime.utcnow())
+    event_bus.fire_event(start_event)
+
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
@@ -333,9 +363,13 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
                              time_slicing_dict)
     schedule = kernel.schedule_all()
 
-    x = []
-    [x.extend(a) for a in schedule.values()]
-    log.info("Scheduling completed. Final schedule has %d Reservations." % len(x))
+
+    scheduled_reservations = []
+    [scheduled_reservations.extend(a) for a in schedule.values()]
+    log.info("Scheduling completed. Final schedule has %d Reservations." % len(scheduled_reservations))
+
+    report_scheduling_outcome(to_schedule, scheduled_reservations)
+
 
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
@@ -360,6 +394,10 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     log.info("In total, deleted %d previously scheduled %s", *pluralise(n_deleted, 'block'))
     log.info("Submitted %d new %s to the POND", *pluralise(n_submitted, 'block'))
     log.info("Scheduling complete.")
+
+    end_event = TimingLogger.create_end_event(datetime.utcnow())
+    event_bus.fire_event(end_event)
+
 
     return visibility_from
 

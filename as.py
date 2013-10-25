@@ -16,7 +16,7 @@ from __future__ import division
 
 
 from adaptive_scheduler.eventbus         import get_eventbus
-from adaptive_scheduler.feedback         import UserFeedbackLogger
+from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.orchestrator     import run_scheduler, get_requests_from_db
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
@@ -239,7 +239,12 @@ def main(argv):
 
     event_bus = get_eventbus()
     user_feedback_logger = UserFeedbackLogger()
+    timing_logger        = TimingLogger()
     event_bus.add_listener(user_feedback_logger, persist=True)
+    event_bus.add_listener(timing_logger, persist=True,
+                           event_type=TimingLogger._StartEvent)
+    event_bus.add_listener(timing_logger, persist=True,
+                           event_type=TimingLogger._EndEvent)
 
     # Force a reschedule when first started
     scheduler_client.set_dirty_flag()
