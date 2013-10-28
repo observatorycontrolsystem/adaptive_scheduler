@@ -78,6 +78,7 @@ def get_requests_from_json(req_filename, telescope_class):
         req_data = req_fh.read()
         return json.loads(req_data)
 
+
 @timeit
 def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     format = '%Y-%m-%d %H:%M:%S'
