@@ -288,12 +288,15 @@ def drop_empty_requests(ur_list):
 
 
 def filter_on_pending(ur_list):
-    '''Case 7: Drop child Requests which are not in a PENDING state.'''
+    '''Case 7: Delete child Requests which are not in a PENDING state.'''
     for ur in ur_list:
         dropped = ur.drop_non_pending()
-        ur_log.info("Dropped %d Requests: not PENDING" % len(dropped), ur.tracking_number)
+        req_str = pl(dropped, 'Request')
+        ur_log.info("Dropped %d %s: not PENDING" % (len(dropped), req_str),
+                                                    ur.tracking_number)
 
     return ur_list
+
 
 # User Request Filters
 #---------------------

@@ -242,7 +242,6 @@ class Telescope(DataContainer):
 
 
 class Request(DefaultMixin):
-    # TODO: Update docstring to match new signature
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
@@ -388,11 +387,6 @@ class CompoundRequest(DefaultMixin):
         return n_windows
 
 
-    def is_schedulable(self):
-#        return self._is_schedulable_hard()
-        return self._is_schedulable_easy()
-
-
     def drop_empty_children(self):
         to_keep = []
         dropped = []
@@ -419,6 +413,10 @@ class CompoundRequest(DefaultMixin):
         self.requests = to_keep
 
         return dropped
+
+
+    def is_schedulable(self):
+        return self._is_schedulable_easy()
 
 
     def _is_schedulable_easy(self):
