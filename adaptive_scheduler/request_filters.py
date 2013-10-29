@@ -294,6 +294,7 @@ def filter_on_pending(ur_list):
         req_str = pl(dropped, 'Request')
         ur_log.info("Dropped %d %s: not PENDING" % (len(dropped), req_str),
                                                     ur.tracking_number)
+        log.info("Dropped %d %s: not PENDING" % (len(dropped), req_str))
 
     return ur_list
 
