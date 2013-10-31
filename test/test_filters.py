@@ -571,7 +571,6 @@ class TestWindowFilters(object):
         assert_equal(ur1.requests, [r1])
 
 
-
     def test_run_all_filters(self):
         window_dict1 = {
                          'start' : "2013-03-01 00:00:00",
