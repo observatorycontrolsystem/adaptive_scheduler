@@ -166,7 +166,8 @@ def filter_out_past_windows(ur_list):
             return True
         else:
             tag = 'WindowInPast'
-            msg = 'Window %s -> %s falls before %s' % (w.start, w.end, now)
+            msg = 'Window (at %s) %s -> %s falls before %s' % (w.get_resource_name(),
+                                                               w.start, w.end, now)
             ur.emit_user_feedback(msg, tag)
             return False
 
@@ -180,8 +181,9 @@ def truncate_lower_crossing_windows(ur_list):
 
     def truncate_lower_crossing(w, ur, r):
         if w.start < now < w.end:
-            tag = 'WindowTruncated'
-            msg = 'Window %s -> %s truncated to %s' % (w.start, w.end, now)
+            tag = 'WindowTruncatedLower'
+            msg = 'Window (at %s) %s -> %s truncated to %s' % (w.get_resource_name(),
+                                                               w.start, w.end, now)
             ur.emit_user_feedback(msg, tag)
             w.start = now
 
@@ -206,8 +208,9 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
             if horizon < effective_horizon:
                 effective_horizon = horizon
         if w.start < effective_horizon < w.end:
-            tag = 'WindowTruncated'
-            msg = 'Window %s -> %s truncated to %s' % (w.start, w.end, effective_horizon)
+            tag = 'WindowTruncatedUpper'
+            msg = 'Window (at %s) %s -> %s truncated to %s' % (w.get_resource_name(), 
+                                                               w.start, w.end, effective_horizon)
             ur.emit_user_feedback(msg, tag)
             w.end = effective_horizon
 
@@ -234,7 +237,9 @@ def filter_out_future_windows(ur_list, horizon=None):
             return True
         else:
             tag = 'WindowBeyondHorizon'
-            msg = 'Window %s -> %s starts after the scheduling horizon (%s)' % (w.start,
+            msg = 'Window (at %s) %s -> %s starts after the scheduling horizon (%s)' % (
+                                                                                w.get_resource_name(),
+                                                                                w.start,
                                                                                 w.end,
                                                                                 effective_horizon)
             ur.emit_user_feedback(msg, tag)
@@ -259,7 +264,8 @@ def filter_on_duration(ur_list, filter_executor=_for_all_ur_windows):
             return True
         else:
             tag = 'WindowTooSmall'
-            msg = "Window %s -> %s too small for duration '%s'" % (w.start, w.end, duration)
+            msg = "Window (at %s) %s -> %s too small for duration '%s'" % (w.get_resource_name(),
+                                                                           w.start, w.end, duration)
             ur.emit_user_feedback(msg, tag)
             return False
 

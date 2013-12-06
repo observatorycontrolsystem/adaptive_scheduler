@@ -42,6 +42,7 @@ from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger
 from adaptive_scheduler.utils import timeit
 from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.event_utils import report_scheduling_outcome
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -199,27 +200,6 @@ def update_telescope_events(tels, current_events):
     return
 
 
-def report_scheduling_outcome(to_schedule, scheduled_reservations):
-    # Collate the scheduled and unscheduled reservations
-    to_schedule_res = []
-    for comp_res in to_schedule:
-        to_schedule_res.extend(comp_res.reservation_list)
-
-
-    not_scheduled_res = set(to_schedule_res) - set(scheduled_reservations)
-
-    # Emit the messages
-    for res in scheduled_reservations:
-        tag = 'WasScheduled'
-        msg = 'This Request (request number=%s) was scheduled' % res.request.request_number
-        res.compound_request.emit_user_feedback(msg, tag)
-
-    for res in not_scheduled_res:
-        tag = 'WasNotScheduled'
-        msg = 'This Request (request number=%s) was not scheduled (it clashed)' % res.request.request_number
-        res.compound_request.emit_user_feedback(msg, tag)
-
-    return
 
 
 # TODO: refactor into smaller chunks
@@ -313,24 +293,26 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         if tel.events:
             log.info("Bypassing visibility calcs for %s" % tel_name)
 
-    user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
-                                  now, semester_end, scheduling_horizon)
+    visible_urs = filter_for_kernel(user_reqs, visibility_from, tels,
+                                    now, semester_end, scheduling_horizon)
+
+
     log.info("Completed dark/rise_set filters")
-    summarise_urs(user_reqs, log_msg="Passed dark/rise filters:")
-    for ur in user_reqs:
+    summarise_urs(visible_urs, log_msg="Passed dark/rise filters:")
+    for ur in visible_urs:
         log_windows(ur, log_msg="Remaining windows:")
 
-    log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
+    log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(visible_urs))
 
     # Remove running blocks from consideration, and get the availability edge
     try:
-        user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
+        visible_urs, running_at_tel = blacklist_running_blocks(visible_urs, tels, now, semester_end)
     except PondFacadeException as e:
         log.error("Could not determine running blocks from POND - aborting run")
         return visibility_from
 
     # Convert CompoundRequests -> CompoundReservations
-    many_urs, other_urs = differentiate_by_type('many', user_reqs)
+    many_urs, other_urs = differentiate_by_type('many', visible_urs)
     to_schedule_many  = make_many_type_compound_reservations(many_urs, tels, visibility_from,
                                                             semester_start)
     to_schedule_other = make_compound_reservations(other_urs, tels, visibility_from,

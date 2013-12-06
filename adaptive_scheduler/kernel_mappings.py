@@ -45,6 +45,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.memoize import Memoize
 from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.event_utils import report_visibility_outcome
 
 import math
 
@@ -262,7 +263,8 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 
 
     # Filter on rise_set/airmass
-    crs = filter_on_visibility(crs, tels, visibility_from)
+    visible_crs = filter_on_visibility(crs, tels, visibility_from)
+    report_visibility_outcome(crs, visible_crs)
 
     # Clean up now impossible Requests
     crs = filter_on_duration(crs)
@@ -274,9 +276,6 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 @log_windows
 def filter_on_visibility(crs, tels, visibility_from):
     for cr in crs:
-        tag = 'VisibilityCalculationsInProgress'
-        msg = 'Considering rise/set calculations'
-        cr.emit_user_feedback(msg, tag)
         for r in cr.requests:
             r = compute_intersections(r, tels, visibility_from)
 

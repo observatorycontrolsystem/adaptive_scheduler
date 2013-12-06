@@ -392,6 +392,7 @@ class TestWindowFilters(object):
         w = Mock()
         w.start = datetime(2013, 10, 1)
         w.end   = datetime(2013, 10, 3)
+        w.get_resource_name.return_value = 'elp'
 
         ur = Mock()
 
@@ -399,7 +400,7 @@ class TestWindowFilters(object):
         r.duration = 5*24*3600
 
         arg_list[1](w, ur, r)
-        expected_msg = "Window 2013-10-01 00:00:00 -> 2013-10-03 00:00:00 too small for duration '5 days, 0:00:00'"
+        expected_msg = "Window (at elp) 2013-10-01 00:00:00 -> 2013-10-03 00:00:00 too small for duration '5 days, 0:00:00'"
         expected_tag = 'WindowTooSmall'
         ur.emit_user_feedback.assert_called_with(expected_msg, expected_tag)
 
