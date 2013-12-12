@@ -28,7 +28,7 @@ February 2012
 from datetime import datetime
 import time
 
-from adaptive_scheduler.model2         import Proposal, Target
+from adaptive_scheduler.model2         import Proposal, SiderealTarget, NonSiderealTarget
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
@@ -242,17 +242,104 @@ class Block(object):
             block_build_args['trans'] = self.min_transparency
 
         pond_block = PondBlock.build(**block_build_args)
-
-        # 2a) Construct the Pointing Coordinate
-        coord = pointing.ra_dec(
-                                 ra  = self.target.ra.in_degrees(),
-                                 dec = self.target.dec.in_degrees()
-                               )
-        # 2b) Construct the Pointing
-        pond_pointing = pointing.sidereal(
-                                           name  = self.target.name,
-                                           coord = coord,
-                                         )
+        
+        if isinstance(self.target, SiderealTarget):
+            # 2a) Construct the Pointing Coordinate
+            coord = pointing.ra_dec(
+                                     ra  = self.target.ra.in_degrees(),
+                                     dec = self.target.dec.in_degrees()
+                                   )
+            # 2b) Construct the Pointing
+            pond_pointing = pointing.sidereal(
+                                               name  = self.target.name,
+                                               coord = coord,
+                                             )
+        elif isinstance(self.target, NonSiderealTarget):
+            if self.target.scheme == 'ASA_MAJOR_PLANET':
+                pond_pointing = pointing.nonsidereal_asa_major_planet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              longofperih = self.target.longofperih,
+                                                              meandist    = self.target.meandist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              meanlong = self.target.meanlong,
+                                                              dailymot = self.target.dailymot
+                                                              )
+            elif self.target.scheme == 'ASA_MINOR_PLANET':
+                pond_pointing = pointing.nonsidereal_asa_minor_planet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              meandist    = self.target.meandist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              meananom = self.target.meananom,
+                                                              )
+            elif self.target.scheme == 'ASA_COMET':
+                pond_pointing = pointing.nonsidereal_asa_comet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              perihdist    = self.target.perihdist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              epochofperih = self.target.epochofperih,
+                                                              )
+            elif self.target.scheme == 'JPL_MAJOR_PLANET':
+                pond_pointing = pointing.nonsidereal_jpl_major_planet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              meandist    = self.target.meandist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              meananom = self.target.meananom,
+                                                              dailymot = self.target.dailymot
+                                                              )
+            elif self.target.scheme == 'JPL_MINOR_PLANET':
+                pond_pointing = pointing.nonsidereal_jpl_minor_planet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              perihdist    = self.target.perihdist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              epochofperih = self.target.epochofperih,
+                                                              )
+            elif self.target.scheme == 'MPC_MINOR_PLANET':
+                pond_pointing = pointing.nonsidereal_mpc_minor_planet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              meandist    = self.target.meandist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              meananom = self.target.meananom,
+                                                              )
+            elif self.target.scheme == 'MPC_COMET':
+                pond_pointing = pointing.nonsidereal_mpc_comet(name    = self.target.name,
+                                                              scheme  = self.target.scheme,
+                                                              epochofel = self.target.epochofel,
+                                                              orbinc = self.target.orbinc,
+                                                              longascnode = self.target.longascnode,
+                                                              argofperih = self.target.argofperih,
+                                                              perihdist    = self.target.perihdist, 
+                                                              eccentricity = self.target.eccentricity,
+                                                              epochofperih = self.target.epochofperih,
+                                                              )
+            else:
+                raise Exception("Unsupported orbital element scheme %s" % self.target.scheme)
+        else:
+            raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
+        
+        
 
         # 3) Construct the Observations
         observations = []

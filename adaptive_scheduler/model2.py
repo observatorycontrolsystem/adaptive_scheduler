@@ -99,18 +99,26 @@ class DataContainer(DefaultMixin):
 
 
 class Target(DataContainer):
+    
+    def __init__(self, required_fields, *initial_data, **kwargs):
+        DataContainer.__init__(self, *initial_data, **kwargs)
+        self.__req_fields =  required_fields
 
     def list_missing_fields(self):
-        req_fields = ('name', 'ra', 'dec')
         missing_fields = []
-
-        for field in req_fields:
+        for field in self.__req_fields:
             try:
                 getattr(self, field)
             except:
                 missing_fields.append(field)
 
         return missing_fields
+
+
+class SiderealTarget(Target):
+
+    def __init__(self, *initial_data, **kwargs):
+        Target.__init__(self, ('name', 'ra', 'dec'), *initial_data, **kwargs)
 
     # Use accessors to ensure we always have valid coordinates
     def get_ra(self):
@@ -131,7 +139,45 @@ class Target(DataContainer):
     dec = property(get_dec, set_dec)
 
     def __repr__(self):
-        return "Target(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
+        return "SiderealTarget(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
+
+    
+class NonSiderealTarget(Target):
+
+    def __init__(self, scheme, *initial_data, **kwargs):
+        if scheme == 'ASA_MAJOR_PLANET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'longofperih',
+                               'meandist', 'eccentricity', 'meanlong', 'dailymot')
+        elif scheme == 'ASA_MINOR_PLANET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'meandist', 'eccentricity', 'meananom')
+        elif scheme == 'ASA_COMET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'perihdist', 'eccentricity', 'epochofperih')
+        elif scheme == 'JPL_MAJOR_PLANET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'meandist', 'eccentricity', 'meananom', 'dailymot')
+        elif scheme == 'JPL_MINOR_PLANET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'perihdist', 'eccentricity', 'epochofperih')
+        elif scheme == 'MPC_MINOR_PLANET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'meandist', 'eccentricity', 'meananom')
+        elif scheme == 'MPC_COMET':
+            required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'argofperih',
+                               'perihdist', 'eccentricity', 'epochofperih')
+        else:
+            msg = "Unknown orbital element scheme %s" % scheme
+            raise Exception(msg)
+        Target.__init__(self, required_fields, *initial_data, **kwargs)
+        
+    def __repr__(self):
+        fields_as_str = []
+        for field in self.__req_fields:
+            fields_as_str.append(field + '=' + str(getattr(self, field)))
+        fields_as_str = '(' + ','.join(fields_as_str) + ')'
+        return "NonSiderealTarget%s" % fields_as_str
+        
 
 
 class Constraints(DataContainer):
@@ -563,7 +609,13 @@ class ModelBuilder(object):
 
 
     def build_request(self, req_dict):
-        target = Target(req_dict['target'])
+        target_type = req_dict['target']['type'] 
+        if target_type == 'SIDEREAL':
+            target = SiderealTarget(req_dict['target'])
+        elif target_type == 'NON_SIDEREAL':
+            target = NonSiderealTarget(req_dict['target'])
+        else:
+            raise Exception("Unsupported target type %s" & target_type)
 
         molecules = []
         for mol_dict in req_dict['molecules']:
