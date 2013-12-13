@@ -157,7 +157,7 @@ class Block(object):
 
         self.proposal  = Proposal()
         self.molecules = []
-        self.target    = Target()
+        self.target    = SiderealTarget()
 
         self.pond_block = None
 

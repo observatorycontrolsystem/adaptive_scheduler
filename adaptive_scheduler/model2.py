@@ -99,7 +99,7 @@ class DataContainer(DefaultMixin):
 
 
 class Target(DataContainer):
-    
+
     def __init__(self, required_fields, *initial_data, **kwargs):
         DataContainer.__init__(self, *initial_data, **kwargs)
         self.__req_fields =  required_fields

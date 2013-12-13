@@ -7,7 +7,8 @@ from datetime import datetime
 
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
-                                             Target, Telescope, Proposal, Molecule,
+                                             SiderealTarget, Telescope,
+                                             Proposal, Molecule,
                                              Request, CompoundRequest, Windows,
                                              Window, Constraints,
                                              _LocationExpander )
@@ -153,14 +154,14 @@ class TestRequest(object):
     '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
-        self.target = Target(
-                              name  = 'deneb',
-                              #ra  = '20 41 25.91',
-                              #dec = '+45 16 49.22',
-                              ra  = 310.35795833333333,
-                              dec = 45.280338888888885,
-                              epoch = 2000,
-                             )
+        self.target = SiderealTarget(
+                                      name  = 'deneb',
+                                      #ra  = '20 41 25.91',
+                                      #dec = '+45 16 49.22',
+                                      ra  = 310.35795833333333,
+                                      dec = 45.280338888888885,
+                                      epoch = 2000,
+                                     )
 
         self.telescope = Telescope(
                                     name      = 'maui',
