@@ -180,9 +180,10 @@ class NonSiderealTarget(Target):
 
 
     def in_rise_set_format(self):
-        target_dict = make_moving_object_target(self.scheme, self.epochofel, self.orbinc,
+        epoch_of_el = iso_string_to_datetime(self.epochofel)
+        target_dict = make_moving_object_target(self.scheme, epoch_of_el, self.orbinc,
                                                 self.longascnode, self.argofperih,
-                                                meandist, self.eccentricity, self.meananom)
+                                                self.meandist, self.eccentricity, self.meananom)
 
         return target_dict
 
