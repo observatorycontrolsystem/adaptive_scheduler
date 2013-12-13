@@ -12,6 +12,7 @@ July 2012
 # Required for true (non-integer) division
 from __future__ import division
 from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.astrometry      import make_ra_dec_target, make_moving_object_target
 from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
@@ -135,6 +136,12 @@ class SiderealTarget(Target):
     def get_dec(self):
         return self._dec
 
+    def in_rise_set_format(self):
+        target_dict = make_ra_dec_target(self.ra, self.dec)
+
+        return target_dict
+
+
     ra  = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
@@ -170,14 +177,22 @@ class NonSiderealTarget(Target):
             msg = "Unknown orbital element scheme %s" % scheme
             raise Exception(msg)
         Target.__init__(self, required_fields, *initial_data, **kwargs)
-        
+
+
+    def in_rise_set_format(self):
+        target_dict = make_moving_object_target(self.scheme, self.epochofel, self.orbinc,
+                                                self.longascnode, self.argofperih,
+                                                meandist, self.eccentricity, self.meananom)
+
+        return target_dict
+
+
     def __repr__(self):
         fields_as_str = []
         for field in self.__req_fields:
             fields_as_str.append(field + '=' + str(getattr(self, field)))
         fields_as_str = '(' + ','.join(fields_as_str) + ')'
         return "NonSiderealTarget%s" % fields_as_str
-        
 
 
 class Constraints(DataContainer):
