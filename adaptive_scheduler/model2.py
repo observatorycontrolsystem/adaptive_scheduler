@@ -151,7 +151,8 @@ class SiderealTarget(Target):
     
 class NonSiderealTarget(Target):
 
-    def __init__(self, scheme, *initial_data, **kwargs):
+    def __init__(self, *initial_data, **kwargs):
+        scheme = initial_data[0]['scheme']
         if scheme == 'ASA_MAJOR_PLANET':
             required_fields = ('name', 'scheme', 'epochofel', 'orbinc', 'longascnode', 'longofperih',
                                'meandist', 'eccentricity', 'meanlong', 'dailymot')
@@ -180,8 +181,7 @@ class NonSiderealTarget(Target):
 
 
     def in_rise_set_format(self):
-        epoch_of_el = iso_string_to_datetime(self.epochofel)
-        target_dict = make_moving_object_target(self.scheme, epoch_of_el, self.orbinc,
+        target_dict = make_moving_object_target(self.scheme, self.epochofel, self.orbinc,
                                                 self.longascnode, self.argofperih,
                                                 self.meandist, self.eccentricity, self.meananom)
 
@@ -189,11 +189,12 @@ class NonSiderealTarget(Target):
 
 
     def __repr__(self):
-        fields_as_str = []
-        for field in self.__req_fields:
-            fields_as_str.append(field + '=' + str(getattr(self, field)))
-        fields_as_str = '(' + ','.join(fields_as_str) + ')'
-        return "NonSiderealTarget%s" % fields_as_str
+#        fields_as_str = []
+#        for field in self.__req_fields:
+#            fields_as_str.append(field + '=' + str(getattr(self, field)))
+#        fields_as_str = '(' + ','.join(fields_as_str) + ')'
+#        return "NonSiderealTarget%s" % fields_as_str
+        return "NonSiderealTarget: %s" % self.name
 
 
 class Constraints(DataContainer):

@@ -257,7 +257,6 @@ class Block(object):
         elif isinstance(self.target, NonSiderealTarget):
             if self.target.scheme == 'ASA_MAJOR_PLANET':
                 pond_pointing = pointing.nonsidereal_asa_major_planet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -269,7 +268,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'ASA_MINOR_PLANET':
                 pond_pointing = pointing.nonsidereal_asa_minor_planet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -280,7 +278,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'ASA_COMET':
                 pond_pointing = pointing.nonsidereal_asa_comet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -291,7 +288,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'JPL_MAJOR_PLANET':
                 pond_pointing = pointing.nonsidereal_jpl_major_planet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -303,7 +299,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'JPL_MINOR_PLANET':
                 pond_pointing = pointing.nonsidereal_jpl_minor_planet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -314,7 +309,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'MPC_MINOR_PLANET':
                 pond_pointing = pointing.nonsidereal_mpc_minor_planet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
@@ -325,7 +319,6 @@ class Block(object):
                                                               )
             elif self.target.scheme == 'MPC_COMET':
                 pond_pointing = pointing.nonsidereal_mpc_comet(name    = self.target.name,
-                                                              scheme  = self.target.scheme,
                                                               epochofel = self.target.epochofel,
                                                               orbinc = self.target.orbinc,
                                                               longascnode = self.target.longascnode,
