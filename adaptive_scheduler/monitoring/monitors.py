@@ -68,6 +68,37 @@ class NetworkStateMonitor(object):
         ''' Return true if this datum means a resource unuseable. '''
         pass
 
+class SequencerEnableMonitor(NetworkStateMonitor):
+    ''' Monitor the sequencer enable state. '''
+
+    def __init__(self):
+        super(SequencerEnableMonitor, self).__init__()
+        self.reason = None
+
+
+    def retrieve_data(self):
+        return get_datum("Sequencer Enable State")
+
+
+    def create_event(self, datum):
+        reason = self.reason or "Sequencer in %s state" % datum.value
+        event  = Event(
+                        type       = "SEQUENCER DISABLED",
+                        reason     = reason,
+                        start_time = datum.timestamp_changed,
+                        end_time   = datum.timestamp_measured
+                      )
+
+        return event
+
+
+    def create_resource(self, datum):
+        return '.'.join((datum.telescope,datum.observatory,datum.site))
+
+
+    def is_an_event(self, datum):
+        return datum.value != 'AUTOMATIC'
+
 
 
 class ScheduleTimestampMonitor(NetworkStateMonitor):
