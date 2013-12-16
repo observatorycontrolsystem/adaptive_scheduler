@@ -2,12 +2,13 @@
 from __future__ import division
 
 import mock
-from nose.tools import assert_equal, raises
+from nose.tools import assert_equal, assert_in, raises, nottest
 from datetime import datetime
 
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
-                                             SiderealTarget, Telescope,
+                                             SiderealTarget, NonSiderealTarget,
+                                             Telescope,
                                              Proposal, Molecule,
                                              Request, CompoundRequest, Windows,
                                              Window, Constraints,
@@ -247,8 +248,6 @@ class TestCompoundRequest(object):
 
 
 
-
-
 class TestLocationExpander(object):
 
     def setup(self):
@@ -439,3 +438,36 @@ class TestTelescope(object):
         telescope = Telescope()
 
         assert_equal(telescope.events, [])
+
+
+
+class TestNonSiderealTarget(object):
+
+    def setup(self):
+        pass
+
+
+    def test_minor_planet_has_required_fields(self):
+        initial_data = { 'scheme' : 'MPC_MINOR_PLANET' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('meandist', target.required_fields)
+
+
+    def test_comet_has_required_fields(self):
+        initial_data = { 'scheme' : 'MPC_COMET' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('perihdist', target.required_fields)
+
+
+    def test_accepts_lowercase_scheme(self):
+        initial_data = { 'scheme' : 'mpc_minor_planet' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('meandist', target.required_fields)
+
+
