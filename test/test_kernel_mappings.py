@@ -3,7 +3,8 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (Telescope, Target, Request, CompoundRequest,
+from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
+                                       CompoundRequest,
                                        Window, Windows, Molecule, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
@@ -44,7 +45,7 @@ class TestKernelMappings(object):
                                                  )
                     }
 
-        self.target = Target(
+        self.target = SiderealTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
                               ra  = 310.35795833333333,
@@ -190,10 +191,10 @@ class TestKernelMappings(object):
 
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
-                            datetime.strptime('2011-11-01 02:02:43.252928', format),
-                            datetime.strptime('2011-11-01 07:52:00.564203', format),
-                            datetime.strptime('2011-11-02 02:01:50.419578', format),
-                            datetime.strptime('2011-11-02 07:48:04.692318', format)
+                            datetime.strptime('2011-11-01 02:02:43.257196', format),
+                            datetime.strptime('2011-11-01 07:52:00.564199', format),
+                            datetime.strptime('2011-11-02 02:01:50.423880', format),
+                            datetime.strptime('2011-11-02 07:48:04.692316', format)
                            )
 
         # Verify we get the intervals we expect
@@ -233,8 +234,8 @@ class TestKernelMappings(object):
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
                              datetime.strptime('2011-11-01 06:00:00.0', format),
-                             datetime.strptime('2011-11-01 07:52:00.564203', format),
-                             datetime.strptime('2011-11-02 02:01:50.419578', format),
+                             datetime.strptime('2011-11-01 07:52:00.564199', format),
+                             datetime.strptime('2011-11-02 02:01:50.423880', format),
                              datetime.strptime('2011-11-02 06:00:00.0', format),
                             )
 
@@ -282,8 +283,8 @@ class TestKernelMappings(object):
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
                             datetime.strptime('2011-11-01 06:00:00.0', format),
-                            datetime.strptime('2011-11-01 07:52:00.564203', format),
-                            datetime.strptime('2011-11-02 02:01:50.419578', format),
+                            datetime.strptime('2011-11-01 07:52:00.564199', format),
+                            datetime.strptime('2011-11-02 02:01:50.423880', format),
                             datetime.strptime('2011-11-02 04:00:00.0', format),
                            )
 

@@ -2,12 +2,14 @@
 from __future__ import division
 
 import mock
-from nose.tools import assert_equal, raises
+from nose.tools import assert_equal, assert_in, raises, nottest
 from datetime import datetime
 
 # Import the modules to test
 from adaptive_scheduler.model2      import ( build_telescope_network,
-                                             Target, Telescope, Proposal, Molecule,
+                                             SiderealTarget, NonSiderealTarget,
+                                             Telescope,
+                                             Proposal, Molecule,
                                              Request, CompoundRequest, Windows,
                                              Window, Constraints,
                                              _LocationExpander )
@@ -153,14 +155,14 @@ class TestRequest(object):
     '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
-        self.target = Target(
-                              name  = 'deneb',
-                              #ra  = '20 41 25.91',
-                              #dec = '+45 16 49.22',
-                              ra  = 310.35795833333333,
-                              dec = 45.280338888888885,
-                              epoch = 2000,
-                             )
+        self.target = SiderealTarget(
+                                      name  = 'deneb',
+                                      #ra  = '20 41 25.91',
+                                      #dec = '+45 16 49.22',
+                                      ra  = 310.35795833333333,
+                                      dec = 45.280338888888885,
+                                      epoch = 2000,
+                                     )
 
         self.telescope = Telescope(
                                     name      = 'maui',
@@ -243,8 +245,6 @@ class TestCompoundRequest(object):
 
         assert_equal(len(cr.requests), 1)
         assert_equal(cr.requests[0], r_mock1)
-
-
 
 
 
@@ -438,3 +438,36 @@ class TestTelescope(object):
         telescope = Telescope()
 
         assert_equal(telescope.events, [])
+
+
+
+class TestNonSiderealTarget(object):
+
+    def setup(self):
+        pass
+
+
+    def test_minor_planet_has_required_fields(self):
+        initial_data = { 'scheme' : 'MPC_MINOR_PLANET' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('meandist', target.required_fields)
+
+
+    def test_comet_has_required_fields(self):
+        initial_data = { 'scheme' : 'MPC_COMET' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('perihdist', target.required_fields)
+
+
+    def test_accepts_lowercase_scheme(self):
+        initial_data = { 'scheme' : 'mpc_minor_planet' }
+
+        target = NonSiderealTarget(initial_data)
+
+        assert_in('meandist', target.required_fields)
+
+
