@@ -24,7 +24,6 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
-from rise_set.astrometry      import make_target
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
@@ -54,14 +53,6 @@ log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
-
-def target_to_rise_set_target(target):
-    '''Convert scheduler Target to rise_set target dict.'''
-
-    # TODO: Change to default_dict, expand to allow proper motion etc.
-    target_dict = make_target(target.ra, target.dec)
-
-    return target_dict
 
 
 def telescope_to_rise_set_telescope(telescope):
@@ -118,7 +109,8 @@ def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
 
-    rs_target  = target_to_rise_set_target(req.target)
+    # TODO: Expand to allow proper motion etc.
+    rs_target = req.target.in_rise_set_format()
 
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
