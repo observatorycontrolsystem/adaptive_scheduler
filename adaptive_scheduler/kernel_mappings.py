@@ -24,7 +24,7 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
-from rise_set.astrometry      import make_target
+from rise_set.astrometry      import make_ra_dec_target as make_target
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
