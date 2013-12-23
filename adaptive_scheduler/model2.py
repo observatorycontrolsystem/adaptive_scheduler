@@ -16,14 +16,23 @@ from rise_set.astrometry      import make_ra_dec_target, make_moving_object_targ
 from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.exceptions import InvalidRequestError
-from adaptive_scheduler import semester_service
+from adaptive_scheduler.exceptions            import InvalidRequestError
+from adaptive_scheduler                       import semester_service
+from adaptive_scheduler.log                   import UserRequestLogger
+from adaptive_scheduler.feedback              import UserFeedbackLogger
+from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils import required_fields_from_scheme
 
+from datetime import datetime
 import math
 import ast
 import logging
 log = logging.getLogger(__name__)
+
+multi_ur_log = logging.getLogger('ur_logger')
+ur_log = UserRequestLogger(multi_ur_log)
+
+event_bus = get_eventbus()
 
 
 def n_requests(user_reqs):
@@ -509,6 +518,20 @@ class UserRequest(CompoundRequest, DefaultMixin):
         self.expires  = expires
         self.tracking_number = tracking_number
         self.group_id = group_id
+
+
+    def emit_user_feedback(self, msg, tag, timestamp=None):
+        if not timestamp:
+            timestamp = datetime.utcnow()
+
+        originator = 'scheduler'
+
+        event = UserFeedbackLogger.create_event(timestamp, originator, msg,
+                                                tag, self.tracking_number)
+
+        event_bus.fire_event(event)
+
+        return
 
 
     def get_priority(self):

@@ -38,8 +38,11 @@ from adaptive_scheduler.semester_service import get_semester_block, get_semester
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
+from adaptive_scheduler.eventbus        import get_eventbus
+from adaptive_scheduler.feedback        import TimingLogger
 from adaptive_scheduler.utils import timeit
 from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.event_utils import report_scheduling_outcome
 
 from reqdb.client import SearchQuery, SchedulerClient
 from reqdb        import request_factory
@@ -52,6 +55,7 @@ multi_ur_log = logging.getLogger('ur_logger')
 
 ur_log = UserRequestLogger(multi_ur_log)
 
+event_bus = get_eventbus()
 
 #TODO: Refactor - move all these functions to better locations
 def get_requests(url, telescope_class):
@@ -198,11 +202,17 @@ def update_telescope_events(tels, current_events):
     return
 
 
+
+
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
                   current_events, visibility_from=None, dry_run=False, no_weather=False,
                   no_singles=False, no_compounds=False):
+
+    start_event = TimingLogger.create_start_event(datetime.utcnow())
+    event_bus.fire_event(start_event)
+
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
     scheduling_horizon = now + ONE_WEEK
@@ -268,6 +278,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
     log.info("Completed unschedulable filters")
     summarise_urs(user_reqs, log_msg="Passed unschedulable filters:")
+
     for ur in user_reqs:
         log_windows(ur, log_msg="Remaining windows:")
 
@@ -284,24 +295,26 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         if tel.events:
             log.info("Bypassing visibility calcs for %s" % tel_name)
 
-    user_reqs = filter_for_kernel(user_reqs, visibility_from, tels,
-                                  now, semester_end, scheduling_horizon)
+    visible_urs = filter_for_kernel(user_reqs, visibility_from, tels,
+                                    now, semester_end, scheduling_horizon)
+
+
     log.info("Completed dark/rise_set filters")
-    summarise_urs(user_reqs, log_msg="Passed dark/rise filters:")
-    for ur in user_reqs:
+    summarise_urs(visible_urs, log_msg="Passed dark/rise filters:")
+    for ur in visible_urs:
         log_windows(ur, log_msg="Remaining windows:")
 
-    log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(user_reqs))
+    log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(visible_urs))
 
     # Remove running blocks from consideration, and get the availability edge
     try:
-        user_reqs, running_at_tel = blacklist_running_blocks(user_reqs, tels, now, semester_end)
+        visible_urs, running_at_tel = blacklist_running_blocks(visible_urs, tels, now, semester_end)
     except PondFacadeException as e:
         log.error("Could not determine running blocks from POND - aborting run")
         return visibility_from
 
     # Convert CompoundRequests -> CompoundReservations
-    many_urs, other_urs = differentiate_by_type('many', user_reqs)
+    many_urs, other_urs = differentiate_by_type('many', visible_urs)
     to_schedule_many  = make_many_type_compound_reservations(many_urs, tels, visibility_from,
                                                             semester_start)
     to_schedule_other = make_compound_reservations(other_urs, tels, visibility_from,
@@ -334,9 +347,13 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
                              time_slicing_dict)
     schedule = kernel.schedule_all()
 
-    x = []
-    [x.extend(a) for a in schedule.values()]
-    log.info("Scheduling completed. Final schedule has %d Reservations." % len(x))
+
+    scheduled_reservations = []
+    [scheduled_reservations.extend(a) for a in schedule.values()]
+    log.info("Scheduling completed. Final schedule has %d Reservations." % len(scheduled_reservations))
+
+    report_scheduling_outcome(to_schedule, scheduled_reservations)
+
 
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
@@ -361,6 +378,10 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
     log.info("In total, deleted %d previously scheduled %s", *pluralise(n_deleted, 'block'))
     log.info("Submitted %d new %s to the POND", *pluralise(n_submitted, 'block'))
     log.info("Scheduling complete.")
+
+    end_event = TimingLogger.create_end_event(datetime.utcnow())
+    event_bus.fire_event(end_event)
+
 
     return visibility_from
 

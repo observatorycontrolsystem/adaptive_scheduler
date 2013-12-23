@@ -10,8 +10,8 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              SiderealTarget, NonSiderealTarget,
                                              Telescope,
                                              Proposal, Molecule,
-                                             Request, CompoundRequest, Windows,
-                                             Window, Constraints,
+                                             Request, CompoundRequest, UserRequest,
+                                             Windows, Window, Constraints,
                                              _LocationExpander )
 from adaptive_scheduler.exceptions import InvalidRequestError
 
@@ -246,6 +246,32 @@ class TestCompoundRequest(object):
         assert_equal(len(cr.requests), 1)
         assert_equal(cr.requests[0], r_mock1)
 
+
+class TestUserRequest(object):
+    '''Unit tests for the adaptive scheduler UserRequest object.'''
+
+    def setup(self):
+        pass
+
+    @mock.patch('adaptive_scheduler.model2.event_bus.fire_event')
+    def test_emit_user_feedback(self, mock_func):
+        tracking_number = '0000000005'
+        operator = 'single'
+        ur = UserRequest(
+                          operator = operator,
+                          requests = [],
+                          proposal = None,
+                          expires  = None,
+                          tracking_number = tracking_number,
+                          group_id = None
+                         )
+
+        msg = 'Yo dude'
+        tag = 'MeTag'
+        timestamp = datetime(2013, 10, 15, 1, 1, 1)
+        ur.emit_user_feedback(msg, tag, timestamp)
+
+        assert_equal(mock_func.called, True)
 
 
 class TestLocationExpander(object):
