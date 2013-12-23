@@ -17,7 +17,6 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.orchestrator     import run_scheduler, get_requests_from_db
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
@@ -162,6 +161,7 @@ def clear_dirty_flag(scheduler_client, args):
 
 
 def get_requests(scheduler_client, now):
+    from adaptive_scheduler.orchestrator     import get_requests_from_db
     # Try and get the requests
     semester_start, semester_end = get_semester_block(dt=now)
     try:
@@ -177,6 +177,7 @@ def get_requests(scheduler_client, now):
 
 
 def create_new_schedule(scheduler_client, args, visibility_from, current_events):
+    from adaptive_scheduler.orchestrator import run_scheduler
     # Use a static command line datetime if provided...
     now = determine_scheduler_now(args)
 
@@ -226,11 +227,16 @@ def scheduler_rerun_required(scheduler_client, args, network):
 
 
 
+
 def main(argv):
     global run_flag
     args = parse_args(argv)
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
+
+    if args.dry_run:
+        import lcogtpond
+        lcogtpond._service_host = 'localhost'
 
     request_db_url   = args.requestdb
     scheduler_client = SchedulerClient(request_db_url)

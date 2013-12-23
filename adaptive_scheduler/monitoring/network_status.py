@@ -21,12 +21,14 @@ May 2013
 '''
 from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     NotOkToOpenMonitor,
-                                                    OfflineResourceMonitor)
+                                                    OfflineResourceMonitor,
+                                                    SequencerEnableMonitor)
 from adaptive_scheduler.monitoring.telemetry import ConnectionError
 
 DEFAULT_MONITORS = [ScheduleTimestampMonitor(),
                     NotOkToOpenMonitor(),
-                    OfflineResourceMonitor()]
+                    OfflineResourceMonitor(),
+                    SequencerEnableMonitor()]
 
 import logging
 log = logging.getLogger(__name__)

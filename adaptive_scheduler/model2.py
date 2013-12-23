@@ -12,6 +12,7 @@ July 2012
 # Required for true (non-integer) division
 from __future__ import division
 from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.astrometry      import make_ra_dec_target, make_moving_object_target
 from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
                                        DefaultMixin )
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
@@ -20,6 +21,7 @@ from adaptive_scheduler                       import semester_service
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
+from adaptive_scheduler.moving_object_utils import required_fields_from_scheme
 
 from datetime import datetime
 import math
@@ -109,17 +111,25 @@ class DataContainer(DefaultMixin):
 
 class Target(DataContainer):
 
-    def list_missing_fields(self):
-        req_fields = ('name', 'ra', 'dec')
-        missing_fields = []
+    def __init__(self, required_fields, *initial_data, **kwargs):
+        DataContainer.__init__(self, *initial_data, **kwargs)
+        self.required_fields = required_fields
 
-        for field in req_fields:
+    def list_missing_fields(self):
+        missing_fields = []
+        for field in self.required_fields:
             try:
                 getattr(self, field)
             except:
                 missing_fields.append(field)
 
         return missing_fields
+
+
+class SiderealTarget(Target):
+
+    def __init__(self, *initial_data, **kwargs):
+        Target.__init__(self, ('name', 'ra', 'dec'), *initial_data, **kwargs)
 
     # Use accessors to ensure we always have valid coordinates
     def get_ra(self):
@@ -136,11 +146,43 @@ class Target(DataContainer):
     def get_dec(self):
         return self._dec
 
+    def in_rise_set_format(self):
+        target_dict = make_ra_dec_target(self.ra, self.dec)
+
+        return target_dict
+
+
     ra  = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
     def __repr__(self):
-        return "Target(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
+        return "SiderealTarget(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
+
+
+
+class NonSiderealTarget(Target):
+
+    def __init__(self, *initial_data, **kwargs):
+        scheme = initial_data[0]['scheme']
+
+        required_fields = required_fields_from_scheme(scheme)
+        Target.__init__(self, required_fields, *initial_data, **kwargs)
+
+
+    def in_rise_set_format(self):
+        target_dict = make_moving_object_target(self.scheme, self.epochofel, self.orbinc,
+                                                self.longascnode, self.argofperih,
+                                                self.meandist, self.eccentricity, self.meananom)
+
+        return target_dict
+
+
+    def __repr__(self):
+        fields_as_str = []
+        for field in self.required_fields:
+            fields_as_str.append(field + '=' + str(getattr(self, field)))
+        fields_as_str = '(' + ', '.join(fields_as_str) + ')'
+        return "NonSiderealTarget%s" % fields_as_str
 
 
 class Constraints(DataContainer):
@@ -251,7 +293,6 @@ class Telescope(DataContainer):
 
 
 class Request(DefaultMixin):
-    # TODO: Update docstring to match new signature
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
@@ -263,17 +304,19 @@ class Request(DefaultMixin):
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
-        duration  - exposure time of each observation. TODO: Clarify what this means.
-        telescope - a Telescope object (lat/long information)
+        constraints - a Constraint object (airmass limit, etc.)
+        request_number - The unique request number of the Request
+        state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, request_number):
+    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING'):
 
         self.target         = target
         self.molecules      = molecules
         self.windows        = windows
         self.constraints    = constraints
         self.request_number = request_number
+        self.state          = state
 
     def get_duration(self):
         '''This is a placeholder for a more sophisticated duration function, that
@@ -395,11 +438,6 @@ class CompoundRequest(DefaultMixin):
         return n_windows
 
 
-    def is_schedulable(self):
-#        return self._is_schedulable_hard()
-        return self._is_schedulable_easy()
-
-
     def drop_empty_children(self):
         to_keep = []
         dropped = []
@@ -412,6 +450,24 @@ class CompoundRequest(DefaultMixin):
         self.requests = to_keep
 
         return dropped
+
+
+    def drop_non_pending(self):
+        to_keep = []
+        dropped = []
+        for r in self.requests:
+            if r.state == 'PENDING':
+                to_keep.append(r)
+            else:
+                dropped.append(r)
+
+        self.requests = to_keep
+
+        return dropped
+
+
+    def is_schedulable(self):
+        return self._is_schedulable_easy()
 
 
     def _is_schedulable_easy(self):
@@ -572,7 +628,13 @@ class ModelBuilder(object):
 
 
     def build_request(self, req_dict):
-        target = Target(req_dict['target'])
+        target_type = req_dict['target']['type'] 
+        if target_type == 'SIDEREAL':
+            target = SiderealTarget(req_dict['target'])
+        elif target_type == 'NON_SIDEREAL':
+            target = NonSiderealTarget(req_dict['target'])
+        else:
+            raise Exception("Unsupported target type %s" & target_type)
 
         molecules = []
         for mol_dict in req_dict['molecules']:
@@ -596,9 +658,8 @@ class ModelBuilder(object):
                        windows        = windows,
                        constraints    = constraints,
                        request_number = req_dict['request_number'],
+                       state          = req_dict['state']
                      )
-
-        req.received_state = req_dict['state']
 
         return req
 

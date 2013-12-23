@@ -12,7 +12,8 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
                                       get_network_running_blocks)
-from adaptive_scheduler.model2 import (Proposal, Molecule, Target, Request,
+from adaptive_scheduler.model2 import (Proposal, Molecule, Target,
+                                       SiderealTarget, Request,
                                        UserRequest, Constraints)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.camera_mapping import create_camera_mapping
@@ -104,7 +105,7 @@ class TestPond(object):
                                         priority       = 2,
                                       )
 
-        self.valid_target = Target(
+        self.valid_target = SiderealTarget(
                                     name  = 'deneb',
                                     type  = 'sidereal',
                                     #ra  = '20 41 25.91',

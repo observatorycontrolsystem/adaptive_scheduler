@@ -28,11 +28,12 @@ February 2012
 from datetime import datetime
 import time
 
-from adaptive_scheduler.model2         import Proposal, Target
+from adaptive_scheduler.model2         import Proposal, SiderealTarget, NonSiderealTarget
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.log            import UserRequestLogger
+from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
@@ -157,7 +158,7 @@ class Block(object):
 
         self.proposal  = Proposal()
         self.molecules = []
-        self.target    = Target()
+        self.target    = SiderealTarget()
 
         self.pond_block = None
 
@@ -243,16 +244,24 @@ class Block(object):
 
         pond_block = PondBlock.build(**block_build_args)
 
-        # 2a) Construct the Pointing Coordinate
-        coord = pointing.ra_dec(
-                                 ra  = self.target.ra.in_degrees(),
-                                 dec = self.target.dec.in_degrees()
-                               )
-        # 2b) Construct the Pointing
-        pond_pointing = pointing.sidereal(
-                                           name  = self.target.name,
-                                           coord = coord,
-                                         )
+        if isinstance(self.target, SiderealTarget):
+            # 2a) Construct the Pointing Coordinate
+            coord = pointing.ra_dec(
+                                     ra  = self.target.ra.in_degrees(),
+                                     dec = self.target.dec.in_degrees()
+                                   )
+            # 2b) Construct the Pointing
+            pond_pointing = pointing.sidereal(
+                                               name  = self.target.name,
+                                               coord = coord,
+                                             )
+        elif isinstance(self.target, NonSiderealTarget):
+            pond_pointing = pond_pointing_from_scheme(self.target)
+
+        else:
+            raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
+
+
 
         # 3) Construct the Observations
         observations = []

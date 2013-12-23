@@ -75,11 +75,13 @@ def get_requests_from_file(req_filename, telescope_class):
         req_data = req_fh.read()
         return ast.literal_eval(req_data)
 
+
 def get_requests_from_json(req_filename, telescope_class):
 
     with open(req_filename, 'r') as req_fh:
         req_data = req_fh.read()
         return json.loads(req_data)
+
 
 @timeit
 def get_requests_from_db(url, telescope_class, sem_start, sem_end):
