@@ -256,8 +256,7 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 
 
     # Filter on rise_set/airmass
-    visible_crs = filter_on_visibility(crs, tels, visibility_from)
-    report_visibility_outcome(crs, visible_crs)
+    crs = filter_on_visibility(crs, tels, visibility_from)
 
     # Clean up now impossible Requests
     crs = filter_on_duration(crs)
@@ -266,11 +265,35 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
     return crs
 
 
+def list_available_tels(visibility_from):
+    available_tels = []
+    for tel in visibility_from.keys():
+        n_dark_intervals = visibility_from[tel][0].dark_intervals
+        if n_dark_intervals:
+            available_tels.append(tel)
+
+    return available_tels
+
+
 @log_windows
 def filter_on_visibility(crs, tels, visibility_from):
     for cr in crs:
+        ur_log.info("Intersecting windows with dark/up intervals", cr.tracking_number)
         for r in cr.requests:
             r = compute_intersections(r, tels, visibility_from)
+            if r.has_windows():
+                tag = 'RequestIsVisible'
+                msg = 'Request %s (UR %s) is visible (%d windows remaining)' % (r.request_number,
+                                                                                cr.tracking_number,
+                                                                                r.n_windows())
+            else:
+                tag = 'RequestIsNotVisible'
+                msg = 'Request %s (UR %s) is not up and dark at any available telescope' % (r.request_number,
+                                                                                            cr.tracking_number)
+                tels = list_available_tels(visibility_from)
+                ur_log.info("Available telescopes are: %s" % tels, cr.tracking_number)
+
+            cr.emit_user_feedback(msg, tag)
 
     return crs
 
