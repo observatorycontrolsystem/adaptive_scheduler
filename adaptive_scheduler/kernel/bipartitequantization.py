@@ -5,7 +5,7 @@ BipartiteQuantization provides the utility of calculating, hashing and
 unhashing quantum starts for the family of bipartite matching-based 
 schedulers.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Dec 2012
 '''
 

@@ -3,7 +3,7 @@
 '''
 Scheduler is the base class for all schedulers. 
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Dec 2012
 '''
 
@@ -74,7 +74,7 @@ class Scheduler(object):
 
 
     def resources_include(self, x):
-        if (self.current_resource in x.free_windows_dict[resource].keys()):
+        if (self.current_resource in x.free_windows_dict[resource]):
             return True
         else:
             return False
@@ -98,7 +98,7 @@ class Scheduler(object):
             reservation.clean_up_free_windows(resource)
             if reservation.free_windows_dict[resource].is_empty():
                 del(reservation.free_windows_dict[resource])
-        if reservation.free_windows_dict.keys():
+        if reservation.free_windows_dict:
             return True
         else:
             return False

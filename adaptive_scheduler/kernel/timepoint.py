@@ -3,7 +3,7 @@
 '''
 timepoint.py - Class for specifying generic timepoints.
 
-Author: Sotiria Lampoudi
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 August 2011
 edited November 2011: added resource field
 edited December 2011: removed resource field

@@ -14,7 +14,7 @@ Methods that return a new Intervals object:
 subtract(),
 intersect()
 
-Author: Sotiria Lampoudi
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 August 2011
 edited: November 2011 -- added .add(), .find_interval_of_length() methods
 bugfixes in clean_up() and subtract() in November 2011

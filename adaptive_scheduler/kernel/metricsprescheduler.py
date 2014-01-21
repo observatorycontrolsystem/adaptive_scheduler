@@ -4,7 +4,7 @@
 MetricsPreSchedulerScalar
 MetricsPreSchedulerVector
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Feb 2012, May 2012
 '''
 

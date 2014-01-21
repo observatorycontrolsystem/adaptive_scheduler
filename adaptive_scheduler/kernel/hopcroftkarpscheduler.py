@@ -3,7 +3,7 @@
 '''
 HopcroftKarp scheduler: unweighted bipartite graph-based.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 November 2011
 '''
 
@@ -44,7 +44,7 @@ class HopcroftKarpScheduler(object):
                 # (first checks which windows of opportunity are still free)
                 quantum_starts = self.bq.quantize_windows(r, quantum, resource)
                 # add to graph
-                if r.get_ID() in constraint_graph.keys():
+                if r.get_ID() in constraint_graph:
                     constraint_graph[r.get_ID()].extend(quantum_starts)
                 else:
                     constraint_graph[r.get_ID()] = quantum_starts

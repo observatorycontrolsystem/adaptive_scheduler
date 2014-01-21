@@ -6,7 +6,7 @@ across multiple resources using the Hungarian algorithm.
 
 It handles 'and' compound reservations using constraints, and 'oneof' compound reservations transparently.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 June 2012
 '''
 

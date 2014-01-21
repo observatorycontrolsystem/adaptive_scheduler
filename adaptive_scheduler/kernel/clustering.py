@@ -3,7 +3,7 @@
 '''
 Clustering class for clustering and ordering reservations
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 November 2011
 May 2012 -- changed so higher priority results in lower order (evaluated earlier)
 TODO: 

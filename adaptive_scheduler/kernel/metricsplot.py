@@ -3,7 +3,7 @@
 '''
 MetricsPlot
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 May 2012
 '''
 

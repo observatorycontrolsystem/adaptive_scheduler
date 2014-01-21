@@ -3,7 +3,7 @@
 '''
 Reservation_v3 and CompoundReservation_v2 classes for scheduling.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 December 2012
 
 Reservation_v3 does not associate a single resource with each reservation. 

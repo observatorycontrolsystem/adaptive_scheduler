@@ -3,7 +3,7 @@
 '''
 Hungarian scheduler: weighted bipartite graph-based.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 June 2012
 '''
 
@@ -58,7 +58,7 @@ class HungarianScheduler(object):
                 quantum_starts = self.bq.quantize_windows(r, quantum, resource)
                 for q in quantum_starts:
                     # if quantum already exists, just add entry to matrix
-                    if q in self.constraint_matrix_cols_by_quantum.keys():
+                    if q in self.constraint_matrix_cols_by_quantum:
                         # get column number
                         col = self.constraint_matrix_cols_by_quantum[q]
                         sparse_matrix.append([current_row, col, - r.priority])

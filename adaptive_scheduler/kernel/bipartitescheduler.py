@@ -4,7 +4,7 @@
 BipartiteScheduler is the parent class for the unweighted (Hopcroft-Karp)
 and weighted (Hungarian) bipartite matching-based schedulers. 
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Dec 2012
 '''
 

@@ -10,7 +10,7 @@ more argument than usual.
 
 This implementation uses a SPARSE matrix representation. 
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Sept 2012
 Dec 2012: changed to work with Reservation_v3
 '''

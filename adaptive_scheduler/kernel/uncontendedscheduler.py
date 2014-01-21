@@ -4,7 +4,7 @@
 uncontendedscheduler.py -- Schedules reservations in uncontended windows, if
 possible.
 
-Author: Sotiria Lampoudi
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 November 2011
 '''
 
@@ -20,10 +20,10 @@ class UncontendedScheduler(object):
 
     def find_uncontended_windows(self, reservation):
         uncontended = []
-        if self.resource in reservation.free_windows_dict.keys():
+        if self.resource in reservation.free_windows_dict:
             uncontended = reservation.free_windows_dict[self.resource] #intervals
             for r in self.reservation_list:
-                if self.resource in r.free_windows_dict.keys():
+                if self.resource in r.free_windows_dict:
                     if r == reservation: 
                         continue
                     elif r.scheduled:

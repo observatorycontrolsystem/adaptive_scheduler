@@ -6,7 +6,7 @@ across multiple resources using bipartite matching.
 
 It handles 'and' compound reservations using constraints, and 'oneof' compound reservations transparently.
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 November 2011
 '''
 

@@ -8,7 +8,7 @@ Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
 more argument than usual. 
 
-Author: Sotiria Lampoudi (slampoud@cs.ucsb.edu)
+Author: Sotiria Lampoudi (slampoud@gmail.com)
 Sept 2012
 Dec 2012: changed to work with Reservation_v3
 '''
@@ -80,7 +80,7 @@ class SlicedIPScheduler(Scheduler):
                         # build aikt
                         # working with slice: (s,r.resource)
                         key, exists = self.hash_slice(s, resource, slice_length)
-#                        if key in self.aikt.keys():
+#                        if key in self.aikt:
                         if exists:
                             self.aikt[key].append(Yik_idx)
                         else:
