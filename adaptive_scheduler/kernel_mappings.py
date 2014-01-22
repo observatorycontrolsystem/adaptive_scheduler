@@ -290,8 +290,8 @@ def filter_on_visibility(crs, tels, visibility_from):
                 tag = 'RequestIsNotVisible'
                 msg = 'Request %s (UR %s) is not up and dark at any available telescope' % (r.request_number,
                                                                                             cr.tracking_number)
-                tels = list_available_tels(visibility_from)
-                ur_log.info("Available telescopes are: %s" % tels, cr.tracking_number)
+                tel_names = list_available_tels(visibility_from)
+                ur_log.info("Available telescopes are: %s" % tel_names, cr.tracking_number)
 
             cr.emit_user_feedback(msg, tag)
 
