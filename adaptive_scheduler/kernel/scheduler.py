@@ -30,10 +30,18 @@ class Scheduler(object):
         # free intervals
         self.schedule_dict_free = {}
 
+        # sanity check: walk through and make sure none of the globally
+        # possible windows are empty. Do the iteration over keys, because
+        # we're modifying the dict as we go.
+        for r in globally_possible_windows_dict.keys():
+            globally_possible_windows_dict[r].clean_up()
+            if globally_possible_windows_dict[r].is_empty():
+                del globally_possible_windows_dict[r]
         # resource_list holds the schedulable resources.
         # possible windows specified by reservations may include
         # resources not on this list, but we cannot schedule them because
         # we do not know their globally possible windows.
+                
         self.resource_list = globally_possible_windows_dict.keys()
 
         for resource in self.resource_list:
@@ -46,7 +54,7 @@ class Scheduler(object):
         
         self.and_constraints   = []        
         self.oneof_constraints = []
-        self.reservation_list  = self.convert_compound_to_simple()
+        self.reservation_list, self.reservation_dict  = self.convert_compound_to_simple()
         self.unscheduled_reservation_list = copy.copy(self.reservation_list)
 
         self.reservations_by_resource_dict = {}
@@ -79,13 +87,18 @@ class Scheduler(object):
         else:
             return False
 
-
+    # old list-based implementation
+    # def get_reservation_by_ID(self, ID):
+    #     for r in self.reservation_list:
+    #         if r.get_ID() == ID:
+    #             return r
+    #     return None
+    # new dict-based implementation
     def get_reservation_by_ID(self, ID):
-        for r in self.reservation_list:
-            if r.get_ID() == ID:
-                return r
-        return None
-
+        if ID in self.reservation_dict:
+            return self.reservation_dict[ID]
+        else:
+            return None
 
     def check_against_gpw(self, reservation):
         # intersect the free_windows of reservation with the 
@@ -106,15 +119,18 @@ class Scheduler(object):
 
     def convert_compound_to_simple(self):
         reservation_list = []
+        reservation_dict = {}
         for cr in self.compound_reservation_list:
             if cr.issingle():
                 if self.check_against_gpw(cr.reservation_list[0]):
                     reservation_list.append(cr.reservation_list[0])
+                    reservation_dict[cr.reservation_list[0].resID] = cr.reservation_list[0]
             elif cr.isoneof():
                 tmp_list = []
                 for reservation in cr.reservation_list:
                     if self.check_against_gpw(reservation):
                         tmp_list.append(reservation)
+                        reservation_dict[reservation.resID] = reservation
                 if tmp_list:
                     reservation_list.extend(tmp_list)
                 self.oneof_constraints.append(tmp_list)
@@ -127,7 +143,9 @@ class Scheduler(object):
                     reservation_list.extend(cr.reservation_list)
                     # add the constraint to the list of constraints
                     self.and_constraints.append(cr.reservation_list)
-        return reservation_list
+                    for r in cr.reservation_list:
+                        reservation_dict[r.resID] = r
+        return reservation_list, reservation_dict
 
 
     def commit_reservation_to_schedule(self, r):
