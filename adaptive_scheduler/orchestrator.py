@@ -19,7 +19,8 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
 from adaptive_scheduler.model2          import ( ModelBuilder, filter_out_compounds,
-                                                 differentiate_by_type, n_requests )
+                                                 differentiate_by_type, n_requests,
+                                                 RequestError )
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
@@ -207,8 +208,8 @@ def update_telescope_events(tels, current_events):
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
-                  current_events, visibility_from=None, dry_run=False, no_weather=False,
-                  no_singles=False, no_compounds=False):
+                  camera_mappings_file, current_events, visibility_from=None, dry_run=False,
+                  no_weather=False, no_singles=False, no_compounds=False):
 
     start_event = TimingLogger.create_start_event(datetime.utcnow())
     event_bus.fire_event(start_event)
@@ -231,12 +232,15 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     scheduler_dump_file = 'to_schedule.pickle'
 
-    mb = ModelBuilder(tel_file)
+    mb = ModelBuilder(tel_file, camera_mappings_file)
 
     user_reqs = []
     for serialised_req in collapsed_reqs:
-        user_req = mb.build_user_request(serialised_req)
-        user_reqs.append(user_req)
+        try:
+            user_req = mb.build_user_request(serialised_req)
+            user_reqs.append(user_req)
+        except RequestError as e:
+            log.warn(e)
 
     # Summarise the User Requests we've received
     n_urs, n_rs = n_requests(user_reqs)
@@ -366,7 +370,8 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         return visibility_from
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
-    n_submitted = send_schedule_to_pond(schedule, semester_start, dry_run)
+    n_submitted = send_schedule_to_pond(schedule, semester_start,
+                                        camera_mappings_file, dry_run)
 
     log.info("------------------")
     log.info("Scheduling Summary")

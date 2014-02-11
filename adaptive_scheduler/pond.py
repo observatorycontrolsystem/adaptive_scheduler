@@ -29,7 +29,7 @@ from datetime import datetime
 import time
 
 from adaptive_scheduler.model2         import Proposal, SiderealTarget, NonSiderealTarget
-from adaptive_scheduler.utils          import get_reservation_datetimes, timeit
+from adaptive_scheduler.utils          import get_reservation_datetimes, timeit, split_location
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.log            import UserRequestLogger
@@ -89,17 +89,16 @@ def retry_or_reraise(max_tries=6, delay=10):
 
 
 def resolve_instrument(instrument_name, site, obs, tel, mapping):
-    '''Determine the specific camera name for a given site.'''
+    '''Determine the specific camera name for a given site.
+       If a non-generic name is provided, we just pass it through and assume it's ok.'''
 
-    generic_camera_names = ('SCICAM', 'FASTCAM')
+    generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG')
     specific_camera = instrument_name
     if instrument_name in generic_camera_names:
-        tel_class = tel[:-1]
-        search = tel_class + '-' + instrument_name
         inst_match = mapping.find_by_camera_type_and_location(site,
                                                               obs,
                                                               tel,
-                                                              search)
+                                                              instrument_name)
 
         if not inst_match:
             msg = "Couldn't find any instrument for '%s' at %s.%s.%s" % (
@@ -114,11 +113,11 @@ def resolve_instrument(instrument_name, site, obs, tel, mapping):
 def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
     '''Determine the specific autoguider for a given site.
        If a specific name is provided, pass through and return it.
-       If a generic name (SCICAM) is provided, resolve for self-guiding.
+       If a generic name (SCICAM-*) is provided, resolve for self-guiding.
        If nothing is specified, resolve to the preferred autoguider.'''
 
     if ag_name:
-        # If SCICAM is provided, we will self-guide
+        # If SCICAM-* is provided, we will self-guide
         # Otherwise, we'll use whatever they suggest
         specific_ag = resolve_instrument(ag_name, site, obs, tel, mapping)
     else:
@@ -127,7 +126,7 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
 
         if not ag_match:
             msg = "Couldn't find any autoguider for '%s' at %s.%s.%s" % (
-                                                                         ag_name, tel,
+                                                                         specific_camera, tel,
                                                                          obs, site)
             raise InstrumentResolutionError(msg)
         specific_ag = ag_match[0]['autoguider']
@@ -139,7 +138,7 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
-                 request_number, priority=0, max_airmass=None,
+                 request_number, camera_mapping, priority=0, max_airmass=None,
                  min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
@@ -150,6 +149,9 @@ class Block(object):
         self.tracking_number    = str(tracking_number)
         self.request_number     = str(request_number)
         self.priority           = priority
+
+        self.camera_mapping     = camera_mapping
+
         self.max_airmass        = max_airmass
         self.min_lunar_distance = min_lunar_distance
         self.max_lunar_phase    = max_lunar_phase
@@ -220,7 +222,7 @@ class Block(object):
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
-        telescope, observatory, site = self.split_location()
+        telescope, observatory, site = split_location(self.location)
         block_build_args = dict(
                                 start       = self.start,
                                 end         = self.end,
@@ -266,8 +268,6 @@ class Block(object):
         # 3) Construct the Observations
         observations = []
 
-        mapping = create_camera_mapping("camera_mappings.dat")
-
 
         for i, molecule in enumerate(self.molecules):
             mol_summary_msg = "Building molecule %d/%d (%dx%.03d %s)" % (i+1,
@@ -279,7 +279,7 @@ class Block(object):
             ur_log.debug(mol_summary_msg, self.tracking_number)
 
             specific_camera = resolve_instrument(molecule.instrument_name, site,
-                                                 observatory, telescope, mapping)
+                                                 observatory, telescope, self.camera_mapping)
 
             msg = "Instrument resolved as '%s'" % specific_camera
             log.debug(msg)
@@ -333,7 +333,7 @@ class Block(object):
             # Resolve the Autoguider if necessary
             if molecule.ag_mode != 'OFF':
                 specific_ag = resolve_autoguider(molecule.ag_name, specific_camera,
-                                                 site, observatory, telescope, mapping)
+                                                 site, observatory, telescope, self.camera_mapping)
                 obs.ag_name = specific_ag
 
                 msg = "Autoguider resolved as '%s'" % specific_ag
@@ -349,30 +349,6 @@ class Block(object):
         self.pond_block = pond_block
 
         return pond_block
-
-
-    def split_location(self):
-        '''
-            If the location is of the form telescope.observatory.site, then
-            extract those separate components and return them. Otherwise, return
-            the full location in the place of each component without splitting.
-
-            Examples:  '0m4a.aqwb.coj' -> (0m4a, aqwb, coj)
-                       'Maui'          -> (Maui, Maui, Maui)
-        '''
-        # Split on full stops (sometimes obscurely also known as periods)
-        DELIMITER = '.'
-
-        # Number of sections making up the full location string
-        N_COMPONENTS = 3
-
-        separated = tuple(self.location.split(DELIMITER))
-
-        if len(separated) == N_COMPONENTS:
-            return separated
-
-        # Separation wasn't possible. Selling a house is all about:
-        return (self.location, self.location, self.location)
 
 
 def send_blocks_to_pond(blocks, dry_run=False):
@@ -397,7 +373,7 @@ def send_blocks_to_pond(blocks, dry_run=False):
                                                                block.request_number,
                                                                block.tracking_number)
             log.error(msg)
-            ur_log.error(msg)
+            ur_log.error(msg, block.tracking_number)
             log.error(e)
             ur_log.error(e, block.tracking_number)
 
@@ -443,7 +419,8 @@ def make_simple_pond_schedule(schedule, semester_start):
     return pond_blocks
 
 
-def build_block(reservation, request, compound_request, semester_start):
+def build_block(reservation, request, compound_request, semester_start, camera_mappings_file):
+    camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
     block = Block(
                    location           = reservation.scheduled_resource,
@@ -452,6 +429,7 @@ def build_block(reservation, request, compound_request, semester_start):
                    group_id           = compound_request.group_id,
                    tracking_number    = compound_request.tracking_number,
                    request_number     = request.request_number,
+                   camera_mapping     = camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
                    priority           = 30,
                    max_airmass        = request.constraints.max_airmass,
@@ -474,14 +452,15 @@ def build_block(reservation, request, compound_request, semester_start):
 
 
 @timeit
-def send_schedule_to_pond(schedule, semester_start, dry_run=False):
+def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
     blocks = []
     for resource_name in schedule:
         for reservation in schedule[resource_name]:
             block = build_block(reservation, reservation.request,
-                                reservation.compound_request, semester_start)
+                                reservation.compound_request, semester_start,
+                                camera_mappings_file)
 
             blocks.append(block)
 

@@ -88,7 +88,7 @@ class Network(object):
             self.current_events  = self._status()
         except ConnectionError as e:
             msg = "Unable to retrieve current network status: %s" % e
-            log.warning(msg)
+            log.warn(msg)
 
             return self.previous_events
 

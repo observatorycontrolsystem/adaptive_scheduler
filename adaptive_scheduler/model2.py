@@ -11,19 +11,21 @@ July 2012
 
 # Required for true (non-integer) division
 from __future__ import division
-from rise_set.sky_coordinates import RightAscension, Declination
-from rise_set.astrometry      import make_ra_dec_target, make_moving_object_target
-from adaptive_scheduler.utils import ( iso_string_to_datetime, EqualityMixin,
-                                       DefaultMixin )
+
+from rise_set.sky_coordinates                 import RightAscension, Declination
+from rise_set.astrometry                      import make_ra_dec_target, make_moving_object_target
+from adaptive_scheduler.utils                 import ( iso_string_to_datetime, EqualityMixin,
+                                                       DefaultMixin, join_location)
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.exceptions            import InvalidRequestError
-from adaptive_scheduler                       import semester_service
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
-from adaptive_scheduler.moving_object_utils import required_fields_from_scheme
+from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
+from adaptive_scheduler.camera_mapping        import create_camera_mapping
+from adaptive_scheduler                       import semester_service
 
-from datetime import datetime
+from datetime    import datetime
+from collections import namedtuple
 import math
 import ast
 import logging
@@ -49,7 +51,7 @@ def filter_out_compounds(user_reqs):
     for ur in user_reqs:
         if ur.operator != 'single':
             msg = "UR %s is of type %s - removing from consideration" % (ur.tracking_number, ur.operator)
-            log.warning(msg)
+            log.warn(msg)
         else:
             single_urs.append(ur)
 
@@ -292,6 +294,129 @@ class Telescope(DataContainer):
 
 
 
+class Instrument(DefaultMixin):
+    def __init__(self):
+        self.type = 'NULL-INSTRUMENT'
+
+    def _no_instrument_defined(self):
+        raise ConfigurationError("Can't get duration - no instrument has been specified")
+
+    def get_duration(self, dummy_molecule_arg):
+        self._no_instrument_defined()
+
+
+
+class InstrumentFactory(object):
+    def __init__(self):
+        self.overhead = namedtuple(
+                                    'Overhead',
+                                    (
+                                      'readout_per_exp',        # Unbinned readout time per frame
+                                      'fixed_overhead_per_exp', # Camera-query overhead (binning independent)
+                                      'filter_change_time',     # Time to change a filter
+                                      'front_padding'           # Guesstimate of sequencer/site agent set-up
+                                                                # time (upper bound)
+                                    )
+                                 )
+
+        self.instruments = {
+                             '1M0-SCICAM-SBIG'     : self.make_sbig,
+                             '1M0-SCICAM-SINISTRO' : self.make_sinistro,
+                             'NULL-INSTRUMENT'     : self.make_null_instrument,
+                           }
+
+
+    def make_sbig(self):
+        sbig_overheads = self.overhead(
+                                        readout_per_exp        = 60,
+                                        fixed_overhead_per_exp = 0.5,
+                                        filter_change_time     = 15,
+                                        front_padding          = 90,
+                                      )
+
+        sbig_ccd = CCD(*sbig_overheads, type='1M0-SCICAM-SBIG')
+
+        return sbig_ccd
+
+
+    def make_sinistro(self):
+        sinistro_overheads = self.overhead(
+                                            readout_per_exp        = 46,
+                                            fixed_overhead_per_exp = 23,
+                                            filter_change_time     = 15,
+                                            front_padding          = 90,
+                                          )
+
+        sinistro_ccd = CCD(*sinistro_overheads, type='1M0-SCICAM-SINISTRO')
+
+        return sinistro_ccd
+
+
+    def make_null_instrument(self):
+        null_instrument = Instrument()
+
+        return null_instrument
+
+
+    def make_instrument_by_type(self, instrument_type):
+
+        key = instrument_type.upper()
+        if key not in self.instruments:
+            key = 'NULL-INSTRUMENT'
+
+        selected_instrument = self.instruments[key]()
+
+        return selected_instrument
+
+
+
+class CCD(Instrument):
+    def __init__(self, readout_per_exp, fixed_overhead_per_exp, filter_change_time,
+                 front_padding, type=''):
+        self.readout_per_exp        = readout_per_exp
+        self.fixed_overhead_per_exp = fixed_overhead_per_exp
+        self.filter_change_time     = filter_change_time
+        self.front_padding          = front_padding
+
+        Instrument.__init__(self)
+        if type:
+            self.type = type
+
+        return
+
+    def get_duration(self, molecules):
+        return self._calc_duration(molecules)
+
+    def _calc_duration(self, molecules):
+        duration = 0
+
+        # Find number of filter changes, and calculate total filter overhead
+        prev_filter = None
+        n_filter_changes = 0
+        for i, mol in enumerate(molecules):
+            if mol.filter != prev_filter:
+                n_filter_changes += 1
+
+            prev_filter = mol.filter
+
+        filter_overhead = n_filter_changes * self.filter_change_time
+
+        for mol in molecules:
+            binned_overhead_per_exp = self.readout_per_exp / (mol.bin_x * mol.bin_y)
+            total_overhead_per_exp  = binned_overhead_per_exp + self.fixed_overhead_per_exp
+            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
+
+            duration     += mol_duration
+
+        # Add per-block overheads
+        duration += self.front_padding
+        duration += filter_overhead
+
+        duration = math.ceil(duration)
+
+        return duration
+
+
 class Request(DefaultMixin):
     '''
         Represents a single valid configuration where an observation could take
@@ -309,7 +434,10 @@ class Request(DefaultMixin):
         state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING'):
+    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
+                 instrument_type=''):
+
+        self.inst_factory = InstrumentFactory()
 
         self.target         = target
         self.molecules      = molecules
@@ -318,48 +446,19 @@ class Request(DefaultMixin):
         self.request_number = request_number
         self.state          = state
 
+        self.set_instrument(instrument_type)
+
+
+    def set_instrument(self, instrument_type):
+        self.instrument = self.inst_factory.make_instrument_by_type(instrument_type)
+
+        return
+
+    def get_instrument_type(self):
+        return self.instrument.type
+
     def get_duration(self):
-        '''This is a placeholder for a more sophisticated duration function, that
-           does something clever with overheads. For now, it just sums the exposure
-           times of the molecules, and adds an almost arbitrary overhead.'''
-
-        #TODO: Placeholder for more sophisticated overhead scheme
-
-        # Pick sensible sounding overheads, in seconds
-        readout_per_exp        = 60    # Unbinned readout time per frame
-        fixed_overhead_per_exp = 0.5   # Camera-query overhead (binning independent)
-        filter_change_time     = 15    # Time to change a filter
-        front_padding          = 90    # Guesstimate of sequencer/site agent set-up time
-                                       # (upper bound)
-
-        duration = 0
-
-        # Find number of filter changes, and calculate total filter overhead
-        prev_filter = None
-        n_filter_changes = 0
-        for i, mol in enumerate(self.molecules):
-            if mol.filter != prev_filter:
-                n_filter_changes += 1
-
-            prev_filter = mol.filter
-
-        filter_overhead = n_filter_changes * filter_change_time
-
-        for mol in self.molecules:
-            binned_overhead_per_exp = readout_per_exp / (mol.bin_x * mol.bin_y)
-            total_overhead_per_exp  = binned_overhead_per_exp + fixed_overhead_per_exp
-            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
-
-            duration     += mol_duration
-
-        # Add per-block overheads
-        duration += front_padding
-        duration += filter_overhead
-
-        duration = math.ceil(duration)
-
-        return duration
-
+        return self.instrument.get_duration(self.molecules)
 
     def has_windows(self):
         return self.windows.has_windows()
@@ -368,7 +467,6 @@ class Request(DefaultMixin):
         return self.windows.size()
 
 
-    # Define properties
     duration = property(get_duration)
 
 
@@ -404,20 +502,9 @@ class CompoundRequest(DefaultMixin):
             for res_type, help_txt in CompoundRequest.valid_types.iteritems():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
-            raise InvalidRequestError(error_msg)
+            raise RequestError(error_msg)
 
         return provided_operator
-
-
-    def get_duration(self):
-        '''The duration of a CompoundRequest is just the sum of the durations of
-           its sub-requests.'''
-
-        duration = 0
-        for req in self.requests:
-            duration += req.duration
-
-        return duration
 
 
     def filter_requests(self, filter_test):
@@ -501,10 +588,6 @@ class CompoundRequest(DefaultMixin):
         return not is_ok_to_return[self.operator][0]
 
 
-    # Define properties
-    duration = property(get_duration)
-
-
 
 class UserRequest(CompoundRequest, DefaultMixin):
     '''UserRequests are just top-level CompoundRequests. They differ only in having
@@ -514,10 +597,10 @@ class UserRequest(CompoundRequest, DefaultMixin):
                  tracking_number, group_id):
         CompoundRequest.__init__(self, operator, requests)
 
-        self.proposal = proposal
-        self.expires  = expires
+        self.proposal        = proposal
+        self.expires         = expires
         self.tracking_number = tracking_number
-        self.group_id = group_id
+        self.group_id        = group_id
 
 
     def emit_user_feedback(self, msg, tag, timestamp=None):
@@ -534,6 +617,13 @@ class UserRequest(CompoundRequest, DefaultMixin):
         return
 
 
+    def scheduling_horizon(self, now):
+        sem_end = semester_service.get_semester_end(now)
+        if self.expires and self.expires < sem_end:
+            return self.expires
+        return sem_end
+
+
     def get_priority(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
@@ -543,12 +633,6 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
     # Define properties
     priority = property(get_priority)
-
-    def scheduling_horizon(self, now):
-        sem_end = semester_service.get_semester_end(now)
-        if self.expires and self.expires < sem_end:
-            return self.expires
-        return sem_end
 
 
 
@@ -597,12 +681,20 @@ class TelescopeNetwork(object):
 
 class ModelBuilder(object):
 
-    def __init__(self, tel_file):
-        self.tel_network = build_telescope_network(tel_file)
+    def __init__(self, tel_file, camera_mappings_file):
+        self.tel_network     = build_telescope_network(tel_file)
+        self.camera_mappings = camera_mappings_file
 
 
     def build_user_request(self, cr_dict):
-        requests  = self.build_requests(cr_dict['requests'])
+        requests, invalid_requests  = self.build_requests(cr_dict['requests'])
+        if invalid_requests:
+            log.warn("Found %d invalid Requests" % len(invalid_requests))
+
+        if not requests:
+            msg = "No valid Requests for UR %s" % cr_dict['tracking_number']
+            raise RequestError(msg)
+
         proposal  = Proposal(cr_dict['proposal'])
         expiry_dt = iso_string_to_datetime(cr_dict['expires'])
 
@@ -619,12 +711,17 @@ class ModelBuilder(object):
 
 
     def build_requests(self, req_dicts):
-        requests = []
+        requests         = []
+        invalid_requests = []
         for req_dict in req_dicts:
-            req = self.build_request(req_dict)
-            requests.append(req)
+            try:
+                req = self.build_request(req_dict)
+                requests.append(req)
+            except RequestError as e:
+                log.warn(e)
+                invalid_requests.append(req_dict)
 
-        return requests
+        return requests, invalid_requests
 
 
     def build_request(self, req_dict):
@@ -634,34 +731,110 @@ class ModelBuilder(object):
         elif target_type == 'NON_SIDEREAL':
             target = NonSiderealTarget(req_dict['target'])
         else:
-            raise Exception("Unsupported target type %s" & target_type)
+            raise RequestError("Unsupported target type '%s'" % target_type)
 
+        # Create the Molecules
         molecules = []
         for mol_dict in req_dict['molecules']:
             molecules.append(Molecule(mol_dict))
 
-        telescopes = self.tel_network.get_telescopes_at_location(req_dict['location'])
+        # A Request can only be scheduled on one instrument-based subnetwork
+        if not self.have_same_instrument(molecules):
+            # Complain
+            msg  = "Request %s has molecules with different instruments" % req_dict['request_number']
+            msg += " - removing from consideration"
+            raise RequestError(msg)
 
+        # To preserve the deprecated interface, map SCICAM -> 1m0-SCICAM-SBIG
+        self.map_scicam_keyword(molecules, req_dict['request_number'])
 
+        # Get the instrument (we know they are all the same)
+        instrument_name = molecules[0].instrument_name
+
+        mapping = create_camera_mapping(self.camera_mappings)
+
+        generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG',
+                                '2M0-SCICAM-SPECTRAL', '2M0-SCICAM-MEROPE')
+
+        if instrument_name.upper() in generic_camera_names:
+            instrument_info = mapping.find_by_camera_type(instrument_name)
+        else:
+            instrument_info = mapping.find_by_camera(instrument_name)
+
+        # Determine the resource subnetwork satisfying the camera and location requirements
+        telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])
+        tels_with_inst = [join_location(x['site'], x['observatory'], x['telescope']) for x in instrument_info]
+        subnetwork     = [t for t in telescopes if t.name in tels_with_inst]
+
+        if not subnetwork:
+            # Complain
+            site_str = req_dict['location']['site'] or ''
+            obs_str  = req_dict['location']['observatory'] or ''
+            tel_str  = req_dict['location']['telescope'] or ''
+            req_location = '.'.join(
+                                     (
+                                       req_dict['location']['telescope_class'],
+                                       site_str,
+                                       obs_str,
+                                       tel_str
+                                     )
+                                   )
+            msg = "Request %s wants camera %s, which is not available on the subnetwork '%s'" % (
+                                                                                req_dict['request_number'],
+                                                                                instrument_name,
+                                                                                req_location
+                                                                               )
+            raise RequestError(msg)
+
+        instrument_type = instrument_info[0]['camera_type']
+
+        # Create a window for each telescope in the subnetwork
         windows = Windows()
-        for telescope in telescopes:
+        for telescope in subnetwork:
             for window_dict in req_dict['windows']:
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
 
         constraints = Constraints(req_dict['constraints'])
 
-
+        # Finally, package everything up into the Request
         req = Request(
-                       target         = target,
-                       molecules      = molecules,
-                       windows        = windows,
-                       constraints    = constraints,
-                       request_number = req_dict['request_number'],
-                       state          = req_dict['state']
+                       target          = target,
+                       molecules       = molecules,
+                       windows         = windows,
+                       constraints     = constraints,
+                       request_number  = req_dict['request_number'],
+                       state           = req_dict['state'],
+                       instrument_type = instrument_type,
                      )
 
         return req
+
+
+    def have_same_instrument(self, molecules):
+        instrument_names = []
+        for mol in molecules:
+            instrument_names.append(mol.instrument_name)
+
+        if len(set(instrument_names)) > 1:
+            return False
+
+        return True
+
+
+    def map_scicam_keyword(self, molecules, request_number):
+        # Assume all molecules have the same instrument
+        if molecules[0].instrument_name.upper() == 'SCICAM':
+            SBIG_SCICAM = '1m0-SCICAM-SBIG'
+            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
+                                                                                        request_number,
+                                                                                        SBIG_SCICAM
+                                                                                      )
+            log.warn(msg)
+            for mol in molecules:
+                mol.instrument_name = SBIG_SCICAM
+
+        return
 
 
 
@@ -716,3 +889,10 @@ class _LocationExpander(object):
         locations = [ '.'.join(location[:-1]) for location in filtered_subset ]
 
         return locations
+
+
+class ConfigurationError(Exception):
+    pass
+
+class RequestError(Exception):
+    pass

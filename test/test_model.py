@@ -12,9 +12,8 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Proposal, Molecule,
                                              Request, CompoundRequest, UserRequest,
                                              Windows, Window, Constraints,
-                                             _LocationExpander )
-from adaptive_scheduler.exceptions import InvalidRequestError
-
+                                             _LocationExpander, ModelBuilder,
+                                             RequestError)
 
 class TestTelescopeNetwork(object):
 
@@ -114,29 +113,37 @@ class TestDuration(object):
                            ]
         constraints = Constraints({})
         self.request1  = Request(
-                                target         = None,
-                                molecules      = [self.molecule1],
-                                windows        = None,
-                                constraints    = constraints,
-                                request_number = None)
+                                  target          = None,
+                                  molecules       = [self.molecule1],
+                                  windows         = None,
+                                  constraints     = constraints,
+                                  request_number  = None,
+                                  instrument_type = '1m0-SCICAM-SBIG',
+                                )
         self.request2  = Request(
-                                target         = None,
-                                molecules      = [self.molecule2],
-                                windows        = None,
-                                constraints    = constraints,
-                                request_number = None)
+                                  target          = None,
+                                  molecules       = [self.molecule2],
+                                  windows         = None,
+                                  constraints     = constraints,
+                                  request_number  = None,
+                                  instrument_type = '1m0-SCICAM-SBIG',
+                                )
         self.request3  = Request(
-                                target         = None,
-                                molecules      = [self.molecule3],
-                                windows        = None,
-                                constraints    = constraints,
-                                request_number = None)
+                                  target          = None,
+                                  molecules       = [self.molecule3],
+                                  windows         = None,
+                                  constraints     = constraints,
+                                  request_number  = None,
+                                  instrument_type = '1m0-SCICAM-SBIG',
+                                )
         self.request4  = Request(
-                                target         = None,
-                                molecules      = self.complex_mols,
-                                windows        = None,
-                                constraints    = constraints,
-                                request_number = None)
+                                  target          = None,
+                                  molecules       = self.complex_mols,
+                                  windows         = None,
+                                  constraints     = constraints,
+                                  request_number  = None,
+                                  instrument_type = '1m0-SCICAM-SBIG',
+                                )
 
     def test_get_simple_duration(self):
         assert_equal(self.request1.get_duration(), 141.0)
@@ -188,6 +195,7 @@ class TestRequest(object):
                                   exposure_time   = 20,
                                   priority        = 1
                                 )
+        self.constraints = Constraints({})
 
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
         self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
@@ -198,28 +206,44 @@ class TestRequest(object):
 
 
 
-    @raises(InvalidRequestError)
+    @raises(RequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
-        constraints = Constraints({})
         request = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows,
-                          constraints    = constraints,
+                          constraints    = self.constraints,
                           request_number = self.request_number)
         compound_request = CompoundRequest(junk_res_type, [request])
 
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
-        constraints = Constraints({})
         request = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows,
-                          constraints    = constraints,
+                          constraints    = self.constraints,
                           request_number = self.request_number)
         compound_request = CompoundRequest(valid_res_type, [request])
 
+
+    def test_null_instrument_has_a_name(self):
+        request = Request(target         = self.target,
+                          molecules      = [self.molecule],
+                          windows        = self.windows,
+                          constraints    = self.constraints,
+                          request_number = self.request_number)
+        assert_equal(request.get_instrument_type(), 'NULL-INSTRUMENT')
+
+    def test_configured_instrument_has_a_name(self):
+        request = Request(target          = self.target,
+                          molecules       = [self.molecule],
+                          windows         = self.windows,
+                          constraints     = self.constraints,
+                          request_number  = self.request_number,
+                          instrument_type = '1M0-SCICAM-SINISTRO')
+
+        assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
 
 
 class TestCompoundRequest(object):
@@ -497,3 +521,151 @@ class TestNonSiderealTarget(object):
         assert_in('meandist', target.required_fields)
 
 
+
+class TestModelBuilder(object):
+
+    def setup(self):
+        self.target = {
+                        'type' : 'SIDEREAL',
+                      }
+        self.molecules = [
+                           {
+                             'instrument_name' : '1m0-SciCam-Sinistro',
+                           },
+                         ]
+        self.location = {
+                          'telescope_class' : '1m0',
+                          'site'            : None,
+                          'observatory'     : None,
+                          'telescope'       : None,
+                        }
+        self.windows = [
+                         {
+                           'start' : datetime(2013, 1, 1),
+                           'end'   : datetime(2013, 1, 2),
+                         },
+                       ]
+        self.constraints = {}
+        self.request_number = '0000000002'
+        self.state          = 'PENDING'
+
+        self.mb = ModelBuilder('telescopes.dat', 'camera_mappings.dat')
+
+    def test_build_request_sinistro_resolves_to_lsc_subnetwork(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
+        assert_equal(set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']),
+                     set(request.windows.windows_for_resource.keys()))
+
+
+    def test_build_request_scicam_maps_to_sbig(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'SciCam',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.instrument.type, '1M0-SCICAM-SBIG')
+        assert_equal(set(['1m0a.doma.coj', '1m0a.domb.coj',
+                          '1m0a.doma.cpt', '1m0a.domb.cpt', '1m0a.domc.cpt',
+                          '1m0a.doma.elp'
+                         ]),
+                     set(request.windows.windows_for_resource.keys()))
+
+
+    def test_build_request_fl03_resolves_to_lsc_telescope(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'fl03',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
+        assert_equal(set(['1m0a.domb.lsc']),
+                     set(request.windows.windows_for_resource.keys()))
+
+
+    @raises(RequestError)
+    def test_dont_accept_weird_target_types(self):
+        req_dict = {
+                     'target' : {
+                                  'type' : 'POTATOES',
+                                },
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)
+
+
+    @raises(RequestError)
+    def test_dont_accept_molecules_with_different_instruments(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'SciCam',
+                                     },
+                                     {
+                                       'instrument_name' : '1m0-SciCam-Sinistro',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)
+
+
+    @raises(RequestError)
+    def test_dont_accept_cameras_not_present_on_a_subnetwork(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'POTOTOES',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        request = self.mb.build_request(req_dict)

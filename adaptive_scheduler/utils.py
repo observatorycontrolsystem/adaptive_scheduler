@@ -109,6 +109,33 @@ def get_reservation_datetimes(reservation, semester_start):
 
     return dt_start, dt_end
 
+def split_location(location):
+    '''
+        If the location is of the form telescope.observatory.site, then
+        extract those separate components and return them. Otherwise, return
+        the full location in the place of each component without splitting.
+
+        Examples:  '0m4a.aqwb.coj' -> (0m4a, aqwb, coj)
+                   'Maui'          -> (Maui, Maui, Maui)
+    '''
+    # Split on full stops
+    DELIMITER = '.'
+
+    # Number of sections making up the full location string
+    N_COMPONENTS = 3
+
+    separated = tuple(location.split(DELIMITER))
+
+    if len(separated) == N_COMPONENTS:
+        return separated
+
+    # Separation wasn't possible
+    return (location, location, location)
+
+def join_location(site, observatory, telescope):
+    # Join on full stops
+    return "%s.%s.%s" % (telescope, observatory, site)
+
 
 
 def timeit(method):

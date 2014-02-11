@@ -8,7 +8,24 @@ import calendar
 # Import the modules to test
 from adaptive_scheduler.utils import (normalise, unnormalise, datetime_to_epoch,
                                       epoch_to_datetime, datetime_to_normalised_epoch,
-                                      normalised_epoch_to_datetime)
+                                      normalised_epoch_to_datetime, split_location)
+
+class TestSplitLocation(object):
+    def setup(self):
+        pass
+
+    def test_split_location_extracts_components(self):
+
+        location = '0m4a.aqwb.coj'
+        assert_equal(split_location(location), ('0m4a','aqwb','coj'))
+
+
+    def test_split_location_duplicates_components_if_it_cant_split(self):
+
+        location = 'Maui'
+        assert_equal(split_location(location), ('Maui','Maui','Maui'))
+
+
 
 class TestDateEpochConversions(object):
     '''Unit tests for converting between normalised epoch times (used by the

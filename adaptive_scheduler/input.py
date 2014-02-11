@@ -136,6 +136,7 @@ def build_requests(req_list, targets, telescopes, molecules, semester_start,
                        telescope_name = d['telescope_name'],
                      )
 
+
         # Store the requested duration directly in the molecule
         req.molecule.duration = req.duration
 

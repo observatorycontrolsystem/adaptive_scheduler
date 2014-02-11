@@ -68,9 +68,9 @@ class TestKernelMappings(object):
                         'end'   : datetime(2011, 11, 2, 6, 0, 0)
                       }
         resource_name = '1m0a.doma.bpl'
-        resource = self.tels[resource_name]
+        resource      = self.tels[resource_name]
 
-        window = Window(window_dict, resource)
+        window     = Window(window_dict, resource)
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -80,7 +80,8 @@ class TestKernelMappings(object):
                         molecules      = [self.mol],
                         windows        = dt_windows,
                         constraints    = constraints,
-                        request_number = '1'
+                        request_number = '1',
+                        instrument_type = '1M0-SCICAM-SBIG',
                       )
 
         return req
@@ -179,10 +180,10 @@ class TestKernelMappings(object):
         constraints = Constraints({})
 
         req  = Request(
-                       target    = self.target,
-                       molecules = [self.mol],
-                       windows   = dt_windows,
-                       constraints = constraints,
+                       target         = self.target,
+                       molecules      = [self.mol],
+                       windows        = dt_windows,
+                       constraints    = constraints,
                        request_number = '1'
                       )
 
