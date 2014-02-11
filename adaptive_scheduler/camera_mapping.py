@@ -24,7 +24,7 @@ import urllib2
 
 def update_mapping():
     MAPPING_FILENAME  = 'camera_mappings.dat'
-    CONFIGDB_ENDPOINT = 'http://devlin1sba/configdb/camera_mappings/'
+    CONFIGDB_ENDPOINT = 'http://lcogt.net/configdb/camera_mappings/'
     content = get_http_data(CONFIGDB_ENDPOINT)
     replace_mapping_file(MAPPING_FILENAME, content)
 
