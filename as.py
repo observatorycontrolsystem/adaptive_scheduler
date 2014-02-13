@@ -22,7 +22,7 @@ from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
 from adaptive_scheduler.orchestrator     import collapse_requests
-from adaptive_scheduler.model2           import ModelBuilder, RequestError  
+from adaptive_scheduler.model2           import ModelBuilder, RequestError
 from reqdb.client import SchedulerClient
 
 import argparse
@@ -186,7 +186,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     now = determine_scheduler_now(args)
 
     json_user_requests = get_requests(scheduler_client, now)
-    
+
     # Collapse each request tree
     json_user_requests = collapse_requests(json_user_requests)
     mb = ModelBuilder(args.telescopes, args.cameras)
@@ -198,19 +198,19 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
             all_user_requests.append(user_request)
         except RequestError as e:
             log.warn(e)
-    
+
     normal_user_requests = []
-    too_user_requests = []
+    too_user_requests    = []
     for ur in all_user_requests:
         if ur.has_target_of_opportunity():
             too_user_requests.append(ur)
         else:
             normal_user_requests.append(ur)
-            
+
     log.info("Received %d ToO User Requests" % len(too_user_requests))
     log.info("Received %d Normal User Requests" % len(normal_user_requests))
 
-    if too_user_requests:        
+    if too_user_requests:
         # TODO: Do a pre run scheduling all too requests first
         pass
 

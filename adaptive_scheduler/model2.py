@@ -580,8 +580,8 @@ class CompoundRequest(DefaultMixin):
         self.requests = to_keep
 
         return dropped
-    
-    
+
+
     def has_target_of_opportunity(self):
         '''Return True if request or child request is a ToO
         '''
@@ -591,10 +591,10 @@ class CompoundRequest(DefaultMixin):
                 is_too_request = (child_request.observation_type == 'TARGET_OF_OPPORTUNITY')
             else:
                 is_too_request = is_too_request or child_request.has_target_of_opportunity()
-            
+
             if is_too_request:
                 break
-        
+
         return is_too_request
 
 
@@ -770,7 +770,7 @@ class ModelBuilder(object):
 
 
     def build_request(self, req_dict):
-        target_type = req_dict['target']['type'] 
+        target_type = req_dict['target']['type']
         if target_type == 'SIDEREAL':
             target = SiderealTarget(req_dict['target'])
         elif target_type == 'NON_SIDEREAL':
@@ -832,7 +832,7 @@ class ModelBuilder(object):
             raise RequestError(msg)
 
         instrument_type = instrument_info[0]['camera_type']
-        
+
         valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
         observation_type = req_dict['observation_type']
         if not observation_type in valid_observation_types:
