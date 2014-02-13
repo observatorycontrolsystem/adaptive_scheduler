@@ -21,7 +21,7 @@ from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
-from reqdb.client import SchedulerClient, ConnectionError
+from reqdb.requests import Request, CompoundRequest
 
 import argparse
 from datetime import datetime, timedelta
@@ -183,12 +183,27 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     # Use a static command line datetime if provided...
     now = determine_scheduler_now(args)
 
-    requests = get_requests(scheduler_client, now)
+    all_user_requests = get_requests(scheduler_client, now)
+    
+    normal_user_requests = []
+    too_user_requests = []
+    for ur in all_user_requests:
+        if ur.has_target_of_opporunity(ur):
+            too_user_requests.append(ur)
+        else:
+            normal_user_requests.append(ur)
+            
+    log.info("Received %d ToO User Requests" % len(too_user_requests))
+    log.info("Received %d Normal User Requests" % len(normal_user_requests))
+
+    if too_user_requests:        
+        # TODO: Do a pre run scheduling all too requests first
+        pass
 
     # Run the scheduling loop, if there are any User Requests
-    if requests:
+    if normal_user_requests:
         semester_start, semester_end = get_semester_block(dt=now)
-        visibility_from = run_scheduler(requests, scheduler_client, now,
+        visibility_from = run_scheduler(normal_user_requests, scheduler_client, now,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,

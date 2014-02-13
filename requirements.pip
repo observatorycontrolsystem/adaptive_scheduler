@@ -7,6 +7,8 @@ scipy
 nose
 ipdb==0.7
 ipython
+lcogt
+lcogt-dateutils
 lcogtpond
 mock==1.0.1
 reqdbclient
