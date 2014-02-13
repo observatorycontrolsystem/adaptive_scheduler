@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
-from adaptive_scheduler.model2          import ( filter_out_compounds,
+from adaptive_scheduler.model2          import ( filter_out_compounds, ModelBuilder,
                                                  differentiate_by_type, n_requests,
                                                   )
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
@@ -206,7 +206,7 @@ def update_telescope_events(tels, current_events):
 
 # TODO: refactor into smaller chunks
 @timeit
-def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel_file,
+def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, tel_file,
                   camera_mappings_file, current_events, visibility_from=None, dry_run=False,
                   no_weather=False, no_singles=False, no_compounds=False):
 
@@ -224,7 +224,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
                                                      semester_end.strftime(date_fmt))
     log.info("Scheduling horizon is %s", scheduling_horizon.strftime(date_time_fmt))
 
-    log.info("Received %s from Request DB", pl(len(requests), 'User Request'))
+    log.info("Received %s from Request DB", pl(len(user_reqs), 'User Request'))
 
     scheduler_dump_file = 'to_schedule.pickle'
 
@@ -252,6 +252,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
         user_reqs = filter_out_compounds(user_reqs)
 
     # TODO: Swap to tels2
+    mb = ModelBuilder(tel_file, camera_mappings_file)
     tels = mb.tel_network.telescopes
     log.info("Available telescopes:")
     for t in sorted(tels):

@@ -590,7 +590,7 @@ class CompoundRequest(DefaultMixin):
             if isinstance(child_request, Request):
                 is_too_request = (child_request.observation_type == 'TARGET_OF_OPPORTUNITY')
             else:
-                is_too_request = is_too_request or child_request.has_target_of_opporunity()
+                is_too_request = is_too_request or child_request.has_target_of_opportunity()
             
             if is_too_request:
                 break

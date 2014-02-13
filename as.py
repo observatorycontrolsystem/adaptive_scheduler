@@ -202,7 +202,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     normal_user_requests = []
     too_user_requests = []
     for ur in all_user_requests:
-        if ur.has_target_of_opporunity(ur):
+        if ur.has_target_of_opportunity():
             too_user_requests.append(ur)
         else:
             normal_user_requests.append(ur)
