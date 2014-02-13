@@ -622,15 +622,11 @@ class TestModelBuilder(object):
         assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.domb.lsc']),
                      set(request.windows.windows_for_resource.keys()))
-        
+
     def test_build_request_observation_type_normal(self):
         req_dict = {
                      'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : 'scicam',
-                                     },
-                                   ],
+                     'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
@@ -641,15 +637,11 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict)
         assert_equal(request.observation_type, 'NORMAL')
-        
+
     def test_build_request_observation_type_target_of_opportunity(self):
         req_dict = {
                      'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : 'scicam',
-                                     },
-                                   ],
+                     'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
@@ -709,7 +701,7 @@ class TestModelBuilder(object):
                      'target'         : self.target,
                      'molecules' : [
                                      {
-                                       'instrument_name' : 'POTOTOES',
+                                       'instrument_name' : 'POTATOES',
                                      },
                                    ],
                      'location'       : self.location,
@@ -721,16 +713,12 @@ class TestModelBuilder(object):
                    }
 
         request = self.mb.build_request(req_dict)
-        
+
     @raises(RequestError)
     def test_dont_accept_unsupported_observation_type(self):
         req_dict = {
                      'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : 'POTOTOES',
-                                     },
-                                   ],
+                     'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,

@@ -833,8 +833,9 @@ class ModelBuilder(object):
 
         instrument_type = instrument_info[0]['camera_type']
 
+        # Validate we are an allowed type of Request
         valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
-        observation_type = req_dict['observation_type']
+        observation_type        = req_dict['observation_type']
         if not observation_type in valid_observation_types:
             msg = "Request observation_type must be one of %s" % valid_observation_types
             raise RequestError(msg)
