@@ -322,6 +322,8 @@ class InstrumentFactory(object):
         self.instruments = {
                              '1M0-SCICAM-SBIG'     : self.make_sbig,
                              '1M0-SCICAM-SINISTRO' : self.make_sinistro,
+                             '2M0-SCICAM-SPECTRAL' : self.make_spectral,
+                             '2M0-SCICAM-MEROPE'   : self.make_merope,
                              'NULL-INSTRUMENT'     : self.make_null_instrument,
                            }
 
@@ -350,6 +352,32 @@ class InstrumentFactory(object):
         sinistro_ccd = CCD(*sinistro_overheads, type='1M0-SCICAM-SINISTRO')
 
         return sinistro_ccd
+
+
+    def make_spectral(self):
+        spectral_overheads = self.overhead(
+                                            readout_per_exp        = 42,
+                                            fixed_overhead_per_exp = 12,
+                                            filter_change_time     = 15,
+                                            front_padding          = 120,
+                                          )
+
+        spectral_ccd = CCD(*spectral_overheads, type='2M0-SCICAM-SPECTRAL')
+
+        return spectral_ccd
+
+
+    def make_merope(self):
+        merope_overheads = self.overhead(
+                                            readout_per_exp        = 68,
+                                            fixed_overhead_per_exp = 12,
+                                            filter_change_time     = 15,
+                                            front_padding          = 120,
+                                          )
+
+        merope_ccd = CCD(*merope_overheads, type='2M0-SCICAM-MEROPE')
+
+        return merope_ccd
 
 
     def make_null_instrument(self):

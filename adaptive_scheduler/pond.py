@@ -92,7 +92,8 @@ def resolve_instrument(instrument_name, site, obs, tel, mapping):
     '''Determine the specific camera name for a given site.
        If a non-generic name is provided, we just pass it through and assume it's ok.'''
 
-    generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG')
+    generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG',
+                            '2M0-SCICAM-SPECTRAL', '2M0-SCICAM-MEROPE')
     specific_camera = instrument_name
     if instrument_name in generic_camera_names:
         inst_match = mapping.find_by_camera_type_and_location(site,
