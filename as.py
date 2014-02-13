@@ -21,7 +21,9 @@ from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
-from reqdb.requests import Request, CompoundRequest
+from adaptive_scheduler.orchestrator     import collapse_requests
+from adaptive_scheduler.model2           import ModelBuilder, RequestError  
+from reqdb.client import SchedulerClient
 
 import argparse
 from datetime import datetime, timedelta
@@ -183,7 +185,19 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     # Use a static command line datetime if provided...
     now = determine_scheduler_now(args)
 
-    all_user_requests = get_requests(scheduler_client, now)
+    json_user_requests = get_requests(scheduler_client, now)
+    
+    # Collapse each request tree
+    json_user_requests = collapse_requests(json_user_requests)
+    mb = ModelBuilder(args.telescopes, args.cameras)
+
+    all_user_requests = []
+    for json_user_request in json_user_requests:
+        try:
+            user_request = mb.build_user_request(json_user_request)
+            all_user_requests.append(user_request)
+        except RequestError as e:
+            log.warn(e)
     
     normal_user_requests = []
     too_user_requests = []

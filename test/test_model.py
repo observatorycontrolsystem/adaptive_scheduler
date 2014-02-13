@@ -119,6 +119,7 @@ class TestDuration(object):
                                   constraints     = constraints,
                                   request_number  = None,
                                   instrument_type = '1m0-SCICAM-SBIG',
+                                  observation_type = 'NORMAL',
                                 )
         self.request2  = Request(
                                   target          = None,
@@ -127,6 +128,7 @@ class TestDuration(object):
                                   constraints     = constraints,
                                   request_number  = None,
                                   instrument_type = '1m0-SCICAM-SBIG',
+                                  observation_type = 'NORMAL',
                                 )
         self.request3  = Request(
                                   target          = None,
@@ -135,6 +137,7 @@ class TestDuration(object):
                                   constraints     = constraints,
                                   request_number  = None,
                                   instrument_type = '1m0-SCICAM-SBIG',
+                                  observation_type = 'NORMAL',
                                 )
         self.request4  = Request(
                                   target          = None,
@@ -143,6 +146,7 @@ class TestDuration(object):
                                   constraints     = constraints,
                                   request_number  = None,
                                   instrument_type = '1m0-SCICAM-SBIG',
+                                  observation_type = 'NORMAL',
                                 )
 
     def test_get_simple_duration(self):
@@ -213,7 +217,8 @@ class TestRequest(object):
                           molecules      = [self.molecule],
                           windows        = self.windows,
                           constraints    = self.constraints,
-                          request_number = self.request_number)
+                          request_number = self.request_number,
+                          observation_type = 'NORMAL')
         compound_request = CompoundRequest(junk_res_type, [request])
 
 
@@ -223,7 +228,8 @@ class TestRequest(object):
                           molecules      = [self.molecule],
                           windows        = self.windows,
                           constraints    = self.constraints,
-                          request_number = self.request_number)
+                          request_number = self.request_number,
+                          observation_type = 'NORMAL')
         compound_request = CompoundRequest(valid_res_type, [request])
 
 
@@ -232,7 +238,8 @@ class TestRequest(object):
                           molecules      = [self.molecule],
                           windows        = self.windows,
                           constraints    = self.constraints,
-                          request_number = self.request_number)
+                          request_number = self.request_number,
+                          observation_type = 'NORMAL')
         assert_equal(request.get_instrument_type(), 'NULL-INSTRUMENT')
 
     def test_configured_instrument_has_a_name(self):
@@ -241,7 +248,8 @@ class TestRequest(object):
                           windows         = self.windows,
                           constraints     = self.constraints,
                           request_number  = self.request_number,
-                          instrument_type = '1M0-SCICAM-SINISTRO')
+                          instrument_type = '1M0-SCICAM-SINISTRO',
+                          observation_type = 'NORMAL')
 
         assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
 
@@ -560,6 +568,7 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -581,6 +590,7 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -605,12 +615,51 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
         assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.domb.lsc']),
                      set(request.windows.windows_for_resource.keys()))
+        
+    def test_build_request_observation_type_normal(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'scicam',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.observation_type, 'NORMAL')
+        
+    def test_build_request_observation_type_target_of_opportunity(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'scicam',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'TARGET_OF_OPPORTUNITY',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.observation_type, 'TARGET_OF_OPPORTUNITY')
 
 
     @raises(RequestError)
@@ -625,6 +674,7 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -647,6 +697,7 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -666,6 +717,26 @@ class TestModelBuilder(object):
                      'constraints'    : self.constraints,
                      'request_number' : self.request_number,
                      'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        
+    @raises(RequestError)
+    def test_dont_accept_unsupported_observation_type(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'POTOTOES',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'ABNORMAL',
                    }
 
         request = self.mb.build_request(req_dict)

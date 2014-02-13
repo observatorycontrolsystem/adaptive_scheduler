@@ -18,16 +18,15 @@ from datetime import datetime, timedelta
 
 from adaptive_scheduler.request_parser  import TreeCollapser
 from adaptive_scheduler.tree_walker     import RequestMaxDepthFinder
-from adaptive_scheduler.model2          import ( ModelBuilder, filter_out_compounds,
+from adaptive_scheduler.model2          import ( filter_out_compounds,
                                                  differentiate_by_type, n_requests,
-                                                 RequestError )
+                                                  )
 from adaptive_scheduler.kernel_mappings import ( construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
                                                  make_many_type_compound_reservations,
                                                  filter_for_kernel,
                                                  construct_global_availability )
-from adaptive_scheduler.input    import ( get_telescope_network, dump_scheduler_input )
 from adaptive_scheduler.printing import ( print_schedule, print_compound_reservations,
                                           summarise_urs, log_full_ur, log_windows)
 from adaptive_scheduler.printing import pluralise
@@ -35,7 +34,7 @@ from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks,
                                           PondFacadeException )
-from adaptive_scheduler.semester_service import get_semester_block, get_semester_code
+from adaptive_scheduler.semester_service import get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
@@ -227,20 +226,7 @@ def run_scheduler(requests, sched_client, now, semester_start, semester_end, tel
 
     log.info("Received %s from Request DB", pl(len(requests), 'User Request'))
 
-    # Collapse each request tree
-    collapsed_reqs = collapse_requests(requests)
-
     scheduler_dump_file = 'to_schedule.pickle'
-
-    mb = ModelBuilder(tel_file, camera_mappings_file)
-
-    user_reqs = []
-    for serialised_req in collapsed_reqs:
-        try:
-            user_req = mb.build_user_request(serialised_req)
-            user_reqs.append(user_req)
-        except RequestError as e:
-            log.warn(e)
 
     # Summarise the User Requests we've received
     n_urs, n_rs = n_requests(user_reqs)

@@ -463,7 +463,7 @@ class Request(DefaultMixin):
     '''
 
     def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
-                 instrument_type=''):
+                 instrument_type='', observation_type='NORMAL'):
 
         self.inst_factory = InstrumentFactory()
 
@@ -473,6 +473,7 @@ class Request(DefaultMixin):
         self.constraints    = constraints
         self.request_number = request_number
         self.state          = state
+        self.observation_type  = observation_type
 
         self.set_instrument(instrument_type)
 
@@ -579,6 +580,22 @@ class CompoundRequest(DefaultMixin):
         self.requests = to_keep
 
         return dropped
+    
+    
+    def has_target_of_opportunity(self):
+        '''Return True if request or child request is a ToO
+        '''
+        is_too_request = False
+        for child_request in self.requests:
+            if isinstance(child_request, Request):
+                is_too_request = (child_request.observation_type == 'TARGET_OF_OPPORTUNITY')
+            else:
+                is_too_request = is_too_request or child_request.has_target_of_opporunity()
+            
+            if is_too_request:
+                break
+        
+        return is_too_request
 
 
     def is_schedulable(self):
@@ -815,6 +832,12 @@ class ModelBuilder(object):
             raise RequestError(msg)
 
         instrument_type = instrument_info[0]['camera_type']
+        
+        valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
+        observation_type = req_dict['observation_type']
+        if not observation_type in valid_observation_types:
+            msg = "Request observation_type must be one of %s" % valid_observation_types
+            raise RequestError(msg)
 
         # Create a window for each telescope in the subnetwork
         windows = Windows()
@@ -834,6 +857,7 @@ class ModelBuilder(object):
                        request_number  = req_dict['request_number'],
                        state           = req_dict['state'],
                        instrument_type = instrument_type,
+                       observation_type = req_dict['observation_type']
                      )
 
         return req
