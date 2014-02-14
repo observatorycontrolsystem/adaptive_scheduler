@@ -583,7 +583,7 @@ class CompoundRequest(DefaultMixin):
 
 
     def has_target_of_opportunity(self):
-        '''Return True if request or child request is a ToO
+        '''Return True if request or child request is a ToO.
         '''
         is_too_request = False
         for child_request in self.requests:
@@ -878,7 +878,7 @@ class ModelBuilder(object):
     def map_scicam_keyword(self, molecules, request_number):
         # Assume all molecules have the same instrument
         if molecules[0].instrument_name.upper() == 'SCICAM':
-            SBIG_SCICAM = '1m0-SCICAM-SBIG'
+            SBIG_SCICAM = '1M0-SCICAM-SBIG'
             msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
                                                                                         request_number,
                                                                                         SBIG_SCICAM
