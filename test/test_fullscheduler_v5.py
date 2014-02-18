@@ -13,6 +13,10 @@ from adaptive_scheduler.kernel.intervals import *
 from adaptive_scheduler.kernel.fullscheduler_v5 import *
 import copy
 
+from nose import SkipTest
+
+
+@SkipTest
 class TestFullScheduler_v5(object):
 
     def setup(self):
