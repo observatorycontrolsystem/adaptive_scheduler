@@ -1,0 +1,14 @@
+After installing the RequestDB using the script in this directory, there are
+additional steps needed to make the system functional.
+
+1) Create mysql databases for the RequestDB ('scheduler_requests') and rbauth ('rbauth')
+2) Add rbauth to the list of installed apps in the RequestDB server's settings.py
+3) python manage.py syncdb --database=rbauth
+4) python manage.py syncdb --database=requestdb
+5) python manage.py migrate proposaldb
+6) python manage.py migrate requestdb
+
+7) Run the server: python manage.py runserver 0.0.0.0:8001
+8) Submit requests. Requests won't be accepted unless you have a valid proposal which
+also has time allocated.
+

@@ -6,6 +6,10 @@ The Adaptive Scheduler's Python dependencies are summarised in requirements.pip.
 Dependencies below based on grepping the history on scheduler-dev.lco.gtn. Ubuntu
 notes based on installation on pluto.lco.gtn.
 
+If you already have an Ubuntu machine with Python 2.7, then look at
+install/scheduler_on_ubuntu.sh for detailed installation steps.
+
+
 Scheduler machine set up
 ------------------------
 CENTOS:
