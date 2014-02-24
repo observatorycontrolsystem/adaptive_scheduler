@@ -37,11 +37,13 @@ class TestKernelMappings(object):
         self.tels = {
                       '1m0a.doma.bpl' :
                                         Telescope(
-                                                   name      = '1m0a.doma.bpl',
-                                                   tel_class = '1m0',
-                                                   latitude  = 34.433157,
-                                                   longitude = -119.86308,
-                                                   horizon   = 25,
+                                                   name         = '1m0a.doma.bpl',
+                                                   tel_class    = '1m0',
+                                                   latitude     = 34.433157,
+                                                   longitude    = -119.86308,
+                                                   horizon      = 25,
+                                                   ha_limit_neg = -12.0,
+                                                   ha_limit_pos = 12.0,
                                                  )
                     }
 
@@ -314,6 +316,136 @@ class TestKernelMappings(object):
         self.tels['1m0a.doma.bpl'].events = []
         received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
         assert_equal(len(received[tel_name].timepoints), 4)
+
+
+    def test_visibility_intervals_are_limited_by_hour_angle(self):
+
+        window_dict = {
+                        'start' : datetime(2013, 03, 22, 0, 0, 0),
+                        'end'   : datetime(2013, 03, 23, 0, 0, 0),
+                      }
+
+        tel_name = '1m0a.doma.coj'
+        tel = Telescope(
+                         name         = tel_name,
+                         tel_class    = '1m0',
+                         latitude     = -31.273,
+                         longitude    = 149.070593,
+                         horizon      = 15,
+                         ha_limit_neg = -4.6,
+                         ha_limit_pos = 4.6,
+                       )
+
+        tels = {
+                 tel_name : tel,
+               }
+
+        target = SiderealTarget(
+                                  ra  = 310.35795833333333,
+                                  dec = -60.0,
+                               )
+
+        window = Window(window_dict, tel)
+        dt_windows = Windows()
+        dt_windows.append(window)
+
+        constraints = Constraints()
+        req = Request(
+                       target          = target,
+                       molecules       = [self.mol],
+                       windows         = dt_windows,
+                       constraints     = constraints,
+                       request_number  = '1',
+                       instrument_type = '1M0-SCICAM-SBIG',
+                     )
+        sem_start = datetime(2013, 03, 1, 0, 0, 0)
+        sem_end   = datetime(2013, 03, 31, 0, 0, 0)
+
+        visibility_from = construct_visibilities(tels, sem_start, sem_end)
+        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+
+
+        # Hour angle not violated independently confirmed by hand-cranking through SLALIB
+        expected_tps = [
+                         {
+                           'type': 'start',
+                           'time': datetime(2013, 3, 22, 18, 11, 28, 78641)
+                         },
+                         {
+                           'type': 'end',
+                           'time': datetime(2013, 3, 22, 19, 16, 27, 292072)
+                         },
+                       ]
+
+        for received_tp, expected_tp in zip(received[tel_name].timepoints, expected_tps):
+            assert_equal(received_tp.type, expected_tp['type'])
+            assert_equal(received_tp.time, expected_tp['time'])
+
+
+    def test_visibility_intervals_at_low_horizon_are_allowed_by_hour_angle(self):
+
+        window_dict = {
+                        'start' : datetime(2013, 03, 22, 0, 0, 0),
+                        'end'   : datetime(2013, 03, 23, 0, 0, 0),
+                      }
+
+        tel_name = '1m0a.doma.coj'
+        tel = Telescope(
+                         name         = tel_name,
+                         tel_class    = '1m0',
+                         latitude     = -31.273,
+                         longitude    = 149.070593,
+                         horizon      = 15,
+                         ha_limit_neg = -4.6,
+                         ha_limit_pos = 4.6,
+                       )
+
+        tels = {
+                 tel_name : tel,
+               }
+
+        target = SiderealTarget(
+                                  # RA 15:41:25.91
+                                  ra  = 235.357958333,
+                                  dec = -60.0,
+                               )
+
+        window = Window(window_dict, tel)
+        dt_windows = Windows()
+        dt_windows.append(window)
+
+        constraints = Constraints()
+        req = Request(
+                       target          = target,
+                       molecules       = [self.mol],
+                       windows         = dt_windows,
+                       constraints     = constraints,
+                       request_number  = '1',
+                       instrument_type = '1M0-SCICAM-SBIG',
+                     )
+        sem_start = datetime(2013, 03, 1, 0, 0, 0)
+        sem_end   = datetime(2013, 03, 31, 0, 0, 0)
+
+        visibility_from = construct_visibilities(tels, sem_start, sem_end)
+        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+
+
+        # Hour angle not violated independently confirmed by hand-cranking through SLALIB
+        expected_tps = [
+                         {
+                           'type': 'start',
+                           'time': datetime(2013, 3, 22, 13, 12, 17, 226447)
+                         },
+                         {
+                           'type': 'end',
+                           'time': datetime(2013, 3, 22, 19, 16, 27, 292072)
+                         },
+                       ]
+
+
+        for received_tp, expected_tp in zip(received[tel_name].timepoints, expected_tps):
+            assert_equal(received_tp.type, expected_tp['type'])
+            assert_equal(received_tp.time, expected_tp['time'])
 
 
     def test_construct_global_availability(self):

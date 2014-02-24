@@ -122,20 +122,23 @@ def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
         if tel.events:
             rs_dark_intervals = []
             rs_up_intervals   = []
+            rs_ha_intervals   = []
         else:
-            visibility = visibility_from[resource_name][0]
+            visibility        = visibility_from[resource_name][0]
             rs_dark_intervals = visibility_from[resource_name][1]()
             rs_up_intervals   = visibility_from[resource_name][2](
                                                  target=rs_target,
                                                  up=True,
                                                  airmass=req.constraints.max_airmass)
+            rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
         up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
+        ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
 
         # Construct the intersection (dark AND up) reprsenting actual visibility
-        intersection = dark_intervals.intersect([up_intervals])
+        intersection = dark_intervals.intersect([up_intervals, ha_intervals])
 
         # Intersect with any window provided in the user request
         user_windows   = req.windows.at(resource_name)
@@ -412,11 +415,13 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         rs_telescope = telescope_to_rise_set_telescope(tel)
         visibility = Visibility(rs_telescope, semester_start,
                                 semester_end, tel.horizon,
-                                twilight)
+                                twilight, tel.ha_limit_neg,
+                                tel.ha_limit_pos)
         get_target = Memoize(visibility.get_target_intervals)
-        get_dark = visibility.get_dark_intervals
+        get_dark   = visibility.get_dark_intervals
+        get_ha     = visibility.get_ha_intervals
 
-        visibility_from[tel_name] = (visibility, get_dark, get_target)
+        visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha)
 
     return visibility_from
 

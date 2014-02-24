@@ -23,7 +23,7 @@ from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
 from adaptive_scheduler.orchestrator     import collapse_requests
 from adaptive_scheduler.model2           import ModelBuilder, RequestError
-from reqdb.client import SchedulerClient
+from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
 from datetime import datetime, timedelta
