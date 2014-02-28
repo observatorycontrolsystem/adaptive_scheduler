@@ -60,10 +60,13 @@ def telescope_to_rise_set_telescope(telescope):
     '''Convert scheduler Telescope to rise_set telescope dict.'''
 
     # TODO: Move scheduler Telescope code to rise_set.
+    HOURS_TO_DEGREES = 15
     telescope_dict = {
                         'latitude'  : Angle(degrees=telescope.latitude),
                         'longitude' : Angle(degrees=telescope.longitude),
-                      }
+                        'ha_limit_neg' : Angle(degrees=telescope.ha_limit_neg * HOURS_TO_DEGREES),
+                        'ha_limit_pos' : Angle(degrees=telescope.ha_limit_pos * HOURS_TO_DEGREES),
+                     }
 
     return telescope_dict
 
