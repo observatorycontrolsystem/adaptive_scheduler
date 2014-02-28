@@ -12,6 +12,7 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Proposal, Molecule,
                                              Request, CompoundRequest, UserRequest,
                                              Windows, Window, Constraints,
+                                             Spectrograph,
                                              _LocationExpander, ModelBuilder,
                                              RequestError)
 
@@ -160,6 +161,138 @@ class TestDuration(object):
 
     def test_get_complex_duration(self):
         assert_equal(self.request4.get_duration(), 1535.0)
+
+
+
+class TestSpectrographDuration(object):
+    '''Unit tests for duration of URs, CRs, and Rs.'''
+
+    def setup(self):
+        self.lamp_molecule = Molecule(
+                                      type            = 'lamp_flat',
+                                      exposure_count  = 1,
+                                      bin_x           = 1,
+                                      bin_y           = 1,
+                                      instrument_name = 'floyds',
+                                      filter          = '',
+                                      exposure_time   = 60,
+                                      priority        = 1
+                                    )
+        self.arc_molecule = Molecule(
+                                      type            = 'arc',
+                                      exposure_count  = 1,
+                                      bin_x           = 1,
+                                      bin_y           = 1,
+                                      instrument_name = 'floyds',
+                                      filter          = '',
+                                      exposure_time   = 30,
+                                      priority        = 2
+                                    )
+        self.arc_exp2_molecule = Molecule(
+                                      type            = 'arc',
+                                      exposure_count  = 2,
+                                      bin_x           = 1,
+                                      bin_y           = 1,
+                                      instrument_name = 'floyds',
+                                      filter          = '',
+                                      exposure_time   = 30,
+                                      priority        = 2
+                                    )
+        self.arc_exp2_bin2_molecule = Molecule(
+                                      type            = 'arc',
+                                      exposure_count  = 2,
+                                      bin_x           = 2,
+                                      bin_y           = 2,
+                                      instrument_name = 'floyds',
+                                      filter          = '',
+                                      exposure_time   = 30,
+                                      priority        = 2
+                                    )
+        self.spectrum_molecule = Molecule(
+                                          type            = 'spectrum',
+                                          exposure_count  = 1,
+                                          bin_x           = 1,
+                                          bin_y           = 1,
+                                          instrument_name = 'floyds',
+                                          filter          = '',
+                                          spectra_slit    = 'slit_6as',
+                                          exposure_time   = 1800,
+                                          priority        = 3
+                                        )
+        self.target_acq_on = SiderealTarget(
+                                              name  = 'deneb',
+                                              ra    = 310.35795833333333,
+                                              dec   = 45.280338888888885,
+                                              epoch = 2000,
+                                              acquire_mode = 'ON',
+                                            )
+        self.target_acq_off = SiderealTarget(
+                                              name  = 'deneb',
+                                              ra    = 310.35795833333333,
+                                              dec   = 45.280338888888885,
+                                              epoch = 2000,
+                                              acquire_mode = 'OFF',
+                                            )
+        self.target_acq_maybe = SiderealTarget(
+                                                 name  = 'deneb',
+                                                 ra    = 310.35795833333333,
+                                                 dec   = 45.280338888888885,
+                                                 epoch = 2000,
+                                                 acquire_mode = 'MAYBE',
+                                               )
+        self.spectrograph = Spectrograph()
+
+    def test_acquire_is_off(self):
+        mols = [self.spectrum_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        assert_equal(received, 1976)
+
+    def test_acquire_is_maybe(self):
+        mols = [self.spectrum_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_maybe, mols)
+        assert_equal(received, 2066)
+
+    def test_acquire_is_on(self):
+        mols = [self.spectrum_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 2066)
+
+    def test_lamp_flat_arc_target_sequence(self):
+        mols = [self.lamp_molecule, self.arc_molecule, self.spectrum_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 2267)
+
+    def test_lamp_flat_arc_sequence(self):
+        mols = [self.lamp_molecule, self.arc_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 321)
+
+    def test_double_lamp_arc_four_changes(self):
+        mols = [self.lamp_molecule, self.arc_molecule,
+                self.lamp_molecule, self.arc_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 522)
+
+    def test_double_lamp_arc_three_changes(self):
+        mols = [self.lamp_molecule, self.arc_molecule,
+                self.arc_molecule, self.lamp_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 492)
+
+    def test_arc_two_exposures(self):
+        mols = [self.arc_exp2_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        assert_equal(received, 261)
+
+    def test_arc_two_exposures_bin_two_no_acquisition(self):
+        mols = [self.arc_exp2_bin2_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        assert_equal(received, 224)
+
+    def test_arc_two_exposures_bin_two_with_acquisition(self):
+        mols = [self.arc_exp2_bin2_molecule]
+        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        assert_equal(received, 224)
 
 
 class TestRequest(object):

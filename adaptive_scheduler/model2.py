@@ -445,6 +445,55 @@ class CCD(Instrument):
         return duration
 
 
+class Spectrograph(Instrument):
+    def __init__(self):
+        self.config_change_time      = 30
+        self.acquire_processing_time = 60
+        self.acquire_exp_time        = 30
+        self.readout_per_exp         = 25
+        self.fixed_overhead_per_exp  = 0.5
+        self.front_padding           = 120
+
+    def _calc_duration(self, target, molecules):
+        duration = 0
+
+        # Determine how many molecule changes we have
+        prev_mol_type = None
+        n_mol_changes = 0
+        for i, mol in enumerate(molecules):
+            if mol.type.upper() != prev_mol_type:
+                n_mol_changes += 1
+
+            prev_mol_type = mol.type.upper()
+
+        config_change_overhead = n_mol_changes * self.config_change_time
+
+        # A Request can only have one target
+        acquire_overhead = 0
+        if target.acquire_mode.upper() != 'OFF':
+            mol_types = [mol.type.upper() for mol in molecules]
+            # Only add the overhead if we have on-sky targets to acquire
+            if 'SPECTRUM' in mol_types or 'STANDARD' in mol_types:
+                acquire_overhead = self.acquire_exp_time + self.acquire_processing_time
+
+        for mol in molecules:
+            binned_overhead_per_exp = self.readout_per_exp / (mol.bin_x * mol.bin_y)
+            total_overhead_per_exp  = binned_overhead_per_exp + self.fixed_overhead_per_exp
+            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
+
+            duration     += mol_duration
+
+        # Add per-block overheads
+        duration += self.front_padding
+        duration += config_change_overhead
+        duration += acquire_overhead
+
+        duration = math.ceil(duration)
+
+        return duration
+
+
+
 class Request(DefaultMixin):
     '''
         Represents a single valid configuration where an observation could take
