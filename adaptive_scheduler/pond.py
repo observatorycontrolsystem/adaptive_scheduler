@@ -39,6 +39,7 @@ from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import Expose, Standard
+#from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
@@ -217,8 +218,11 @@ class Block(object):
             raise IncompleteBlockError(missing_fields)
 
         molecule_classes = {
-                             'EXPOSE'   : Expose,
-                             'STANDARD' : Standard
+                             'EXPOSE'    : Expose,
+                             'STANDARD'  : Standard,
+#                             'ARC'       : Arc,
+#                             'LAMP_FLAT' : LampFlat,
+#                             'SPECTRUM'  : Spectrum,
                            }
 
         # Construct the POND objects...
@@ -271,11 +275,14 @@ class Block(object):
 
 
         for i, molecule in enumerate(self.molecules):
-            mol_summary_msg = "Building molecule %d/%d (%dx%.03d %s)" % (i+1,
-                                                            len(self.molecules),
-                                                            molecule.exposure_count,
-                                                            molecule.exposure_time,
-                                                            molecule.filter)
+            mol_summary_msg = "Building %s molecule %d/%d (%dx%.03d %s)" % (
+                                                                             molecule.type,
+                                                                             i+1,
+                                                                             len(self.molecules),
+                                                                             molecule.exposure_count,
+                                                                             molecule.exposure_time,
+                                                                             molecule.filter,
+                                                                             )
             log.debug(mol_summary_msg)
             ur_log.debug(mol_summary_msg, self.tracking_number)
 
@@ -297,6 +304,7 @@ class Block(object):
                 mol_type = molecule_classes['STANDARD']
 
             # Otherwise, default to creating an Expose molecule
+            # TODO: Create elsif switch for 3x spectrograph
             else:
                 # Note if an unsupported type was provided
                 if not molecule.type.upper() == 'EXPOSE':
