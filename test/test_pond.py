@@ -133,6 +133,24 @@ class TestPond(object):
                                         defocus         = 0.0,
                                        )
 
+    def create_pond_block(self, location='0m4a.aqwb.coj', start=datetime(2012, 1, 1, 0, 0, 0),
+                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group',
+                          tracking_number='0000000001', request_number='0000000001'):
+        scheduled_block = Block(
+                                 location=location,
+                                 start=start,
+                                 end=end,
+                                 group_id=group_id,
+                                 tracking_number=tracking_number,
+                                 request_number=request_number,
+                                 camera_mapping=self.mapping,
+                               )
+
+        scheduled_block.add_proposal(self.valid_proposal)
+        scheduled_block.add_target(self.valid_target)
+        scheduled_block.add_molecule(self.valid_molecule)
+        return scheduled_block.create_pond_block()
+
     def test_proposal_lists_missing_fields(self):
         missing  = self.proposal.list_missing_fields()
 
@@ -140,8 +158,6 @@ class TestPond(object):
                       missing,
                       ['proposal_id', 'user_id', 'tag_id', 'priority']
                     )
-
-
 
     def test_scheduled_block_lists_missing_fields(self):
 
@@ -183,42 +199,11 @@ class TestPond(object):
 
 
     def test_a_valid_block_doesnt_raise_an_exception(self):
-
-
-        scheduled_block = Block(
-                                 location = '0m4a.aqwb.coj',
-                                 start    = datetime(2012, 1, 1, 0, 0, 0),
-                                 end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 'related things',
-                                 tracking_number = '0000000001',
-                                 request_number  = '0000000001',
-                                 camera_mapping = self.mapping,
-                               )
-
-        scheduled_block.add_proposal(self.valid_proposal)
-        scheduled_block.add_target(self.valid_target)
-
-        scheduled_block.add_molecule(self.valid_molecule)
-
-
-        scheduled_block.create_pond_block()
+        self.create_pond_block()
 
 
     def test_create_pond_block(self):
-        block = Block(
-                        location = '0m4a.aqwb.coj',
-                        start    = datetime(2012, 1, 1, 0, 0, 0),
-                        end      = datetime(2012, 1, 2, 0, 0, 0),
-                        group_id = 'related things',
-                        tracking_number = 1,
-                        request_number  = 1,
-                        camera_mapping = self.mapping,
-                      )
-
-        block.add_proposal(self.valid_proposal)
-        block.add_molecule(self.valid_molecule)
-        block.add_target(self.valid_target)
-        received = block.create_pond_block()
+        received = self.create_pond_block()
 
         assert(received)
 
@@ -289,36 +274,8 @@ class TestPond(object):
 
     @patch('adaptive_scheduler.pond.get_blocks')
     def test_get_too_blocks(self, mock_get_blocks):
-        too_block = Block(
-                         location='0m4a.aqwb.coj',
-                         start=datetime(2012, 1, 1, 0, 0, 0),
-                         end=datetime(2012, 1, 2, 0, 0, 0),
-                         group_id='1',
-                         tracking_number='0000000001',
-                         request_number=1,
-                         camera_mapping=self.mapping
-                       )
-
-        too_block.add_proposal(self.valid_proposal)
-        too_block.add_target(self.valid_target)
-
-        too_block.add_molecule(self.valid_molecule)
-        too_block = too_block.create_pond_block()
-
-        non_too_block = Block(
-                         location='0m4a.aqwb.elp',
-                         start=datetime(2012, 1, 1, 0, 0, 0),
-                         end=datetime(2012, 1, 2, 0, 0, 0),
-                         group_id='1',
-                         tracking_number='0000000002',
-                         request_number=2,
-                         camera_mapping=self.mapping,
-                       );
-
-        non_too_block.add_proposal(self.valid_proposal)
-        non_too_block.add_target(self.valid_target)
-        non_too_block.add_molecule(self.valid_molecule)
-        non_too_block = non_too_block.create_pond_block()
+        too_block = self.create_pond_block(location='0m4a.aqwb.coj', tracking_number='0000000001')
+        non_too_block = self.create_pond_block(location='0m4a.aqwb.elp', tracking_number='0000000002')
 
         def my_side_effect(start, end, site_name, obs_name, tel_name):
             if site_name == 'elp':
@@ -356,21 +313,7 @@ class TestPond(object):
     @patch('adaptive_scheduler.pond.get_running_blocks')
     def test_blocks_arent_running_if_weather(self, mock_func1):
         
-        block = Block(
-                         location='0m4a.aqwb.coj',
-                         start=datetime(2012, 1, 1, 0, 0, 0),
-                         end=datetime(2012, 1, 2, 0, 0, 0),
-                         group_id='1',
-                         tracking_number='0000000001',
-                         request_number=1,
-                         camera_mapping=self.mapping
-                       )
-
-        block.add_proposal(self.valid_proposal)
-        block.add_target(self.valid_target)
-
-        block.add_molecule(self.valid_molecule)
-        block = block.create_pond_block()
+        block = self.create_pond_block()
         
         tel_mock1 = Mock()
         tel_mock2 = Mock()
