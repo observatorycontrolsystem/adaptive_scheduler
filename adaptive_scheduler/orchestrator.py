@@ -33,7 +33,7 @@ from adaptive_scheduler.printing import pluralise
 from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks,
-                                          PondFacadeException )
+                                          PondFacadeException , get_too_blocks)
 from adaptive_scheduler.semester_service import get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
@@ -50,6 +50,7 @@ from reqdb        import request_factory
 
 # Set up and configure a module scope logger, and a UR-specific logger
 import logging
+from adaptive_scheduler.kernel.intervals import Intervals
 log          = logging.getLogger(__name__)
 multi_ur_log = logging.getLogger('ur_logger')
 
@@ -201,13 +202,19 @@ def update_telescope_events(tels, current_events):
 
     return
 
+def combine_running_and_too_requests(running_at_tel, too_at_tel):
+    for tel in too_at_tel.items():
+                interval = too_at_tel[tel]
+                running_interval = running_at_tel.get(tel, Intervals([]))
+                running_interval.add(interval.timepoints)
+                running_interval[tel] = running_interval
 
-
+    return running_at_tel
 
 # TODO: refactor into smaller chunks
 @timeit
 def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, tel_file,
-                  camera_mappings_file, current_events, visibility_from=None, dry_run=False,
+                  camera_mappings_file, current_events, visibility_from=None, too_user_requests=None, dry_run=False,
                   no_weather=False, no_singles=False, no_compounds=False):
 
     start_event = TimingLogger.create_start_event(datetime.utcnow())
@@ -299,10 +306,19 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
 
     # Remove running blocks from consideration, and get the availability edge
     try:
-        visible_urs, running_at_tel = blacklist_running_blocks(visible_urs, tels, now, semester_end)
-    except PondFacadeException as e:
+        visible_urs, excluded_intervals = blacklist_running_blocks(visible_urs, tels, now, semester_end)
+    except PondFacadeException:
         log.error("Could not determine running blocks from POND - aborting run")
         return visibility_from
+
+    # Get too requests scheduled in pond, combine with excluded_intervals
+    if too_user_requests:
+        try:
+            too_at_tel = get_too_blocks(too_user_requests, tels, now, semester_end)
+            excluded_intervals = combine_running_and_too_requests(excluded_intervals, too_at_tel)
+        except PondFacadeException:
+            log.error("Could not determine too blocks from POND - aborting run")
+            return visibility_from
 
     # Convert CompoundRequests -> CompoundReservations
     many_urs, other_urs = differentiate_by_type('many', visible_urs)
@@ -316,8 +332,8 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
     resource_windows = construct_resource_windows(visibility_from, semester_start)
 
     # Intersect and mask out time where Blocks are currently running
-    global_windows = construct_global_availability(now, semester_start,
-                                                   running_at_tel, resource_windows)
+    global_windows = construct_global_availability(semester_start,
+                                                   excluded_intervals, resource_windows)
 
     print_compound_reservations(to_schedule)
 
@@ -352,7 +368,7 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
     # Clean out all existing scheduled blocks
     try:
         n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
-    except PondFacadeException as e:
+    except PondFacadeException:
         log.error("Could not cancel schedule - aborting run")
         return visibility_from
 

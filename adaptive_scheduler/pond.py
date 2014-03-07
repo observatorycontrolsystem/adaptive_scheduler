@@ -39,11 +39,13 @@ from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import Expose, Standard
-#from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
+# from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
 import logging
+from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.kernel.timepoint import Timepoint
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -124,7 +126,7 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
         specific_ag = resolve_instrument(ag_name, site, obs, tel, mapping)
     else:
         # With no autoguider specified, we go with the preferred autoguider
-        ag_match    = mapping.find_by_camera(specific_camera)
+        ag_match = mapping.find_by_camera(specific_camera)
 
         if not ag_match:
             msg = "Couldn't find any autoguider for '%s' at %s.%s.%s" % (
@@ -144,25 +146,25 @@ class Block(object):
                  min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
-        self.location           = location
-        self.start              = start
-        self.end                = end
-        self.group_id           = group_id
-        self.tracking_number    = str(tracking_number)
-        self.request_number     = str(request_number)
-        self.priority           = priority
+        self.location = location
+        self.start = start
+        self.end = end
+        self.group_id = group_id
+        self.tracking_number = str(tracking_number)
+        self.request_number = str(request_number)
+        self.priority = priority
 
-        self.camera_mapping     = camera_mapping
+        self.camera_mapping = camera_mapping
 
-        self.max_airmass        = max_airmass
+        self.max_airmass = max_airmass
         self.min_lunar_distance = min_lunar_distance
-        self.max_lunar_phase    = max_lunar_phase
-        self.max_seeing         = max_seeing
-        self.min_transparency   = min_transparency
+        self.max_lunar_phase = max_lunar_phase
+        self.max_seeing = max_seeing
+        self.min_transparency = min_transparency
 
-        self.proposal  = Proposal()
+        self.proposal = Proposal()
         self.molecules = []
-        self.target    = SiderealTarget()
+        self.target = SiderealTarget()
 
         self.pond_block = None
 
@@ -229,12 +231,12 @@ class Block(object):
         # 1) Create a POND ScheduledBlock
         telescope, observatory, site = split_location(self.location)
         block_build_args = dict(
-                                start       = self.start,
-                                end         = self.end,
-                                site        = site,
-                                observatory = observatory,
-                                telescope   = telescope,
-                                priority    = self.priority
+                                start=self.start,
+                                end=self.end,
+                                site=site,
+                                observatory=observatory,
+                                telescope=telescope,
+                                priority=self.priority
                                 )
 
         # If constraints are provided, include them in the block
@@ -254,13 +256,13 @@ class Block(object):
         if isinstance(self.target, SiderealTarget):
             # 2a) Construct the Pointing Coordinate
             coord = pointing.ra_dec(
-                                     ra  = self.target.ra.in_degrees(),
-                                     dec = self.target.dec.in_degrees()
+                                     ra=self.target.ra.in_degrees(),
+                                     dec=self.target.dec.in_degrees()
                                    )
             # 2b) Construct the Pointing
             pond_pointing = pointing.sidereal(
-                                               name  = self.target.name,
-                                               coord = coord,
+                                               name=self.target.name,
+                                               coord=coord,
                                              )
         elif isinstance(self.target, NonSiderealTarget):
             pond_pointing = pond_pointing_from_scheme(self.target)
@@ -277,7 +279,7 @@ class Block(object):
         for i, molecule in enumerate(self.molecules):
             mol_summary_msg = "Building %s molecule %d/%d (%dx%.03d %s)" % (
                                                                              molecule.type,
-                                                                             i+1,
+                                                                             i + 1,
                                                                              len(self.molecules),
                                                                              molecule.exposure_count,
                                                                              molecule.exposure_time,
@@ -321,22 +323,22 @@ class Block(object):
             # Build the specified molecule
             obs = mol_type.build(
                                 # Meta data
-                                tracking_num = self.tracking_number,
-                                request_num  = self.request_number,
-                                tag          = self.proposal.tag_id,
-                                user         = self.proposal.observer_name,
-                                proposal     = self.proposal.proposal_id,
-                                group        = self.group_id,
+                                tracking_num=self.tracking_number,
+                                request_num=self.request_number,
+                                tag=self.proposal.tag_id,
+                                user=self.proposal.observer_name,
+                                proposal=self.proposal.proposal_id,
+                                group=self.group_id,
                                 # Observation details
-                                exp_cnt      = molecule.exposure_count,
-                                exp_time     = molecule.exposure_time,
+                                exp_cnt=molecule.exposure_count,
+                                exp_time=molecule.exposure_time,
                                 # TODO: Allow bin_x and bin_y
-                                bin          = molecule.bin_x,
-                                inst_name    = specific_camera,
-                                filters      = molecule.filter,
-                                pointing     = pond_pointing,
-                                priority     = molecule.priority,
-                                defocus      = molecule.defocus,
+                                bin=molecule.bin_x,
+                                inst_name=specific_camera,
+                                filters=molecule.filter,
+                                pointing=pond_pointing,
+                                priority=molecule.priority,
+                                defocus=molecule.defocus,
                               )
 
             # Resolve the Autoguider if necessary
@@ -404,12 +406,12 @@ def make_simple_pond_block(compound_reservation, semester_start):
     dt_start, dt_end = get_cr_datetimes(compound_reservation, semester_start)
 
     pond_block = PondBlock.build(
-                                    start       = dt_start,
-                                    end         = dt_end,
-                                    site        = compound_reservation.resource,
-                                    observatory = compound_reservation.resource,
-                                    telescope   = compound_reservation.resource,
-                                    priority    = compound_reservation.priority
+                                    start=dt_start,
+                                    end=dt_end,
+                                    site=compound_reservation.resource,
+                                    observatory=compound_reservation.resource,
+                                    telescope=compound_reservation.resource,
+                                    priority=compound_reservation.priority
                                 )
     return pond_block
 
@@ -432,20 +434,20 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
     camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
     block = Block(
-                   location           = reservation.scheduled_resource,
-                   start              = res_start,
-                   end                = res_end,
-                   group_id           = compound_request.group_id,
-                   tracking_number    = compound_request.tracking_number,
-                   request_number     = request.request_number,
-                   camera_mapping     = camera_mapping,
+                   location=reservation.scheduled_resource,
+                   start=res_start,
+                   end=res_end,
+                   group_id=compound_request.group_id,
+                   tracking_number=compound_request.tracking_number,
+                   request_number=request.request_number,
+                   camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
-                   priority           = 30,
-                   max_airmass        = request.constraints.max_airmass,
-                   min_lunar_distance = request.constraints.min_lunar_distance,
-                   max_lunar_phase    = request.constraints.max_lunar_phase,
-                   max_seeing         = request.constraints.max_seeing,
-                   min_transparency   = request.constraints.min_transparency,
+                   priority=30,
+                   max_airmass=request.constraints.max_airmass,
+                   min_lunar_distance=request.constraints.min_lunar_distance,
+                   max_lunar_phase=request.constraints.max_lunar_phase,
+                   max_seeing=request.constraints.max_seeing,
+                   min_transparency=request.constraints.min_transparency,
                  )
 
     block.add_proposal(compound_request.proposal)
@@ -492,7 +494,7 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
 
 @timeit
 def blacklist_running_blocks(ur_list, tels, start, end):
-    running_at_tel  = get_network_running_blocks(tels, start, end)
+    running_at_tel = get_network_running_blocks(tels, start, end)
 
     all_running_blocks = []
     for run_dict in running_at_tel.values():
@@ -519,8 +521,8 @@ def blacklist_running_blocks(ur_list, tels, start, end):
                 break
 
 
-    all_tns         = [ur.tracking_number for ur in ur_list]
-    running_tns     = [block.tracking_num_set()[0] for block in all_running_blocks]
+    all_tns = [ur.tracking_number for ur in ur_list]
+    running_tns = [block.tracking_num_set()[0] for block in all_running_blocks]
     schedulable_tns = set(all_tns) - set(running_tns)
     schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
 
@@ -528,11 +530,26 @@ def blacklist_running_blocks(ur_list, tels, start, end):
 
     return schedulable_urs, running_at_tel
 
+@timeit
+def get_too_blocks(ur_list, tels, start, end):
+    telescope_interval = {}
+    tracking_numbers = [ur.tracking_number for ur in ur_list]
+
+    for full_tel_name in tels:
+        tel_name, obs_name, site_name = full_tel_name.split('.')
+        blocks = get_blocks(start, end, site_name, obs_name, tel_name)
+
+        filtered_blocks = filter(lambda block: block.tracking_num_set()[0] in tracking_numbers, blocks)
+        intervals = get_intervals(filtered_blocks)
+        if not intervals.is_empty():
+            telescope_interval[full_tel_name] = intervals
+
+    return telescope_interval
 
 def get_network_running_blocks(tels, start, end):
     n_running_total = 0
-    running_at_tel  = {}
-    for full_tel_name, tel in tels.iteritems():
+    running_at_tel = {}
+    for full_tel_name, tel in tels.items():
         tel_name, obs_name, site_name = full_tel_name.split('.')
         log.debug("Acquiring running blocks and first availability at %s",
                                                           full_tel_name)
@@ -543,12 +560,9 @@ def get_network_running_blocks(tels, start, end):
             cutoff, running = get_running_blocks(start, end, site_name,
                                                  obs_name, tel_name)
 
-        running_at_tel[full_tel_name] = {
-                                          'cutoff'  : cutoff,
-                                          'running' : running
-                                        }
+        running_at_tel[full_tel_name] = get_intervals(running)
 
-        n_running    = len(running)
+        n_running = len(running)
         _, block_str = pl(n_running, 'block')
         log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
         n_running_total += n_running
@@ -558,11 +572,8 @@ def get_network_running_blocks(tels, start, end):
     return running_at_tel
 
 
-@retry_or_reraise(max_tries=6, delay=10)
 def get_running_blocks(start, end, site, obs, tel):
-    schedule  = Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel,
-                             canceled_blocks=False)
+    schedule = get_blocks(start, end, site, obs, tel)
     cutoff_dt = schedule.end_of_overlap(start)
 
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
@@ -571,12 +582,18 @@ def get_running_blocks(start, end, site, obs, tel):
     return cutoff_dt, running
 
 
-@retry_or_reraise(max_tries=6, delay=10)
+def get_intervals(blocks):
+    timepoints = []
+    for block in blocks:
+        timepoints.append(Timepoint(block.start, 'start'))
+        timepoints.append(Timepoint(block.end, 'end'))
+
+    return Intervals(timepoints)
+
+
 def get_deletable_blocks(start, end, site, obs, tel):
     # Only retrieve blocks which have not been cancelled
-    schedule  = Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel,
-                             canceled_blocks=False)
+    schedule = get_blocks(start, end, site, obs, tel)
 
     cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start >= cutoff_dt and
@@ -593,6 +610,12 @@ def get_deletable_blocks(start, end, site, obs, tel):
 
     return to_delete
 
+@retry_or_reraise(max_tries=6, delay=10)
+def get_blocks(start, end, site, obs, tel):
+    # Only retrieve blocks which have not been cancelled
+    return Schedule.get(start=start, end=end, site=site,
+                             observatory=obs, telescope=tel,
+                             canceled_blocks=False)
 
 @timeit
 def cancel_schedule(tels, start, end, dry_run=False):

@@ -429,17 +429,16 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     return visibility_from
 
 
-def construct_global_availability(now, semester_start, running_at_tel, resource_windows):
-    '''Use the cutoff time to make unavailable portions of each resource where an
-       observation is running. Normalise and intersect with the resource windows to
+def construct_global_availability(semester_start, exclude_intervals, resource_windows):
+    '''Use the exclude_intervals to make unavailable portions of each resource where an
+       observation is running/too request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
     '''
 
-    for tel_name in running_at_tel:
-        running_interval = Intervals([Timepoint(now, 'start'),
-                                      Timepoint(running_at_tel[tel_name]['cutoff'], 'end')])
-        norm_running_interval = normalise_dt_intervals(running_interval, semester_start)
+    for tel_name in exclude_intervals:
+        excluded_interval = exclude_intervals[tel_name]
+        norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
 
-        resource_windows[tel_name] = resource_windows[tel_name].subtract(norm_running_interval)
+        resource_windows[tel_name] = resource_windows[tel_name].subtract(norm_excluded_interval)
 
     return resource_windows

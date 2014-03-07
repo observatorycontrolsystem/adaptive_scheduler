@@ -64,6 +64,8 @@ class Intervals(object):
     def __repr__(self):
         return str(self.serialise())
 
+    def __eq__(self, other):
+        return self.__repr__() == other.__repr__()
 
     def serialise(self):
         serialised_timepoints = [v.serialise() for v in self.timepoints]

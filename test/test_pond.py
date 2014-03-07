@@ -11,7 +11,8 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
-                                      get_network_running_blocks)
+                                      get_network_running_blocks,
+    get_too_blocks)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints)
@@ -22,6 +23,9 @@ import lcogtpond
 
 from datetime import datetime
 import collections
+from lcogtpond import block
+from adaptive_scheduler.kernel.timepoint import Timepoint
+from adaptive_scheduler.kernel.intervals import Intervals
 
 
 def add_two_numbers(x, y):
@@ -283,6 +287,114 @@ class TestPond(object):
 
         received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
 
+    @patch('adaptive_scheduler.pond.get_blocks')
+    def test_get_too_blocks(self, mock_get_blocks):
+        too_block = Block(
+                         location='0m4a.aqwb.coj',
+                         start=datetime(2012, 1, 1, 0, 0, 0),
+                         end=datetime(2012, 1, 2, 0, 0, 0),
+                         group_id='1',
+                         tracking_number='0000000001',
+                         request_number=1,
+                         camera_mapping=self.mapping
+                       )
+
+        too_block.add_proposal(self.valid_proposal)
+        too_block.add_target(self.valid_target)
+
+        too_block.add_molecule(self.valid_molecule)
+        too_block = too_block.create_pond_block()
+
+        non_too_block = Block(
+                         location='0m4a.aqwb.elp',
+                         start=datetime(2012, 1, 1, 0, 0, 0),
+                         end=datetime(2012, 1, 2, 0, 0, 0),
+                         group_id='1',
+                         tracking_number='0000000002',
+                         request_number=2,
+                         camera_mapping=self.mapping,
+                       );
+
+        non_too_block.add_proposal(self.valid_proposal)
+        non_too_block.add_target(self.valid_target)
+        non_too_block.add_molecule(self.valid_molecule)
+        non_too_block = non_too_block.create_pond_block()
+
+        def my_side_effect(start, end, site_name, obs_name, tel_name):
+            if site_name == 'elp':
+                return [non_too_block]
+            else:
+                return [too_block]
+
+        # TODO:
+        mock_get_blocks.side_effect = my_side_effect
+
+        ur1 = UserRequest(
+                           operator='single',
+                           requests=None,
+                           proposal=None,
+                           tracking_number='0000000001',
+                           group_id=None,
+                           expires=None,
+                         )
+
+        tels = {
+                 '0m4a.aqwb.elp' : [],
+                 '0m4a.aqwb.coj' : []
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        too_blocks = get_too_blocks([ur1], tels, start, end)
+
+        expected = {
+                    '0m4a.aqwb.coj' : Intervals([Timepoint(too_block.start, 'start'), Timepoint(too_block.end, 'end')])
+                    }
+        assert_equal(expected, too_blocks)
+
+
+    @patch('adaptive_scheduler.pond.get_running_blocks')
+    def test_blocks_arent_running_if_weather(self, mock_func1):
+        
+        block = Block(
+                         location='0m4a.aqwb.coj',
+                         start=datetime(2012, 1, 1, 0, 0, 0),
+                         end=datetime(2012, 1, 2, 0, 0, 0),
+                         group_id='1',
+                         tracking_number='0000000001',
+                         request_number=1,
+                         camera_mapping=self.mapping
+                       )
+
+        block.add_proposal(self.valid_proposal)
+        block.add_target(self.valid_target)
+
+        block.add_molecule(self.valid_molecule)
+        block = block.create_pond_block()
+        
+        tel_mock1 = Mock()
+        tel_mock2 = Mock()
+
+        tel_mock1.events = [1, 2, 3]
+        tel_mock2.events = []
+
+        mock_func1.return_value = ('me', [block])
+
+        tels = {
+                 '1m0a.doma.lsc' : tel_mock1,
+                 '1m0a.doma.cpt' : tel_mock2
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        received = get_network_running_blocks(tels, start, end)
+
+        expected = {
+                    '1m0a.doma.lsc' : Intervals([]),
+                    '1m0a.doma.cpt' : Intervals([Timepoint(block.start, 'start'), Timepoint(block.end, 'end')])
+                    }
+
+        assert_equal(received, expected)
 
 class TestPondInteractions(object):
     def setup(self):
@@ -414,38 +526,6 @@ class TestPondInteractions(object):
 
         mock_func.assert_called_with([mock_pond_block])
 
-
-    @patch('adaptive_scheduler.pond.get_running_blocks')
-    def test_blocks_arent_running_if_weather(self, mock_func1):
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        mock_func1.return_value = ('me', ['you'])
-
-        tels = {
-                 '1m0a.doma.lsc' : tel_mock1,
-                 '1m0a.doma.cpt' : tel_mock2
-               }
-        start = datetime(2013, 10, 3)
-        end   = datetime(2013, 11, 3)
-
-        received = get_network_running_blocks(tels, start, end)
-
-        expected = {
-                     '1m0a.doma.lsc' : {
-                                         'cutoff'  : start,
-                                         'running' : []
-                                       },
-                     '1m0a.doma.cpt' : {
-                                         'cutoff'  : 'me',
-                                         'running' : ['you']
-                                       },
-                   }
-
-        assert_equal(received, expected)
 
 
     @patch('adaptive_scheduler.pond.send_blocks_to_pond')

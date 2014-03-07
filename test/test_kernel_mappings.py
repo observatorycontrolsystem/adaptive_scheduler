@@ -473,15 +473,12 @@ class TestKernelMappings(object):
         dt3 = datetime(2013, 3, 22, 5)
         now = dt2
         running_at_tel = {
-                           tel_name : {
-                               'cutoff'  : dt3,
-                               'running' : []
-                            },
+                           tel_name : Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')]),
                          }
 
         # Expected available intervals after masking are
         # 3-4, 5-7
-        received = construct_global_availability(now, sem_start, running_at_tel,
+        received = construct_global_availability(sem_start, running_at_tel,
                                                  resource_windows)
         received_int = received[tel_name]
         assert_equal(len(received_int.timepoints), 4)
