@@ -583,6 +583,7 @@ def get_running_blocks(start, end, site, obs, tel):
 
 
 def get_intervals(blocks):
+    ''' Create Intervals from given blocks  '''
     timepoints = []
     for block in blocks:
         timepoints.append(Timepoint(block.start, 'start'))

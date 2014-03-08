@@ -202,12 +202,10 @@ def update_telescope_events(tels, current_events):
 
     return
 
-def combine_running_and_too_requests(running_at_tel, too_at_tel):
+def combine_running_and_too_requests(running_at_tel ={}, too_at_tel):
     for tel in too_at_tel:
-                interval = too_at_tel[tel]
-                running_interval = running_at_tel.get(tel, Intervals([]))
-                running_interval.add(interval.timepoints)
-                running_at_tel[tel] = running_interval
+        too_timepoints = too_at_tel[tel].timepoints
+        running_at_tel.setdefault(tel, Intervals([])).add(too_timepoints)
 
     return running_at_tel
 
