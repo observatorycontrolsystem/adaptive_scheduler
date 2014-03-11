@@ -10,7 +10,7 @@ August 2013
 '''
 
 from adaptive_scheduler.orchestrator import update_telescope_events, report_scheduling_outcome, \
-    combine_running_and_too_requests
+    combine_excluded_intervals
 from adaptive_scheduler.model2       import Telescope
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
@@ -93,7 +93,7 @@ class TestOrchestrator(object):
         too = {
                '0m4a.aqwb.coj' : Intervals([Timepoint(start + timedelta(seconds=10), 'start'), Timepoint(end + timedelta(seconds=10), 'end')])
                }
-        combined = combine_running_and_too_requests(running, too)
+        combined = combine_excluded_intervals(running, too)
 
         expected = {
                     '0m4a.aqwb.coj' : Intervals([Timepoint(start, 'start'), Timepoint(end + timedelta(seconds=10), 'end')])

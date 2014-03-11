@@ -531,9 +531,9 @@ def blacklist_running_blocks(ur_list, tels, start, end):
     return schedulable_urs, running_at_tel
 
 @timeit
-def get_too_blocks(ur_list, tels, start, end):
+def get_blocks_by_request(urs, tels, start, end):
     telescope_interval = {}
-    tracking_numbers = [ur.tracking_number for ur in ur_list]
+    tracking_numbers = [ur.tracking_number for ur in urs]
 
     for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')

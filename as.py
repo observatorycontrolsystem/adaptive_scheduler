@@ -213,7 +213,6 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     log.info("Received %d Normal User Requests" % len(normal_user_requests))
 
     if too_user_requests:
-        # TODO: Do a pre run scheduling all too requests first
         semester_start, semester_end = get_semester_block(dt=now)
         visibility_from = run_scheduler(too_user_requests, scheduler_client, now,
                                         semester_start, semester_end,

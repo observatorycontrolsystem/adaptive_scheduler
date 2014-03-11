@@ -12,7 +12,7 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
                                       get_network_running_blocks,
-    get_too_blocks)
+    get_blocks_by_request)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints)
@@ -302,42 +302,12 @@ class TestPond(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        too_blocks = get_too_blocks([ur1], tels, start, end)
+        too_blocks = get_blocks_by_request([ur1], tels, start, end)
 
         expected = {
                     '0m4a.aqwb.coj' : Intervals([Timepoint(too_block.start, 'start'), Timepoint(too_block.end, 'end')])
                     }
         assert_equal(expected, too_blocks)
-
-
-    @patch('adaptive_scheduler.pond.get_running_blocks')
-    def test_blocks_arent_running_if_weather(self, mock_func1):
-        
-        block = self.create_pond_block()
-        
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        mock_func1.return_value = ('me', [block])
-
-        tels = {
-                 '1m0a.doma.lsc' : tel_mock1,
-                 '1m0a.doma.cpt' : tel_mock2
-               }
-        start = datetime(2013, 10, 3)
-        end = datetime(2013, 11, 3)
-
-        received = get_network_running_blocks(tels, start, end)
-
-        expected = {
-                    '1m0a.doma.lsc' : Intervals([]),
-                    '1m0a.doma.cpt' : Intervals([Timepoint(block.start, 'start'), Timepoint(block.end, 'end')])
-                    }
-
-        assert_equal(received, expected)
 
 class TestPondInteractions(object):
     def setup(self):
@@ -497,6 +467,41 @@ class TestPondInteractions(object):
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(mock_res_list, dry_run)
 
+    @patch('adaptive_scheduler.pond.get_intervals')
+    @patch('adaptive_scheduler.pond.get_running_blocks')
+    def test_blocks_arent_running_if_weather(self, mock_func1, mock_func2):
+
+        tel_mock1 = Mock()
+        tel_mock2 = Mock()
+
+        tel_mock1.events = [1, 2, 3]
+        tel_mock2.events = []
+
+        mock_func1.return_value = ("test", ["test"])
+
+        def return_func(*args, **kwargs):
+            if args[0]:
+                return "interval"
+            else:
+                return "empty"
+
+        mock_func2.side_effect = return_func
+
+        tels = {
+                 '1m0a.doma.lsc' : tel_mock1,
+                 '1m0a.doma.cpt' : tel_mock2
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        received = get_network_running_blocks(tels, start, end)
+
+        expected = {
+                    '1m0a.doma.lsc' : "empty",
+                    '1m0a.doma.cpt' : "interval"
+                    }
+
+        assert_equal(received, expected)
 
     def test_build_block(self):
         raise SkipTest

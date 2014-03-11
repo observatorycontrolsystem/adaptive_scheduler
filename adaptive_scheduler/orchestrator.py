@@ -33,7 +33,7 @@ from adaptive_scheduler.printing import pluralise
 from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks,
-                                          PondFacadeException , get_too_blocks)
+                                          PondFacadeException , get_blocks_by_request)
 from adaptive_scheduler.semester_service import get_semester_code
 
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
@@ -202,12 +202,12 @@ def update_telescope_events(tels, current_events):
 
     return
 
-def combine_running_and_too_requests(running_at_tel ={}, too_at_tel):
-    for tel in too_at_tel:
-        too_timepoints = too_at_tel[tel].timepoints
-        running_at_tel.setdefault(tel, Intervals([])).add(too_timepoints)
+def combine_excluded_intervals(excluded_intervals_1, excluded_intervals_2):
+    for key in excluded_intervals_2:
+        timepoints = excluded_intervals_2[key].timepoints
+        excluded_intervals_1.setdefault(key, Intervals([])).add(timepoints)
 
-    return running_at_tel
+    return excluded_intervals_1
 
 # TODO: refactor into smaller chunks
 @timeit
@@ -304,7 +304,7 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
 
     # Remove running blocks from consideration, and get the availability edge
     try:
-        visible_urs, excluded_intervals = blacklist_running_blocks(visible_urs, tels, now, semester_end)
+        visible_urs, excluded_running_intervals = blacklist_running_blocks(visible_urs, tels, now, semester_end)
     except PondFacadeException:
         log.error("Could not determine running blocks from POND - aborting run")
         return visibility_from
@@ -312,11 +312,13 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
     # Get too requests scheduled in pond, combine with excluded_intervals
     if too_user_requests:
         try:
-            too_at_tel = get_too_blocks(too_user_requests, tels, now, semester_end)
-            excluded_intervals = combine_running_and_too_requests(excluded_intervals, too_at_tel)
+            excluded_too_intervals = get_blocks_by_request(too_user_requests, tels, now, semester_end)
+            excluded_intervals = combine_excluded_intervals(excluded_running_intervals, excluded_too_intervals)
         except PondFacadeException:
             log.error("Could not determine too blocks from POND - aborting run")
             return visibility_from
+    else:
+        excluded_intervals = excluded_running_intervals
 
     # Convert CompoundRequests -> CompoundReservations
     many_urs, other_urs = differentiate_by_type('many', visible_urs)
