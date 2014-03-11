@@ -106,6 +106,8 @@ def parse_args(argv):
                                 help="Ignore the 'single' Request type")
     arg_parser.add_argument("--nocompounds", action="store_true",
                                 help="Ignore the 'and', 'oneof' and 'many' Request types")
+    arg_parser.add_argument("--notoo", action="store_true",
+                                help="Treat Target of Opportunity Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
 
@@ -202,7 +204,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     normal_user_requests = []
     too_user_requests    = []
     for ur in all_user_requests:
-        if ur.has_target_of_opportunity():
+        if not args.notoo and ur.has_target_of_opportunity():
             too_user_requests.append(ur)
         else:
             normal_user_requests.append(ur)
