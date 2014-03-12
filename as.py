@@ -122,7 +122,7 @@ def parse_args(argv):
     return args
 
 
-def determine_scheduler_now(args):
+def determine_scheduler_now(args, short_run=False):
     '''Use a static command line datetime if provided, or default to utcnow, with a
        little extra to cover the scheduler's run time.'''
     if args.now:
@@ -135,7 +135,7 @@ def determine_scheduler_now(args):
             sys.exit()
     # ...otherwise offset 'now' to account for the duration of the scheduling run
     else:
-        now = datetime.utcnow() + timedelta(minutes=6)
+        now = datetime.utcnow() + (timedelta(minutes=2) if short_run else timedelta(minutes=6))
 
     log.info("Using a 'now' of %s", now)
 
@@ -185,9 +185,10 @@ def get_requests(scheduler_client, now):
 def create_new_schedule(scheduler_client, args, visibility_from, current_events):
     from adaptive_scheduler.orchestrator import run_scheduler
     # Use a static command line datetime if provided...
-    now = determine_scheduler_now(args)
+    now = determine_scheduler_now(args);
+    short_run_now = determine_scheduler_now(args, short_run=True);
 
-    json_user_requests = get_requests(scheduler_client, now)
+    json_user_requests = get_requests(scheduler_client, short_run_now)
 
     # Collapse each request tree
     json_user_requests = collapse_requests(json_user_requests)
@@ -213,8 +214,9 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     log.info("Received %d Normal User Requests" % len(normal_user_requests))
 
     if too_user_requests:
-        semester_start, semester_end = get_semester_block(dt=now)
-        visibility_from = run_scheduler(too_user_requests, scheduler_client, now,
+        log.info("Start ToO Scheduling")
+        semester_start, semester_end = get_semester_block(dt=short_run_now)
+        visibility_from = run_scheduler(too_user_requests, scheduler_client, short_run_now,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
@@ -222,9 +224,11 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,
                                         no_compounds=args.nocompounds)
+        log.info("End ToO Scheduling")
 
     # Run the scheduling loop, if there are any User Requests
     if normal_user_requests:
+        log.info("Start Normal Scheduling")
         semester_start, semester_end = get_semester_block(dt=now)
         visibility_from = run_scheduler(normal_user_requests, scheduler_client, now,
                                         semester_start, semester_end,
@@ -235,6 +239,8 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,
                                         no_compounds=args.nocompounds)
+        log.info("End Normal Scheduling")
+
     else:
         log.warn("Received no User Requests! Skipping this scheduling cycle")
     sys.stdout.flush()
