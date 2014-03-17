@@ -289,7 +289,9 @@ def main(argv):
 
     visibility_from = {}
     while run_flag:
-        current_events = network.update()
+        current_events = []
+        if not args.noweather:
+            current_events = network.update()
 
         if scheduler_rerun_required(scheduler_client, args, network):
             visibility_from = create_new_schedule(scheduler_client, args,
