@@ -392,7 +392,7 @@ class TestPondInteractions(object):
     def test_dont_send_blocks_if_dry_run(self, mock_func, mock_func2):
         dry_run = True
 
-        blocks = [Mock()]
+        blocks = {'foo' : [Mock()]}
 
         send_blocks_to_pond(blocks, dry_run)
         assert not mock_func.called, 'Dry run flag was ignored'
@@ -408,7 +408,7 @@ class TestPondInteractions(object):
         mock_block.request_number  = '0000000001'
         mock_block.tracking_number = '0000000001'
 
-        blocks = [mock_block]
+        blocks = {'foo' : [mock_block]}
 
         send_blocks_to_pond(blocks, dry_run)
 
@@ -467,6 +467,9 @@ class TestPondInteractions(object):
         # Each time the mock is called, do this. This allows us to build up a list
         # to test.
         mock_func1.side_effect = lambda v,w,x,y,z : v
+
+        mock_func2.return_value = ( {'1m0a.doma.lsc' : ['block 1', 'block 2']},
+                                    {'1m0a.doma.lsc' : ['block 3']} )
 
         n_submitted_total = send_schedule_to_pond(schedule, self.start,
                                                   camera_mappings_file, dry_run)

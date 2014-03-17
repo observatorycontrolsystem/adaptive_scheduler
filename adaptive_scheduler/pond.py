@@ -485,10 +485,8 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
     sent_blocks, not_sent_blocks= send_blocks_to_pond(blocks_by_resource, dry_run)
 
     # Summarise what was supposed to have been sent
-    # TODO: Get this from send_blocks_to_pond, since some blocks might not make it
     # The sorting is just a way to iterate through the output in a human-readable way
     n_submitted_total = 0
-    import ipdb; ipdb.set_trace()
     for resource_name in sorted(sent_blocks, key=lambda x: x[::-1]):
         n_submitted = len(sent_blocks[resource_name])
         n_not_sent  = len(not_sent_blocks[resource_name])
