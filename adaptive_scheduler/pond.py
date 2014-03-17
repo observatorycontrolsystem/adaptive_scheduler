@@ -32,6 +32,7 @@ from adaptive_scheduler.model2         import Proposal, SiderealTarget, NonSider
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit, split_location
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
+from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 
@@ -360,31 +361,38 @@ class Block(object):
         return pond_block
 
 
-def send_blocks_to_pond(blocks, dry_run=False):
-    pond_blocks = []
-    for block in blocks:
-        try:
-            pb = block.create_pond_block()
-            pond_blocks.append(pb)
-            msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
-                                                                     block.tracking_number,
-                                                                     pb.telescope,
-                                                                     pb.observatory,
-                                                                     pb.site)
-            if dry_run:
-                msg = "Dry-run: Would have sent " + msg
-            else:
-                msg = "Sent " + msg
-            log.debug(msg)
-            ur_log.info(msg, block.tracking_number)
-        except (IncompleteBlockError, InstrumentResolutionError) as e:
-            msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
-                                                               block.request_number,
-                                                               block.tracking_number)
-            log.error(msg)
-            ur_log.error(msg, block.tracking_number)
-            log.error(e)
-            ur_log.error(e, block.tracking_number)
+def send_blocks_to_pond(blocks_by_resource, dry_run=False):
+    pond_blocks     = []
+    sent_blocks     = {}
+    not_sent_blocks = {}
+    for resource_name, blocks in blocks_by_resource.items():
+        sent_blocks[resource_name]     = []
+        not_sent_blocks[resource_name] = []
+        for block in blocks:
+            try:
+                pb = block.create_pond_block()
+                pond_blocks.append(pb)
+                msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
+                                                                         block.tracking_number,
+                                                                         pb.telescope,
+                                                                         pb.observatory,
+                                                                         pb.site)
+                if dry_run:
+                    msg = "Dry-run: Would have sent " + msg
+                else:
+                    msg = "Sent " + msg
+                log.debug(msg)
+                ur_log.info(msg, block.tracking_number)
+                sent_blocks[resource_name].append(block)
+            except (IncompleteBlockError, InstrumentResolutionError) as e:
+                msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
+                                                                   block.request_number,
+                                                                   block.tracking_number)
+                log.error(msg)
+                ur_log.error(msg, block.tracking_number)
+                log.error(e)
+                ur_log.error(e, block.tracking_number)
+                not_sent_blocks[resource_name].append(block)
 
 
     if not dry_run:
@@ -393,7 +401,7 @@ def send_blocks_to_pond(blocks, dry_run=False):
         except BlockSaveException as e:
             log.error(e)
 
-    return
+    return sent_blocks, not_sent_blocks
 
 
 
@@ -464,25 +472,30 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
 def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_run=False):
     '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
 
-    blocks = []
-    for resource_name in schedule:
-        for reservation in schedule[resource_name]:
+    blocks_by_resource = {}
+    for resource_name, reservations in schedule.items():
+        blocks_by_resource[resource_name] = []
+        for reservation in reservations:
             block = build_block(reservation, reservation.request,
                                 reservation.compound_request, semester_start,
                                 camera_mappings_file)
 
-            blocks.append(block)
+            blocks_by_resource[resource_name].append(block)
 
-    send_blocks_to_pond(blocks, dry_run)
+    sent_blocks, not_sent_blocks= send_blocks_to_pond(blocks_by_resource, dry_run)
 
     # Summarise what was supposed to have been sent
     # TODO: Get this from send_blocks_to_pond, since some blocks might not make it
     # The sorting is just a way to iterate through the output in a human-readable way
     n_submitted_total = 0
-    for resource_name in sorted(schedule, key=lambda x: x[::-1]):
-        n_submitted = len(schedule[resource_name])
+    import ipdb; ipdb.set_trace()
+    for resource_name in sorted(sent_blocks, key=lambda x: x[::-1]):
+        n_submitted = len(sent_blocks[resource_name])
+        n_not_sent  = len(not_sent_blocks[resource_name])
         _, block_str = pl(n_submitted, 'block')
         msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
+        if n_not_sent:
+            msg += " (%s)" % plural_str(n_not_sent, "bad block")
         log_info_dry_run(msg, dry_run)
         n_submitted_total += n_submitted
 

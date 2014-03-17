@@ -16,6 +16,7 @@ from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import make_ra_dec_target, make_moving_object_target
 from adaptive_scheduler.utils                 import ( iso_string_to_datetime, EqualityMixin,
                                                        DefaultMixin, join_location)
+from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
@@ -301,7 +302,7 @@ class Instrument(DefaultMixin):
     def _no_instrument_defined(self):
         raise ConfigurationError("Can't get duration - no instrument has been specified")
 
-    def get_duration(self, dummy_molecule_arg):
+    def get_duration(self, dummy_molecule_arg, dummy_target_arg=None):
         self._no_instrument_defined()
 
 
@@ -324,6 +325,7 @@ class InstrumentFactory(object):
                              '1M0-SCICAM-SINISTRO' : self.make_sinistro,
                              '2M0-SCICAM-SPECTRAL' : self.make_spectral,
                              '2M0-SCICAM-MEROPE'   : self.make_merope,
+                             '2M0-FLOYDS-SCICAM'   : self.make_floyds,
                              'NULL-INSTRUMENT'     : self.make_null_instrument,
                            }
 
@@ -380,6 +382,12 @@ class InstrumentFactory(object):
         return merope_ccd
 
 
+    def make_floyds(self):
+        floyds_spectrograph = Spectrograph(type='2M0-FLOYDS-SCICAM')
+
+        return floyds_spectrograph
+
+
     def make_null_instrument(self):
         null_instrument = Instrument()
 
@@ -412,10 +420,10 @@ class CCD(Instrument):
 
         return
 
-    def get_duration(self, molecules):
+    def get_duration(self, molecules, target=None):
         return self._calc_duration(molecules)
 
-    def _calc_duration(self, molecules):
+    def _calc_duration(self, molecules, target=None):
         duration = 0
 
         # Find number of filter changes, and calculate total filter overhead
@@ -446,7 +454,7 @@ class CCD(Instrument):
 
 
 class Spectrograph(Instrument):
-    def __init__(self):
+    def __init__(self, type=''):
         self.config_change_time      = 30
         self.acquire_processing_time = 60
         self.acquire_exp_time        = 30
@@ -454,7 +462,14 @@ class Spectrograph(Instrument):
         self.fixed_overhead_per_exp  = 0.5
         self.front_padding           = 120
 
-    def _calc_duration(self, target, molecules):
+        Instrument.__init__(self)
+        if type:
+            self.type = type
+
+    def get_duration(self, molecules, target):
+        return self._calc_duration(molecules, target)
+
+    def _calc_duration(self, molecules, target):
         duration = 0
 
         # Determine how many molecule changes we have
@@ -536,7 +551,7 @@ class Request(DefaultMixin):
         return self.instrument.type
 
     def get_duration(self):
-        return self.instrument.get_duration(self.molecules)
+        return self.instrument.get_duration(self.molecules, self.target)
 
     def has_windows(self):
         return self.windows.has_windows()
@@ -776,14 +791,15 @@ class TelescopeNetwork(object):
 class ModelBuilder(object):
 
     def __init__(self, tel_file, camera_mappings_file):
-        self.tel_network     = build_telescope_network(tel_file)
-        self.camera_mappings = camera_mappings_file
+        self.tel_network        = build_telescope_network(tel_file)
+        self.camera_mappings    = camera_mappings_file
+        self.instrument_factory = InstrumentFactory()
 
 
     def build_user_request(self, cr_dict):
         requests, invalid_requests  = self.build_requests(cr_dict['requests'])
         if invalid_requests:
-            log.warn("Found %d invalid Requests" % len(invalid_requests))
+            log.warn("Found %s", pl(len(invalid_requests), 'invalid Request'))
 
         if not requests:
             msg = "No valid Requests for UR %s" % cr_dict['tracking_number']
@@ -847,8 +863,7 @@ class ModelBuilder(object):
 
         mapping = create_camera_mapping(self.camera_mappings)
 
-        generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG',
-                                '2M0-SCICAM-SPECTRAL', '2M0-SCICAM-MEROPE')
+        generic_camera_names = self.instrument_factory.instruments.keys()
 
         if instrument_name.upper() in generic_camera_names:
             instrument_info = mapping.find_by_camera_type(instrument_name)

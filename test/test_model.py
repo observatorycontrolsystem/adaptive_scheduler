@@ -244,54 +244,54 @@ class TestSpectrographDuration(object):
 
     def test_acquire_is_off(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 1976)
 
     def test_acquire_is_maybe(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_maybe, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_maybe)
         assert_equal(received, 2066)
 
     def test_acquire_is_on(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 2066)
 
     def test_lamp_flat_arc_target_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule, self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 2267)
 
     def test_lamp_flat_arc_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 321)
 
     def test_double_lamp_arc_four_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.lamp_molecule, self.arc_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 522)
 
     def test_double_lamp_arc_three_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.arc_molecule, self.lamp_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 492)
 
     def test_arc_two_exposures(self):
         mols = [self.arc_exp2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 261)
 
     def test_arc_two_exposures_bin_two_no_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 224)
 
     def test_arc_two_exposures_bin_two_with_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 224)
 
 
