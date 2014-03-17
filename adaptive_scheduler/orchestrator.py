@@ -36,7 +36,7 @@ from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule
                                           PondFacadeException )
 from adaptive_scheduler.semester_service import get_semester_code
 
-from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger
@@ -334,10 +334,10 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
     contractual_obligations = []
 
     log.info("Instantiating and running kernel")
+
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
     schedule = kernel.schedule_all()
-
 
     scheduled_reservations = []
     [scheduled_reservations.extend(a) for a in schedule.values()]

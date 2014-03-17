@@ -145,16 +145,14 @@ class FullScheduler_v6(SlicedIPScheduler_v2):
 # docs for options
 # https://github.com/cvxopt/cvxopt/blob/master/src/C/glpk.c
         cvxopt.glpk.options['LPX_K_MSGLEV'] = 0
+        cvxopt.glpk.options['LPX_K_TMLIM']  = 300
 
         (status, x) = ilp(f, A, b, Aeq, beq, set(range(len(self.Yik))), set(range(len(self.Yik))))
-        if status == 'optimal':
-            r = Result()
-            r.xf = numpy.array(x).flatten()
-            r.ff = f.T*x
-            return self.unpack_result(r)
-        else: 
-            print "GLPK status: "+status
-            return None
+#        print "GLPK status: "+status
+        r = Result()
+        r.xf = numpy.array(x).flatten()
+        r.ff = f.T*x
+        return self.unpack_result(r)
 
 
 def dump_matrix_sizes(f, A, Aeq, b, beq, n_res):
