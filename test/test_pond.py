@@ -475,7 +475,7 @@ class TestPondInteractions(object):
                                                   camera_mappings_file, dry_run)
 
         assert_equal(n_submitted_total, 2)
-        mock_func2.assert_called_once_with(mock_res_list, dry_run)
+        mock_func2.assert_called_once_with(schedule, dry_run)
 
 
     def test_build_block(self):
