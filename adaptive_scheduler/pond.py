@@ -28,7 +28,8 @@ February 2012
 from datetime import datetime
 import time
 
-from adaptive_scheduler.model2         import Proposal, SiderealTarget, NonSiderealTarget
+from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
+                                              InstrumentFactory)
 from adaptive_scheduler.utils          import get_reservation_datetimes, timeit, split_location
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
@@ -39,8 +40,7 @@ from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import Expose, Standard
-#from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
+from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
@@ -94,9 +94,9 @@ def resolve_instrument(instrument_name, site, obs, tel, mapping):
     '''Determine the specific camera name for a given site.
        If a non-generic name is provided, we just pass it through and assume it's ok.'''
 
-    generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG',
-                            '2M0-SCICAM-SPECTRAL', '2M0-SCICAM-MEROPE')
-    specific_camera = instrument_name
+    instrument_factory   = InstrumentFactory()
+    generic_camera_names = instrument_factory.instrument_names
+    specific_camera      = instrument_name
     if instrument_name in generic_camera_names:
         inst_match = mapping.find_by_camera_type_and_location(site,
                                                               obs,
@@ -221,9 +221,9 @@ class Block(object):
         molecule_classes = {
                              'EXPOSE'    : Expose,
                              'STANDARD'  : Standard,
-#                             'ARC'       : Arc,
-#                             'LAMP_FLAT' : LampFlat,
-#                             'SPECTRUM'  : Spectrum,
+                             'ARC'       : Arc,
+                             'LAMP_FLAT' : LampFlat,
+                             'SPECTRUM'  : Spectrum,
                            }
 
         # Construct the POND objects...
@@ -297,27 +297,35 @@ class Block(object):
             if not molecule.defocus:
                 molecule.defocus = 0.0
 
+            mol_type = determine_molecule_type(molecule, molecule_classes, self.tracking_number)
 
-            # Create a Standard molecule if that was specified
-            if molecule.type.upper() == 'STANDARD':
-                msg = "Creating a STANDARD molecule"
-                ur_log.debug(msg, self.tracking_number)
-                mol_type = molecule_classes['STANDARD']
+            common_fields = {
+                              # Meta data
+                              tracking_num : self.tracking_number,
+                              request_num  : self.request_number,
+                              tag          : self.proposal.tag_id,
+                              user         : self.proposal.observer_name,
+                              proposal     : self.proposal.proposal_id,
+                              group        : self.group_id,
+                              # Observation details
+                              exp_cnt      : molecule.exposure_count,
+                              exp_time     : molecule.exposure_time,
+                              bin          : molecule.bin_x,
+                              inst_name    : specific_camera,
+                              priority     : molecule.priority,
+                            }
 
-            # Otherwise, default to creating an Expose molecule
-            # TODO: Create elsif switch for 3x spectrograph
-            else:
-                # Note if an unsupported type was provided
-                if not molecule.type.upper() == 'EXPOSE':
-                    msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % molecule.type
-                    log.warn(msg)
-                    ur_log.warn(msg, self.tracking_number)
-                else:
-                    msg = "Creating an EXPOSE molecule"
-                    ur_log.debug(msg, self.tracking_number)
-
-                mol_type = molecule_classes['EXPOSE']
-
+            spectro_fields = {
+                               spectra_slit : ,
+                             }
+            imaging_fields = {
+                              filters      : molecule.filter,
+                             }
+            targetting_fields = {
+                                  pointing     : pond_pointing,
+                                  defocus      : molecule.defocus,
+                                  ag_name      : None,
+                                }
 
             # Build the specified molecule
             obs = mol_type.build(
@@ -359,6 +367,24 @@ class Block(object):
         self.pond_block = pond_block
 
         return pond_block
+
+
+def determine_molecule_type(molecule, molecule_classes, tracking_number):
+    ''' Validate the provided molecule type against supported POND molecule classes.
+        Default to EXPOSE if the provided type is unknown.
+    '''
+    mol_type_incoming = molecule.type.upper()
+    if mol_type_incoming in molecule_classes:
+        msg = "Creating a %s molecule" % mol_type_incoming
+        ur_log.debug(msg, tracking_number)
+        mol_type = molecule_classes[mol_type_incoming]
+    else:
+        msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % mol_type_incoming
+        log.warn(msg)
+        ur_log.warn(msg, tracking_number)
+        mol_type = molecule_classes['EXPOSE']
+
+    return mol_type
 
 
 def send_blocks_to_pond(blocks_by_resource, dry_run=False):

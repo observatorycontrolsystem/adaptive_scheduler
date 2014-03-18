@@ -329,6 +329,8 @@ class InstrumentFactory(object):
                              'NULL-INSTRUMENT'     : self.make_null_instrument,
                            }
 
+        self.instrument_names = sorted(self.instruments.keys())
+
 
     def make_sbig(self):
         sbig_overheads = self.overhead(
@@ -863,7 +865,7 @@ class ModelBuilder(object):
 
         mapping = create_camera_mapping(self.camera_mappings)
 
-        generic_camera_names = self.instrument_factory.instruments.keys()
+        generic_camera_names = self.instrument_factory.instrument_names
 
         if instrument_name.upper() in generic_camera_names:
             instrument_info = mapping.find_by_camera_type(instrument_name)
