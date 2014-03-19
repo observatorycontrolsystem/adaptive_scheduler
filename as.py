@@ -32,6 +32,7 @@ import logging.config
 import signal
 import time
 import sys
+from reqdb.requests import Request
 
 VERSION = '1.2.2'
 
@@ -213,10 +214,17 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     log.info("Received %d ToO User Requests" % len(too_user_requests))
     log.info("Received %d Normal User Requests" % len(normal_user_requests))
 
+    user_requests_dict = {
+                          Request.NORMAL_OBSERVATION_TYPE : normal_user_requests,
+                          Request.TARGET_OF_OPPORTUNITY : too_user_requests
+                          }
+
     if too_user_requests:
         log.info("Start ToO Scheduling")
+        user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
+
         semester_start, semester_end = get_semester_block(dt=short_run_now)
-        visibility_from = run_scheduler(too_user_requests, scheduler_client, short_run_now,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client, short_run_now,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
@@ -229,12 +237,13 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     # Run the scheduling loop, if there are any User Requests
     if normal_user_requests:
         log.info("Start Normal Scheduling")
+        user_requests_dict['type'] = Request.NORMAL_OBSERVATION_TYPE
+
         semester_start, semester_end = get_semester_block(dt=now)
-        visibility_from = run_scheduler(normal_user_requests, scheduler_client, now,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
-                                        too_user_requests,
                                         dry_run=args.dry_run,
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,

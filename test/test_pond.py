@@ -12,7 +12,7 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
                                       get_network_running_blocks,
-    get_blocks_by_request)
+    get_blocks_by_request, get_network_running_intervals)
 from adaptive_scheduler.model2 import (Proposal, Molecule, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints)
@@ -494,7 +494,7 @@ class TestPondInteractions(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        received = get_network_running_blocks(tels, start, end)
+        received = get_network_running_intervals(tels, start, end)
 
         expected = {
                     '1m0a.doma.lsc' : "empty",

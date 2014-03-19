@@ -494,7 +494,7 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
 
 @timeit
 def blacklist_running_blocks(ur_list, tels, start, end):
-    running_at_tel = get_network_running_blocks(tels, start, end)
+    running_at_tel = get_network_running_intervals(tels, start, end)
 
     all_running_blocks = []
     for run_dict in running_at_tel.values():
@@ -546,6 +546,14 @@ def get_blocks_by_request(urs, tels, start, end):
 
     return telescope_interval
 
+def get_network_running_intervals(tels, start, end):
+    running_at_tel = get_network_running_blocks(tels, start, end)
+
+    for key in running_at_tel:
+        running_at_tel[key] = get_intervals(running_at_tel[key])
+
+    return running_at_tel
+
 def get_network_running_blocks(tels, start, end):
     n_running_total = 0
     running_at_tel = {}
@@ -560,7 +568,7 @@ def get_network_running_blocks(tels, start, end):
             cutoff, running = get_running_blocks(start, end, site_name,
                                                  obs_name, tel_name)
 
-        running_at_tel[full_tel_name] = get_intervals(running)
+        running_at_tel[full_tel_name] = running
 
         n_running = len(running)
         _, block_str = pl(n_running, 'block')
