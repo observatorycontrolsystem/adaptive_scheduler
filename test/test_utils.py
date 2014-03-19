@@ -6,9 +6,60 @@ from datetime   import datetime, timedelta
 import calendar
 
 # Import the modules to test
-from adaptive_scheduler.utils import (normalise, unnormalise, datetime_to_epoch,
-                                      epoch_to_datetime, datetime_to_normalised_epoch,
+from adaptive_scheduler.utils import (merge_dicts, normalise, unnormalise,
+                                      datetime_to_epoch, epoch_to_datetime,
+                                      datetime_to_normalised_epoch,
                                       normalised_epoch_to_datetime, split_location)
+
+
+class TestMergeDicts(object):
+    def setup(self):
+        self.d1 = {
+                    'k1' : 'v1',
+                    'k2' : 'v2',
+                  }
+        self.d2 = {
+                    'k3' : 'v3',
+                    'k4' : 'v4',
+                  }
+        self.d3 = {
+                    'k5' : 'v5',
+                    'k6' : 'v6',
+                  }
+
+
+    def test_merge_one_dict_gives_identical_dict(self):
+        expected = self.d1.copy()
+        received = merge_dicts(self.d1)
+
+        assert_equal(received, expected)
+
+
+    def test_merge_two_dicts(self):
+        expected = {
+                     'k1' : 'v1',
+                     'k2' : 'v2',
+                     'k3' : 'v3',
+                     'k4' : 'v4',
+                   }
+        received = merge_dicts(self.d1, self.d2)
+
+        assert_equal(received, expected)
+
+
+    def test_merge_three_dicts(self):
+        expected = {
+                     'k1' : 'v1',
+                     'k2' : 'v2',
+                     'k3' : 'v3',
+                     'k4' : 'v4',
+                     'k5' : 'v5',
+                     'k6' : 'v6',
+                   }
+        received = merge_dicts(self.d1, self.d2, self.d3)
+
+        assert_equal(received, expected)
+
 
 class TestSplitLocation(object):
     def setup(self):

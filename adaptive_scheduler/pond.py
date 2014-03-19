@@ -30,7 +30,8 @@ import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
                                               InstrumentFactory)
-from adaptive_scheduler.utils          import get_reservation_datetimes, timeit, split_location
+from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
+                                               split_location, merge_dicts)
 from adaptive_scheduler.camera_mapping import create_camera_mapping
 from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
@@ -137,6 +138,88 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
     return specific_ag
 
 
+class MoleculeFactory(object):
+
+    def __init__(self, tracking_number, request_number, proposal, group_id):
+        self.tracking_number = tracking_number
+        self.request_number  = request_number
+        self.proposal        = proposal
+        self.group_id        = group_id
+        self.molecule_classes = {
+                                  'EXPOSE'    : Expose,
+                                  'STANDARD'  : Standard,
+                                  'ARC'       : Arc,
+                                  'LAMP_FLAT' : LampFlat,
+                                  'SPECTRUM'  : Spectrum,
+                                }
+
+
+
+    def _determine_molecule_class(self, molecule, tracking_number):
+        ''' Validate the provided molecule type against supported POND molecule classes.
+            Default to EXPOSE if the provided type is unknown.
+        '''
+        mol_type_incoming = molecule.type.upper()
+        mol_class = None
+        if mol_type_incoming in self.molecule_classes:
+            msg = "Creating a %s molecule" % mol_type_incoming
+            ur_log.debug(msg, tracking_number)
+            mol_class = self.molecule_classes[mol_type_incoming]
+        else:
+            msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % mol_type_incoming
+            log.warn(msg)
+            ur_log.warn(msg, tracking_number)
+            mol_class = self.molecule_classes['EXPOSE']
+
+        return mol_class
+
+
+    def build(self, molecule, pond_pointing):
+        common = {
+                   # Meta data
+                   'tracking_num' : self.tracking_number,
+                   'request_num'  : self.request_number,
+                   'tag'          : self.proposal.tag_id,
+                   'user'         : self.proposal.observer_name,
+                   'proposal'     : self.proposal.proposal_id,
+                   'group'        : self.group_id,
+                   # Observation details
+                   'exp_cnt'      : molecule.exposure_count,
+                   'exp_time'     : molecule.exposure_time,
+                   'bin'          : molecule.bin_x,
+                   'inst_name'    : molecule.instrument_name,
+                   'priority'     : molecule.priority,
+                 }
+
+        spectro = {
+                    'spectra_slit' : molecule.spectra_slit,
+                  }
+        imaging = {
+                    'filters' : molecule.filter,
+                  }
+        targeting = {
+                      'pointing' : pond_pointing,
+                      'defocus' : molecule.defocus,
+#                      'ag_mode' : molecule.ag_mode,
+                      'ag_name' : molecule.ag_name,
+                    }
+
+        mol_type = self._determine_molecule_class(molecule, self.tracking_number)
+
+        molecule_fields = {
+                            'EXPOSE'    : merge_dicts(common, imaging, targeting),
+                            'STANDARD'  : merge_dicts(common, imaging, targeting),
+                            'SPECTRUM'  : merge_dicts(common, spectro, targeting),
+                            'ARC'       : merge_dicts(common, spectro),
+                            'LAMP_FLAT' : merge_dicts(common, spectro),
+                          }
+
+        return self._build_molecule(mol_type, molecule_fields[molecule.type])
+
+
+    def _build_molecule(self, mol_type, fields):
+        return mol_type.build(**fields)
+
 
 class Block(object):
 
@@ -209,6 +292,20 @@ class Block(object):
         self.target = target
 
 
+    def resolve_autoguider_in_molecule_fields(self, fields, tracking_number, site,
+                                              observatory, telescope, camera_mapping):
+        if fields['ag_mode'] != 'OFF':
+            specific_ag = resolve_autoguider(fields['ag_name'], fields['inst_name'],
+                                             site, observatory, telescope, camera_mapping)
+            fields['ag_name'] = specific_ag
+
+            msg = "Autoguider resolved as '%s'" % specific_ag
+            log.debug(msg)
+            ur_log.debug(msg, self.tracking_number)
+
+        return
+
+
     def create_pond_block(self):
         if self.pond_block:
             return self.pond_block
@@ -217,14 +314,6 @@ class Block(object):
         missing_fields = self.list_missing_fields()
         if len(missing_fields) > 0:
             raise IncompleteBlockError(missing_fields)
-
-        molecule_classes = {
-                             'EXPOSE'    : Expose,
-                             'STANDARD'  : Standard,
-                             'ARC'       : Arc,
-                             'LAMP_FLAT' : LampFlat,
-                             'SPECTRUM'  : Spectrum,
-                           }
 
         # Construct the POND objects...
         # 1) Create a POND ScheduledBlock
@@ -290,73 +379,30 @@ class Block(object):
             specific_camera = resolve_instrument(molecule.instrument_name, site,
                                                  observatory, telescope, self.camera_mapping)
 
+            molecule.instrument_name = specific_camera
+
             msg = "Instrument resolved as '%s'" % specific_camera
             log.debug(msg)
             ur_log.debug(msg, self.tracking_number)
 
-            if not molecule.defocus:
-                molecule.defocus = 0.0
 
-            mol_type = determine_molecule_type(molecule, molecule_classes, self.tracking_number)
-
-            common_fields = {
-                              # Meta data
-                              tracking_num : self.tracking_number,
-                              request_num  : self.request_number,
-                              tag          : self.proposal.tag_id,
-                              user         : self.proposal.observer_name,
-                              proposal     : self.proposal.proposal_id,
-                              group        : self.group_id,
-                              # Observation details
-                              exp_cnt      : molecule.exposure_count,
-                              exp_time     : molecule.exposure_time,
-                              bin          : molecule.bin_x,
-                              inst_name    : specific_camera,
-                              priority     : molecule.priority,
-                            }
-
-            spectro_fields = {
-                               spectra_slit : ,
-                             }
-            imaging_fields = {
-                              filters      : molecule.filter,
-                             }
-            targetting_fields = {
-                                  pointing     : pond_pointing,
-                                  defocus      : molecule.defocus,
-                                  ag_name      : None,
-                                }
-
-            # Build the specified molecule
-            obs = mol_type.build(
-                                # Meta data
-                                tracking_num = self.tracking_number,
-                                request_num  = self.request_number,
-                                tag          = self.proposal.tag_id,
-                                user         = self.proposal.observer_name,
-                                proposal     = self.proposal.proposal_id,
-                                group        = self.group_id,
-                                # Observation details
-                                exp_cnt      = molecule.exposure_count,
-                                exp_time     = molecule.exposure_time,
-                                # TODO: Allow bin_x and bin_y
-                                bin          = molecule.bin_x,
-                                inst_name    = specific_camera,
-                                filters      = molecule.filter,
-                                pointing     = pond_pointing,
-                                priority     = molecule.priority,
-                                defocus      = molecule.defocus,
-                              )
-
-            # Resolve the Autoguider if necessary
             if molecule.ag_mode != 'OFF':
                 specific_ag = resolve_autoguider(molecule.ag_name, specific_camera,
-                                                 site, observatory, telescope, self.camera_mapping)
-                obs.ag_name = specific_ag
+                                                 site, observatory, telescope,
+                                                 self.camera_mapping)
+                molecule.ag_name = specific_ag
 
                 msg = "Autoguider resolved as '%s'" % specific_ag
                 log.debug(msg)
                 ur_log.debug(msg, self.tracking_number)
+
+
+            if not molecule.defocus:
+                molecule.defocus = 0.0
+
+            molecule_factory = MoleculeFactory(self.tracking_number, self.request_number,
+                                               self.proposal, self.group_id)
+            obs = molecule_factory.build(molecule, pond_pointing)
 
             observations.append(obs)
 
@@ -367,24 +413,6 @@ class Block(object):
         self.pond_block = pond_block
 
         return pond_block
-
-
-def determine_molecule_type(molecule, molecule_classes, tracking_number):
-    ''' Validate the provided molecule type against supported POND molecule classes.
-        Default to EXPOSE if the provided type is unknown.
-    '''
-    mol_type_incoming = molecule.type.upper()
-    if mol_type_incoming in molecule_classes:
-        msg = "Creating a %s molecule" % mol_type_incoming
-        ur_log.debug(msg, tracking_number)
-        mol_type = molecule_classes[mol_type_incoming]
-    else:
-        msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % mol_type_incoming
-        log.warn(msg)
-        ur_log.warn(msg, tracking_number)
-        mol_type = molecule_classes['EXPOSE']
-
-    return mol_type
 
 
 def send_blocks_to_pond(blocks_by_resource, dry_run=False):
