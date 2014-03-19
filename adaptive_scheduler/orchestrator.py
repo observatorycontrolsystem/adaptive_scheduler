@@ -222,11 +222,9 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, now, 
 
     # filter running too urs from tels
     all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]
-
     for tel, block in telescope_to_running_blocks.items():
         if block.get_tracking_number_set()[0] in all_too_tracking_numbers:
             tels.remove(tel)
-            del telescope_to_running_blocks[tel]
 
     value_function_dict = construct_value_function_dict(visible_too_urs, normal_urs, tels, telescope_to_running_blocks)
 
@@ -262,22 +260,20 @@ def construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_runnin
             for window in request.windows:
                 tracking_number_to_telescopes[tracking_number].add(window.resource)
 
-    def iterate_over_too_urs(running_request_priority):
+    value_function_dict = {};
+    for tel in tels:
+        if tel in telescope_to_running_blocks:
+            running_tracking_number = telescope_to_running_blocks[tel].get_tracking_number_set()[0]
+            running_request_priority = normal_tracking_numbers_dict[running_tracking_number].get_priority()
+        else:
+            # use a priority of 1 for telescopes without a running block
+            running_request_priority = 1
+
         for ur in too_urs:
             tracking_number = ur.tracking_number
             if tel in tracking_number_to_telescopes[tracking_number]:
                 too_priority = ur.get_priority()
                 value_function_dict[(tel, tracking_number)] = too_priority / running_request_priority
-
-    value_function_dict = {};
-    for tel, block in telescope_to_running_blocks.items():
-        running_tracking_number = block.get_tracking_number_set()[0]
-        running_request_priority = normal_tracking_numbers_dict[running_tracking_number].get_priority()
-        iterate_over_too_urs(running_request_priority)
-
-    telescopes_without_running_blocks = [tel for tel in tels if tel not in telescope_to_running_blocks]
-    for tel in telescopes_without_running_blocks:
-        iterate_over_too_urs(running_request_priority=1)
 
     return value_function_dict
 
