@@ -280,7 +280,10 @@ class TestPond(object):
                                     #ra  = '20 41 25.91',
                                     #dec = '+45 16 49.22',
                                     ra  = 310.35795833333333,
-                                    dec = 45.280338888888885
+                                    dec = 45.280338888888885,
+                                    rot_mode  = 'SKY',
+                                    rot_angle = 0.0,
+                                    acquire_mode  = 'OPTIONAL',
                                   )
 
         self.valid_expose_mol = self.mol_factory.build(

@@ -218,11 +218,17 @@ class PondMoleculeFactory(object):
                }
 
     def _targeting(self, molecule, pond_pointing=None):
+        ag_mode_pond_mapping = {
+                                 'ON'       : 0,
+                                 'OFF'      : 1,
+                                 'OPTIONAL' : 2,
+                               }
         return {
                  'pointing' : pond_pointing,
                  'defocus'  : getattr(molecule, 'defocus', 0.0),
                  # Autoguider name might not exist if autoguiding disabled by ag_type
                  'ag_name'  : getattr(molecule, 'ag_name', ''),
+                 'ag_mode'  : ag_mode_pond_mapping[molecule.ag_mode.upper()],
                }
 
     def _spectro(self, molecule, pond_pointing=None):
@@ -363,6 +369,7 @@ class Block(object):
                                                name  = self.target.name,
                                                coord = coord,
                                              )
+
         elif isinstance(self.target, NonSiderealTarget):
             pond_pointing = pond_pointing_from_scheme(self.target)
 
@@ -370,6 +377,27 @@ class Block(object):
             pond_pointing = None
         else:
             raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
+
+        # Set default rotator parameters if none provided
+        if pond_pointing:
+            if self.target.rot_mode:
+                pond_pointing.rot_mode = self.target.rot_mode
+            else:
+                pond_pointing.rot_mode  = 'SKY'
+
+            if self.target.rot_angle:
+                pond_pointing.rot_angle = self.target.rot_angle
+            else:
+                pond_pointing.rot_angle = 0.0
+
+            # Set default acquire mode if none provided
+            if self.target.acquire_mode:
+                pond_pointing.acquire_mode = self.target.acquire_mode
+            else:
+                if self.molecules[0].type.upper() in ('EXPOSE', 'STANDARD'):
+                    pond_pointing.acquire_mode = 'OFF'
+                else:
+                    pond_pointing.acquire_mode = 'ON'
 
 
 
