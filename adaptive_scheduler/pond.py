@@ -29,7 +29,7 @@ from datetime import datetime
 import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
-                                              InstrumentFactory)
+                                               NullTarget, InstrumentFactory)
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
                                                split_location, merge_dicts)
 from adaptive_scheduler.camera_mapping import create_camera_mapping
@@ -98,7 +98,7 @@ def resolve_instrument(instrument_name, site, obs, tel, mapping):
     instrument_factory   = InstrumentFactory()
     generic_camera_names = instrument_factory.instrument_names
     specific_camera      = instrument_name
-    if instrument_name in generic_camera_names:
+    if instrument_name.upper() in generic_camera_names:
         inst_match = mapping.find_by_camera_type_and_location(site,
                                                               obs,
                                                               tel,
@@ -138,7 +138,7 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
     return specific_ag
 
 
-class MoleculeFactory(object):
+class PondMoleculeFactory(object):
 
     def __init__(self, tracking_number, request_number, proposal, group_id):
         self.tracking_number = tracking_number
@@ -153,6 +153,27 @@ class MoleculeFactory(object):
                                   'SPECTRUM'  : Spectrum,
                                 }
 
+
+    def build(self, molecule, pond_pointing):
+
+        mol_type = self._determine_molecule_class(molecule, self.tracking_number)
+
+        molecule_fields = {
+                            'EXPOSE'    : (self._common, self._imaging, self._targeting),
+                            'STANDARD'  : (self._common, self._imaging, self._targeting),
+                            'SPECTRUM'  : (self._common, self._spectro, self._targeting),
+                            'ARC'       : (self._common, self._spectro),
+                            'LAMP_FLAT' : (self._common, self._spectro),
+                          }
+
+        param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
+        combined_params = merge_dicts(*param_dicts)
+
+        return self._build_molecule(mol_type, combined_params)
+
+
+    def _build_molecule(self, mol_type, fields):
+        return mol_type.build(**fields)
 
 
     def _determine_molecule_class(self, molecule, tracking_number):
@@ -174,51 +195,41 @@ class MoleculeFactory(object):
         return mol_class
 
 
-    def build(self, molecule, pond_pointing):
-        common = {
-                   # Meta data
-                   'tracking_num' : self.tracking_number,
-                   'request_num'  : self.request_number,
-                   'tag'          : self.proposal.tag_id,
-                   'user'         : self.proposal.observer_name,
-                   'proposal'     : self.proposal.proposal_id,
-                   'group'        : self.group_id,
-                   # Observation details
-                   'exp_cnt'      : molecule.exposure_count,
-                   'exp_time'     : molecule.exposure_time,
-                   'bin'          : molecule.bin_x,
-                   'inst_name'    : molecule.instrument_name,
-                   'priority'     : molecule.priority,
-                 }
+    def _common(self, molecule, pond_pointing=None):
+        return {
+                 # Meta data
+                 'tracking_num' : self.tracking_number,
+                 'request_num'  : self.request_number,
+                 'tag'          : self.proposal.tag_id,
+                 'user'         : self.proposal.observer_name,
+                 'proposal'     : self.proposal.proposal_id,
+                 'group'        : self.group_id,
+                 # Observation details
+                 'exp_cnt'      : molecule.exposure_count,
+                 'exp_time'     : molecule.exposure_time,
+                 'bin'          : molecule.bin_x,
+                 'inst_name'    : molecule.instrument_name,
+                 'priority'     : molecule.priority,
+               }
 
-        spectro = {
-                    'spectra_slit' : molecule.spectra_slit,
-                  }
-        imaging = {
-                    'filters' : molecule.filter,
-                  }
-        targeting = {
-                      'pointing' : pond_pointing,
-                      'defocus' : molecule.defocus,
-#                      'ag_mode' : molecule.ag_mode,
-                      'ag_name' : molecule.ag_name,
-                    }
+    def _imaging(self, molecule, pond_pointing=None):
+        return {
+                 'filters' : molecule.filter,
+               }
 
-        mol_type = self._determine_molecule_class(molecule, self.tracking_number)
+    def _targeting(self, molecule, pond_pointing=None):
+        return {
+                 'pointing' : pond_pointing,
+                 'defocus'  : getattr(molecule, 'defocus', 0.0),
+                 # Autoguider name might not exist if autoguiding disabled by ag_type
+                 'ag_name'  : getattr(molecule, 'ag_name', ''),
+               }
 
-        molecule_fields = {
-                            'EXPOSE'    : merge_dicts(common, imaging, targeting),
-                            'STANDARD'  : merge_dicts(common, imaging, targeting),
-                            'SPECTRUM'  : merge_dicts(common, spectro, targeting),
-                            'ARC'       : merge_dicts(common, spectro),
-                            'LAMP_FLAT' : merge_dicts(common, spectro),
-                          }
+    def _spectro(self, molecule, pond_pointing=None):
+        return {
+                 'spectra_slit' : molecule.spectra_slit,
+               }
 
-        return self._build_molecule(mol_type, molecule_fields[molecule.type])
-
-
-    def _build_molecule(self, mol_type, fields):
-        return mol_type.build(**fields)
 
 
 class Block(object):
@@ -246,7 +257,7 @@ class Block(object):
 
         self.proposal  = Proposal()
         self.molecules = []
-        self.target    = SiderealTarget()
+        self.target    = NullTarget()
 
         self.pond_block = None
 
@@ -355,6 +366,8 @@ class Block(object):
         elif isinstance(self.target, NonSiderealTarget):
             pond_pointing = pond_pointing_from_scheme(self.target)
 
+        elif isinstance(self.target, NullTarget):
+            pond_pointing = None
         else:
             raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
 
@@ -365,13 +378,18 @@ class Block(object):
 
 
         for i, molecule in enumerate(self.molecules):
+            filter_or_slit = 'Unknown'
+            if molecule.type.upper() in ('EXPOSE', 'STANDARD'):
+                filter_or_slit = molecule.filter
+            else:
+                filter_or_slit = molecule.spectra_slit
             mol_summary_msg = "Building %s molecule %d/%d (%dx%.03d %s)" % (
                                                                              molecule.type,
                                                                              i+1,
                                                                              len(self.molecules),
                                                                              molecule.exposure_count,
                                                                              molecule.exposure_time,
-                                                                             molecule.filter,
+                                                                             filter_or_slit,
                                                                              )
             log.debug(mol_summary_msg)
             ur_log.debug(mol_summary_msg, self.tracking_number)
@@ -385,9 +403,9 @@ class Block(object):
             log.debug(msg)
             ur_log.debug(msg, self.tracking_number)
 
-
             if molecule.ag_mode != 'OFF':
-                specific_ag = resolve_autoguider(molecule.ag_name, specific_camera,
+                ag_name = getattr(molecule, 'ag_name', '')
+                specific_ag = resolve_autoguider(ag_name, specific_camera,
                                                  site, observatory, telescope,
                                                  self.camera_mapping)
                 molecule.ag_name = specific_ag
@@ -397,12 +415,9 @@ class Block(object):
                 ur_log.debug(msg, self.tracking_number)
 
 
-            if not molecule.defocus:
-                molecule.defocus = 0.0
-
-            molecule_factory = MoleculeFactory(self.tracking_number, self.request_number,
-                                               self.proposal, self.group_id)
-            obs = molecule_factory.build(molecule, pond_pointing)
+            pond_molecule_factory = PondMoleculeFactory(self.tracking_number, self.request_number,
+                                                        self.proposal, self.group_id)
+            obs = pond_molecule_factory.build(molecule, pond_pointing)
 
             observations.append(obs)
 

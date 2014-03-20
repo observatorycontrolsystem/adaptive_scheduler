@@ -129,6 +129,11 @@ class Target(DataContainer):
         return missing_fields
 
 
+
+class NullTarget(Target):
+    def __init__(self, *initial_data, **kwargs):
+        Target.__init__(self, (), *initial_data, **kwargs)
+
 class SiderealTarget(Target):
 
     def __init__(self, *initial_data, **kwargs):
@@ -203,22 +208,46 @@ class Constraints(DataContainer):
         return "Constraints(airmass=%s)" % self.max_airmass
 
 class Molecule(DataContainer):
-    #TODO: This is really an expose_n molecule, so should be specialised
-    #TODO: Specialisation will be necessary once other molecules are scheduled
+    def __init__(self, required_fields, *initial_data, **kwargs):
+        DataContainer.__init__(self, *initial_data, **kwargs)
+        self.required_fields = required_fields
 
     def list_missing_fields(self):
-        req_fields = ('type', 'exposure_count', 'bin_x', 'bin_y',
-                      'instrument_name', 'filter', 'exposure_time',
-                      'priority')
         missing_fields = []
 
-        for field in req_fields:
+        for field in self.required_fields:
             try:
                 getattr(self, field)
             except:
                 missing_fields.append(field)
 
         return missing_fields
+
+
+
+class MoleculeFactory(object):
+    def __init__(self):
+        self.required_fields_by_mol = {
+                                  'EXPOSE'    : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'STANDARD'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'ARC'       : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                  'LAMP_FLAT' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                  'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                }
+
+    def build(self, mol_dict):
+        required_fields = self.required_fields_by_mol[mol_dict['type'].upper()]
+        return Molecule(required_fields, mol_dict)
 
 
 
@@ -796,6 +825,7 @@ class ModelBuilder(object):
         self.tel_network        = build_telescope_network(tel_file)
         self.camera_mappings    = camera_mappings_file
         self.instrument_factory = InstrumentFactory()
+        self.molecule_factory   = MoleculeFactory()
 
 
     def build_user_request(self, cr_dict):
@@ -848,7 +878,7 @@ class ModelBuilder(object):
         # Create the Molecules
         molecules = []
         for mol_dict in req_dict['molecules']:
-            molecules.append(Molecule(mol_dict))
+            molecules.append(self.molecule_factory.build(mol_dict))
 
         # A Request can only be scheduled on one instrument-based subnetwork
         if not self.have_same_instrument(molecules):
