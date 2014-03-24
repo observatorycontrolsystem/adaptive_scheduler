@@ -36,7 +36,8 @@ from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule
                                           PondFacadeException )
 from adaptive_scheduler.semester_service import get_semester_code
 
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+#from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger
@@ -208,14 +209,15 @@ def update_telescope_events(tels, current_events):
 @timeit
 def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, tel_file,
                   camera_mappings_file, current_events, visibility_from=None, dry_run=False,
-                  no_weather=False, no_singles=False, no_compounds=False):
+                  no_weather=False, no_singles=False, no_compounds=False, slicesize=300, 
+                  timelimit=300.0, horizon=7.0):
 
     start_event = TimingLogger.create_start_event(datetime.utcnow())
     event_bus.fire_event(start_event)
 
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
-    scheduling_horizon = now + ONE_WEEK
+    scheduling_horizon = now + timedelta(days=horizon)
     date_fmt      = '%Y-%m-%d'
     date_time_fmt = '%Y-%m-%d %H:%M:%S'
 
@@ -329,7 +331,7 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
     # TODO: Move this to a config file
     time_slicing_dict = {}
     for t in tels:
-        time_slicing_dict[t] = [0, 300]
+        time_slicing_dict[t] = [0,slicesize]
 
     contractual_obligations = []
 
@@ -337,7 +339,8 @@ def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, te
 
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
-    schedule = kernel.schedule_all()
+
+    schedule = kernel.schedule_all(timelimit=timelimit)
 
     scheduled_reservations = []
     [scheduled_reservations.extend(a) for a in schedule.values()]

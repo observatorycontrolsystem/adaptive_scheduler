@@ -88,6 +88,13 @@ def parse_args(argv):
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
 
+    arg_parser.add_argument("-l", "--timelimit", type=int, default=300,
+                            help="The time limit of the scheduler kernel, in seconds; negative implies no limit")
+    arg_parser.add_argument("-i", "--horizon", type=float, default=7,
+                            help="The scheduler's horizon, in days")
+
+    arg_parser.add_argument("-z", "--slicesize", type=int, default=300,
+                            help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=60,
                             help="Sleep period between scheduling runs, in seconds")
     arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
@@ -224,7 +231,10 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                                         dry_run=args.dry_run,
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,
-                                        no_compounds=args.nocompounds)
+                                        no_compounds=args.nocompounds,
+                                        slicesize=args.slicesize,
+                                        timelimit=args.timelimit,
+                                        horizon=args.horizon)
     else:
         log.warn("Received no User Requests! Skipping this scheduling cycle")
     sys.stdout.flush()

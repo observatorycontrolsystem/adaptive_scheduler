@@ -29,6 +29,8 @@ from collections import namedtuple
 import math
 import ast
 import logging
+import random
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -718,12 +720,35 @@ class UserRequest(CompoundRequest, DefaultMixin):
         return sem_end
 
 
+    def get_priority_dumb(self):
+        '''This is a placeholder for a more sophisticated priority function. For now,
+           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
+        
+        # doesn't have to be statistically random; determinism is important
+        random.seed(self.requests[0].request_number)
+        perturbation_size = 0.01
+        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
+
+        #TODO: Placeholder for more sophisticated priority scheme
+        # add small random bit to help scheduler break degeneracies
+        return self.proposal.priority*ran
+
     def get_priority(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
 
-        #TODO: Placeholder for more sophisticated priority scheme
-        return self.proposal.priority
+        # doesn't have to be statistically random; determinism is important
+        random.seed(self.requests[0].request_number)
+        perturbation_size = 0.01
+        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
+
+        # Assume only 1 child Request
+        req = self.requests[0]
+        effective_priority = self.proposal.priority * req.get_duration()/60.0
+
+        effective_priority = min(effective_priority,32000)*ran
+
+        return effective_priority
 
     # Define properties
     priority = property(get_priority)

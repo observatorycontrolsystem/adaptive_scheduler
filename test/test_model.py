@@ -439,6 +439,71 @@ class TestUserRequest(object):
         assert_equal(mock_func.called, True)
 
 
+    def test_jason_is_awesome(self):
+        # This doesn't actually test anything yet
+        # It's a placeholder for the super awesome priority function
+        # that Jason assures me is just over the horizon
+        tracking_number = '0000000005'
+        operator = 'single'
+
+        proposal = Proposal(
+                             proposal_name  = 'LCOSchedulerTest',
+                             user           = 'Eric Saunders',
+                             tag            = 'admin',
+                             time_remaining = 10,               # In hours
+                             priority       = 1
+                           )
+
+        molecule1 = Molecule(
+                              type            = 'expose_n',
+                              exposure_count  = 1,
+                              bin_x           = 2,
+                              bin_y           = 2,
+                              instrument_name = 'KB12',
+                              filter          = 'BSSL-UX-020',
+                              exposure_time   = 20,
+                              priority        = 1
+                            )
+
+        telescope = Telescope(
+                                name      = 'maui',
+                                latitude  = 20.7069444444,
+                                longitude = -156.258055556,
+                              )
+        window_dict = {
+                        'start' : "2013-03-01 00:00:00",
+                        'end'   : "2013-03-01 00:30:00",
+                      }
+        w = Window(
+                    window_dict = window_dict,
+                    resource    = telescope
+                  )
+        windows = Windows()
+        windows.append(w)
+
+
+
+        r = Request(
+                     target = None,
+                     molecules = [molecule1],
+                     windows = windows,
+                     constraints = None,
+                     request_number = '0000000003',
+                     instrument_type ='1M0-SCICAM-SBIG'
+                   )
+
+        ur = UserRequest(
+                          operator = operator,
+                          requests = [r],
+                          proposal = proposal,
+                          expires  = None,
+                          tracking_number = '000000004',
+                          group_id = None,
+                         )
+
+        ur.get_priority()
+
+
 class TestLocationExpander(object):
 
     def setup(self):
