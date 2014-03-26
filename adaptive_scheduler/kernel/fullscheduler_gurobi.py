@@ -81,7 +81,7 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
             request[2] = request[2] + weight
 
     @timeit
-    def schedule_all(self, timelimit=300.0):
+    def schedule_all(self, timelimit=None):
 
         if not self.reservation_list:
             return self.schedule_dict
@@ -158,7 +158,8 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         m.modelSense = GRB.MAXIMIZE
 
         # impose a time limit on the solve
-        #m.params.timeLimit=timelimit
+        if timelimit > 0:
+            m.params.timeLimit=timelimit
 
         # add all the constraints to the model
         m.update()

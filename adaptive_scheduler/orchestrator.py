@@ -36,8 +36,8 @@ from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule
                                           PondFacadeException )
 from adaptive_scheduler.semester_service import get_semester_code
 
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
-#from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
+#from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger
@@ -210,7 +210,7 @@ def update_telescope_events(tels, current_events):
 def run_scheduler(user_reqs, sched_client, now, semester_start, semester_end, tel_file,
                   camera_mappings_file, current_events, visibility_from=None, dry_run=False,
                   no_weather=False, no_singles=False, no_compounds=False, slicesize=300, 
-                  timelimit=300.0, horizon=7.0):
+                  timelimit=None, horizon=7.0):
 
     start_event = TimingLogger.create_start_event(datetime.utcnow())
     event_bus.fire_event(start_event)

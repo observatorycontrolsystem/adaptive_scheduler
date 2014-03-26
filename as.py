@@ -88,11 +88,10 @@ def parse_args(argv):
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
 
-    arg_parser.add_argument("-l", "--timelimit", type=int, default=300,
+    arg_parser.add_argument("-l", "--timelimit", type=float, default=None,
                             help="The time limit of the scheduler kernel, in seconds; negative implies no limit")
     arg_parser.add_argument("-i", "--horizon", type=float, default=7,
                             help="The scheduler's horizon, in days")
-
     arg_parser.add_argument("-z", "--slicesize", type=int, default=300,
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=60,
