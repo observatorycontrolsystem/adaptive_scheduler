@@ -953,11 +953,11 @@ class ModelBuilder(object):
         # Assume all molecules have the same instrument
         if molecules[0].instrument_name.upper() == 'SCICAM':
             SBIG_SCICAM = '1M0-SCICAM-SBIG'
-            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
-                                                                                        request_number,
-                                                                                        SBIG_SCICAM
-                                                                                      )
-            log.warn(msg)
+#            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
+#                                                                                        request_number,
+#                                                                                        SBIG_SCICAM
+#                                                                                      )
+#            log.warn(msg)
             for mol in molecules:
                 mol.instrument_name = SBIG_SCICAM
 
