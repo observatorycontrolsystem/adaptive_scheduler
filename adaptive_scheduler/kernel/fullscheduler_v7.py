@@ -39,7 +39,7 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
 
 
     @timeit
-    def schedule_all(self):
+    def schedule_all(self, timelimit=None):
         if not self.reservation_list:
             return self.schedule_dict
 

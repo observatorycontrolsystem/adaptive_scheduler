@@ -1,19 +1,19 @@
 #!/usr/bin/env python
 
 '''
-test_fullscheduler_v5.py
+test_fullscheduler_gurobi.py
 
 Author: Sotiria Lampoudi
 August 2012
 '''
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_true
 from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.intervals import *
-from adaptive_scheduler.kernel.fullscheduler_v6 import *
+from adaptive_scheduler.kernel.fullscheduler_gurobi import *
 import copy
 
-class TestFullScheduler_v6(object):
+class TestFullScheduler_gurobi(object):
 
     def setup(self):
         s1 = Intervals([Timepoint(1, 'start'),
@@ -33,6 +33,7 @@ class TestFullScheduler_v6(object):
         s12 = copy.copy(s10)
         s13 = copy.copy(s10)
 
+        # Priority, Duration, possible_windows_dict
         self.r1 = Reservation_v3(1, 1, {'foo': s1})
         self.r2 = Reservation_v3(2, 2, {'bar': s2})
         self.r3 = Reservation_v3(1, 1, {'foo': s3})
@@ -45,16 +46,18 @@ class TestFullScheduler_v6(object):
         self.r10 = Reservation_v3(2, 2, {'bar': s9})
         self.r11 = Reservation_v3(1, 1, {'bar': s10})
         self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})        
+        self.r13 = Reservation_v3(1, 1, {'bar': s12})
         self.r14 = Reservation_v3(1, 1, {'bar': s13})
-        
+
         self.r15 = Reservation_v3(1, 9, {'bar': s13})
         self.r16 = Reservation_v3(1, 9, {'foo': s13})
         self.r17 = Reservation_v3(2, 9, {'bar': s13})
-        self.r18 = Reservation_v3(3, 9, {'foo': s13})
+        self.r18 = Reservation_v3(2, 9, {'foo': s13})
 
-
-
+        self.r19 = Reservation_v3(1, 1, {'bar': s10})
+        self.r20 = Reservation_v3(1, 1, {'bar': s10})
+        self.r21 = Reservation_v3(1, 1, {'bar': s10})
+        
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
         self.cr3 = CompoundReservation_v2([self.r4])
@@ -72,9 +75,13 @@ class TestFullScheduler_v6(object):
         self.cr15 = CompoundReservation_v2([self.r13])
         self.cr16 = CompoundReservation_v2([self.r14])
 
-        self.cr17 = CompoundReservation_v2([self.r15,self.r16],'and')
+        self.cr17 = CompoundReservation_v2([self.r15, self.r16],'and')
         self.cr18 = CompoundReservation_v2([self.r17])
         self.cr19 = CompoundReservation_v2([self.r18])
+
+        self.cr20 = CompoundReservation_v2([self.r19])
+        self.cr21 = CompoundReservation_v2([self.r20])
+        self.cr22 = CompoundReservation_v2([self.r21])
 
         self.gpw2 = {}
         self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
@@ -91,25 +98,37 @@ class TestFullScheduler_v6(object):
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
 
-        self.fs1 = FullScheduler_v6([self.cr1, self.cr2, self.cr3], 
+        # compound_reservation_list, globally_possible_windows_dict, contractual_obligations_list, time_slicing_dict
+        self.fs1 = FullScheduler_gurobi([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
-        self.fs2 = FullScheduler_v6([self.cr1, self.cr4],
+        self.fs2 = FullScheduler_gurobi([self.cr1, self.cr4],
                                     self.gpw2, [], slice_dict)
-        self.fs3 = FullScheduler_v6([self.cr5],
+        self.fs3 = FullScheduler_gurobi([self.cr5],
                                     self.gpw2, [], slice_dict)
-        self.fs4 = FullScheduler_v6([self.cr8, self.cr6, self.cr7],
+        self.fs4 = FullScheduler_gurobi([self.cr8, self.cr6, self.cr7],
                                     self.gpw2, [], slice_dict)
-        self.fs5 = FullScheduler_v6([self.cr10, self.cr2, self.cr3], 
+        self.fs5 = FullScheduler_gurobi([self.cr10, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
-        self.fs6 = FullScheduler_v6([self.cr11, self.cr2, self.cr3], 
+        self.fs6 = FullScheduler_gurobi([self.cr11, self.cr2, self.cr3], 
                                     self.gpw2, [], slice_dict)
-        self.fs7 = FullScheduler_v6([self.cr12],
+        self.fs7 = FullScheduler_gurobi([self.cr12],
                                     self.gpw3, [], slice_dict)
-        self.fs8 = FullScheduler_v6([self.cr13, self.cr14, self.cr15, self.cr16],
+        self.fs8 = FullScheduler_gurobi([self.cr13, self.cr14, self.cr15, self.cr16],
                                     self.gpw4, [], slice_dict)
-        self.fs9 = FullScheduler_v6([self.cr17, self.cr18, self.cr19],
+        self.fs9 = FullScheduler_gurobi([self.cr17,self.cr18,self.cr19],
+                                    self.gpw2, [], slice_dict)
+        self.fs10 = FullScheduler_gurobi([self.cr20,self.cr21,self.cr22],
                                     self.gpw2, [], slice_dict)
 
+
+    # This is testing that we schedule earlier rather than later if given the choice
+    def test_schedule_early(self):
+        self.fs10.schedule_all()
+        assert_true(self.r19.scheduled_start <=3)
+        assert_true(self.r20.scheduled_start <=3)
+        assert_true(self.r21.scheduled_start <=3)
+
+    # This should schedule the two separate over the two "and"ed blocks
     def test_schedule_noneofand(self):
         self.fs9.schedule_all()
         assert_equal(self.r15.scheduled,False)
@@ -155,7 +174,6 @@ class TestFullScheduler_v6(object):
         d = self.fs2.schedule_all()
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
-        
 
     def test_schedule_all_3(self):
         d = self.fs3.schedule_all()
@@ -178,7 +196,7 @@ class TestFullScheduler_v6(object):
         slice_dict = {}
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
-        fs = FullScheduler_v6([self.cr9],
+        fs = FullScheduler_gurobi([self.cr9],
                               self.gpw2, [], slice_dict)
         s = fs.schedule_all()
         # only one should be scheduled
@@ -201,7 +219,7 @@ class TestFullScheduler_v6(object):
         slice_dict = {}
         slice_dict['foo'] = [90000,60]
         slice_dict['goo'] = [90000,60]
-        fs = FullScheduler_v6([cr], gpw, [], slice_dict)
+        fs = FullScheduler_gurobi([cr], gpw, [], slice_dict)
         schedule = fs.schedule_all()
 
 
