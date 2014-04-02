@@ -225,9 +225,9 @@ class PondMoleculeFactory(object):
                                }
         return {
                  'pointing' : pond_pointing,
-                 'defocus'  : getattr(molecule, 'defocus', 0.0),
+                 'defocus'  : getattr(molecule, 'defocus', None) or 0.0,
                  # Autoguider name might not exist if autoguiding disabled by ag_type
-                 'ag_name'  : getattr(molecule, 'ag_name', ''),
+                 'ag_name'  : getattr(molecule, 'ag_name', None) or '',
                  'ag_mode'  : ag_mode_pond_mapping[molecule.ag_mode.upper()],
                }
 
@@ -432,7 +432,7 @@ class Block(object):
             ur_log.debug(msg, self.tracking_number)
 
             if molecule.ag_mode != 'OFF':
-                ag_name = getattr(molecule, 'ag_name', '')
+                ag_name = getattr(molecule, 'ag_name', None) or ''
                 specific_ag = resolve_autoguider(ag_name, specific_camera,
                                                  site, observatory, telescope,
                                                  self.camera_mapping)
