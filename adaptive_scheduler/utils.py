@@ -22,34 +22,6 @@ fh.setFormatter(formatter)
 log.addHandler(fh)
 
 
-class ReprMixin(object):
-    '''Inherit from this class if you want your object to provide a dump of its
-       contents when printed. Warning: beware of circular dependencies between
-       objects inheriting this, which will cause infinite recursion!'''
-
-#    def __repr__(self):
-#        return "%s(%r)" % (self.__class__, self.__dict__)
-
-
-class EqualityMixin(object):
-    '''Inherit from this class if you want your object to have simple equality
-       properties based on common attributes (this is what you usually want).'''
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class DefaultMixin(ReprMixin, EqualityMixin):
-    '''Inherit from this class if you want some sensible default behaviour for
-       your object (introspection, equality).'''
-    pass
-
-
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
     if key in dictionary:

@@ -14,8 +14,7 @@ from __future__ import division
 
 from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import make_ra_dec_target, make_moving_object_target
-from adaptive_scheduler.utils                 import ( iso_string_to_datetime, EqualityMixin,
-                                                       DefaultMixin, join_location)
+from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
@@ -24,6 +23,7 @@ from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.camera_mapping        import create_camera_mapping
 from schedutils                               import semester_service
+from schedutils.utils                         import EqualityMixin, DefaultMixin
 
 from datetime    import datetime
 from collections import namedtuple
