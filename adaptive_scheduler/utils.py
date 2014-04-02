@@ -59,6 +59,13 @@ def increment_dict_by_value(dictionary, key, value):
 
     return
 
+
+def merge_dicts(*args):
+    '''Merge any number of dictionaries. Duplicate keys, and their corresponding values
+       are dropped (i.e. we assume unique keys).'''
+    return {k:v for d in args for k, v in d.items()}
+
+
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to
        datetime objects. It's no coincidence that this also happens to be the string
