@@ -12,9 +12,11 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              Proposal, MoleculeFactory,
                                              Request, CompoundRequest, UserRequest,
                                              Windows, Window, Constraints,
-                                             Spectrograph,
                                              _LocationExpander, ModelBuilder,
                                              RequestError)
+
+#TODO: Clean up unit tests, remove this
+from schedutils.instruments         import Spectrograph
 
 class TestTelescopeNetwork(object):
 

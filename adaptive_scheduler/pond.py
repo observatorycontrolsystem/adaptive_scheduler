@@ -29,7 +29,7 @@ from datetime import datetime
 import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
-                                               NullTarget, InstrumentFactory)
+                                               NullTarget)
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
                                                split_location, merge_dicts)
 from adaptive_scheduler.camera_mapping import create_camera_mapping
@@ -37,6 +37,8 @@ from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
+
+from schedutils.instruments            import InstrumentFactory
 
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
