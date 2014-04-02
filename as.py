@@ -19,10 +19,10 @@ from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
-from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
 from adaptive_scheduler.orchestrator     import collapse_requests
 from adaptive_scheduler.model2           import ModelBuilder, RequestError
+from schedutils.semester_service         import get_semester_block
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
