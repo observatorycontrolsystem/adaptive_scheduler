@@ -493,8 +493,8 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
 
 
 @timeit
-def blacklist_running_blocks(ur_list, tels, start, end):
-    running_at_tel = get_network_running_intervals(tels, start, end)
+def blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before):
+    running_at_tel = get_network_running_intervals(tels, ends_after, running_if_starts_before, starts_before)
 
     all_running_blocks = []
     for run_dict in running_at_tel.values():
@@ -531,13 +531,13 @@ def blacklist_running_blocks(ur_list, tels, start, end):
     return schedulable_urs, running_at_tel
 
 @timeit
-def get_blocks_by_request(urs, tels, start, end):
+def get_blocks_by_request(urs, tels, ends_after, starts_before):
     telescope_interval = {}
     tracking_numbers = [ur.tracking_number for ur in urs]
 
     for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')
-        blocks = get_blocks(start, end, site_name, obs_name, tel_name)
+        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name)
 
         filtered_blocks = filter(lambda block: block.tracking_num_set()[0] in tracking_numbers, blocks)
         intervals = get_intervals(filtered_blocks)
@@ -546,15 +546,15 @@ def get_blocks_by_request(urs, tels, start, end):
 
     return telescope_interval
 
-def get_network_running_intervals(tels, start, end):
-    running_at_tel = get_network_running_blocks(tels, start, end)
+def get_network_running_intervals(tels, ends_after, running_if_starts_before, starts_before):
+    running_at_tel = get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before)
 
     for key in running_at_tel:
         running_at_tel[key] = get_intervals(running_at_tel[key])
 
     return running_at_tel
 
-def get_network_running_blocks(tels, start, end):
+def get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before):
     n_running_total = 0
     running_at_tel = {}
     for full_tel_name, tel in tels.items():
@@ -563,9 +563,9 @@ def get_network_running_blocks(tels, start, end):
                                                           full_tel_name)
 
         if tel.events:
-            cutoff, running = start, []
+            cutoff, running = running_if_starts_before, []
         else:
-            cutoff, running = get_running_blocks(start, end, site_name,
+            cutoff, running = get_running_blocks(ends_after, running_if_starts_before, starts_before, site_name,
                                                  obs_name, tel_name)
 
         running_at_tel[full_tel_name] = running
@@ -580,9 +580,9 @@ def get_network_running_blocks(tels, start, end):
     return running_at_tel
 
 
-def get_running_blocks(start, end, site, obs, tel):
-    schedule = get_blocks(start, end, site, obs, tel)
-    cutoff_dt = schedule.end_of_overlap(start)
+def get_running_blocks(ends_after, running_if_starts_before, starts_before, site, obs, tel):
+    schedule = get_blocks(ends_after, starts_before, site, obs, tel)
+    cutoff_dt = schedule.end_of_overlap(running_if_starts_before)
 
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
                                              b.tracking_num_set()]

@@ -136,7 +136,7 @@ def determine_scheduler_now(args, short_run=False):
             sys.exit()
     # ...otherwise offset 'now' to account for the duration of the scheduling run
     else:
-        now = datetime.utcnow() + (timedelta(minutes=2) if short_run else timedelta(minutes=6))
+        now = datetime.utcnow()
 
     log.info("Using a 'now' of %s", now)
 
@@ -187,9 +187,10 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     from adaptive_scheduler.orchestrator import run_scheduler
     # Use a static command line datetime if provided...
     now = determine_scheduler_now(args);
-    short_run_now = determine_scheduler_now(args, short_run=True);
+    estimated_scheduler_end = now + timedelta(minutes=6)
+    short_estimated_scheduler_end = now + timedelta(minutes=2)
 
-    json_user_requests = get_requests(scheduler_client, short_run_now)
+    json_user_requests = get_requests(scheduler_client, short_estimated_scheduler_end)
 
     # Collapse each request tree
     json_user_requests = collapse_requests(json_user_requests)
@@ -218,13 +219,13 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                           Request.NORMAL_OBSERVATION_TYPE : normal_user_requests,
                           Request.TARGET_OF_OPPORTUNITY : too_user_requests
                           }
-
+    
+    semester_start, semester_end = get_semester_block(dt=short_estimated_scheduler_end)
     if too_user_requests:
         log.info("Start ToO Scheduling")
         user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
 
-        semester_start, semester_end = get_semester_block(dt=short_run_now)
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client, short_run_now,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now, short_estimated_scheduler_end,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
@@ -239,8 +240,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
         log.info("Start Normal Scheduling")
         user_requests_dict['type'] = Request.NORMAL_OBSERVATION_TYPE
 
-        semester_start, semester_end = get_semester_block(dt=now)
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now, estimated_scheduler_end,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,

@@ -319,7 +319,7 @@ def compute_optimal_combination(value_dict, tracking_numbers, telescopes):
 
 # TODO: refactor into smaller chunks
 @timeit
-def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_end, tel_file,
+def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_scheduler_end, semester_start, semester_end, tel_file,
                   camera_mappings_file, current_events, visibility_from=None, dry_run=False,
                   no_weather=False, no_singles=False, no_compounds=False):
 
@@ -328,7 +328,7 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
 
     ONE_MONTH = timedelta(weeks=4)
     ONE_WEEK  = timedelta(weeks=1)
-    scheduling_horizon = now + ONE_WEEK
+    scheduling_horizon = estimated_scheduler_end + ONE_WEEK
     date_fmt      = '%Y-%m-%d'
     date_time_fmt = '%Y-%m-%d %H:%M:%S'
 
@@ -354,7 +354,7 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
 
     summarise_urs(user_reqs, log_msg="Received from Request DB")
     for ur in user_reqs:
-        log_full_ur(ur, now)
+        log_full_ur(ur, estimated_scheduler_end)
         log_windows(ur, log_msg="Initial windows:")
 
 
@@ -381,21 +381,30 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
         log.info("Weather monitoring disabled on the command line")
     else:
         update_telescope_events(tels, current_events)
+        
+    # Construct visibility objects for each telescope
+    log.info("Constructing telescope visibilities")
+    if not visibility_from:
+        visibility_from = construct_visibilities(tels, semester_start, semester_end)
+        
+    # Remove running blocks from consideration, and get the availability edge
+    try:
+        user_reqs, excluded_running_intervals = blacklist_running_blocks(user_reqs, tels,
+                                                                         ends_after=current_utc_now,
+                                                                         running_if_starts_before=estimated_scheduler_end,
+                                                                         starts_before=semester_end)
+    except PondFacadeException:
+        log.error("Could not determine running blocks from POND - aborting run")
+        return visibility_from
 
     # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
     log.info("Filtering for unschedulability")
-    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, now, dry_run)
+    user_reqs = filter_and_set_unschedulable_urs(sched_client, user_reqs, estimated_scheduler_end, dry_run)
     log.info("Completed unschedulable filters")
     summarise_urs(user_reqs, log_msg="Passed unschedulable filters:")
 
     for ur in user_reqs:
         log_windows(ur, log_msg="Remaining windows:")
-
-    # Construct visibility objects for each telescope
-    log.info("Constructing telescope visibilities")
-    if not visibility_from:
-        visibility_from = construct_visibilities(tels, semester_start, semester_end)
-
 
     # Do another check on duration and operator soundness, after dark/rise checking
     log.info("Filtering on dark/rise_set")
@@ -405,7 +414,7 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
             log.info("Bypassing visibility calcs for %s" % tel_name)
 
     visible_urs = filter_for_kernel(user_reqs, visibility_from, tels,
-                                    now, semester_end, scheduling_horizon)
+                                    estimated_scheduler_end, semester_end, scheduling_horizon)
 
 
     log.info("Completed dark/rise_set filters")
@@ -415,12 +424,7 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
 
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(visible_urs))
 
-    # Remove running blocks from consideration, and get the availability edge
-    try:
-        visible_urs, excluded_running_intervals = blacklist_running_blocks(visible_urs, tels, now, semester_end)
-    except PondFacadeException:
-        log.error("Could not determine running blocks from POND - aborting run")
-        return visibility_from
+    
 
     # preempt running blocks
     if run_type == Request.TARGET_OF_OPPORTUNITY:
@@ -433,7 +437,9 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
     # Get too requests scheduled in pond, combine with excluded_intervals
     if run_type == Request.NORMAL_OBSERVATION_TYPE and too_user_requests:
         try:
-            excluded_too_intervals = get_blocks_by_request(too_user_requests, tels, now, semester_end)
+            excluded_too_intervals = get_blocks_by_request(too_user_requests, tels,
+                                                           ends_after=current_utc_now,
+                                                           starts_before=semester_end)
             excluded_intervals = combine_excluded_intervals(excluded_running_intervals, excluded_too_intervals)
         except PondFacadeException:
             log.error("Could not determine too blocks from POND - aborting run")
@@ -460,7 +466,7 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
 
     if not to_schedule:
         log.info("Nothing to schedule! Skipping kernel call...")
-        return
+        return visibility_from
 
     # Instantiate and run the scheduler
     # TODO: Move this to a config file
@@ -486,12 +492,14 @@ def run_scheduler(user_reqs_dict, sched_client, now, semester_start, semester_en
     # Summarise the schedule in normalised epoch (kernel) units of time
     print_schedule(schedule, semester_start, semester_end)
 
-    # Clean out all existing scheduled blocks
-    try:
-        n_deleted = cancel_schedule(tels, now, semester_end, dry_run)
-    except PondFacadeException:
-        log.error("Could not cancel schedule - aborting run")
-        return visibility_from
+    # Clean out all existing scheduled blocks during a normal run but not ToO
+    n_deleted = 0
+    if run_type == Request.NORMAL_OBSERVATION_TYPE:
+        try:
+            n_deleted = cancel_schedule(tels, estimated_scheduler_end, semester_end, dry_run)
+        except PondFacadeException:
+            log.error("Could not cancel schedule - aborting run")
+            return visibility_from
 
     # Convert the kernel schedule into POND blocks, and send them to the POND
     n_submitted = send_schedule_to_pond(schedule, semester_start,

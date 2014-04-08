@@ -21,7 +21,7 @@ from adaptive_scheduler.camera_mapping import create_camera_mapping
 
 import lcogtpond
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import collections
 from lcogtpond import block
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -493,8 +493,9 @@ class TestPondInteractions(object):
                }
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
+        now = start - timedelta(minutes=6)
 
-        received = get_network_running_intervals(tels, start, end)
+        received = get_network_running_intervals(tels, now, start, end)
 
         expected = {
                     '1m0a.doma.lsc' : "empty",
