@@ -813,7 +813,7 @@ class TestModelBuilder(object):
                      set(request.windows.windows_for_resource.keys()))
 
 
-    def test_build_request_scicam_maps_to_sbig(self):
+    def test_build_request_scicam_instrument_maps_to_sbig(self):
         req_dict = {
                      'target'         : self.target,
                      'molecules' : [
@@ -832,11 +832,36 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict)
         assert_equal(request.instrument.type, '1M0-SCICAM-SBIG')
+
+        # Verify that only telescopes with SBIG cameras were selected
         assert_equal(set(['1m0a.doma.coj', '1m0a.domb.coj',
                           '1m0a.doma.cpt', '1m0a.domb.cpt', '1m0a.domc.cpt',
                           '1m0a.doma.elp'
                          ]),
                      set(request.windows.windows_for_resource.keys()))
+
+
+    def test_build_request_scicam_autoguider_maps_to_sbig(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'SciCam',
+                                       'type'            : 'expose',
+                                       'ag_name'         : 'scicam',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        for mol in request.molecules:
+            assert_equal(mol.ag_name, '1M0-SCICAM-SBIG')
 
 
     def test_build_request_fl03_resolves_to_lsc_telescope(self):

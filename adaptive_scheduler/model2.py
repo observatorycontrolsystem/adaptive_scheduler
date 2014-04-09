@@ -781,15 +781,20 @@ class ModelBuilder(object):
 
     def map_scicam_keyword(self, molecules, request_number):
         # Assume all molecules have the same instrument
-        if molecules[0].instrument_name.upper() == 'SCICAM':
-            SBIG_SCICAM = '1M0-SCICAM-SBIG'
+        SBIG_SCICAM = '1M0-SCICAM-SBIG'
+        for mol in molecules:
+            if mol.instrument_name.upper() == 'SCICAM':
+                mol.instrument_name = SBIG_SCICAM
+
+            if hasattr(mol, 'ag_name'):
+                if mol.ag_name.upper() == 'SCICAM':
+                    mol.ag_name = SBIG_SCICAM
+
 #            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
 #                                                                                        request_number,
 #                                                                                        SBIG_SCICAM
 #                                                                                      )
 #            log.warn(msg)
-            for mol in molecules:
-                mol.instrument_name = SBIG_SCICAM
 
         return
 
