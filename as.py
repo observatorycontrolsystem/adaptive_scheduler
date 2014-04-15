@@ -33,7 +33,7 @@ import signal
 import time
 import sys
 
-VERSION = '1.2.2'
+VERSION = '1.0.1'
 
 # Set up and configure an application scope logger
 #logging.config.fileConfig('logging.conf')
