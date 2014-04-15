@@ -210,6 +210,7 @@ class Constraints(DataContainer):
 
 class Molecule(DataContainer):
     def __init__(self, required_fields, *initial_data, **kwargs):
+        self.ag_name = None
         DataContainer.__init__(self, *initial_data, **kwargs)
         self.required_fields = required_fields
 
@@ -786,7 +787,7 @@ class ModelBuilder(object):
             if mol.instrument_name.upper() == 'SCICAM':
                 mol.instrument_name = SBIG_SCICAM
 
-            if hasattr(mol, 'ag_name'):
+            if mol.ag_name:
                 if mol.ag_name.upper() == 'SCICAM':
                     mol.ag_name = SBIG_SCICAM
 
