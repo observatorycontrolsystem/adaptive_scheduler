@@ -133,7 +133,12 @@ def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
                                                  target=rs_target,
                                                  up=True,
                                                  airmass=req.constraints.max_airmass)
-            rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
+            # HA support only currently implemented for sidereal targets
+            if 'ra' in rs_target:
+                rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
+            else:
+                rs_ha_intervals   = rs_up_intervals
+
 
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)

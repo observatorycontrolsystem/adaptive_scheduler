@@ -9,12 +9,14 @@ from datetime import datetime
 from adaptive_scheduler.model2      import ( build_telescope_network,
                                              SiderealTarget, NonSiderealTarget,
                                              Telescope,
-                                             Proposal, Molecule,
+                                             Proposal, MoleculeFactory,
                                              Request, CompoundRequest, UserRequest,
                                              Windows, Window, Constraints,
-                                             Spectrograph,
                                              _LocationExpander, ModelBuilder,
                                              RequestError)
+
+#TODO: Clean up unit tests, remove this
+from schedutils.instruments         import Spectrograph
 
 class TestTelescopeNetwork(object):
 
@@ -59,8 +61,10 @@ class TestDuration(object):
     '''Unit tests for duration of URs, CRs, and Rs.'''
 
     def setup(self):
-        self.molecule1 = Molecule(
-                                  type            = 'expose_n',
+        self.mol_factory = MoleculeFactory()
+        self.molecule1 = self.mol_factory.build(
+                            dict(
+                                  type            = 'expose',
                                   exposure_count  = 1,
                                   bin_x           = 2,
                                   bin_y           = 2,
@@ -69,48 +73,62 @@ class TestDuration(object):
                                   exposure_time   = 20,
                                   priority        = 1
                                 )
-        self.molecule2 = Molecule(
-                                  type            = 'expose_n',
-                                  exposure_count  = 10,
-                                  bin_x           = 1,
-                                  bin_y           = 1,
-                                  instrument_name = 'KB12',
-                                  filter          = 'BSSL-UX-020',
-                                  exposure_time   = 20,
-                                  priority        = 1
                                 )
-        self.molecule3 = Molecule(
-                                  type            = 'expose_n',
-                                  exposure_count  = 300,
-                                  bin_x           = 2,
-                                  bin_y           = 2,
-                                  instrument_name = 'KB12',
-                                  filter          = 'BSSL-UX-020',
-                                  exposure_time   = 42,
-                                  priority        = 1
-                                )
+        self.molecule2 = self.mol_factory.build(
+                                                    dict(
+                                                          type            = 'expose',
+                                                          exposure_count  = 10,
+                                                          bin_x           = 1,
+                                                          bin_y           = 1,
+                                                          instrument_name = 'KB12',
+                                                          filter          = 'BSSL-UX-020',
+                                                          exposure_time   = 20,
+                                                          priority        = 1
+                                                        )
+                                                )
+        self.molecule3 = self.mol_factory.build(
+                                                dict(
+                                                      type            = 'expose',
+                                                      exposure_count  = 300,
+                                                      bin_x           = 2,
+                                                      bin_y           = 2,
+                                                      instrument_name = 'KB12',
+                                                      filter          = 'BSSL-UX-020',
+                                                      exposure_time   = 42,
+                                                      priority        = 1
+                                                    )
+                                                )
         self.complex_mols = [
-                              Molecule(
-                                exposure_time   = 180.0,
-                                exposure_count  = 3,
-                                filter          = 'B',
-                                bin_x           = 2,
-                                bin_y           = 2,
-                              ),
-                              Molecule(
-                                exposure_time  = 120.0,
-                                exposure_count = 3,
-                                filter         = 'V',
-                                bin_x          = 2,
-                                bin_y          = 2,
-                              ),
-                              Molecule(
-                                exposure_time  = 120.0,
-                                exposure_count = 3,
-                                filter         = 'R',
-                                bin_x          = 2,
-                                bin_y          = 2,
-                              ),
+                              self.mol_factory.build(
+                                                        dict(
+                                                            type            = 'expose',
+                                                            exposure_time   = 180.0,
+                                                            exposure_count  = 3,
+                                                            filter          = 'B',
+                                                            bin_x           = 2,
+                                                            bin_y           = 2,
+                                                            )
+                                                      ),
+                              self.mol_factory.build(
+                                                        dict(
+                                                            type           = 'expose',
+                                                            exposure_time  = 120.0,
+                                                            exposure_count = 3,
+                                                            filter         = 'V',
+                                                            bin_x          = 2,
+                                                            bin_y          = 2,
+                                                            )
+                                                          ),
+                              self.mol_factory.build(
+                                                    dict(
+                                                        type           = 'expose',
+                                                        exposure_time  = 120.0,
+                                                        exposure_count = 3,
+                                                        filter         = 'R',
+                                                        bin_x          = 2,
+                                                        bin_y          = 2,
+                                                        )
+                                                      ),
                            ]
         constraints = Constraints({})
         self.request1  = Request(
@@ -168,7 +186,10 @@ class TestSpectrographDuration(object):
     '''Unit tests for duration of URs, CRs, and Rs.'''
 
     def setup(self):
-        self.lamp_molecule = Molecule(
+        self.mol_factory = MoleculeFactory()
+
+        self.lamp_molecule = self.mol_factory.build(
+                                    dict(
                                       type            = 'lamp_flat',
                                       exposure_count  = 1,
                                       bin_x           = 1,
@@ -177,8 +198,10 @@ class TestSpectrographDuration(object):
                                       filter          = '',
                                       exposure_time   = 60,
                                       priority        = 1
+                                      )
                                     )
-        self.arc_molecule = Molecule(
+        self.arc_molecule = self.mol_factory.build(
+                                    dict(
                                       type            = 'arc',
                                       exposure_count  = 1,
                                       bin_x           = 1,
@@ -187,8 +210,10 @@ class TestSpectrographDuration(object):
                                       filter          = '',
                                       exposure_time   = 30,
                                       priority        = 2
+                                      )
                                     )
-        self.arc_exp2_molecule = Molecule(
+        self.arc_exp2_molecule = self.mol_factory.build(
+                                    dict(
                                       type            = 'arc',
                                       exposure_count  = 2,
                                       bin_x           = 1,
@@ -197,8 +222,10 @@ class TestSpectrographDuration(object):
                                       filter          = '',
                                       exposure_time   = 30,
                                       priority        = 2
+                                      )
                                     )
-        self.arc_exp2_bin2_molecule = Molecule(
+        self.arc_exp2_bin2_molecule = self.mol_factory.build(
+                                    dict(
                                       type            = 'arc',
                                       exposure_count  = 2,
                                       bin_x           = 2,
@@ -207,8 +234,10 @@ class TestSpectrographDuration(object):
                                       filter          = '',
                                       exposure_time   = 30,
                                       priority        = 2
+                                      )
                                     )
-        self.spectrum_molecule = Molecule(
+        self.spectrum_molecule = self.mol_factory.build(
+                                    dict(
                                           type            = 'spectrum',
                                           exposure_count  = 1,
                                           bin_x           = 1,
@@ -219,6 +248,7 @@ class TestSpectrographDuration(object):
                                           exposure_time   = 1800,
                                           priority        = 3
                                         )
+                                      )
         self.target_acq_on = SiderealTarget(
                                               name  = 'deneb',
                                               ra    = 310.35795833333333,
@@ -244,54 +274,54 @@ class TestSpectrographDuration(object):
 
     def test_acquire_is_off(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 1976)
 
     def test_acquire_is_maybe(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_maybe, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_maybe)
         assert_equal(received, 2066)
 
     def test_acquire_is_on(self):
         mols = [self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 2066)
 
     def test_lamp_flat_arc_target_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule, self.spectrum_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 2267)
 
     def test_lamp_flat_arc_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 321)
 
     def test_double_lamp_arc_four_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.lamp_molecule, self.arc_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 522)
 
     def test_double_lamp_arc_three_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.arc_molecule, self.lamp_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 492)
 
     def test_arc_two_exposures(self):
         mols = [self.arc_exp2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 261)
 
     def test_arc_two_exposures_bin_two_no_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_off, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_off)
         assert_equal(received, 224)
 
     def test_arc_two_exposures_bin_two_with_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
-        received = self.spectrograph._calc_duration(self.target_acq_on, mols)
+        received = self.spectrograph.get_duration(mols, self.target_acq_on)
         assert_equal(received, 224)
 
 
@@ -322,16 +352,20 @@ class TestRequest(object):
                                   priority       = 1
                                 )
 
-        self.molecule = Molecule(
-                                  type            = 'expose_n',
-                                  exposure_count  = 1,
-                                  bin_x           = 2,
-                                  bin_y           = 2,
-                                  instrument_name = 'KB12',
-                                  filter          = 'BSSL-UX-020',
-                                  exposure_time   = 20,
-                                  priority        = 1
-                                )
+        self.mol_factory = MoleculeFactory()
+
+        self.molecule = self.mol_factory.build(
+                                                dict(
+                                                  type            = 'expose',
+                                                  exposure_count  = 1,
+                                                  bin_x           = 2,
+                                                  bin_y           = 2,
+                                                  instrument_name = 'KB12',
+                                                  filter          = 'BSSL-UX-020',
+                                                  exposure_time   = 20,
+                                                  priority        = 1
+                                                )
+                                              )
         self.constraints = Constraints({})
 
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
@@ -437,6 +471,74 @@ class TestUserRequest(object):
         ur.emit_user_feedback(msg, tag, timestamp)
 
         assert_equal(mock_func.called, True)
+
+
+    def test_jason_is_awesome(self):
+        # This doesn't actually test anything yet
+        # It's a placeholder for the super awesome priority function
+        # that Jason assures me is just over the horizon
+        tracking_number = '0000000005'
+        operator = 'single'
+
+        proposal = Proposal(
+                             proposal_name  = 'LCOSchedulerTest',
+                             user           = 'Eric Saunders',
+                             tag            = 'admin',
+                             time_remaining = 10,               # In hours
+                             priority       = 1
+                           )
+
+        self.mol_factory = MoleculeFactory()
+        molecule1 = self.mol_factory.build(
+                            dict(
+                                  type            = 'expose',
+                                  exposure_count  = 1,
+                                  bin_x           = 2,
+                                  bin_y           = 2,
+                                  instrument_name = 'KB12',
+                                  filter          = 'BSSL-UX-020',
+                                  exposure_time   = 20,
+                                  priority        = 1
+                                )
+                            )
+
+        telescope = Telescope(
+                                name      = 'maui',
+                                latitude  = 20.7069444444,
+                                longitude = -156.258055556,
+                              )
+        window_dict = {
+                        'start' : "2013-03-01 00:00:00",
+                        'end'   : "2013-03-01 00:30:00",
+                      }
+        w = Window(
+                    window_dict = window_dict,
+                    resource    = telescope
+                  )
+        windows = Windows()
+        windows.append(w)
+
+
+
+        r = Request(
+                     target = None,
+                     molecules = [molecule1],
+                     windows = windows,
+                     constraints = None,
+                     request_number = '0000000003',
+                     instrument_type ='1M0-SCICAM-SBIG'
+                   )
+
+        ur = UserRequest(
+                          operator = operator,
+                          requests = [r],
+                          proposal = proposal,
+                          expires  = None,
+                          tracking_number = '000000004',
+                          group_id = None,
+                         )
+
+        ur.get_priority()
 
 
 class TestLocationExpander(object):
@@ -672,6 +774,7 @@ class TestModelBuilder(object):
         self.molecules = [
                            {
                              'instrument_name' : '1m0-SciCam-Sinistro',
+                             'type'            : 'expose',
                            },
                          ]
         self.location = {
@@ -710,12 +813,13 @@ class TestModelBuilder(object):
                      set(request.windows.windows_for_resource.keys()))
 
 
-    def test_build_request_scicam_maps_to_sbig(self):
+    def test_build_request_scicam_instrument_maps_to_sbig(self):
         req_dict = {
                      'target'         : self.target,
                      'molecules' : [
                                      {
                                        'instrument_name' : 'SciCam',
+                                       'type'            : 'expose',
                                      },
                                    ],
                      'location'       : self.location,
@@ -728,11 +832,36 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict)
         assert_equal(request.instrument.type, '1M0-SCICAM-SBIG')
+
+        # Verify that only telescopes with SBIG cameras were selected
         assert_equal(set(['1m0a.doma.coj', '1m0a.domb.coj',
                           '1m0a.doma.cpt', '1m0a.domb.cpt', '1m0a.domc.cpt',
                           '1m0a.doma.elp'
                          ]),
                      set(request.windows.windows_for_resource.keys()))
+
+
+    def test_build_request_scicam_autoguider_maps_to_sbig(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'SciCam',
+                                       'type'            : 'expose',
+                                       'ag_name'         : 'scicam',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        for mol in request.molecules:
+            assert_equal(mol.ag_name, '1M0-SCICAM-SBIG')
 
 
     def test_build_request_fl03_resolves_to_lsc_telescope(self):
@@ -741,6 +870,7 @@ class TestModelBuilder(object):
                      'molecules' : [
                                      {
                                        'instrument_name' : 'fl03',
+                                       'type'            : 'expose',
                                      },
                                    ],
                      'location'       : self.location,
@@ -812,9 +942,11 @@ class TestModelBuilder(object):
                      'molecules' : [
                                      {
                                        'instrument_name' : 'SciCam',
+                                       'type'            : 'expose',
                                      },
                                      {
                                        'instrument_name' : '1m0-SciCam-Sinistro',
+                                       'type'            : 'expose',
                                      },
                                    ],
                      'location'       : self.location,
@@ -835,6 +967,7 @@ class TestModelBuilder(object):
                      'molecules' : [
                                      {
                                        'instrument_name' : 'POTATOES',
+                                       'type'            : 'expose',
                                      },
                                    ],
                      'location'       : self.location,

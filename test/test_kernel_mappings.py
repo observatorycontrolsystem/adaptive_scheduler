@@ -5,7 +5,7 @@ from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
                                        CompoundRequest,
-                                       Window, Windows, Molecule, Constraints)
+                                       Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
                                       normalised_epoch_to_datetime)
@@ -34,6 +34,8 @@ class TestKernelMappings(object):
         self.start = datetime(2011, 11, 1, 0, 0, 0)
         self.end   = datetime(2011, 11, 3, 0, 0, 0)
 
+        self.mol_factory = MoleculeFactory()
+
         self.tels = {
                       '1m0a.doma.bpl' :
                                         Telescope(
@@ -54,13 +56,16 @@ class TestKernelMappings(object):
                               dec = 45.280338888888885
                             )
 
-        self.mol = Molecule(
-                             filter ='B',
-                             bin_x  = 2,
-                             bin_y  = 2,
-                             exposure_count = 1,
-                             exposure_time  = 30,
-                           )
+        self.mol = self.mol_factory.build(
+                                            dict(
+                                                 type   = 'expose',
+                                                 filter ='B',
+                                                 bin_x  = 2,
+                                                 bin_y  = 2,
+                                                 exposure_count = 1,
+                                                 exposure_time  = 30,
+                                                )
+                                               )
 
 
     def make_constrained_request(self, airmass=None):

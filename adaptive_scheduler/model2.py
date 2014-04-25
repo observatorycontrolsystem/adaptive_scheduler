@@ -14,21 +14,23 @@ from __future__ import division
 
 from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import make_ra_dec_target, make_moving_object_target
-from adaptive_scheduler.utils                 import ( iso_string_to_datetime, EqualityMixin,
-                                                       DefaultMixin, join_location)
+from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location
+from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.camera_mapping        import create_camera_mapping
-from adaptive_scheduler                       import semester_service
+from schedutils                               import semester_service
+from schedutils.utils                         import EqualityMixin, DefaultMixin
+from schedutils.instruments                   import InstrumentFactory
 
 from datetime    import datetime
-from collections import namedtuple
-import math
 import ast
 import logging
+import random
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -128,6 +130,11 @@ class Target(DataContainer):
         return missing_fields
 
 
+
+class NullTarget(Target):
+    def __init__(self, *initial_data, **kwargs):
+        Target.__init__(self, (), *initial_data, **kwargs)
+
 class SiderealTarget(Target):
 
     def __init__(self, *initial_data, **kwargs):
@@ -202,22 +209,47 @@ class Constraints(DataContainer):
         return "Constraints(airmass=%s)" % self.max_airmass
 
 class Molecule(DataContainer):
-    #TODO: This is really an expose_n molecule, so should be specialised
-    #TODO: Specialisation will be necessary once other molecules are scheduled
+    def __init__(self, required_fields, *initial_data, **kwargs):
+        self.ag_name = None
+        DataContainer.__init__(self, *initial_data, **kwargs)
+        self.required_fields = required_fields
 
     def list_missing_fields(self):
-        req_fields = ('type', 'exposure_count', 'bin_x', 'bin_y',
-                      'instrument_name', 'filter', 'exposure_time',
-                      'priority')
         missing_fields = []
 
-        for field in req_fields:
+        for field in self.required_fields:
             try:
                 getattr(self, field)
             except:
                 missing_fields.append(field)
 
         return missing_fields
+
+
+
+class MoleculeFactory(object):
+    def __init__(self):
+        self.required_fields_by_mol = {
+                                  'EXPOSE'    : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'STANDARD'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'ARC'       : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                  'LAMP_FLAT' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                  'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'spectra_slit', 'exposure_time',
+                                                 'priority'),
+                                }
+
+    def build(self, mol_dict):
+        required_fields = self.required_fields_by_mol[mol_dict['type'].upper()]
+        return Molecule(required_fields, mol_dict)
 
 
 
@@ -294,206 +326,6 @@ class Telescope(DataContainer):
 
 
 
-class Instrument(DefaultMixin):
-    def __init__(self):
-        self.type = 'NULL-INSTRUMENT'
-
-    def _no_instrument_defined(self):
-        raise ConfigurationError("Can't get duration - no instrument has been specified")
-
-    def get_duration(self, dummy_molecule_arg):
-        self._no_instrument_defined()
-
-
-
-class InstrumentFactory(object):
-    def __init__(self):
-        self.overhead = namedtuple(
-                                    'Overhead',
-                                    (
-                                      'readout_per_exp',        # Unbinned readout time per frame
-                                      'fixed_overhead_per_exp', # Camera-query overhead (binning independent)
-                                      'filter_change_time',     # Time to change a filter
-                                      'front_padding'           # Guesstimate of sequencer/site agent set-up
-                                                                # time (upper bound)
-                                    )
-                                 )
-
-        self.instruments = {
-                             '1M0-SCICAM-SBIG'     : self.make_sbig,
-                             '1M0-SCICAM-SINISTRO' : self.make_sinistro,
-                             '2M0-SCICAM-SPECTRAL' : self.make_spectral,
-                             '2M0-SCICAM-MEROPE'   : self.make_merope,
-                             'NULL-INSTRUMENT'     : self.make_null_instrument,
-                           }
-
-
-    def make_sbig(self):
-        sbig_overheads = self.overhead(
-                                        readout_per_exp        = 60,
-                                        fixed_overhead_per_exp = 0.5,
-                                        filter_change_time     = 15,
-                                        front_padding          = 90,
-                                      )
-
-        sbig_ccd = CCD(*sbig_overheads, type='1M0-SCICAM-SBIG')
-
-        return sbig_ccd
-
-
-    def make_sinistro(self):
-        sinistro_overheads = self.overhead(
-                                            readout_per_exp        = 46,
-                                            fixed_overhead_per_exp = 23,
-                                            filter_change_time     = 15,
-                                            front_padding          = 90,
-                                          )
-
-        sinistro_ccd = CCD(*sinistro_overheads, type='1M0-SCICAM-SINISTRO')
-
-        return sinistro_ccd
-
-
-    def make_spectral(self):
-        spectral_overheads = self.overhead(
-                                            readout_per_exp        = 42,
-                                            fixed_overhead_per_exp = 12,
-                                            filter_change_time     = 15,
-                                            front_padding          = 120,
-                                          )
-
-        spectral_ccd = CCD(*spectral_overheads, type='2M0-SCICAM-SPECTRAL')
-
-        return spectral_ccd
-
-
-    def make_merope(self):
-        merope_overheads = self.overhead(
-                                            readout_per_exp        = 68,
-                                            fixed_overhead_per_exp = 12,
-                                            filter_change_time     = 15,
-                                            front_padding          = 120,
-                                          )
-
-        merope_ccd = CCD(*merope_overheads, type='2M0-SCICAM-MEROPE')
-
-        return merope_ccd
-
-
-    def make_null_instrument(self):
-        null_instrument = Instrument()
-
-        return null_instrument
-
-
-    def make_instrument_by_type(self, instrument_type):
-
-        key = instrument_type.upper()
-        if key not in self.instruments:
-            key = 'NULL-INSTRUMENT'
-
-        selected_instrument = self.instruments[key]()
-
-        return selected_instrument
-
-
-
-class CCD(Instrument):
-    def __init__(self, readout_per_exp, fixed_overhead_per_exp, filter_change_time,
-                 front_padding, type=''):
-        self.readout_per_exp        = readout_per_exp
-        self.fixed_overhead_per_exp = fixed_overhead_per_exp
-        self.filter_change_time     = filter_change_time
-        self.front_padding          = front_padding
-
-        Instrument.__init__(self)
-        if type:
-            self.type = type
-
-        return
-
-    def get_duration(self, molecules):
-        return self._calc_duration(molecules)
-
-    def _calc_duration(self, molecules):
-        duration = 0
-
-        # Find number of filter changes, and calculate total filter overhead
-        prev_filter = None
-        n_filter_changes = 0
-        for i, mol in enumerate(molecules):
-            if mol.filter != prev_filter:
-                n_filter_changes += 1
-
-            prev_filter = mol.filter
-
-        filter_overhead = n_filter_changes * self.filter_change_time
-
-        for mol in molecules:
-            binned_overhead_per_exp = self.readout_per_exp / (mol.bin_x * mol.bin_y)
-            total_overhead_per_exp  = binned_overhead_per_exp + self.fixed_overhead_per_exp
-            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
-
-            duration     += mol_duration
-
-        # Add per-block overheads
-        duration += self.front_padding
-        duration += filter_overhead
-
-        duration = math.ceil(duration)
-
-        return duration
-
-
-class Spectrograph(Instrument):
-    def __init__(self):
-        self.config_change_time      = 30
-        self.acquire_processing_time = 60
-        self.acquire_exp_time        = 30
-        self.readout_per_exp         = 25
-        self.fixed_overhead_per_exp  = 0.5
-        self.front_padding           = 120
-
-    def _calc_duration(self, target, molecules):
-        duration = 0
-
-        # Determine how many molecule changes we have
-        prev_mol_type = None
-        n_mol_changes = 0
-        for i, mol in enumerate(molecules):
-            if mol.type.upper() != prev_mol_type:
-                n_mol_changes += 1
-
-            prev_mol_type = mol.type.upper()
-
-        config_change_overhead = n_mol_changes * self.config_change_time
-
-        # A Request can only have one target
-        acquire_overhead = 0
-        if target.acquire_mode.upper() != 'OFF':
-            mol_types = [mol.type.upper() for mol in molecules]
-            # Only add the overhead if we have on-sky targets to acquire
-            if 'SPECTRUM' in mol_types or 'STANDARD' in mol_types:
-                acquire_overhead = self.acquire_exp_time + self.acquire_processing_time
-
-        for mol in molecules:
-            binned_overhead_per_exp = self.readout_per_exp / (mol.bin_x * mol.bin_y)
-            total_overhead_per_exp  = binned_overhead_per_exp + self.fixed_overhead_per_exp
-            mol_duration  = mol.exposure_count * (mol.exposure_time + total_overhead_per_exp)
-
-            duration     += mol_duration
-
-        # Add per-block overheads
-        duration += self.front_padding
-        duration += config_change_overhead
-        duration += acquire_overhead
-
-        duration = math.ceil(duration)
-
-        return duration
-
-
-
 class Request(DefaultMixin):
     '''
         Represents a single valid configuration where an observation could take
@@ -536,7 +368,7 @@ class Request(DefaultMixin):
         return self.instrument.type
 
     def get_duration(self):
-        return self.instrument.get_duration(self.molecules)
+        return self.instrument.get_duration(self.molecules, self.target)
 
     def has_windows(self):
         return self.windows.has_windows()
@@ -718,12 +550,35 @@ class UserRequest(CompoundRequest, DefaultMixin):
         return sem_end
 
 
+    def get_priority_dumb(self):
+        '''This is a placeholder for a more sophisticated priority function. For now,
+           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
+        
+        # doesn't have to be statistically random; determinism is important
+        random.seed(self.requests[0].request_number)
+        perturbation_size = 0.01
+        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
+
+        #TODO: Placeholder for more sophisticated priority scheme
+        # add small random bit to help scheduler break degeneracies
+        return self.proposal.priority*ran
+
     def get_priority(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
 
-        #TODO: Placeholder for more sophisticated priority scheme
-        return self.proposal.priority
+        # doesn't have to be statistically random; determinism is important
+        random.seed(self.requests[0].request_number)
+        perturbation_size = 0.01
+        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
+
+        # Assume only 1 child Request
+        req = self.requests[0]
+        effective_priority = self.proposal.priority * req.get_duration()/60.0
+
+        effective_priority = min(effective_priority,32000)*ran
+
+        return effective_priority
 
     # Define properties
     priority = property(get_priority)
@@ -776,14 +631,16 @@ class TelescopeNetwork(object):
 class ModelBuilder(object):
 
     def __init__(self, tel_file, camera_mappings_file):
-        self.tel_network     = build_telescope_network(tel_file)
-        self.camera_mappings = camera_mappings_file
+        self.tel_network        = build_telescope_network(tel_file)
+        self.camera_mappings    = camera_mappings_file
+        self.instrument_factory = InstrumentFactory()
+        self.molecule_factory   = MoleculeFactory()
 
 
     def build_user_request(self, cr_dict):
         requests, invalid_requests  = self.build_requests(cr_dict['requests'])
         if invalid_requests:
-            log.warn("Found %d invalid Requests" % len(invalid_requests))
+            log.warn("Found %s", pl(len(invalid_requests), 'invalid Request'))
 
         if not requests:
             msg = "No valid Requests for UR %s" % cr_dict['tracking_number']
@@ -830,7 +687,7 @@ class ModelBuilder(object):
         # Create the Molecules
         molecules = []
         for mol_dict in req_dict['molecules']:
-            molecules.append(Molecule(mol_dict))
+            molecules.append(self.molecule_factory.build(mol_dict))
 
         # A Request can only be scheduled on one instrument-based subnetwork
         if not self.have_same_instrument(molecules):
@@ -847,8 +704,7 @@ class ModelBuilder(object):
 
         mapping = create_camera_mapping(self.camera_mappings)
 
-        generic_camera_names = ('1M0-SCICAM-SINISTRO', '1M0-SCICAM-SBIG',
-                                '2M0-SCICAM-SPECTRAL', '2M0-SCICAM-MEROPE')
+        generic_camera_names = self.instrument_factory.instrument_names
 
         if instrument_name.upper() in generic_camera_names:
             instrument_info = mapping.find_by_camera_type(instrument_name)
@@ -926,15 +782,20 @@ class ModelBuilder(object):
 
     def map_scicam_keyword(self, molecules, request_number):
         # Assume all molecules have the same instrument
-        if molecules[0].instrument_name.upper() == 'SCICAM':
-            SBIG_SCICAM = '1M0-SCICAM-SBIG'
-            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
-                                                                                        request_number,
-                                                                                        SBIG_SCICAM
-                                                                                      )
-            log.warn(msg)
-            for mol in molecules:
+        SBIG_SCICAM = '1M0-SCICAM-SBIG'
+        for mol in molecules:
+            if mol.instrument_name.upper() == 'SCICAM':
                 mol.instrument_name = SBIG_SCICAM
+
+            if mol.ag_name:
+                if mol.ag_name.upper() == 'SCICAM':
+                    mol.ag_name = SBIG_SCICAM
+
+#            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
+#                                                                                        request_number,
+#                                                                                        SBIG_SCICAM
+#                                                                                      )
+#            log.warn(msg)
 
         return
 
@@ -992,9 +853,6 @@ class _LocationExpander(object):
 
         return locations
 
-
-class ConfigurationError(Exception):
-    pass
 
 class RequestError(Exception):
     pass

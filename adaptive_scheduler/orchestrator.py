@@ -35,9 +35,10 @@ from adaptive_scheduler.pond     import (send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks,
                                           PondFacadeException , get_blocks_by_request,
                                           get_network_running_blocks)
-from adaptive_scheduler.semester_service import get_semester_code
+from schedutils.semester_service import get_semester_code
 
-from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
+#from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger
@@ -152,16 +153,6 @@ def dump_kernel_input2(to_schedule, global_windows, contractual_obligations, tim
     return
 
 
-def open_debugger_on_unusual_run(schedule):
-    size = 0
-    for res in schedule:
-        size += len(schedule[res])
-    if size != 30:
-        import ipdb; ipdb.set_trace()
-
-    return
-
-
 def collapse_requests(requests):
     collapsed_reqs = []
     for i, req_dict in enumerate(requests):
@@ -204,6 +195,7 @@ def update_telescope_events(tels, current_events):
 
     return
 
+
 def combine_excluded_intervals(excluded_intervals_1, excluded_intervals_2):
     ''' Combine two dictionaries where Intervals are the values '''
     for key in excluded_intervals_2:
@@ -211,6 +203,7 @@ def combine_excluded_intervals(excluded_intervals_1, excluded_intervals_2):
         excluded_intervals_1.setdefault(key, Intervals([])).add(timepoints)
 
     return excluded_intervals_1
+
 
 def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, now, semester_end, dry_run):
     ''' Preempt running blocks, if needed, to run Target of Opportunity user requests'''
@@ -238,22 +231,26 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, now, 
 
     return
 
+
 def construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_running_blocks):
     ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
 
-        where value = too priority / running block priority or if no block is running at that telescope, value = too priority
+        where value = too priority / running block priority or if no block is running at
+        that telescope, value = too priority
 
         NOTE: Assumes running block priority is above 1
     '''
 
     normal_tracking_numbers_dict = {ur.tracking_number : ur for ur in normal_urs}
-    
+
     tracking_number_to_telescopes = defaultdict(set)
     for ur in too_urs: 
         tracking_number = ur.tracking_number
-        
+
         if ur.n_requests > 1:
-            log.info("TOO ur tracking number has compound requests which is currently not handled. Submit as sep requests")
+            msg = "TOO UR %s has more than one child R, which is not supported." % tracking_number
+            msg += " Submit as separate requests."
+            log.info(msg)
             continue
 
         for request in ur.requests:
@@ -277,11 +274,13 @@ def construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_runnin
 
     return value_function_dict
 
+
 def compute_optimal_combination(value_dict, tracking_numbers, telescopes):
     '''
     Compute combination of telescope to tracking number that has the highest value
 
-    NOTE: This schedule assumes that each there will a tracking number only needs one telescope to run (no compound requests).
+    NOTE: This schedule assumes that each there will a tracking number only needs one
+          telescope to run (no compound requests).
     '''
     if len(tracking_numbers) < len(telescopes):
         small_list = tracking_numbers
@@ -321,7 +320,8 @@ def compute_optimal_combination(value_dict, tracking_numbers, telescopes):
 @timeit
 def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_scheduler_end, semester_start, semester_end, tel_file,
                   camera_mappings_file, current_events, visibility_from=None, dry_run=False,
-                  no_weather=False, no_singles=False, no_compounds=False):
+                  no_weather=False, no_singles=False, no_compounds=False, slicesize=300, 
+                  timelimit=None, horizon=7.0):
 
     start_event = TimingLogger.create_start_event(datetime.utcnow())
     event_bus.fire_event(start_event)
@@ -381,12 +381,12 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
         log.info("Weather monitoring disabled on the command line")
     else:
         update_telescope_events(tels, current_events)
-        
+
     # Construct visibility objects for each telescope
     log.info("Constructing telescope visibilities")
     if not visibility_from:
         visibility_from = construct_visibilities(tels, semester_start, semester_end)
-        
+
     # Remove running blocks from consideration, and get the availability edge
     try:
         user_reqs, excluded_running_intervals = blacklist_running_blocks(user_reqs, tels,
@@ -424,9 +424,8 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
 
     log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(visible_urs))
 
-    
 
-    # preempt running blocks
+    # Pre-empt running blocks
     if run_type == Request.TARGET_OF_OPPORTUNITY:
         try:
             preempt_running_blocks(visible_urs, too_user_requests, normal_user_requests, tels, dry_run);
@@ -434,7 +433,7 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
             log.error("Could not determine running blocks from POND - aborting run")
             return visibility_from
 
-    # Get too requests scheduled in pond, combine with excluded_intervals
+    # Get TOO requests scheduled in pond, combine with excluded_intervals
     if run_type == Request.NORMAL_OBSERVATION_TYPE and too_user_requests:
         try:
             excluded_too_intervals = get_blocks_by_request(too_user_requests, tels,
@@ -469,18 +468,18 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
         return visibility_from
 
     # Instantiate and run the scheduler
-    # TODO: Move this to a config file
     time_slicing_dict = {}
     for t in tels:
-        time_slicing_dict[t] = [0, 300]
+        time_slicing_dict[t] = [0, slicesize]
 
     contractual_obligations = []
 
     log.info("Instantiating and running kernel")
+
     kernel   = FullScheduler(to_schedule, global_windows, contractual_obligations,
                              time_slicing_dict)
-    schedule = kernel.schedule_all()
 
+    schedule = kernel.schedule_all(timelimit=timelimit)
 
     scheduled_reservations = []
     [scheduled_reservations.extend(a) for a in schedule.values()]

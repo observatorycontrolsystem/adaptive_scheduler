@@ -19,10 +19,10 @@ from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
-from adaptive_scheduler.semester_service import get_semester_block
 from adaptive_scheduler.monitoring.network_status import Network
 from adaptive_scheduler.orchestrator     import collapse_requests
 from adaptive_scheduler.model2           import ModelBuilder, RequestError
+from schedutils.semester_service         import get_semester_block
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
@@ -34,7 +34,7 @@ import time
 import sys
 from reqdb.requests import Request
 
-VERSION = '1.2.2'
+VERSION = '1.0.1'
 
 # Set up and configure an application scope logger
 #logging.config.fileConfig('logging.conf')
@@ -89,6 +89,12 @@ def parse_args(argv):
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
 
+    arg_parser.add_argument("-l", "--timelimit", type=float, default=None,
+                            help="The time limit of the scheduler kernel, in seconds; negative implies no limit")
+    arg_parser.add_argument("-i", "--horizon", type=float, default=7,
+                            help="The scheduler's horizon, in days")
+    arg_parser.add_argument("-z", "--slicesize", type=int, default=300,
+                            help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=60,
                             help="Sleep period between scheduling runs, in seconds")
     arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
@@ -247,7 +253,10 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
                                         dry_run=args.dry_run,
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,
-                                        no_compounds=args.nocompounds)
+                                        no_compounds=args.nocompounds,
+                                        slicesize=args.slicesize,
+                                        timelimit=args.timelimit,
+                                        horizon=args.horizon)
         log.info("End Normal Scheduling")
 
     else:
@@ -314,7 +323,9 @@ def main(argv):
 
     visibility_from = {}
     while run_flag:
-        current_events = network.update()
+        current_events = []
+        if not args.noweather:
+            current_events = network.update()
 
         if scheduler_rerun_required(scheduler_client, args, network):
             visibility_from = create_new_schedule(scheduler_client, args,

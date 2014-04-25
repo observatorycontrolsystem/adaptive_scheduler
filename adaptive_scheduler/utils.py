@@ -22,34 +22,6 @@ fh.setFormatter(formatter)
 log.addHandler(fh)
 
 
-class ReprMixin(object):
-    '''Inherit from this class if you want your object to provide a dump of its
-       contents when printed. Warning: beware of circular dependencies between
-       objects inheriting this, which will cause infinite recursion!'''
-
-#    def __repr__(self):
-#        return "%s(%r)" % (self.__class__, self.__dict__)
-
-
-class EqualityMixin(object):
-    '''Inherit from this class if you want your object to have simple equality
-       properties based on common attributes (this is what you usually want).'''
-
-    def __eq__(self, other):
-        if type(other) is type(self):
-            return self.__dict__ == other.__dict__
-        return False
-
-    def __ne__(self, other):
-        return not self.__eq__(other)
-
-
-class DefaultMixin(ReprMixin, EqualityMixin):
-    '''Inherit from this class if you want some sensible default behaviour for
-       your object (introspection, equality).'''
-    pass
-
-
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
     if key in dictionary:
@@ -58,6 +30,13 @@ def increment_dict_by_value(dictionary, key, value):
         dictionary[key]  = value
 
     return
+
+
+def merge_dicts(*args):
+    '''Merge any number of dictionaries. Duplicate keys, and their corresponding values
+       are dropped (i.e. we assume unique keys).'''
+    return {k:v for d in args for k, v in d.items()}
+
 
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to

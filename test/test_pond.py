@@ -6,26 +6,28 @@ from mock       import patch, Mock, MagicMock
 
 from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       InstrumentResolutionError,
-                                      PondFacadeException, cancel_blocks,
+                                      PondFacadeException, PondMoleculeFactory,
+                                      cancel_blocks,
                                       get_deletable_blocks, cancel_schedule,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
-                                      get_network_running_blocks,
-    get_blocks_by_request, get_network_running_intervals)
-from adaptive_scheduler.model2 import (Proposal, Molecule, Target,
+                                      get_network_running_blocks, get_blocks_by_request,
+                                      get_network_running_intervals)
+from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
-                                       UserRequest, Constraints)
+                                       UserRequest, Constraints,
+                                       MoleculeFactory)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-from adaptive_scheduler.camera_mapping import create_camera_mapping
+from adaptive_scheduler.camera_mapping        import create_camera_mapping
+from adaptive_scheduler.kernel.timepoint      import Timepoint
+from adaptive_scheduler.kernel.intervals      import Intervals
 
 import lcogtpond
+from lcogtpond import block
 
 from datetime import datetime, timedelta
 import collections
-from lcogtpond import block
-from adaptive_scheduler.kernel.timepoint import Timepoint
-from adaptive_scheduler.kernel.intervals import Intervals
 
 
 def add_two_numbers(x, y):
@@ -84,6 +86,168 @@ class TestRetryDecorator(object):
             assert_equal(sleep_mock.call_count, 3)
 
 
+class TestPondMoleculeFactory(object):
+
+    def setup(self):
+        self.proposal = Proposal(
+                                  observer_name  = 'Eric Saunders',
+                                  user_id        = 'esaunders',
+                                  proposal_id    = 'Scheduler Testing',
+                                  tag_id         = 'admin',
+                                  priority       = 2,
+                                )
+
+        self.pond_coords = lcogtpond.pointing.ra_dec(
+                                                      ra  = 10,
+                                                      dec = 20
+                                                    )
+        self.pond_pointing = lcogtpond.pointing.sidereal(
+                                                          name = 'star',
+                                                          coord = self.pond_coords
+                                                        )
+        self.mol_factory = MoleculeFactory()
+
+        self.valid_expose_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'expose',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        filter          = 'B',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+        self.valid_standard_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'standard',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        filter          = 'B',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+        self.valid_spectrum_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'spectrum',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        spectra_slit    = 'slit_1.6as',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+        self.valid_arc_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'arc',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        spectra_slit    = 'slit_1.6as',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+        self.valid_lamp_flat_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'lamp_flat',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        spectra_slit    = 'slit_1.6as',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+
+    def test_expose_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_expose_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
+        assert_equal(pond_mol.filters, 'B')
+
+
+    def test_standard_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_standard_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Standard)
+        assert_equal(pond_mol.filters, 'B')
+
+
+    def test_spectrum_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_spectrum_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Spectrum)
+        assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
+
+
+    def test_arc_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_arc_mol, 'dummy pointing')
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Arc)
+        assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
+
+
+    def test_lamp_flat_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_lamp_flat_mol, 'dummy pointing')
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.LampFlat)
+        assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
+
+
 
 class TestPond(object):
 
@@ -93,15 +257,18 @@ class TestPond(object):
 
         self.mapping = create_camera_mapping('camera_mappings.dat')
 
-        # Molecule missing a binning parameter
-        self.mol1 = Molecule(
-                              type            = 'expose_n',
-                              exposure_count  = 1,
-                              instrument_name = 'KB12',
-                              filter          = 'BSSL-UX-020',
-                              ag_mode         = 'OFF',
-                              defocus         = 0.0,
-                            )
+        self.mol_factory = MoleculeFactory()
+        # Molecule missing a binning parameter (which is required)
+        self.mol1 = self.mol_factory.build(
+                                            dict(
+                                              type            = 'expose',
+                                              exposure_count  = 1,
+                                              instrument_name = 'KB12',
+                                              filter          = 'BSSL-UX-020',
+                                              ag_mode         = 'OFF',
+                                              defocus         = 0.0,
+                                            )
+                                           )
 
         self.valid_proposal = Proposal(
                                         observer_name  = 'Eric Saunders',
@@ -117,23 +284,106 @@ class TestPond(object):
                                     #ra  = '20 41 25.91',
                                     #dec = '+45 16 49.22',
                                     ra  = 310.35795833333333,
-                                    dec = 45.280338888888885
+                                    dec = 45.280338888888885,
+                                    rot_mode  = 'SKY',
+                                    rot_angle = 0.0,
+                                    acquire_mode  = 'OPTIONAL',
                                   )
 
-        self.valid_molecule = Molecule(
-                                        type            = 'expose',
-                                        exposure_count  = 1,
-                                        bin_x           = 2,
-                                        bin_y           = 2,
-                                        instrument_name = 'KB12',
-                                        filter          = 'BSSL-UX-020',
-                                        exposure_time   = 30,
-                                        priority        = 1,
-                                        ag_mode         = 'OFF',
-                                        defocus         = 0.0,
-                                       )
+        self.valid_expose_mol = self.mol_factory.build(
+                                                      dict(
+                                                        type            = 'expose',
+                                                        exposure_count  = 1,
+                                                        bin_x           = 2,
+                                                        bin_y           = 2,
+                                                        instrument_name = '1m0-SciCam-SBIG',
+                                                        filter          = 'B',
+                                                        exposure_time   = 30,
+                                                        priority        = 1,
+                                                        ag_mode         = 'Optional',
+                                                        defocus         = 0.0,
+                                                      )
+                                                       )
 
-    def create_pond_block(self, location='0m4a.aqwb.coj', start=datetime(2012, 1, 1, 0, 0, 0),
+        self.valid_standard_mol = self.mol_factory.build(
+                                                      dict(
+                                                        type            = 'standard',
+                                                        exposure_count  = 1,
+                                                        bin_x           = 2,
+                                                        bin_y           = 2,
+                                                        instrument_name = '1m0-SciCam-SBIG',
+                                                        filter          = 'B',
+                                                        exposure_time   = 30,
+                                                        priority        = 1,
+                                                        ag_mode         = 'Optional',
+                                                        defocus         = 0.0,
+                                                      )
+                                                       )
+
+        self.valid_spectrum_mol = self.mol_factory.build(
+                                                      dict(
+                                                        type            = 'spectrum',
+                                                        exposure_count  = 1,
+                                                        bin_x           = 1,
+                                                        bin_y           = 1,
+                                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                                        exposure_time   = 30,
+                                                        priority        = 1,
+                                                        spectra_slit    = 'slit_1.6as',
+                                                        ag_mode         = 'Optional',
+                                                      )
+                                                       )
+
+        self.valid_arc_mol = self.mol_factory.build(
+                                                      dict(
+                                                        type            = 'arc',
+                                                        exposure_count  = 1,
+                                                        bin_x           = 1,
+                                                        bin_y           = 1,
+                                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                                        exposure_time   = 30,
+                                                        priority        = 1,
+                                                        spectra_slit    = 'slit_1.6as',
+                                                        ag_mode         = 'Optional',
+                                                      )
+                                                   )
+
+        self.valid_lamp_flat_mol = self.mol_factory.build(
+                                                      dict(
+                                                        type            = 'lamp_flat',
+                                                        exposure_count  = 1,
+                                                        bin_x           = 1,
+                                                        bin_y           = 1,
+                                                        instrument_name = '2m0-FLOYDS-SciCam',
+                                                        exposure_time   = 30,
+                                                        priority        = 1,
+                                                        spectra_slit    = 'slit_1.6as',
+                                                        ag_mode         = 'Optional',
+                                                     )
+                                                        )
+
+        self.one_metre_block = Block(
+                                 location = '1m0a.doma.cpt',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 'related things',
+                                 tracking_number = '0000000001',
+                                 request_number  = '0000000001',
+                                 camera_mapping = self.mapping,
+                               )
+
+        self.two_metre_block = Block(
+                                 location = '2m0a.clma.coj',
+                                 start    = datetime(2012, 1, 1, 0, 0, 0),
+                                 end      = datetime(2012, 1, 2, 0, 0, 0),
+                                 group_id = 'related things',
+                                 tracking_number = '0000000001',
+                                 request_number  = '0000000001',
+                                 camera_mapping = self.mapping,
+                               )
+
+
+    def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
                           end=datetime(2012, 1, 2, 0, 0, 0), group_id='group',
                           tracking_number='0000000001', request_number='0000000001'):
         scheduled_block = Block(
@@ -148,8 +398,10 @@ class TestPond(object):
 
         scheduled_block.add_proposal(self.valid_proposal)
         scheduled_block.add_target(self.valid_target)
-        scheduled_block.add_molecule(self.valid_molecule)
+        scheduled_block.add_molecule(self.valid_expose_mol)
+
         return scheduled_block.create_pond_block()
+
 
     def test_proposal_lists_missing_fields(self):
         missing  = self.proposal.list_missing_fields()
@@ -159,23 +411,13 @@ class TestPond(object):
                       ['proposal_id', 'user_id', 'tag_id', 'priority']
                     )
 
+
     def test_scheduled_block_lists_missing_fields(self):
+        self.two_metre_block.add_proposal(self.proposal)
+        self.two_metre_block.add_molecule(self.mol1)
+        self.two_metre_block.add_target(SiderealTarget())
 
-        scheduled_block = Block(
-                                 location = '0m4a.aqwb.coj',
-                                 start    = datetime(2012, 1, 1, 0, 0, 0),
-                                 end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 1,
-                                 tracking_number = 1,
-                                 request_number = 1,
-                                 camera_mapping = self.mapping,
-                               )
-
-        scheduled_block.add_proposal(self.proposal)
-        scheduled_block.add_molecule(self.mol1)
-
-
-        missing = scheduled_block.list_missing_fields()
+        missing = self.two_metre_block.list_missing_fields()
 
         assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
         assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
@@ -184,28 +426,95 @@ class TestPond(object):
 
     @raises(IncompleteBlockError)
     def test_raises_error_on_incomplete_blocks(self):
-
-        scheduled_block = Block(
-                                 location = '0m4a.aqwb.coj',
-                                 start    = datetime(2012, 1, 1, 0, 0, 0),
-                                 end      = datetime(2012, 1, 2, 0, 0, 0),
-                                 group_id = 1,
-                                 tracking_number = 1,
-                                 request_number = 1,
-                                 camera_mapping = self.mapping,
-                                )
-
-        scheduled_block.create_pond_block()
+        self.two_metre_block.create_pond_block()
 
 
-    def test_a_valid_block_doesnt_raise_an_exception(self):
+    def test_a_valid_expose_block_doesnt_raise_an_exception(self):
+        self.one_metre_block.add_proposal(self.valid_proposal)
+        self.one_metre_block.add_molecule(self.valid_expose_mol)
+        self.one_metre_block.add_target(self.valid_target)
+
+        self.one_metre_block.create_pond_block()
+
         self.create_pond_block()
-
 
     def test_create_pond_block(self):
         received = self.create_pond_block()
 
-        assert(received)
+    def test_create_pond_block_with_expose_mol(self):
+        self.one_metre_block.add_proposal(self.valid_proposal)
+        self.one_metre_block.add_molecule(self.valid_expose_mol)
+        self.one_metre_block.add_target(self.valid_target)
+
+        received = self.one_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
+        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.ag_name, 'ef02')
+        assert_equal(pond_mol.pointing.roll, 310.35795833333333)
+        assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
+
+
+    def test_create_pond_block_with_standard_mol(self):
+        self.one_metre_block.add_proposal(self.valid_proposal)
+        self.one_metre_block.add_molecule(self.valid_standard_mol)
+        self.one_metre_block.add_target(self.valid_target)
+
+        received = self.one_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.Standard)
+        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.ag_name, 'ef02')
+        assert_equal(pond_mol.pointing.roll, 310.35795833333333)
+        assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
+
+
+    def test_create_pond_block_with_spectrum_mol(self):
+        self.two_metre_block.add_proposal(self.valid_proposal)
+        self.two_metre_block.add_molecule(self.valid_spectrum_mol)
+        self.two_metre_block.add_target(self.valid_target)
+
+        received = self.two_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.Spectrum)
+        assert_equal(pond_mol.inst_name, 'floyds02')
+        assert_equal(pond_mol.ag_name, 'kb37')
+        assert_equal(pond_mol.pointing.roll, 310.35795833333333)
+        assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
+
+
+    def test_create_pond_block_with_arc_mol(self):
+        self.two_metre_block.add_proposal(self.valid_proposal)
+        self.two_metre_block.add_molecule(self.valid_arc_mol)
+
+        received = self.two_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.Arc)
+        assert_equal(pond_mol.inst_name, 'floyds02')
+        assert_equal(hasattr(pond_mol, 'ag_name'), False)
+        assert_equal(hasattr(pond_mol, 'pointing'), False)
+
+
+    def test_create_pond_block_with_lamp_flat_mol(self):
+        self.two_metre_block.add_proposal(self.valid_proposal)
+        self.two_metre_block.add_molecule(self.valid_lamp_flat_mol)
+
+        received = self.two_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.LampFlat)
+        assert_equal(pond_mol.inst_name, 'floyds02')
+        assert_equal(hasattr(pond_mol, 'ag_name'), False)
+        assert_equal(hasattr(pond_mol, 'pointing'), False)
 
 
     def test_resolve_instrument_pass_through_if_camera_specified(self):
@@ -274,8 +583,8 @@ class TestPond(object):
 
     @patch('adaptive_scheduler.pond.get_blocks')
     def test_get_too_blocks(self, mock_get_blocks):
-        too_block = self.create_pond_block(location='0m4a.aqwb.coj', tracking_number='0000000001')
-        non_too_block = self.create_pond_block(location='0m4a.aqwb.elp', tracking_number='0000000002')
+        too_block = self.create_pond_block(location='1m0a.doma.coj', tracking_number='0000000001')
+        non_too_block = self.create_pond_block(location='1m0a.doma.elp', tracking_number='0000000002')
 
         def my_side_effect(start, end, site_name, obs_name, tel_name):
             if site_name == 'elp':
@@ -283,7 +592,6 @@ class TestPond(object):
             else:
                 return [too_block]
 
-        # TODO:
         mock_get_blocks.side_effect = my_side_effect
 
         ur1 = UserRequest(
@@ -296,8 +604,8 @@ class TestPond(object):
                          )
 
         tels = {
-                 '0m4a.aqwb.elp' : [],
-                 '0m4a.aqwb.coj' : []
+                 '1m0a.doma.elp' : [],
+                 '1m0a.doma.coj' : []
                }
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
@@ -305,7 +613,8 @@ class TestPond(object):
         too_blocks = get_blocks_by_request([ur1], tels, start, end)
 
         expected = {
-                    '0m4a.aqwb.coj' : Intervals([Timepoint(too_block.start, 'start'), Timepoint(too_block.end, 'end')])
+                    '1m0a.doma.coj' : Intervals([Timepoint(too_block.start, 'start'),
+                                                 Timepoint(too_block.end, 'end')])
                     }
         assert_equal(expected, too_blocks)
 
@@ -417,7 +726,7 @@ class TestPondInteractions(object):
     def test_dont_send_blocks_if_dry_run(self, mock_func, mock_func2):
         dry_run = True
 
-        blocks = [Mock()]
+        blocks = {'foo' : [Mock()]}
 
         send_blocks_to_pond(blocks, dry_run)
         assert not mock_func.called, 'Dry run flag was ignored'
@@ -433,7 +742,7 @@ class TestPondInteractions(object):
         mock_block.request_number  = '0000000001'
         mock_block.tracking_number = '0000000001'
 
-        blocks = [mock_block]
+        blocks = {'foo' : [mock_block]}
 
         send_blocks_to_pond(blocks, dry_run)
 
@@ -461,11 +770,14 @@ class TestPondInteractions(object):
         # to test.
         mock_func1.side_effect = lambda v,w,x,y,z : v
 
+        mock_func2.return_value = ( {'1m0a.doma.lsc' : ['block 1', 'block 2']},
+                                    {'1m0a.doma.lsc' : ['block 3']} )
+
         n_submitted_total = send_schedule_to_pond(schedule, self.start,
                                                   camera_mappings_file, dry_run)
 
         assert_equal(n_submitted_total, 2)
-        mock_func2.assert_called_once_with(mock_res_list, dry_run)
+        mock_func2.assert_called_once_with(schedule, dry_run)
 
     @patch('adaptive_scheduler.pond.get_intervals')
     @patch('adaptive_scheduler.pond.get_running_blocks')
@@ -514,7 +826,7 @@ class TestPondInteractions(object):
         reservation.scheduled_start = 0
 
         proposal = Proposal()
-        target   = Target()
+        target   = SiderealTarget()
 
         compound_request = UserRequest(
                                             operator = 'single',
@@ -541,7 +853,10 @@ class TestPondInteractions(object):
                            request_number = None
                            )
 
-        received = build_block(reservation, request, compound_request, self.start)
+        camera_mappings_file = 'camera_mappings.dat'
+
+        received = build_block(reservation, request, compound_request, self.start,
+                               camera_mappings_file)
         missing = received.list_missing_fields()
         print "Missing %r fields" % missing
         1/0

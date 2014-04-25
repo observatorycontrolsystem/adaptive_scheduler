@@ -11,7 +11,8 @@ November 2011
 
 from adaptive_scheduler.model    import ( Telescope, Target, Proposal, Molecule,
                                           Request, CompoundRequest )
-from adaptive_scheduler.utils    import iso_string_to_datetime, EqualityMixin
+from adaptive_scheduler.utils    import iso_string_to_datetime
+from schedutils.utils            import EqualityMixin
 import ast
 import cPickle
 

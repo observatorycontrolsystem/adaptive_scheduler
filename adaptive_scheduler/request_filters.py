@@ -130,9 +130,14 @@ def set_urs_to_unschedulable(client, unschedulable_ur_numbers):
 
 
 def filter_urs(ur_list):
-    initial_urs       = set(ur_list)
-    schedulable_urs   = set(run_all_filters(ur_list))
-    unschedulable_urs = initial_urs - schedulable_urs
+
+    # Don't use sets here, unless you like non-deterministic orderings
+    # The solve may be sensitive to order, so don't mess with it
+    schedulable_urs = run_all_filters(ur_list)
+    unschedulable_urs = []
+    for ur in ur_list:
+        if ur not in schedulable_urs:
+            unschedulable_urs.append(ur)
 
     return schedulable_urs, unschedulable_urs
 
