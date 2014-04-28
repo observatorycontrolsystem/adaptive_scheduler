@@ -604,12 +604,12 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
 
 @timeit
 def blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before):
-    running_at_tel = get_network_running_intervals(tels, ends_after, running_if_starts_before, starts_before)
+    running_blocks = get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before)
+    running_at_tel = get_network_running_intervals(running_blocks)
 
     all_running_blocks = []
-    for run_dict in running_at_tel.values():
-        running_blocks = run_dict['running']
-        all_running_blocks += running_blocks
+    for blocks in running_blocks.values():
+        all_running_blocks += blocks
 
     log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
     log.info("%d %s in the running blacklist", *pl(len(all_running_blocks), 'UR'))
@@ -656,11 +656,11 @@ def get_blocks_by_request(urs, tels, ends_after, starts_before):
 
     return telescope_interval
 
-def get_network_running_intervals(tels, ends_after, running_if_starts_before, starts_before):
-    running_at_tel = get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before)
+def get_network_running_intervals(running_blocks):
+    running_at_tel = {}
 
-    for key in running_at_tel:
-        running_at_tel[key] = get_intervals(running_at_tel[key])
+    for key, blocks in running_blocks.items():
+        running_at_tel[key] = get_intervals(blocks)
 
     return running_at_tel
 
@@ -673,9 +673,9 @@ def get_network_running_blocks(tels, ends_after, running_if_starts_before, start
                                                           full_tel_name)
 
         if tel.events:
-            cutoff, running = running_if_starts_before, []
+            running = []
         else:
-            cutoff, running = get_running_blocks(ends_after, running_if_starts_before, starts_before,
+            running = get_running_blocks(ends_after, running_if_starts_before, starts_before,
                                                  site_name, obs_name, tel_name)
 
         running_at_tel[full_tel_name] = running
@@ -697,7 +697,7 @@ def get_running_blocks(ends_after, running_if_starts_before, starts_before, site
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
                                              b.tracking_num_set()]
 
-    return cutoff_dt, running
+    return running
 
 
 def get_intervals(blocks):
