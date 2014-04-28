@@ -652,6 +652,22 @@ class TestPondInteractions(object):
         return block_list
 
 
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_blacklist_running_blocks_no_running_blocks(self, func_mock):
+
+        cutoff_dt       = datetime(2013, 8, 18, 0, 0, 0)
+        fake_block_list = []
+        block_list = self.configure_mocks(func_mock, cutoff_dt, fake_block_list)
+
+        ends_after = datetime(2013, 8, 18, 0, 0, 0)
+        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
+        starts_before = datetime(2013, 8, 18, 0, 0, 0)
+
+        blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before)
+
+        # TODO: Finish this test
+
+
     @patch('lcogtpond.block.Block.cancel_blocks')
     def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
         dry_run = True
@@ -663,7 +679,7 @@ class TestPondInteractions(object):
 
 
     @patch('lcogtpond.block.Block.cancel_blocks')
-    def test_cancel_blocks_called_when_dry_run(self, func_mock):
+    def test_cancel_blocks_called_when_dry_run_not_set(self, func_mock):
         dry_run = False
         reason = 'Superceded by new schedule'
         FakeBlock = collections.namedtuple('FakeBlock', 'id')
