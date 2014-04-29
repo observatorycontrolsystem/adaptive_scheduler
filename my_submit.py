@@ -82,8 +82,8 @@ from any site, it will not be scheduled!
 '''
 # You may specify windows by start/end...
 window1 = {
-            'start'    : '2014-06-02 13:30:00',  # Time is UTC
-            'end'      : '2014-06-03 13:30:00',
+            'start'    : '2014-04-29 20:30:00',  # Time is UTC
+            'end'      : '2014-04-30 20:30:00',
           }
 
 # ...or with a duration
@@ -97,7 +97,6 @@ molecule = {
              # Required fields
              'exposure_time'   : 600,            # Exposure time, in secs
              'exposure_count'  : 2,              # The number of consecutive exposures
-             'filter'          : 'lalala',
              'spectra_slit'    : 'slit_6.0as',            # The generic filter name
              # Optional fields. Defaults are as below.
              'type'            : 'SPECTRUM',       # The type of the molecule
@@ -120,7 +119,7 @@ ur.operator = 'single'
 ur.set_proposal(proposal)
 
 # You're done! Send the complete User Request to the DB for scheduling
-#client        = SchedulerClient('http://scheduler-dev.lco.gtn/requestdb/')
-client        = SchedulerClient('http://localhost:8001/')
+client        = SchedulerClient('http://scheduler-dev.lco.gtn/requestdb/')
+#client        = SchedulerClient('http://localhost:8001/')
 response_data = client.submit(ur, keep_record=True, debug=True)
 client.print_submit_response()
