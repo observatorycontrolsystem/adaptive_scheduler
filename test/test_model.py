@@ -244,7 +244,7 @@ class TestSpectrographDuration(object):
                                           bin_y           = 1,
                                           instrument_name = 'floyds',
                                           filter          = '',
-                                          spectra_slit    = 'slit_6as',
+                                          spectra_slit    = 'slit_6.0as',
                                           exposure_time   = 1800,
                                           priority        = 3
                                         )
