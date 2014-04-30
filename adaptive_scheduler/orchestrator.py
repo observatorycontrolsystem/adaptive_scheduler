@@ -212,10 +212,11 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, curre
     #make copy of tels since it could be modified
     tels = list(tels)
 
-    telescope_to_running_blocks = get_network_running_blocks(tels,
-                                                             ends_after=current_utc_now,
-                                                             running_if_starts_before=estimated_scheduler_end,
-                                                             starts_before=semester_end)
+    running_blocks = get_network_running_blocks(tels,
+                                                ends_after=current_utc_now,
+                                                running_if_starts_before=estimated_scheduler_end,
+                                                starts_before=semester_end)
+    telescope_to_running_blocks = get_network_running_intervals(running_blocks)
 
     # filter running too urs from tels
     all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]
