@@ -210,7 +210,7 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, curre
     ''' Preempt running blocks, if needed, to run Target of Opportunity user requests'''
 
     #make copy of tels since it could be modified
-    tels = list(tels)
+    tels = dict(tels)
 
     running_blocks = get_network_running_blocks(tels,
                                                 ends_after=current_utc_now,
