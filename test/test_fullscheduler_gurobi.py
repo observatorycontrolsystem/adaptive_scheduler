@@ -7,11 +7,19 @@ Author: Sotiria Lampoudi
 August 2012
 '''
 
+import copy
+import os
+
+# Gurobi requires 64-bit OS
+from nose import SkipTest
+if os.uname()[4] != 'x86_64':
+    raise SkipTest('Gurobi requires a 64-bit OS')
+
 from nose.tools import assert_equal, assert_true
 from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.intervals import *
 from adaptive_scheduler.kernel.fullscheduler_gurobi import *
-import copy
+
 
 class TestFullScheduler_gurobi(object):
 

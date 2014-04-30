@@ -98,7 +98,7 @@ molecule = {
              'exposure_time'   : 600,            # Exposure time, in secs
              'exposure_count'  : 2,              # The number of consecutive exposures
              'filter'          : 'lalala',
-             'spectra_slit'    : 'slit_6as',            # The generic filter name
+             'spectra_slit'    : 'slit_6.0as',            # The generic filter name
              # Optional fields. Defaults are as below.
              'type'            : 'SPECTRUM',       # The type of the molecule
              'ag_mode'         : 'Optional',
