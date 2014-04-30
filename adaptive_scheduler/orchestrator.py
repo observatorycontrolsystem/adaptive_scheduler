@@ -205,13 +205,17 @@ def combine_excluded_intervals(excluded_intervals_1, excluded_intervals_2):
     return excluded_intervals_1
 
 
-def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, now, semester_end, dry_run):
+def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, current_utc_now,
+                           estimated_scheduler_end, semester_end, dry_run):
     ''' Preempt running blocks, if needed, to run Target of Opportunity user requests'''
 
     #make copy of tels since it could be modified
     tels = list(tels)
 
-    telescope_to_running_blocks = get_network_running_blocks(tels, now, semester_end);
+    telescope_to_running_blocks = get_network_running_blocks(tels,
+                                                             ends_after=current_utc_now,
+                                                             running_if_starts_before=estimated_scheduler_end,
+                                                             starts_before=semester_end)
 
     # filter running too urs from tels
     all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]
@@ -429,7 +433,7 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
     if run_type == Request.TARGET_OF_OPPORTUNITY:
         try:
             preempt_running_blocks(visible_urs, too_user_requests, normal_user_requests, tels,
-                                   current_utc_now, semester_end, dry_run);
+                                   current_utc_now, estimated_scheduler_end, semester_end, dry_run);
         except PondFacadeException:
             log.error("Could not determine running blocks from POND - aborting run")
             return visibility_from

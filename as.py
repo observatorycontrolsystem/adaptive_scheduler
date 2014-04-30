@@ -231,14 +231,18 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
         log.info("Start ToO Scheduling")
         user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
 
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now, short_estimated_scheduler_end,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client,
+                                        now, short_estimated_scheduler_end,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
                                         dry_run=args.dry_run,
                                         no_weather=args.noweather,
                                         no_singles=args.nosingles,
-                                        no_compounds=args.nocompounds)
+                                        no_compounds=args.nocompounds,
+                                        slicesize=args.slicesize,
+                                        timelimit=args.timelimit,
+                                        horizon=args.horizon)
         log.info("End ToO Scheduling")
 
     # Run the scheduling loop, if there are any User Requests
@@ -246,7 +250,8 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
         log.info("Start Normal Scheduling")
         user_requests_dict['type'] = Request.NORMAL_OBSERVATION_TYPE
 
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client, now, estimated_scheduler_end,
+        visibility_from = run_scheduler(user_requests_dict, scheduler_client,
+                                        now, estimated_scheduler_end,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
                                         current_events, visibility_from,
