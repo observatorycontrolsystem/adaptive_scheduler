@@ -34,7 +34,8 @@ from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.pond     import (send_schedule_to_pond, cancel_schedule,
                                           blacklist_running_blocks,
                                           PondFacadeException , get_blocks_by_request,
-                                          get_network_running_blocks)
+                                          get_network_running_blocks,
+                                          get_network_running_intervals)
 from schedutils.semester_service import get_semester_code
 
 #from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
