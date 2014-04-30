@@ -428,7 +428,8 @@ def run_scheduler(user_reqs_dict, sched_client, current_utc_now, estimated_sched
     # Pre-empt running blocks
     if run_type == Request.TARGET_OF_OPPORTUNITY:
         try:
-            preempt_running_blocks(visible_urs, too_user_requests, normal_user_requests, tels, dry_run);
+            preempt_running_blocks(visible_urs, too_user_requests, normal_user_requests, tels,
+                                   current_utc_now, semester_end, dry_run);
         except PondFacadeException:
             log.error("Could not determine running blocks from POND - aborting run")
             return visibility_from
