@@ -36,8 +36,8 @@ from adaptive_scheduler.pond     import ( send_schedule_to_pond, cancel_schedule
                                           PondFacadeException )
 from schedutils.semester_service import get_semester_code
 
-#from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+#from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.request_filters import filter_and_set_unschedulable_urs
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger

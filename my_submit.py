@@ -82,8 +82,8 @@ from any site, it will not be scheduled!
 '''
 # You may specify windows by start/end...
 window1 = {
-            'start'    : '2014-04-29 20:30:00',  # Time is UTC
-            'end'      : '2014-04-30 20:30:00',
+            'start'    : '2014-05-01 20:30:00',  # Time is UTC
+            'end'      : '2014-05-03 20:30:00',
           }
 
 # ...or with a duration
@@ -120,6 +120,7 @@ ur.set_proposal(proposal)
 
 # You're done! Send the complete User Request to the DB for scheduling
 client        = SchedulerClient('http://scheduler-dev.lco.gtn/requestdb/')
+#client        = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
 #client        = SchedulerClient('http://localhost:8001/')
 response_data = client.submit(ur, keep_record=True, debug=True)
 client.print_submit_response()
