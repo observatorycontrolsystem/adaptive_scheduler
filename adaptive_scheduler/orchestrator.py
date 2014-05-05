@@ -217,14 +217,13 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, curre
                                                 ends_after=current_utc_now,
                                                 running_if_starts_before=estimated_scheduler_end,
                                                 starts_before=semester_end)
-    running_intervals_by_tel = get_network_running_intervals(running_blocks_by_tel)
 
     # filter running too urs from tels
     all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]
     for tel, block_list in running_blocks_by_tel.items():
         for block in block_list:
             if block.get_tracking_number_set()[0] in all_too_tracking_numbers:
-                tels.remove(tel)
+                del tels[tel]
                 break;
 
     value_function_dict = construct_value_function_dict(visible_too_urs, normal_urs, tels, running_blocks_by_tel)
@@ -232,10 +231,11 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, curre
     visible_too_tracking_numbers = [ur.tracking_number for ur in visible_too_urs]
     optimal_combination = compute_optimal_combination(value_function_dict, visible_too_tracking_numbers, tels)
 
-    # get telescopes where
-    tels_to_cancel = [ combination[0] for combination in optimal_combination if combination[0] in running_blocks_by_tel]
+    # get telescopes where the cost of canceling is lowest and there is a running block
+    tels_to_cancel = [ combination[0] for combination in optimal_combination
+                      if combination[0] in running_blocks_by_tel and running_blocks_by_tel[combination[0]]]
 
-    cancel_schedule(tels_to_cancel, now, semester_end, dry_run)
+    cancel_schedule(tels_to_cancel, current_utc_now, semester_end, dry_run)
 
     return
 
@@ -267,9 +267,12 @@ def construct_value_function_dict(too_urs, normal_urs, tels, running_blocks_by_t
 
     value_function_dict = {};
     for tel in tels:
-        if tel in running_blocks_by_telescope:
-            running_tracking_number = running_blocks_by_telescope[tel].get_tracking_number_set()[0]
-            running_request_priority = normal_tracking_numbers_dict[running_tracking_number].get_priority()
+        # Compute the priority of the the telescopes without ToOs
+        if tel in running_blocks_by_telescope and running_blocks_by_telescope[tel]:
+            running_request_priority = 0;
+            for block in running_blocks_by_telescope[tel]:
+                running_tracking_number = block.get_tracking_number_set()[0]
+                running_request_priority += normal_tracking_numbers_dict[running_tracking_number].get_priority()
         else:
             # use a priority of 1 for telescopes without a running block
             running_request_priority = 1

@@ -21,6 +21,7 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from mock import Mock, patch
+import lcogtpond
 
 
 class TestOrchestrator(object):
@@ -158,7 +159,7 @@ class TestOrchestrator(object):
 
 
         telescope_to_running_blocks = {
-                                       'tel1' : block
+                                       'tel1' : [block]
                                        }
 
         matrix = construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_running_blocks)
@@ -172,15 +173,33 @@ class TestOrchestrator(object):
 
         assert_equal(matrix, expected)
 
+    def configure_mock_get(self, func_mock, cutoff_dt, fake_block_dict):
+        
+        def mapping(**kwargs):
+            mock_schedule = Mock(spec=lcogtpond.schedule.Schedule)
+            mock_schedule.blocks = fake_block_dict[kwargs.get('site')]
+            mock_schedule.end_of_overlap.return_value = cutoff_dt
+            return mock_schedule
+        
+        func_mock.side_effect = mapping
+
+        return
+
     @patch('adaptive_scheduler.orchestrator.cancel_schedule')
-    @patch('adaptive_scheduler.orchestrator.get_network_running_blocks')
-    def test_preempt_running_blocks(self, mocked_get_network_running_blocks, mocked_cancel_schedule):
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_preempt_running_blocks(self, mocked_get, mocked_cancel_schedule):
         now = 'now'
         semester_end = 'end'
         dry_run = 'run'
+        estimated_scheduler_end = "end"
 
-        # tel2 is not used
-        tels = ['tel1', 'tel2', 'tel3']
+        tel_mock = Mock()
+        tel_mock.events = []
+        tels = {
+                '1m0a.doma.tel1' : tel_mock,
+                '1m0a.doma.tel2' : tel_mock,
+                '1m0a.doma.tel3' : tel_mock
+                }
 
         too_ur1 = self.create_mock_too_ur(1, 20, tels)
         too_ur2 = self.create_mock_too_ur(2, 100, tels)
@@ -198,25 +217,41 @@ class TestOrchestrator(object):
         too_block = Mock()
         too_block.get_tracking_number_set.return_value = [too_ur3.tracking_number]
 
-        mocked_get_network_running_blocks.return_value = {
-                                                           'tel1' : block,
-                                                           'tel3' : too_block
-                                                           }
+        cutoff_dt = datetime(2013, 8, 18, 0, 0, 0)
 
-        preempt_running_blocks(too_urs, all_too_urs, normal_urs, tels, now, semester_end, dry_run)
+        # tel2 is not used
+        fake_block_list = {
+                           'tel1' : [block],
+                           'tel2' : [],
+                           'tel3' : [too_block]
+                           }
+        self.configure_mock_get(mocked_get, cutoff_dt, fake_block_list)
 
-        tels_to_cancel = ['tel1']
+        ends_after = datetime(2013, 8, 18, 0, 0, 0)
+        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
+        starts_before = datetime(2013, 8, 18, 0, 0, 0)
+
+        preempt_running_blocks(too_urs, all_too_urs, normal_urs, tels, now, semester_end, estimated_scheduler_end, dry_run)
+
+        tels_to_cancel = ['1m0a.doma.tel1']
         mocked_cancel_schedule.assert_called_with(tels_to_cancel, now, semester_end, dry_run)
 
     @patch('adaptive_scheduler.orchestrator.cancel_schedule')
-    @patch('adaptive_scheduler.orchestrator.get_network_running_blocks')
-    def test_preempt_running_blocks_no_preemption(self, mocked_get_network_running_blocks, mocked_cancel_schedule):
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_preempt_running_blocks_no_preemption(self, mocked_get, mocked_cancel_schedule):
         now = 'now'
         semester_end = 'end'
         dry_run = 'run'
+        estimated_scheduler_end = "end"
 
         # tel2, tel3 is not used
-        tels = ['tel1', 'tel2', 'tel3']
+        tel_mock = Mock()
+        tel_mock.events = []
+        tels = {
+                '1m0a.doma.tel1' : tel_mock,
+                '1m0a.doma.tel2' : tel_mock,
+                '1m0a.doma.tel3' : tel_mock
+                }
 
         too_ur1 = self.create_mock_too_ur(1, 20, tels)
         too_ur2 = self.create_mock_too_ur(2, 100, tels)
@@ -230,11 +265,21 @@ class TestOrchestrator(object):
         block = Mock()
         block.get_tracking_number_set.return_value = [normal_ur1.tracking_number]
 
-        mocked_get_network_running_blocks.return_value = {
-                                                           'tel1' : block,
-                                                           }
+        cutoff_dt = datetime(2013, 8, 18, 0, 0, 0)
 
-        preempt_running_blocks(too_urs, all_too_urs, normal_urs, tels, now, semester_end, dry_run)
+        # tel2 is not used
+        fake_block_list = {
+                           'tel1' : [block],
+                           'tel2' : [],
+                           'tel3' : []
+                           }
+        self.configure_mock_get(mocked_get, cutoff_dt, fake_block_list)
+
+        ends_after = datetime(2013, 8, 18, 0, 0, 0)
+        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
+        starts_before = datetime(2013, 8, 18, 0, 0, 0)
+
+        preempt_running_blocks(too_urs, all_too_urs, normal_urs, tels, now, semester_end, estimated_scheduler_end, dry_run)
 
         tels_to_cancel = []
         mocked_cancel_schedule.assert_called_with(tels_to_cancel, now, semester_end, dry_run)
