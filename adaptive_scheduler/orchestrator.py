@@ -213,32 +213,34 @@ def preempt_running_blocks(visible_too_urs, all_too_urs, normal_urs, tels, curre
     #make copy of tels since it could be modified
     tels = dict(tels)
 
-    running_blocks = get_network_running_blocks(tels,
+    running_blocks_by_tel = get_network_running_blocks(tels,
                                                 ends_after=current_utc_now,
                                                 running_if_starts_before=estimated_scheduler_end,
                                                 starts_before=semester_end)
-    telescope_to_running_blocks = get_network_running_intervals(running_blocks)
+    running_intervals_by_tel = get_network_running_intervals(running_blocks_by_tel)
 
     # filter running too urs from tels
     all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]
-    for tel, block in telescope_to_running_blocks.items():
-        if block.get_tracking_number_set()[0] in all_too_tracking_numbers:
-            tels.remove(tel)
+    for tel, block_list in running_blocks_by_tel.items():
+        for block in block_list:
+            if block.get_tracking_number_set()[0] in all_too_tracking_numbers:
+                tels.remove(tel)
+                break;
 
-    value_function_dict = construct_value_function_dict(visible_too_urs, normal_urs, tels, telescope_to_running_blocks)
+    value_function_dict = construct_value_function_dict(visible_too_urs, normal_urs, tels, running_blocks_by_tel)
 
     visible_too_tracking_numbers = [ur.tracking_number for ur in visible_too_urs]
     optimal_combination = compute_optimal_combination(value_function_dict, visible_too_tracking_numbers, tels)
 
     # get telescopes where
-    tels_to_cancel = [ combination[0] for combination in optimal_combination if combination[0] in telescope_to_running_blocks]
+    tels_to_cancel = [ combination[0] for combination in optimal_combination if combination[0] in running_blocks_by_tel]
 
     cancel_schedule(tels_to_cancel, now, semester_end, dry_run)
 
     return
 
 
-def construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_running_blocks):
+def construct_value_function_dict(too_urs, normal_urs, tels, running_blocks_by_telescope):
     ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
 
         where value = too priority / running block priority or if no block is running at
@@ -265,8 +267,8 @@ def construct_value_function_dict(too_urs, normal_urs, tels, telescope_to_runnin
 
     value_function_dict = {};
     for tel in tels:
-        if tel in telescope_to_running_blocks:
-            running_tracking_number = telescope_to_running_blocks[tel].get_tracking_number_set()[0]
+        if tel in running_blocks_by_telescope:
+            running_tracking_number = running_blocks_by_telescope[tel].get_tracking_number_set()[0]
             running_request_priority = normal_tracking_numbers_dict[running_tracking_number].get_priority()
         else:
             # use a priority of 1 for telescopes without a running block
