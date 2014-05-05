@@ -647,7 +647,7 @@ def get_blocks_by_request(urs, tels, ends_after, starts_before):
 
     for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')
-        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name)
+        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
 
         filtered_blocks = filter(lambda block: block.tracking_num_set()[0] in tracking_numbers, blocks)
         intervals = get_intervals(filtered_blocks)

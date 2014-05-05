@@ -582,18 +582,21 @@ class TestPond(object):
 
         received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
 
-    @patch('adaptive_scheduler.pond.get_blocks')
-    def test_get_too_blocks(self, mock_get_blocks):
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_get_too_blocks(self, func_mock):
         too_block = self.create_pond_block(location='1m0a.doma.coj', tracking_number='0000000001')
         non_too_block = self.create_pond_block(location='1m0a.doma.elp', tracking_number='0000000002')
 
-        def my_side_effect(start, end, site_name, obs_name, tel_name):
-            if site_name == 'elp':
-                return [non_too_block]
-            else:
-                return [too_block]
+        cutoff_dt = datetime(2013, 8, 18, 0, 0, 0)
+        fake_block = {
+                      'elp' : [non_too_block],
+                      'coj' : [too_block]
+                      }
+        block_list = TestPondInteractions.configure_mocks(func_mock, cutoff_dt, fake_block)
 
-        mock_get_blocks.side_effect = my_side_effect
+        ends_after = datetime(2013, 8, 18, 0, 0, 0)
+        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
+        starts_before = datetime(2013, 8, 18, 0, 0, 0)
 
         ur1 = UserRequest(
                            operator='single',
@@ -642,16 +645,17 @@ class TestPondInteractions(object):
         return FakeBlock(start_dt, tracking_num_set)
 
 
-    def configure_mocks(self, func_mock, cutoff_dt, fake_block_list):
-        mock_schedule          = Mock(spec=lcogtpond.schedule.Schedule)
-        func_mock.return_value = mock_schedule
-        mock_schedule.end_of_overlap.return_value = cutoff_dt
+    @staticmethod
+    def configure_mocks(func_mock, cutoff_dt, fake_blocks):
+        def mapping(**kwargs):
+            mock_schedule = Mock(spec=lcogtpond.schedule.Schedule)
+            mock_schedule.blocks = fake_blocks if isinstance(fake_blocks, list) else fake_blocks[kwargs.get('site')]
+            mock_schedule.end_of_overlap.return_value = cutoff_dt
+            return mock_schedule
+        
+        func_mock.side_effect = mapping
 
-        block_list           = fake_block_list
-        mock_schedule.blocks = block_list
-
-        return block_list
-
+        return
 
     @patch('lcogtpond.schedule.Schedule.get')
     def test_blacklist_running_blocks_no_running_blocks(self, func_mock):
