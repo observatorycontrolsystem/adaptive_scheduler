@@ -642,6 +642,9 @@ def blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before
 
 @timeit
 def get_blocks_by_request(urs, tels, ends_after, starts_before):
+    '''
+        return a map of telescopes to intervals of given urs
+    '''
     telescope_interval = {}
     tracking_numbers = [ur.tracking_number for ur in urs]
 
@@ -649,7 +652,7 @@ def get_blocks_by_request(urs, tels, ends_after, starts_before):
         tel_name, obs_name, site_name = full_tel_name.split('.')
         blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
 
-        filtered_blocks = filter(lambda block: block.tracking_num_set()[0] in tracking_numbers, blocks)
+        filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
         intervals = get_intervals(filtered_blocks)
         if not intervals.is_empty():
             telescope_interval[full_tel_name] = intervals
