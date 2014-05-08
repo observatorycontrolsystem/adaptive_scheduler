@@ -537,12 +537,12 @@ class TestPond(object):
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
         ag_name         = None
-        inst_name       = 'kb72'
+        inst_name       = 'fl01'
         site, obs, tel  = ('bpl', 'doma', '1m0a')
 
         received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
 
-        assert_equal(received, 'efXX')
+        assert_equal(received, 'ef12')
 
 
     @raises(InstrumentResolutionError)

@@ -918,14 +918,14 @@ class TestModelBuilder(object):
         assert_equal(set(['2m0a.clma.coj']),
                      set(request.windows.windows_for_resource.keys()))
 
-    def test_build_request_hbeta_resolves_to_lsc_telescope(self):
+    def test_build_request_nh2_resolves_to_ogg_telescope(self):
         req_dict = {
                      'target'         : self.target,
                      'molecules' : [
                                      {
                                        'instrument_name' : '2m0-SciCam-Merope',
                                        'type'            : 'expose',
-                                       'filter'          : 'hbeta',
+                                       'filter'          : 'NH2',
                                      },
                                    ],
                      'location'       : {
