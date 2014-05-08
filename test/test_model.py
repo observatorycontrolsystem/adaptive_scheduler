@@ -890,7 +890,7 @@ class TestModelBuilder(object):
         assert_equal(set(['1m0a.domb.lsc']),
                      set(request.windows.windows_for_resource.keys()))
 
-    def test_build_request_slit_2as_resolves_to_lsc_telescope(self):
+    def test_build_request_slit_2as_resolves_to_coj_telescope(self):
         req_dict = {
                      'target'         : self.target,
                      'molecules' : [
