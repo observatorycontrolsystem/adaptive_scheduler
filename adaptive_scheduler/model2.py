@@ -711,9 +711,20 @@ class ModelBuilder(object):
         else:
             instrument_info = mapping.find_by_camera(instrument_name)
 
+        filters = []
+        for molecule in molecules:
+            if hasattr(molecule, 'filter') and molecule.filter:
+                filters.append(molecule.filter.lower())
+            elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
+                filters.append(molecule.spectra_slit.lower())
+            else:
+                raise RequestError("Molecule must have either filter or spectra_slit")
+
+        valid_instruments = mapping.find_by_filter(filters, instrument_info)
+
         # Determine the resource subnetwork satisfying the camera and location requirements
         telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])
-        tels_with_inst = [join_location(x['site'], x['observatory'], x['telescope']) for x in instrument_info]
+        tels_with_inst = [join_location(x['site'], x['observatory'], x['telescope']) for x in valid_instruments]
         subnetwork     = [t for t in telescopes if t.name in tels_with_inst]
 
         if not subnetwork:

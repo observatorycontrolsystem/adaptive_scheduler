@@ -120,8 +120,11 @@ class _CameraMapping(object):
             datum[header] = column_parser[header](index, split_line)
         return datum
 
-    def _base_find(self, custom_filter):
-        return [datum for datum in self._data if custom_filter(datum)]
+    def _base_find(self, custom_filter, datums=None):
+        if datums == None:
+            datums = self._data
+
+        return [datum for datum in datums if custom_filter(datum)]
 
     def find_by_location(self, site, observatory, telescope):
         filter_by_location = lambda x: x['site'] == site and\
@@ -152,6 +155,15 @@ class _CameraMapping(object):
                                           x['telescope'] == telescope
         return self._base_find(filter_by_camera_type)
 
+    def find_by_filter(self, filters, datums):
+        def lower(set_to_lower):
+            set_lower = set();
+            for each in set_to_lower:
+                set_lower.add(each.lower())
+            return set_lower;
+
+        filter_by_camera_type = lambda x: lower(x['filters']).issuperset(lower(filters));
+        return self._base_find(filter_by_camera_type, datums)
 
 def _create_column_parser_mapping():
     '''
@@ -166,7 +178,7 @@ def _create_column_parser_mapping():
 
     def parse_comma_seperated(index, columns):
         ''' Return a comma delimited list for column.'''
-        return columns[index].split(',')
+        return set(columns[index].split(','))
 
     column_parser = defaultdict(lambda: default_parse_column)
     column_parser['filters'] = parse_comma_seperated
