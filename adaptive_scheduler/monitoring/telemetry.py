@@ -13,7 +13,7 @@ import collections
 from sqlalchemy.engine import create_engine
 from datetime import datetime
 
-DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester3.lco.gtn/harvest'
+DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester2.lco.gtn/harvest'
 DEFAULT_ENGINE = create_engine(DEFAULT_URL)
 
 class ConnectionError(Exception):
@@ -32,11 +32,10 @@ def get_datum(datum, instance=None, engine=None):
 def _query_db(datum, instance, engine):
     ''' Retrieve datum from database.
 
-        This query uses the SCRAPEVALUE table from harvester3 - a table
-        populated via a cron script from the LIVEVALUE table at each site.
+        This query uses a table populated from the LIVEVALUE table at each site.
     '''
     query = """SELECT * from PROPERTY as P
-               join SCRAPEVALUE as LV on P.IDENTIFIER=LV.IDENTIFIER
+               join LIVEVALUE as LV on P.IDENTIFIER=LV.IDENTIFIER
                where P.ADDRESS_DATUM='{datum}'
             """
     if instance:
