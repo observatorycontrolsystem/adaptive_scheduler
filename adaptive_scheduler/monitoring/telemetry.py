@@ -32,10 +32,10 @@ def get_datum(datum, instance=None, engine=None):
 def _query_db(datum, instance, engine):
     ''' Retrieve datum from database.
 
-        This query uses a table populated from the LIVEVALUE table at each site.
+        This query uses a table populated from the SCRAPEVALUE table at each site.
     '''
     query = """SELECT * from PROPERTY as P
-               join LIVEVALUE as LV on P.IDENTIFIER=LV.IDENTIFIER
+               join SCRAPEVALUE as SV on P.IDENTIFIER=SV.IDENTIFIER
                where P.ADDRESS_DATUM='{datum}'
             """
     if instance:
