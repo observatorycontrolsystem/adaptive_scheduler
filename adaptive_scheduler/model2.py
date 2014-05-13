@@ -368,7 +368,7 @@ class Request(DefaultMixin):
         return self.instrument.type
 
     def get_duration(self):
-        return self.instrument.get_duration(self.molecules, self.target)
+        return self.instrument.get_duration(self.molecules, self.target).total_seconds()
 
     def has_windows(self):
         return self.windows.has_windows()
