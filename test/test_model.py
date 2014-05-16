@@ -275,54 +275,54 @@ class TestSpectrographDuration(object):
     def test_acquire_is_off(self):
         mols = [self.spectrum_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_off)
-        assert_equal(received, 1976)
+        assert_equal(received.total_seconds(), 2096)
 
     def test_acquire_is_maybe(self):
         mols = [self.spectrum_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_maybe)
-        assert_equal(received, 2066)
+        assert_equal(received.total_seconds(), 2186)
 
     def test_acquire_is_on(self):
         mols = [self.spectrum_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 2066)
+        assert_equal(received.total_seconds(), 2186)
 
     def test_lamp_flat_arc_target_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule, self.spectrum_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 2267)
+        assert_equal(received.total_seconds(), 2387)
 
     def test_lamp_flat_arc_sequence(self):
         mols = [self.lamp_molecule, self.arc_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 321)
+        assert_equal(received.total_seconds(), 441)
 
     def test_double_lamp_arc_four_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.lamp_molecule, self.arc_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 522)
+        assert_equal(received.total_seconds(), 642)
 
     def test_double_lamp_arc_three_changes(self):
         mols = [self.lamp_molecule, self.arc_molecule,
                 self.arc_molecule, self.lamp_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 492)
+        assert_equal(received.total_seconds(), 612)
 
     def test_arc_two_exposures(self):
         mols = [self.arc_exp2_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_off)
-        assert_equal(received, 261)
+        assert_equal(received.total_seconds(), 381)
 
     def test_arc_two_exposures_bin_two_no_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_off)
-        assert_equal(received, 224)
+        assert_equal(received.total_seconds(), 344)
 
     def test_arc_two_exposures_bin_two_with_acquisition(self):
         mols = [self.arc_exp2_bin2_molecule]
         received = self.spectrograph.get_duration(mols, self.target_acq_on)
-        assert_equal(received, 224)
+        assert_equal(received.total_seconds(), 344)
 
 
 class TestRequest(object):
@@ -775,6 +775,7 @@ class TestModelBuilder(object):
                            {
                              'instrument_name' : '1m0-SciCam-Sinistro',
                              'type'            : 'expose',
+                             'filter'          : 'B',
                            },
                          ]
         self.location = {
@@ -820,6 +821,7 @@ class TestModelBuilder(object):
                                      {
                                        'instrument_name' : 'SciCam',
                                        'type'            : 'expose',
+                                       'filter'          : 'B',
                                      },
                                    ],
                      'location'       : self.location,
@@ -849,6 +851,7 @@ class TestModelBuilder(object):
                                        'instrument_name' : 'SciCam',
                                        'type'            : 'expose',
                                        'ag_name'         : 'scicam',
+                                       'filter'          : 'B',
                                      },
                                    ],
                      'location'       : self.location,
@@ -871,6 +874,7 @@ class TestModelBuilder(object):
                                      {
                                        'instrument_name' : 'fl03',
                                        'type'            : 'expose',
+                                       'filter'          : 'B',
                                      },
                                    ],
                      'location'       : self.location,
@@ -884,6 +888,62 @@ class TestModelBuilder(object):
         request = self.mb.build_request(req_dict)
         assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.domb.lsc']),
+                     set(request.windows.windows_for_resource.keys()))
+
+    def test_build_request_slit_2as_resolves_to_coj_telescope(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : '2m0-FLOYDS-SciCam',
+                                       'type'            : 'arc',
+                                       'spectra_slit'    : 'slit_2.0as',
+                                     },
+                                   ],
+                     'location'       : {
+                                          'telescope_class' : '2m0',
+                                          'site'            : None,
+                                          'observatory'     : None,
+                                          'telescope'       : None,
+                                        },
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.instrument.type, '2M0-FLOYDS-SCICAM')
+        assert_equal(set(['2m0a.clma.coj']),
+                     set(request.windows.windows_for_resource.keys()))
+
+    def test_build_request_nh2_resolves_to_ogg_telescope(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : '2m0-SciCam-Merope',
+                                       'type'            : 'expose',
+                                       'filter'          : 'NH2',
+                                     },
+                                   ],
+                     'location'       : {
+                                          'telescope_class' : '2m0',
+                                          'site'            : None,
+                                          'observatory'     : None,
+                                          'telescope'       : None,
+                                        },
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+        assert_equal(request.instrument.type, '2M0-SCICAM-MEROPE')
+        assert_equal(set(['2m0a.clma.ogg']),
                      set(request.windows.windows_for_resource.keys()))
 
     def test_build_request_observation_type_normal(self):
@@ -968,6 +1028,28 @@ class TestModelBuilder(object):
                                      {
                                        'instrument_name' : 'POTATOES',
                                        'type'            : 'expose',
+                                       'filter'          : 'B',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : self.request_number,
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        request = self.mb.build_request(req_dict)
+
+    @raises(RequestError)
+    def test_dont_accept_filters_not_present_on_a_subnetwork(self):
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : '1m0-SciCam-Sinistro',
+                                       'type'            : 'expose',
+                                       'filter'          : 'fake',
                                      },
                                    ],
                      'location'       : self.location,

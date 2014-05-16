@@ -82,8 +82,8 @@ from any site, it will not be scheduled!
 '''
 # You may specify windows by start/end...
 window1 = {
-            'start'    : '2014-06-06 13:30:00',  # Time is UTC
-            'end'      : '2014-06-07 13:30:00',
+            'start'    : '2014-05-01 20:30:00',  # Time is UTC
+            'end'      : '2014-05-03 20:30:00',
           }
 
 # ...or with a duration
@@ -111,16 +111,16 @@ req.set_target(target)
 req.add_window(window1)
 #req.add_window(window2)
 req.add_molecule(molecule) # Molecules will be executed in the order in which they are added
-req.set_observation_type('TARGET_OF_OPPORTUNITY')
 
 # Add the Request to the outer User Request
-ur = UserRequest(group_id='ToO 1')
+ur = UserRequest(group_id='Your phrase to describe this group')
 ur.add_request(req)
 ur.operator = 'single'
 ur.set_proposal(proposal)
 
 # You're done! Send the complete User Request to the DB for scheduling
 client        = SchedulerClient('http://scheduler-dev.lco.gtn/requestdb/')
+#client        = SchedulerClient('http://scheduler1.lco.gtn/requestdb/')
 #client        = SchedulerClient('http://localhost:8001/')
 response_data = client.submit(ur, keep_record=True, debug=True)
 client.print_submit_response()

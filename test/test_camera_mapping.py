@@ -13,7 +13,7 @@ from adaptive_scheduler.camera_mapping import create_camera_mapping
 def test_find_by_location():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
     cameras = camera_mapping.find_by_location('bpl','doma','1m0a')
-    eq_( len(cameras), 2 )
+    eq_( len(cameras), 3 )
 
 
 def test_find_by_autoguider():
@@ -30,7 +30,7 @@ def test_find_by_autoguider_type():
 
 def test_find_by_camera():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
-    camera = camera_mapping.find_by_camera('kb72')[0]
+    camera = camera_mapping.find_by_camera('fl01')[0]
     eq_( camera['site'], 'bpl' )
     eq_( camera['observatory'], 'doma')
     eq_( camera['telescope'], '1m0a' )
@@ -38,4 +38,4 @@ def test_find_by_camera():
 def test_find_by_camera_type():
     camera_mapping = create_camera_mapping('camera_mappings.dat')
     cameras = camera_mapping.find_by_camera_type('1m0-SciCam-Sinistro')
-    eq_( len(cameras), 3 )
+    eq_( len(cameras), 4 )
