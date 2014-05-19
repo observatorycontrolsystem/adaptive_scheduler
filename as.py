@@ -21,8 +21,8 @@ from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
 from adaptive_scheduler.monitoring.network_status import Network
 from adaptive_scheduler.orchestrator     import collapse_requests
-from adaptive_scheduler.model2           import ModelBuilder, RequestError
-from schedutils.semester_service         import get_semester_block
+from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_requests
+from adaptive_scheduler.request_filters  import set_rs_to_unschedulable, set_urs_to_unschedulable
 from reqdb.client import SchedulerClient, ConnectionError
 
 import argparse
@@ -59,29 +59,7 @@ def kill_handler(signal, frame):
 
 # TODO: Write unit tests for these methods
 
-@timeit
-def get_dirty_flag(scheduler_client):
-    dirty_response = dict(dirty=False)
-    try:
-        dirty_response = scheduler_client.get_dirty_flag()
-    except ConnectionError as e:
-        log.warn("Error retrieving dirty flag from DB: %s", e)
-        log.warn("Skipping this scheduling cycle")
 
-    #TODO: HACK to handle not a real error returned from Request DB
-    if request_db_dirty_flag_is_invalid(dirty_response):
-        dirty_response = dict(dirty=False)
-
-    if dirty_response['dirty'] is False:
-        log.info("Request DB is still clean - nothing has changed")
-
-    else:
-        msg  = "Got dirty flag (DB needs reading) with timestamp"
-        msg += " %s (last updated %s)" % (dirty_response['timestamp'],
-                                          dirty_response['last_updated'])
-        log.info(msg)
-
-    return dirty_response
 
 
 def parse_args(argv):
@@ -125,8 +103,10 @@ def parse_args(argv):
         log.info("Running in simulation mode - no DB changes will be made")
     log.info("Using available telescopes file '%s'", args.telescopes)
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep)
+    
+    sched_params = RequestDBSchedulerParameters(**args)
 
-    return args
+    return sched_params
 
 
 def determine_scheduler_now(args, short_run=False):
@@ -148,33 +128,8 @@ def determine_scheduler_now(args, short_run=False):
 
     return now
 
-
-def request_db_dirty_flag_is_invalid(dirty_response):
-    try:
-        dirty_response['dirty']
-        return False
-    except TypeError as e:
-        log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
-        return True
-
-
-def clear_dirty_flag(scheduler_client, args):
-    # Clear the dirty flag
-    log.info("Clearing dirty flag")
-    try:
-        scheduler_client.clear_dirty_flag()
-        return True
-    except ConnectionError as e:
-        log.critical("Error clearing dirty flag on DB: %s", e)
-        log.critical("Aborting current scheduling loop.")
-        log.info(" Sleeping for %d seconds", args.sleep)
-        time.sleep(args.sleep)
-
-        return False
-
-
 def get_requests(scheduler_client, now):
-    from adaptive_scheduler.orchestrator     import get_requests_from_db
+    from adaptive_scheduler.requestdb     import get_requests_from_db
     # Try and get the requests
     semester_start, semester_end = get_semester_block(dt=now)
     try:
@@ -189,10 +144,10 @@ def get_requests(scheduler_client, now):
         return []
 
 
-def create_new_schedule(scheduler_client, args, visibility_from, current_events):
+def create_new_schedule(scheduler_client, sched_params, current_events):
     from adaptive_scheduler.orchestrator import run_scheduler
     # Use a static command line datetime if provided...
-    now = determine_scheduler_now(args);
+    now = determine_scheduler_now(sched_params);
     estimated_scheduler_end = now + timedelta(minutes=6)
     short_estimated_scheduler_end = now + timedelta(minutes=2)
 
@@ -200,12 +155,12 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
 
     # Collapse each request tree
     json_user_requests = collapse_requests(json_user_requests)
-    mb = ModelBuilder(args.telescopes, args.cameras)
+    model_builder = sched_params.get_model_builder()
 
     all_user_requests = []
     for json_user_request in json_user_requests:
         try:
-            user_request = mb.build_user_request(json_user_request)
+            user_request = model_builder.build_user_request(json_user_request)
             all_user_requests.append(user_request)
         except RequestError as e:
             log.warn(e)
@@ -213,7 +168,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     normal_user_requests = []
     too_user_requests    = []
     for ur in all_user_requests:
-        if not args.notoo and ur.has_target_of_opportunity():
+        if not sched_params.no_too and ur.has_target_of_opportunity():
             too_user_requests.append(ur)
         else:
             normal_user_requests.append(ur)
@@ -230,19 +185,32 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     if too_user_requests:
         log.info("Start ToO Scheduling")
         user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
-
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client,
-                                        now, short_estimated_scheduler_end,
-                                        semester_start, semester_end,
-                                        args.telescopes, args.cameras,
-                                        current_events, visibility_from,
-                                        dry_run=args.dry_run,
-                                        no_weather=args.noweather,
-                                        no_singles=args.nosingles,
-                                        no_compounds=args.nocompounds,
-                                        slicesize=args.slicesize,
-                                        timelimit=args.timelimit,
-                                        horizon=args.horizon)
+        n_urs, n_rs = n_requests(too_user_requests)
+        
+        try:
+            scheduler_run = PondSchedulerRun(sched_params, now, short_estimated_scheduler_end, semester_end)
+            
+            
+            visibility_from, new_schedule, tels_to_cancel, unschedulable_ur_numbers, unschedulable_r_numbers = run_scheduler(user_requests_dict,
+                                            now, short_estimated_scheduler_end,
+                                            semester_start, semester_end,
+                                            current_events, visibility_from,
+                                            scheduler_run)
+            
+            if not sched_params.dry_run:
+                # Set the states of the Requests and User Requests
+                set_rs_to_unschedulable(scheduler_client, unschedulable_r_numbers)
+                set_urs_to_unschedulable(scheduler_client, unschedulable_ur_numbers)
+            
+            # Delete old schedule
+            n_deleted = scheduler_run.cancel(short_estimated_scheduler_end, semester_end, sched_params.dry_run, tels_to_cancel)
+            
+            # Write new schedule
+            n_submitted = scheduler_run.save(new_schedule, semester_start, sched_params.camreras_file, sched_params.dry_run)
+            write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, sched_params.dry_run)
+        except ScheduleException, pfe:
+            log.error(pfe, "aborting run")
+            
         log.info("End ToO Scheduling")
 
     # Run the scheduling loop, if there are any User Requests
@@ -250,7 +218,7 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
         log.info("Start Normal Scheduling")
         user_requests_dict['type'] = Request.NORMAL_OBSERVATION_TYPE
 
-        visibility_from = run_scheduler(user_requests_dict, scheduler_client,
+        visibility_from, schedule = run_scheduler(user_requests_dict, scheduler_client,
                                         now, estimated_scheduler_end,
                                         semester_start, semester_end,
                                         args.telescopes, args.cameras,
@@ -272,47 +240,35 @@ def create_new_schedule(scheduler_client, args, visibility_from, current_events)
     return visibility_from
 
 
-def was_dirty_and_cleared(scheduler_client, args):
-    dirty_response = get_dirty_flag(scheduler_client)
+def write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, dry_run=False):
+    log.info("------------------")
+    log.info("Scheduling Summary")
+    if dry_run:
+        log.info("(DRY-RUN: No delete or submit took place)")
+    log.info("------------------")
+    log.info("Received %s (%s) from Request DB", pl(n_urs, 'User Request'),
+                                                       pl(n_rs, 'Request'))
+    log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
+    log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
+    log.info("Scheduling complete.")
 
-    if dirty_response['dirty'] is True:
-        if clear_dirty_flag(scheduler_client, args):
-            return True
-
-    return False
 
 
-def scheduler_rerun_required(scheduler_client, args, network):
-    db_is_dirty         = False
-    network_has_changed = False
 
-    if was_dirty_and_cleared(scheduler_client, args):
-        log.info("Dirty flag was found set and cleared.")
-        db_is_dirty = True
 
-    if network.has_changed():
-        log.info("Telescope network events were found.")
-        network_has_changed = True
 
-    return db_is_dirty or network_has_changed
 
 
 
 
 def main(argv):
-    global run_flag
-    args = parse_args(argv)
+    sched_params = parse_args(argv)
 
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
 
-    if args.dry_run:
+    if sched_params.dry_run:
         import lcogtpond
         lcogtpond._service_host = 'localhost'
-
-    request_db_url   = args.requestdb
-    scheduler_client = SchedulerClient(request_db_url)
-
-    network = Network()
 
     event_bus = get_eventbus()
     user_feedback_logger = UserFeedbackLogger()
@@ -322,26 +278,9 @@ def main(argv):
                            event_type=TimingLogger._StartEvent)
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
-
-    # Force a reschedule when first started
-    scheduler_client.set_dirty_flag()
-
-    visibility_from = {}
-    while run_flag:
-        current_events = []
-        if not args.noweather:
-            current_events = network.update()
-
-        if scheduler_rerun_required(scheduler_client, args, network):
-            visibility_from = create_new_schedule(scheduler_client, args,
-                                                  visibility_from, current_events)
-
-        if args.run_once:
-            run_flag = False
-
-        log.info("Sleeping for %d seconds", args.sleep)
-        time.sleep(args.sleep)
-
+    
+    scheduler = RequestDBScheduler(sched_params, Network())
+    scheduler.run()
 
 
 if __name__ == '__main__':

@@ -603,50 +603,11 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
 
 
 @timeit
-def blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before):
-    running_blocks = get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before)
-    running_at_tel = get_network_running_intervals(running_blocks)
-
-    all_running_blocks = []
-    for blocks in running_blocks.values():
-        all_running_blocks += blocks
-
-    log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
-    log.info("%d %s in the running blacklist", *pl(len(all_running_blocks), 'UR'))
-    for block in all_running_blocks:
-        msg = "UR %s has a running block (id=%d, finishing at %s)" % (
-                                                     block.tracking_num_set()[0],
-                                                     block.id,
-                                                     block.end
-                                                   )
-        log.debug(msg)
-        tag = 'RunningBlock'
-        msg = 'This Request has a running block (id=%d, finishing at %s)' % (
-                                                                             block.id,
-                                                                             block.end
-                                                                            )
-        for ur in ur_list:
-            if ur.tracking_number == block.tracking_num_set()[0]:
-                ur.emit_user_feedback(msg, tag)
-                break
-
-
-    all_tns = [ur.tracking_number for ur in ur_list]
-    running_tns = [block.tracking_num_set()[0] for block in all_running_blocks]
-    schedulable_tns = set(all_tns) - set(running_tns)
-    schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
-
-    log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
-
-    return schedulable_urs, running_at_tel
-
-@timeit
-def get_blocks_by_request(urs, tels, ends_after, starts_before):
+def get_blocks_by_tracking_number(tracking_numbers, tels, ends_after, starts_before):
     '''
-        return a map of telescopes to intervals of given urs
+        return a map of telescopes to intervals of given tracking number
     '''
     telescope_interval = {}
-    tracking_numbers = [ur.tracking_number for ur in urs]
 
     for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')

@@ -18,7 +18,7 @@ January 2013
 import log
 import threading
 
-from adaptive_scheduler.orchestrator import get_requests_from_db as get_requests
+from adaptive_scheduler.requestdb import get_requests_from_db as get_requests
 
 # Create module log 
 logger = log.create_logger("monitor")
