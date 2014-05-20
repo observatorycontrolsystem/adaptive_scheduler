@@ -17,28 +17,21 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.printing         import pluralise as pl
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
+from adaptive_scheduler.interfaces       import NetworkInterface, PondScheduleInterface, RequestDBInterface
+from adaptive_scheduler.scheduler        import Scheduler, SchedulerRunner
 from adaptive_scheduler.monitoring.network_status import Network
-from adaptive_scheduler.orchestrator     import collapse_requests
-from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_requests
-from adaptive_scheduler.request_filters  import set_rs_to_unschedulable, set_urs_to_unschedulable
-from reqdb.client import SchedulerClient, ConnectionError
+from adaptive_scheduler.model2           import ModelBuilder
 
 import argparse
-from datetime import datetime, timedelta
 import logging
-import logging.config
-import signal
-import time
 import sys
-from reqdb.requests import Request
 
 VERSION = '1.0.1'
 
 # Set up and configure an application scope logger
-#logging.config.fileConfig('logging.conf')
-import logger_config
+# import logging.config
+# logging.config.fileConfig('logging.conf')
+# import logger_config
 log = logging.getLogger('adaptive_scheduler')
 
 # Set up signal handling for graceful shutdown
@@ -54,12 +47,43 @@ def kill_handler(signal, frame):
     print 'Received SIGTERM (kill) - terminating on loop completion.'
     run_flag = False
 
+# import signal
 #signal.signal(signal.SIGINT, ctrl_c_handler)
 #signal.signal(signal.SIGTERM, kill_handler)
 
 # TODO: Write unit tests for these methods
 
 
+
+class SchedulerParameters(object):
+    
+    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None):
+        self.dry_run = dry_run
+        self.telescopes_file = telescopes_file
+        self.cameras_file = cameras_file
+        self.no_weather = no_weather
+        self.no_singles = no_singles
+        self.no_compounds = no_compounds
+        self.no_too = no_too
+        self.timelimit_seconds = timelimit_seconds
+        self.slicesize_seconds = slicesize_seconds
+        self.horizon_days = horizon_days
+        self.run_once = run_once
+        self.sleep_seconds = sleep_seconds
+        self.simulate_now = simulate_now
+        
+        
+    def get_model_builder(self):
+        mb = ModelBuilder(self.telescopes_file, self.cameras_file)
+        
+        return mb
+        
+        
+class RequestDBSchedulerParameters(SchedulerParameters):
+    
+    def __init__(self, requestdb_url, **kwargs):
+        SchedulerParameters.__init__(self, **kwargs)
+        self.requestdb_url = requestdb_url
 
 
 def parse_args(argv):
@@ -109,155 +133,6 @@ def parse_args(argv):
     return sched_params
 
 
-def determine_scheduler_now(args, short_run=False):
-    '''Use a static command line datetime if provided, or default to utcnow, with a
-       little extra to cover the scheduler's run time.'''
-    if args.now:
-        try:
-            now = iso_string_to_datetime(args.now)
-        except ValueError as e:
-            log.critical(e)
-            log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
-            log.critical("Aborting scheduler run.")
-            sys.exit()
-    # ...otherwise offset 'now' to account for the duration of the scheduling run
-    else:
-        now = datetime.utcnow()
-
-    log.info("Using a 'now' of %s", now)
-
-    return now
-
-def get_requests(scheduler_client, now):
-    from adaptive_scheduler.requestdb     import get_requests_from_db
-    # Try and get the requests
-    semester_start, semester_end = get_semester_block(dt=now)
-    try:
-        requests = get_requests_from_db(scheduler_client.url, 'dummy arg',
-                                        semester_start, semester_end)
-        log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
-        return requests
-
-    except ConnectionError as e:
-        log.warn("Error retrieving Requests from DB: %s", e)
-        log.warn("Skipping this scheduling cycle")
-        return []
-
-
-def create_new_schedule(scheduler_client, sched_params, current_events):
-    from adaptive_scheduler.orchestrator import run_scheduler
-    # Use a static command line datetime if provided...
-    now = determine_scheduler_now(sched_params);
-    estimated_scheduler_end = now + timedelta(minutes=6)
-    short_estimated_scheduler_end = now + timedelta(minutes=2)
-
-    json_user_requests = get_requests(scheduler_client, short_estimated_scheduler_end)
-
-    # Collapse each request tree
-    json_user_requests = collapse_requests(json_user_requests)
-    model_builder = sched_params.get_model_builder()
-
-    all_user_requests = []
-    for json_user_request in json_user_requests:
-        try:
-            user_request = model_builder.build_user_request(json_user_request)
-            all_user_requests.append(user_request)
-        except RequestError as e:
-            log.warn(e)
-
-    normal_user_requests = []
-    too_user_requests    = []
-    for ur in all_user_requests:
-        if not sched_params.no_too and ur.has_target_of_opportunity():
-            too_user_requests.append(ur)
-        else:
-            normal_user_requests.append(ur)
-
-    log.info("Received %d ToO User Requests" % len(too_user_requests))
-    log.info("Received %d Normal User Requests" % len(normal_user_requests))
-
-    user_requests_dict = {
-                          Request.NORMAL_OBSERVATION_TYPE : normal_user_requests,
-                          Request.TARGET_OF_OPPORTUNITY : too_user_requests
-                          }
-    
-    semester_start, semester_end = get_semester_block(dt=short_estimated_scheduler_end)
-    if too_user_requests:
-        log.info("Start ToO Scheduling")
-        user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
-        n_urs, n_rs = n_requests(too_user_requests)
-        
-        try:
-            scheduler_run = PondSchedulerRun(sched_params, now, short_estimated_scheduler_end, semester_end)
-            
-            
-            visibility_from, new_schedule, tels_to_cancel, unschedulable_ur_numbers, unschedulable_r_numbers = run_scheduler(user_requests_dict,
-                                            now, short_estimated_scheduler_end,
-                                            semester_start, semester_end,
-                                            current_events, visibility_from,
-                                            scheduler_run)
-            
-            if not sched_params.dry_run:
-                # Set the states of the Requests and User Requests
-                set_rs_to_unschedulable(scheduler_client, unschedulable_r_numbers)
-                set_urs_to_unschedulable(scheduler_client, unschedulable_ur_numbers)
-            
-            # Delete old schedule
-            n_deleted = scheduler_run.cancel(short_estimated_scheduler_end, semester_end, sched_params.dry_run, tels_to_cancel)
-            
-            # Write new schedule
-            n_submitted = scheduler_run.save(new_schedule, semester_start, sched_params.camreras_file, sched_params.dry_run)
-            write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, sched_params.dry_run)
-        except ScheduleException, pfe:
-            log.error(pfe, "aborting run")
-            
-        log.info("End ToO Scheduling")
-
-    # Run the scheduling loop, if there are any User Requests
-    if normal_user_requests:
-        log.info("Start Normal Scheduling")
-        user_requests_dict['type'] = Request.NORMAL_OBSERVATION_TYPE
-
-        visibility_from, schedule = run_scheduler(user_requests_dict, scheduler_client,
-                                        now, estimated_scheduler_end,
-                                        semester_start, semester_end,
-                                        args.telescopes, args.cameras,
-                                        current_events, visibility_from,
-                                        dry_run=args.dry_run,
-                                        no_weather=args.noweather,
-                                        no_singles=args.nosingles,
-                                        no_compounds=args.nocompounds,
-                                        slicesize=args.slicesize,
-                                        timelimit=args.timelimit,
-                                        horizon=args.horizon)
-        log.info("End Normal Scheduling")
-
-    else:
-        log.warn("Received no User Requests! Skipping this scheduling cycle")
-    sys.stdout.flush()
-
-
-    return visibility_from
-
-
-def write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, dry_run=False):
-    log.info("------------------")
-    log.info("Scheduling Summary")
-    if dry_run:
-        log.info("(DRY-RUN: No delete or submit took place)")
-    log.info("------------------")
-    log.info("Received %s (%s) from Request DB", pl(n_urs, 'User Request'),
-                                                       pl(n_rs, 'Request'))
-    log.info("In total, deleted %d previously scheduled %s", *pl(n_deleted, 'block'))
-    log.info("Submitted %d new %s to the POND", *pl(n_submitted, 'block'))
-    log.info("Scheduling complete.")
-
-
-
-
-
-
-
 
 
 
@@ -279,8 +154,16 @@ def main(argv):
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
     
-    scheduler = RequestDBScheduler(sched_params, Network())
-    scheduler.run()
+    schedule_interface = PondScheduleInterface()
+    requestdb_client = SchedulerClient()
+    user_request_interface = RequestDBInterface(requestdb_client)
+    network_state_interface = Network()
+    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
+    
+    scheduler = Scheduler(sched_params, event_bus)
+    network_model = sched_params.model_builder.tel_network.telescopes
+    scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)
+    scheduler_runner.run()
 
 
 if __name__ == '__main__':
