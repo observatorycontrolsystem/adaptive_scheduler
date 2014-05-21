@@ -1,6 +1,6 @@
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.model2           import RequestError
-from pond                                import get_network_running_blocks, get_network_running_intervals, cancel_schedule, PondFacadeException, send_schedule_to_pond, get_blocks_by_tracking_number
+from pond                                import get_network_running_blocks, get_network_running_intervals, cancel_schedule, PondFacadeException, send_schedule_to_pond, get_intervals_by_telescope_for_tracking_numbers
 from adaptive_scheduler.utils            import timeit
 from reqdb.client                        import ConnectionError, RequestDBError
 from adaptive_scheduler.request_parser   import TreeCollapser
@@ -229,7 +229,7 @@ class PondScheduleInterface(object):
         #Fetch the data
         self.running_blocks_by_telescope = self._fetch_running_blocks()
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks)
-        self.too_intervals_by_telescope = self._fetch_too_blocks()
+        self.too_intervals_by_telescope = self._fetch_too_intervals()
 
     
     def _fetch_running_blocks(self):
@@ -254,8 +254,8 @@ class PondScheduleInterface(object):
         
         return running_blocks 
     
-    def _fetch_too_blocks(self):
-        too_blocks = get_blocks_by_tracking_number(self.too_tracking_numbers, self.telescopes,
+    def _fetch_too_intervals(self):
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(self.too_tracking_numbers, self.telescopes,
                                            self.blocks_ends_after,
                                            self.blocks_start_before)
         

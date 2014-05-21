@@ -602,19 +602,30 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
     return n_submitted_total
 
 
+def get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
+    telescope_blocks = {}     
+    for full_tel_name in tels:
+        tel_name, obs_name, site_name = full_tel_name.split('.')
+        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
+        
+        filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+        telescope_blocks[full_tel_name] = filtered_blocks
+        
+    return telescope_blocks
+
+
 @timeit
-def get_blocks_by_tracking_number(tracking_numbers, tels, ends_after, starts_before):
+def get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
     '''
         return a map of telescopes to intervals of given tracking number
     '''
     telescope_interval = {}
-
+    blocks_by_telescope_for_tracking_numbers = get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
+    
     for full_tel_name in tels:
-        tel_name, obs_name, site_name = full_tel_name.split('.')
-        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
+        blocks = blocks_by_telescope_for_tracking_numbers.get(full_tel_name, [])
 
-        filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
-        intervals = get_intervals(filtered_blocks)
+        intervals = get_intervals(blocks)
         if not intervals.is_empty():
             telescope_interval[full_tel_name] = intervals
 
