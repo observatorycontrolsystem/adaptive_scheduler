@@ -9,6 +9,7 @@ from copy       import deepcopy
 
 from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
                                                  Windows, Telescope )
+import helpers
 
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
@@ -92,46 +93,8 @@ class TestWindowFilters(object):
         adaptive_scheduler.request_filters.now = self.current_time
 
 
-    def create_user_request(self, window_dicts, operator='and'):
-        t1 = Telescope(
-                        name = self.resource_name
-                      )
-
-        req_list = []
-        window_list = []
-        for req_windows in window_dicts:
-            windows = Windows()
-            for window_dict in req_windows:
-                w = Window(
-                            window_dict = window_dict,
-                            resource    = t1
-                          )
-                windows.append(w)
-                window_list.append(w)
-
-            r  = Request(
-                          target         = None,
-                          molecules      = None,
-                          windows        = windows,
-                          constraints    = None,
-                          request_number = None
-                        )
-            req_list.append(r)
-
-        if len(req_list) == 1:
-            operator = 'single'
-
-        ur1 = UserRequest(
-                           operator        = operator,
-                           requests        = req_list,
-                           proposal        = None,
-                           expires         = None,
-                           tracking_number = '0000000005',
-                           group_id        = None
-                         )
-
-        return ur1, window_list
-
+    def create_user_request(self, windows, operator='and'):
+        return helpers.create_user_request(windows, operator)
 
     def test_filters_out_only_past_windows(self):
 

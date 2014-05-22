@@ -244,6 +244,92 @@ class Scheduler(object):
         for ur in user_reqs:
             log_full_ur(ur, estimated_scheduler_end)
             log_windows(ur, log_msg="Initial windows:")
+            
+            
+    def apply_unschedulable_filters(self, user_reqs, network_snapshot, estimated_scheduler_end):
+        ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
+        in the unschedulable list will never be possible
+        '''
+        running_ur_tracking_numbers = network_snapshot.running_tracking_numbers()
+        tag = 'RunningBlock'
+        for ur in user_reqs:
+            if ur.tracking_number in running_ur_tracking_numbers:
+                msg = 'User Request is running' % network_snapshot.running_user_request(ur.tracking_number)
+                ur.emit_user_feedback(msg, tag)
+                break
+    
+        # Remove running user requests from consideration, and get the availability edge
+        user_reqs = self.blacklist_running_user_requests(user_reqs, running_ur_tracking_numbers)
+    
+        # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
+        self.log.info("Filtering for unschedulability")
+        
+        set_now(estimated_scheduler_end)
+        schedulable_urs, unschedulable_urs = filter_urs(user_reqs)
+        
+        return schedulable_urs, unschedulable_urs
+    
+    
+    def apply_window_filters(self, user_reqs, network_model, estimated_scheduler_end):
+        ''' Returns the set of URs with windows adjusted to include only URs with windows
+        suitable for scheduling
+        '''
+        # Do another check on duration and operator soundness, after dark/rise checking
+        self.log.info("Filtering on dark/rise_set")
+    
+        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        for tel_name, tel in network_model.iteritems():
+            if tel.events:
+                self.log.info("Bypassing visibility calcs for %s" % tel_name)
+    
+        filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache, network_model,
+                                        estimated_scheduler_end, semester_end, self.scheduling_horizon(estimated_scheduler_end))
+        
+        return filtered_window_user_reqs
+    
+    
+    def prepare_for_kernel(self, window_adjusted_urs, network_model, estimated_scheduler_end):
+        ''' Convert UR model to formalization expected by the scheduling kernel
+        '''
+        # Convert CompoundRequests -> CompoundReservations
+        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        many_urs, other_urs = differentiate_by_type('many', window_adjusted_urs)
+        many_compound_reservations = make_many_type_compound_reservations(many_urs, network_model, self.visibility_cache,
+                                                                semester_start)
+        other_compound_reservations = make_compound_reservations(other_urs, network_model, self.visibility_cache,
+                                                       semester_start)
+        all_compound_reservations = many_compound_reservations + other_compound_reservations
+        
+        return all_compound_reservations
+    
+    
+    def prepare_available_windows_for_kernel(self, network_model, network_snapshot, estimated_scheduler_end):
+        ''' Construct the set of resource windows available for use in scheduling
+        '''
+        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        # Translate when telescopes are available into kernel speak
+        resource_windows = construct_resource_windows(self.visibility_cache, semester_start)
+    
+        # Intersect and mask out time where Blocks are currently running
+        global_windows = construct_global_availability(network_model, semester_start,
+                                                       network_snapshot, resource_windows)
+        
+        return global_windows
+    
+    
+    def on_new_schedule(self, new_schedule, compound_reservations, estimated_scheduler_end):
+        ''' Handler called on completion of a scheduler run
+        '''
+        scheduled_compound_reservations = []
+        [scheduled_compound_reservations.extend(a) for a in new_schedule.values()]
+        self.log.info("Scheduling completed. Final schedule has %d Reservations." % len(scheduled_compound_reservations))
+    
+        report_scheduling_outcome(compound_reservations, scheduled_compound_reservations)
+    
+        # Summarise the schedule in normalised epoch (kernel) units of time
+        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        print_schedule(new_schedule, semester_start, semester_end)
+    
     
     # TODO: refactor into smaller chunks
     @timeit
@@ -272,50 +358,29 @@ class Scheduler(object):
         self.log.info("Constructing telescope visibilities")
         if not self.visibility_cache:
             self.visibility_cache = construct_visibilities(network_model, semester_start, semester_end)
-    
-        running_ur_tracking_numbers = network_snapshot.running_tracking_numbers()
-        tag = 'RunningBlock'
-        for ur in user_reqs:
-            if ur.tracking_number in running_ur_tracking_numbers:
-                msg = 'User Request is running' % network_snapshot.running_user_request(ur.tracking_number)
-                ur.emit_user_feedback(msg, tag)
-                break
-    
-        # Remove running user requests from consideration, and get the availability edge
-        user_reqs = self.blacklist_running_user_requests(user_reqs, running_ur_tracking_numbers)
-    
-        # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
-        self.log.info("Filtering for unschedulability")
-        
-        set_now(estimated_scheduler_end)
-        schedulable_urs, unschedulable_urs = filter_urs(user_reqs)
+
+        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, network_snapshot, estimated_scheduler_end)
+
+
         self.log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
         unschedulable_ur_numbers = find_unschedulable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers = drop_empty_requests(schedulable_urs)    
-    
+        unschedulable_r_numbers  = drop_empty_requests(schedulable_urs)
+        
+
         self.log.info("Completed unschedulable filters")
         summarise_urs(schedulable_urs, log_msg="Passed unschedulable filters:")
     
         for ur in schedulable_urs:
             log_windows(ur, log_msg="Remaining windows:")
-    
-        # Do another check on duration and operator soundness, after dark/rise checking
-        self.log.info("Filtering on dark/rise_set")
-    
-        for tel_name, tel in network_model.iteritems():
-            if tel.events:
-                self.log.info("Bypassing visibility calcs for %s" % tel_name)
-    
-        visible_urs = filter_for_kernel(schedulable_urs, self.visibility_cache, network_model,
-                                        estimated_scheduler_end, semester_end, self.scheduling_horizon(estimated_scheduler_end))
-    
-    
+        
+        window_adjusted_urs = self.apply_window_filters(schedulable_urs, network_model, estimated_scheduler_end)
+        
         self.log.info("Completed dark/rise_set filters")
-        summarise_urs(visible_urs, log_msg="Passed dark/rise filters:")
-        for ur in visible_urs:
+        summarise_urs(window_adjusted_urs, log_msg="Passed dark/rise filters:")
+        for ur in window_adjusted_urs:
             log_windows(ur, log_msg="Remaining windows:")
     
-        self.log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(visible_urs))
+        self.log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(window_adjusted_urs))
     
         # By default, cancel on all telescopes
         tels_to_cancel = dict(network_model)
@@ -323,7 +388,7 @@ class Scheduler(object):
         # TODO: Change this to preemt or not preemt but not care about ToO
         # Pre-empt running blocks
         if run_type == Request.TARGET_OF_OPPORTUNITY:
-            tels_to_cancel = self.find_tels_to_preempt(visible_urs, too_user_requests, normal_user_requests, network_model, network_snapshot);  
+            tels_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, network_model, network_snapshot);  
         
         # TODO: This logic is questionable.  exlculde_intervals in ToO case don't look correct
         # Get TOO requests scheduled in pond, combine with excluded_intervals
@@ -333,58 +398,41 @@ class Scheduler(object):
 #         else:
 #             excluded_intervals = network_interface.current_user_request_intervals_by_telescope()
             
-    
-        # Convert CompoundRequests -> CompoundReservations
-        many_urs, other_urs = differentiate_by_type('many', visible_urs)
-        to_schedule_many = make_many_type_compound_reservations(many_urs, network_model, self.visibility_cache,
-                                                                semester_start)
-        to_schedule_other = make_compound_reservations(other_urs, network_model, self.visibility_cache,
-                                                       semester_start)
-        to_schedule = to_schedule_many + to_schedule_other
-    
-        # Translate when telescopes are available into kernel speak
-        resource_windows = construct_resource_windows(self.visibility_cache, semester_start)
-    
-        # Intersect and mask out time where Blocks are currently running
-        global_windows = construct_global_availability(network_model, semester_start,
-                                                       network_snapshot, resource_windows)
-    
-        print_compound_reservations(to_schedule)
-    
-        if not to_schedule:
-            self.log.info("Nothing to schedule! Skipping kernel call...")
-            return self.visibility_cache
-    
-        # Instantiate and run the scheduler
-        time_slicing_dict = {}
-        for t in network_model:
-            time_slicing_dict[t] = [0, self.sched_params.slicesize_seconds]
-    
-        contractual_obligations = []
-    
-        self.log.info("Instantiating and running kernel")
-    
-        kernel   = self.kernel_class(to_schedule, global_windows, contractual_obligations,
-                                 time_slicing_dict)
-    
-        schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
-    
-        scheduled_reservations = []
-        [scheduled_reservations.extend(a) for a in schedule.values()]
-        self.log.info("Scheduling completed. Final schedule has %d Reservations." % len(scheduled_reservations))
-    
-        report_scheduling_outcome(to_schedule, scheduled_reservations)
-    
-    
-        # Summarise the schedule in normalised epoch (kernel) units of time
-        print_schedule(schedule, semester_start, semester_end)
-    
-        scheduler_result = SchedulerResult()
-        scheduler_result.schedule = schedule
-        scheduler_result.telescope_schedules_to_cancel = tels_to_cancel
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
-        scheduler_result.set_unschedulable_request_numbers = unschedulable_r_numbers
         
+        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, network_model, estimated_scheduler_end)        
+        available_windows = self.prepare_available_windows_for_kernel(network_model, network_snapshot, estimated_scheduler_end)
+    
+        print_compound_reservations(compound_reservations)
+    
+        # Prepare scheduler result
+        scheduler_result = SchedulerResult()
+        scheduler_result.schedule = None
+        scheduler_result.resource_schedules_to_cancel = tels_to_cancel
+        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
+        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
+        
+        if compound_reservations:
+            # Instantiate and run the scheduler
+            time_slicing_dict = {}
+            for t in network_model:
+                time_slicing_dict[t] = [0, self.sched_params.slicesize_seconds]
+        
+            contractual_obligations = []
+        
+            self.log.info("Instantiating and running kernel")
+            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, time_slicing_dict)
+            new_schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
+            
+            # Put new schedule in result object
+            scheduler_result.schedule = new_schedule
+            
+            # Do post scheduling stuff
+            self.on_new_schedule(new_schedule, compound_reservations, estimated_scheduler_end)
+        else:
+            self.log.info("Nothing to schedule! Skipping kernel call...")
+            scheduler_result.resource_schedules_to_cancel = {}
+       
+       
         return scheduler_result
 
 
@@ -420,7 +468,7 @@ class SchedulerResult(object):
     
     def __init__(self):
         self.schedule = None
-        self.telescope_schedules_to_cancel = None
+        self.resource_schedules_to_cancel = None
         self.unschedulable_user_request_numbers = None
         self.unschedulable_request_numbers = None
         
