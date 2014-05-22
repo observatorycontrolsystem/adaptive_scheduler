@@ -32,17 +32,18 @@ class RunningUserRequest(object):
 
 class RunningRequest(object):
 
-    def __init__(self, request_number):
+    def __init__(self, telescope, request_number):
+        self.telescope = telescope
         self.request_number = request_number
         
     def __str__(self):
-        return 'Request Number: %s' % (self.request_number)
+        return 'Request Number: %s at telescope %s' % (self.request_number, self.telescope)
     
 
 class PondRunningRequest(RunningRequest):
     
-    def __init__(self, request_number, block_id, start, end):
-        RunningRequest.__init__(self, request_number)
+    def __init__(self, telescope, request_number, block_id, start, end):
+        RunningRequest.__init__(self, telescope, request_number)
         self.block_id = block_id
         self.start = start
         self.end = end

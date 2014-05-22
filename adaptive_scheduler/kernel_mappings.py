@@ -434,14 +434,14 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     return visibility_from
 
 
-def construct_global_availability(semester_start, exclude_intervals, resource_windows):
+def construct_global_availability(network_model, semester_start, network_snapshot, resource_windows):
     '''Use the exclude_intervals to make unavailable portions of each resource where an
        observation is running/too request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
     '''
 
-    for tel_name in exclude_intervals:
-        excluded_interval = exclude_intervals[tel_name]
+    for tel_name in network_model.keys():
+        excluded_interval = network_snapshot.blocked_intervals(tel_name)
         norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
 
         resource_windows[tel_name] = resource_windows[tel_name].subtract(norm_excluded_interval)

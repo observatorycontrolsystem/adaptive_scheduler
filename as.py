@@ -18,9 +18,9 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import Scheduler, SchedulerRunner
-from adaptive_scheduler.monitoring.network_status import Network
-from adaptive_scheduler.model2           import ModelBuilder
+from adaptive_scheduler.scheduler        import Scheduler, SchedulerRunner, SchedulerParameters
+from adaptive_scheduler.monitoring.network_status   import Network
+from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 
 import argparse
 import logging
@@ -52,32 +52,7 @@ def kill_handler(signal, frame):
 #signal.signal(signal.SIGTERM, kill_handler)
 
 # TODO: Write unit tests for these methods
-
-
-
-class SchedulerParameters(object):
     
-    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None):
-        self.dry_run = dry_run
-        self.telescopes_file = telescopes_file
-        self.cameras_file = cameras_file
-        self.no_weather = no_weather
-        self.no_singles = no_singles
-        self.no_compounds = no_compounds
-        self.no_too = no_too
-        self.timelimit_seconds = timelimit_seconds
-        self.slicesize_seconds = slicesize_seconds
-        self.horizon_days = horizon_days
-        self.run_once = run_once
-        self.sleep_seconds = sleep_seconds
-        self.simulate_now = simulate_now
-        
-        
-    def get_model_builder(self):
-        mb = ModelBuilder(self.telescopes_file, self.cameras_file)
-        
-        return mb
-        
         
 class RequestDBSchedulerParameters(SchedulerParameters):
     
@@ -160,8 +135,9 @@ def main(argv):
     network_state_interface = Network()
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
     
-    scheduler = Scheduler(sched_params, event_bus)
-    network_model = sched_params.model_builder.tel_network.telescopes
+    kernel_class = FullScheduler
+    scheduler = Scheduler(kernel_class, sched_params, event_bus)
+    network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)
     scheduler_runner.run()
 
