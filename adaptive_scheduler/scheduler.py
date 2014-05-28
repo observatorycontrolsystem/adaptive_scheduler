@@ -329,6 +329,13 @@ class Scheduler(object):
         # Summarise the schedule in normalised epoch (kernel) units of time
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         print_schedule(new_schedule, semester_start, semester_end)
+        
+    
+    def unscheduleable_ur_numbers(self, unschedulable_urs):
+        return find_unschedulable_ur_numbers(unschedulable_urs)
+    
+    def filter_unscheduleable_child_requests(self, schedulable_urs):
+        return drop_empty_requests(schedulable_urs)
     
     
     # TODO: refactor into smaller chunks
@@ -363,8 +370,8 @@ class Scheduler(object):
 
 
         self.log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
-        unschedulable_ur_numbers = find_unschedulable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers  = drop_empty_requests(schedulable_urs)
+        unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
+        unschedulable_r_numbers  = self.filter_unscheduleable_child_requests(schedulable_urs)
         
 
         self.log.info("Completed unschedulable filters")
