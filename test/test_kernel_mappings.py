@@ -23,6 +23,7 @@ from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 
+from mock import Mock
 from datetime import datetime
 
 
@@ -454,7 +455,7 @@ class TestKernelMappings(object):
 
 
     def test_construct_global_availability(self):
-        tel_name = '1m0a.doma.tst'
+        tel_name = '1m0a.doma.bpl'
         sem_start = datetime(2012, 10, 1)
 
         # Resource is available from 3-7
@@ -477,13 +478,13 @@ class TestKernelMappings(object):
         dt2 = datetime(2013, 3, 22, 4)
         dt3 = datetime(2013, 3, 22, 5)
         now = dt2
-        running_at_tel = {
-                           tel_name : Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')]),
-                         }
+        running_at_tel = Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')])
+        network_snapshot_mock = Mock()
+        network_snapshot_mock.blocked_intervals = Mock(return_value=running_at_tel)
 
         # Expected available intervals after masking are
         # 3-4, 5-7
-        received = construct_global_availability(sem_start, running_at_tel,
+        received = construct_global_availability(self.tels, sem_start, network_snapshot_mock,
                                                  resource_windows)
         received_int = received[tel_name]
         assert_equal(len(received_int.timepoints), 4)

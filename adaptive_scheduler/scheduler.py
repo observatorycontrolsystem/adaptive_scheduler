@@ -89,7 +89,7 @@ class Scheduler(object):
         # Remove tels with running too from tels
         all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]           
         for tel in tels.keys():
-            if network_snapshot.user_request_for_telescope(tel) in all_too_tracking_numbers:
+            if network_snapshot.user_request_for_telescope(tel) and network_snapshot.user_request_for_telescope(tel).tracking_number in all_too_tracking_numbers:
                 del tels_copy[tel]
     
         value_function_dict = self.construct_value_function_dict(visible_too_urs, normal_urs, tels, network_snapshot)
@@ -98,7 +98,7 @@ class Scheduler(object):
         optimal_combination = self.compute_optimal_combination(value_function_dict, visible_too_tracking_numbers, tels)
     
         # get telescopes where the cost of canceling is lowest and there is a running block
-        tels_to_cancel = [ combination[0] for combination in optimal_combination if network_snapshot.user_request_for_telescope(combination[0])]
+        tels_to_cancel = [ combination[0] for combination in optimal_combination ] # if network_snapshot.user_request_for_telescope(combination[0])]
     
         return tels_to_cancel
     
@@ -129,7 +129,7 @@ class Scheduler(object):
         for ur in too_urs: 
             tracking_number = ur.tracking_number
     
-            if ur.n_requests > 1:
+            if ur.n_requests() > 1:
                 msg = "TOO UR %s has more than one child R, which is not supported." % tracking_number
                 msg += " Submit as separate requests."
                 self.log.info(msg)
@@ -145,8 +145,16 @@ class Scheduler(object):
             # Compute the priority of the the telescopes without ToOs
             if running_at_tel:
                 running_request_priority = 0;
-                running_tracking_number = running_at_tel
-                running_request_priority += normal_tracking_numbers_dict[running_tracking_number].get_priority()
+                running_tracking_number = running_at_tel.tracking_number
+                normal_ur = normal_tracking_numbers_dict.get(running_tracking_number, None)
+                if normal_ur:
+                    running_request_priority += normal_ur.get_priority()
+                else:
+                    # The running request wasn't included in the list of schedulable urs so we don't know it's priority
+                    # This could happen if the running request has been canceled.  In this case treat it like nothing is running
+                    # Not sure if there are other ways this can happen.  Beware....
+                    # TODO: add function unit test for this case
+                    running_request_priority = 1
             else:
                 # use a priority of 1 for telescopes without a running block
                 running_request_priority = 1
@@ -390,12 +398,18 @@ class Scheduler(object):
         self.log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(window_adjusted_urs))
     
         # By default, cancel on all telescopes
-        tels_to_cancel = dict(network_model)
+        tels_to_schedule = dict(network_model)
+        tels_to_cancel = []
         
         # TODO: Change this to preemt or not preemt but not care about ToO
         # Pre-empt running blocks
         if run_type == Request.TARGET_OF_OPPORTUNITY:
             tels_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, network_model, network_snapshot);  
+            for tel in tels_to_schedule.keys():
+                if not tel in tels_to_cancel:
+                    del tels_to_schedule[tel]
+        else:
+            tels_to_cancel = tels_to_schedule.keys()
         
         # TODO: This logic is questionable.  exlculde_intervals in ToO case don't look correct
         # Get TOO requests scheduled in pond, combine with excluded_intervals
@@ -406,8 +420,8 @@ class Scheduler(object):
 #             excluded_intervals = network_interface.current_user_request_intervals_by_telescope()
             
         
-        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, network_model, estimated_scheduler_end)        
-        available_windows = self.prepare_available_windows_for_kernel(network_model, network_snapshot, estimated_scheduler_end)
+        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, tels_to_schedule, estimated_scheduler_end)        
+        available_windows = self.prepare_available_windows_for_kernel(tels_to_schedule, network_snapshot, estimated_scheduler_end)
     
         print_compound_reservations(compound_reservations)
     
@@ -421,7 +435,7 @@ class Scheduler(object):
         if compound_reservations:
             # Instantiate and run the scheduler
             time_slicing_dict = {}
-            for t in network_model:
+            for t in tels_to_schedule:
                 time_slicing_dict[t] = [0, self.sched_params.slicesize_seconds]
         
             contractual_obligations = []
@@ -443,7 +457,7 @@ class Scheduler(object):
         return scheduler_result
 
 
-class NetworkSanpshot(object):
+class NetworkSnapshot(object):
     
     def __init__(self, timestamp, running_user_requests, extra_block_intervals):
         self.timestamp = timestamp
@@ -590,6 +604,7 @@ class SchedulerRunner(object):
                     self.network.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
                 
                 # Delete old schedule
+                # TODO: make sure this cancels anything currently running
                 n_deleted = self.network.cancel(short_estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.telescope_schedules_to_cancel)
                 
                 # Write new schedule
