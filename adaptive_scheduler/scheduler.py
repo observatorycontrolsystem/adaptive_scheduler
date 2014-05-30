@@ -157,20 +157,20 @@ class Scheduler(object):
         return value_function_dict
     
     
-    def compute_optimal_combination(self, value_dict, tracking_numbers, telescopes):
+    def compute_optimal_combination(self, value_dict, tracking_numbers, resources):
         '''
         Compute combination of telescope to tracking number that has the highest value
     
         NOTE: This schedule assumes that each there will a tracking number only needs one
               telescope to run (no compound requests).
         '''
-        if len(tracking_numbers) < len(telescopes):
+        if len(tracking_numbers) < len(resources):
             small_list = tracking_numbers
-            large_list = telescopes
+            large_list = resources
             zip_combinations = lambda x : zip(x, small_list)
         else:
             large_list = tracking_numbers
-            small_list = telescopes
+            small_list = resources
             zip_combinations = lambda x : zip(small_list, x)
     
         optimal_combination_value = -1
@@ -572,7 +572,7 @@ class SchedulerRunner(object):
         self.run_flag = True
         self.sched_params = sched_params
         self.scheduler = scheduler
-        self.network = network_interface
+        self.network_interface = network_interface
         self.network_model = network_model
         self.log = logging.getLogger(__name__)
         
@@ -600,7 +600,7 @@ class SchedulerRunner(object):
         '''
         network_has_changed = False
         
-        if self.network.current_events_has_changed():
+        if self.network_interface.current_events_has_changed():
             self.log.info("Telescope network events were found.")
             network_has_changed = True
             
@@ -608,7 +608,7 @@ class SchedulerRunner(object):
     
     
     def update_network_model(self):
-        current_events = self.network.get_current_events()
+        current_events = self.network_interface.get_current_events()
         for telescope_name, telescope in self.network_model.iteritems():
             if telescope_name in current_events:
                 telescope.events.extend(current_events[telescope_name])
@@ -632,20 +632,20 @@ class SchedulerRunner(object):
                 
             if self.sched_params.run_once:
                 self.run_flag = False
-                
-            self.log.info("Sleeping for %d seconds", self.sched_params.sleep_seconds)
-            time.sleep(self.sched_params.sleep_seconds)
+            else:
+                self.log.info("Sleeping for %d seconds", self.sched_params.sleep_seconds)
+                time.sleep(self.sched_params.sleep_seconds)
             
     def create_new_schedule(self):
         now = self.determine_scheduler_now();
-        estimated_scheduler_end = self.now + timedelta(minutes=6)
-        short_estimated_scheduler_end = self.now + timedelta(minutes=2)
+        estimated_scheduler_end = now + timedelta(minutes=6)
+        short_estimated_scheduler_end = now + timedelta(minutes=2)
         semester_start, semester_end = get_semester_block(dt=short_estimated_scheduler_end)
         
         
         normal_user_requests = []
         too_user_requests    = []
-        for ur in self.network.get_all_user_requests(semester_start, semester_end):
+        for ur in self.network_interface.get_all_user_requests(semester_start, semester_end):
             if not self.sched_params.no_too and ur.has_target_of_opportunity():
                 too_user_requests.append(ur)
             else:
@@ -672,18 +672,19 @@ class SchedulerRunner(object):
                 
                 if not self.sched_params.dry_run:
                     # Set the states of the Requests and User Requests
-                    self.network.set_requests_to_unschedulable(scheduler_result.unschedulable_request_numbers)
-                    self.network.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
+                    self.network_interface.set_requests_to_unschedulable(scheduler_result.unschedulable_request_numbers)
+                    self.network_interface.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
                 
                 # Delete old schedule
                 # TODO: make sure this cancels anything currently running
-                n_deleted = self.network.cancel(short_estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.telescope_schedules_to_cancel)
+                n_deleted = self.network_interface.cancel(short_estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.telescope_schedules_to_cancel)
                 
                 # Write new schedule
-                n_submitted = self.network.save(scheduler_result.new_schedule, semester_start, self.sched_params.camreras_file, self.sched_params.dry_run)
-                self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
+                n_submitted = self.network_interface.save(scheduler_result.new_schedule, semester_start, self.sched_params.cameras_file, self.sched_params.dry_run)
+                #TODO: Lost this logging function during refactor somewhere
+#                 self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
             except ScheduleException, se:
-                self.log.error(pfe, "aborting run")
+                self.log.error(se, "aborting run")
                 
             self.log.info("End ToO Scheduling")
     
@@ -708,9 +709,10 @@ class SchedulerRunner(object):
                 
                 # Write new schedule
                 n_submitted = self.network.save(scheduler_result.new_schedule, semester_start, self.sched_params.camreras_file, self.sched_params.dry_run)
-                self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
+                #TODO: Lost this logging function during refactor somewhere
+#                 self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
             except ScheduleException, se:
-                self.log.error(pfe, "aborting run")
+                self.log.error(se, "aborting run")
             
             self.log.info("End Normal Scheduling")
     

@@ -18,7 +18,7 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import Scheduler, SchedulerRunner, SchedulerParameters
+from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 
@@ -136,7 +136,7 @@ def main(argv):
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
     
     kernel_class = FullScheduler
-    scheduler = Scheduler(kernel_class, sched_params, event_bus)
+    scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus)
     network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)
     scheduler_runner.run()

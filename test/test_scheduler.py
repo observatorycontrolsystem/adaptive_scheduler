@@ -1,4 +1,4 @@
-from adaptive_scheduler.scheduler import Scheduler, SchedulerParameters, LCOGTNetworkScheduler
+from adaptive_scheduler.scheduler import Scheduler, SchedulerParameters, LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.model2 import UserRequest, Window
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -153,9 +153,9 @@ class TestSchduler(object):
         tracking_number = 1
         request_number = 1
         target_telescope = '1m0a.doma.elp' 
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        request = self.create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
-        normal_single_ur = self.create_user_request(tracking_number, priority, [request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
+        normal_single_ur = create_user_request(tracking_number, priority, [request], 'single')
     
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -205,9 +205,9 @@ class TestSchduler(object):
         tracking_number = 1
         request_number = 1
         target_telescope = '1m0a.doma.elp'
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        request = self.create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
-        normal_single_ur = self.create_user_request(tracking_number, priority, [request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
+        normal_single_ur = create_user_request(tracking_number, priority, [request], 'single')
         
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -250,9 +250,9 @@ class TestSchduler(object):
         tracking_number = 1
         request_number = 1
         target_telescope = '1m0a.doma.elp'
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        request = self.create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
-        normal_single_ur = self.create_user_request(tracking_number, priority, [request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope]) 
+        normal_single_ur = create_user_request(tracking_number, priority, [request], 'single')
         
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -303,11 +303,11 @@ class TestSchduler(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        too_request = self.create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        too_single_ur = self.create_user_request(too_tracking_number, priority, [too_request], 'single')
-        normal_request = self.create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        normal_single_ur = self.create_user_request(normal_tracking_number, priority, [normal_request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
+        normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
         
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -372,13 +372,13 @@ class TestSchduler(object):
         low_priority_normal_request_number = 2
         high_priority_normal_tracking_number = 3
         high_prioirty_normal_request_number = 3
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        too_request = self.create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        too_single_ur = self.create_user_request(too_tracking_number, low_priority, [too_request], 'single')
-        low_priority_normal_request = self.create_request(low_priority_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        low_priority_normal_single_ur = self.create_user_request(low_prioirty_normal_tracking_number, low_priority, [low_priority_normal_request], 'single')
-        high_priority_normal_request = self.create_request(high_prioirty_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        high_priority_normal_single_ur = self.create_user_request(high_priority_normal_tracking_number, high_priority, [high_priority_normal_request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        too_single_ur = create_user_request(too_tracking_number, low_priority, [too_request], 'single')
+        low_priority_normal_request = create_request(low_priority_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        low_priority_normal_single_ur = create_user_request(low_prioirty_normal_tracking_number, low_priority, [low_priority_normal_request], 'single')
+        high_priority_normal_request = create_request(high_prioirty_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        high_priority_normal_single_ur = create_user_request(high_priority_normal_tracking_number, high_priority, [high_priority_normal_request], 'single')
           
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -449,13 +449,13 @@ class TestSchduler(object):
         old_low_priority_too_request_number = 2
         old_high_priority_too_tracking_number = 3
         old_high_priority_too_request_number = 3
-        request_windows = self.create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        new_too_request = self.create_request(new_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        new_too_single_ur = self.create_user_request(new_too_tracking_number, low_priority, [new_too_request], 'single')
-        old_low_priority_too_request = self.create_request(old_low_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        old_low_priority_too_single_ur = self.create_user_request(old_low_prioirty_too_tracking_number, low_priority, [old_low_priority_too_request], 'single')
-        old_high_priority_too_request = self.create_request(old_high_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
-        old_high_priority_too_single_ur = self.create_user_request(old_high_priority_too_tracking_number, high_priority, [old_high_priority_too_request], 'single')
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        new_too_request = create_request(new_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        new_too_single_ur = create_user_request(new_too_tracking_number, low_priority, [new_too_request], 'single')
+        old_low_priority_too_request = create_request(old_low_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        old_low_priority_too_single_ur = create_user_request(old_low_prioirty_too_tracking_number, low_priority, [old_low_priority_too_request], 'single')
+        old_high_priority_too_request = create_request(old_high_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        old_high_priority_too_single_ur = create_user_request(old_high_priority_too_tracking_number, high_priority, [old_high_priority_too_request], 'single')
           
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -596,38 +596,66 @@ class TestSchduler(object):
         return intervals
     
     
-    def create_user_request_windows(self, start_end_tuples):
-        windows = []
-        for start, end in start_end_tuples:
-            window_dict = {
-                             'start' : start,
-                             'end'   : end,
-                           }
-        windows.append(window_dict)
-        
-        return windows
+def create_user_request_windows(start_end_tuples):
+    windows = []
+    for start, end in start_end_tuples:
+        window_dict = {
+                         'start' : start,
+                         'end'   : end,
+                       }
+    windows.append(window_dict)
+    
+    return windows
     
     
-    def create_user_request(self, tracking_number, priority, requests, operator):#window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60):
-        
-        mock_user_request = Mock(tracking_number=tracking_number, priority=priority, requests=requests, operator=operator)
-        mock_user_request.n_requests = Mock(return_value=len(requests))
-        mock_user_request.get_priority = Mock(return_value=priority)
-        mock_user_request.drop_empty_children = Mock(side_effect=lambda *args : [])#[request.request_number for request in requests if len(request.windows) > 0])
-        
-        return mock_user_request
+def create_user_request(tracking_number, priority, requests, operator):#window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60):
+    
+    mock_user_request = Mock(tracking_number=tracking_number, priority=priority, requests=requests, operator=operator)
+    mock_user_request.n_requests = Mock(return_value=len(requests))
+    mock_user_request.get_priority = Mock(return_value=priority)
+    mock_user_request.drop_empty_children = Mock(side_effect=lambda *args : [])#[request.request_number for request in requests if len(request.windows) > 0])
+    
+    return mock_user_request
 
     
-    def create_request(self, request_number, duration, windows, possible_telescopes):
-        model_windows = []
-        for window in windows:
-            for telescope in possible_telescopes:
-                model_windows.append(Window(window, telescope))
-        mock_request = Mock(request_number=request_number, duration=duration, windows=model_windows)
-        mock_request.get_duration = Mock(return_value=duration)
-        mock_request.n_windows = Mock(return_value=len(windows))
+def create_request(request_number, duration, windows, possible_telescopes):
+    model_windows = []
+    for window in windows:
+        for telescope in possible_telescopes:
+            model_windows.append(Window(window, telescope))
+    mock_request = Mock(request_number=request_number, duration=duration, windows=model_windows)
+    mock_request.get_duration = Mock(return_value=duration)
+    mock_request.n_windows = Mock(return_value=len(windows))
+    
+    return mock_request
+    
+    
+class TestSchedulerRunner(object):
+     
+    def test_scheduler_runner_all_interfaces_mocked(self):
+        request_duration_seconds = 60
+        priority = 10
+        too_tracking_number = 1
+        too_request_number = 1
+        normal_tracking_number = 2
+        normal_request_number = 2
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
+        too_single_ur.has_target_of_opportunity = Mock(return_value=True)
+        normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
         
-        return mock_request
+        
+        sched_params = SchedulerParameters(run_once=True)
+        scheduler_mock = Mock()
+        network_interface_mock = Mock()
+        network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
+        network_model_mock = {}
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock)
+        scheduler_runner.run()
 
+        assert_equal(2, scheduler_mock.run_scheduler.call_count)
+        assert_equal(2, network_interface_mock.save)
         
 
