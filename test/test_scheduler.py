@@ -656,6 +656,7 @@ class TestSchedulerRunner(object):
         scheduler_runner.run()
 
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
+        assert_equal(2, network_interface_mock.cancel)
         assert_equal(2, network_interface_mock.save)
         
 
