@@ -1,3 +1,5 @@
+from __future__ import division
+
 import time
 import sys
 import logging
@@ -27,6 +29,7 @@ from adaptive_scheduler.interfaces import ScheduleException
 from timeit import itertools
 from collections import defaultdict
 from adaptive_scheduler.model2           import ModelBuilder
+
 
 
 
@@ -65,28 +68,28 @@ class Scheduler(object):
         self.estimated_scheduler_end = datetime.utcnow()
     
     
-    def find_tels_to_preempt(self, visible_too_urs, all_too_urs, normal_urs, tels, network_snapshot):
-        ''' Preempt running blocks, if needed, to run Target of Opportunity user requests'''
+    def find_tels_to_preempt(self, preemtion_urs, all_urgent_urs, normal_urs, resources, network_snapshot):
+        ''' Preempt running requests, if needed, to run urgent user requests'''
     
-        #make copy of tels since it could be modified
-        tels_copy = list(tels)
+        #make copy of resource list since it could be modified
+        copy_of_resources = list(resources)
     
-        # Don't preemt another ToO
-        # Remove tels with running too from tels
-        all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]           
-        for tel in tels:
-            if network_snapshot.user_request_for_telescope(tel) and network_snapshot.user_request_for_telescope(tel).tracking_number in all_too_tracking_numbers:
-                tels_copy.remove(tel)
+        # Don't preemt another urgent request
+        # Remove any resource with running urgent requests from resource list
+        all_urgent_tracking_numbers = [ur.tracking_number for ur in all_urgent_urs]           
+        for resource in resources:
+            if network_snapshot.user_request_for_telescope(resource) and network_snapshot.user_request_for_telescope(resource).tracking_number in all_urgent_tracking_numbers:
+                copy_of_resources.remove(resource)
     
-        value_function_dict = self.construct_value_function_dict(visible_too_urs, normal_urs, tels, network_snapshot)
+        value_function_dict = self.construct_value_function_dict(preemtion_urs, normal_urs, copy_of_resources, network_snapshot)
     
-        visible_too_tracking_numbers = [ur.tracking_number for ur in visible_too_urs]
-        optimal_combination = self.compute_optimal_combination(value_function_dict, visible_too_tracking_numbers, tels)
+        preemtion_tracking_numbers = [ur.tracking_number for ur in preemtion_urs]
+        optimal_combination = self.compute_optimal_combination(value_function_dict, preemtion_tracking_numbers, copy_of_resources)
     
-        # get telescopes where the cost of canceling is lowest and there is a running block
-        tels_to_cancel = [ combination[0] for combination in optimal_combination ] # if network_snapshot.user_request_for_telescope(combination[0])]
+        # get resources where the cost of canceling is lowest
+        resources_to_cancel = [ combination[0] for combination in optimal_combination ]
     
-        return tels_to_cancel
+        return resources_to_cancel
     
     
     
@@ -99,7 +102,7 @@ class Scheduler(object):
     
         return excluded_intervals_1
     
-    def construct_value_function_dict(self, too_urs, normal_urs, tels, network_snapshot):
+    def construct_value_function_dict(self, urgent_urs, normal_urs, resources, network_snapshot):
         ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
     
             where value = too priority / running block priority or if no block is running at
@@ -110,8 +113,8 @@ class Scheduler(object):
     
         normal_tracking_numbers_dict = {ur.tracking_number : ur for ur in normal_urs}
     
-        tracking_number_to_telescopes = defaultdict(set)
-        for ur in too_urs: 
+        tracking_number_to_resource_map = defaultdict(set)
+        for ur in urgent_urs: 
             tracking_number = ur.tracking_number
     
             if ur.n_requests() > 1:
@@ -122,11 +125,11 @@ class Scheduler(object):
     
             for request in ur.requests:
                 for window in request.windows:
-                    tracking_number_to_telescopes[tracking_number].add(window.resource)
+                    tracking_number_to_resource_map[tracking_number].add(window.resource)
     
         value_function_dict = {};
-        for tel in tels:
-            running_at_tel = network_snapshot.user_request_for_telescope(tel) 
+        for resource in resources:
+            running_at_tel = network_snapshot.user_request_for_telescope(resource) 
             # Compute the priority of the the telescopes without ToOs
             if running_at_tel:
                 running_request_priority = 0;
@@ -144,11 +147,12 @@ class Scheduler(object):
                 # use a priority of 1 for telescopes without a running block
                 running_request_priority = 1
     
-            for ur in too_urs:
+            for ur in urgent_urs:
                 tracking_number = ur.tracking_number
-                if tel in tracking_number_to_telescopes[tracking_number]:
+                if resource in tracking_number_to_resource_map[tracking_number]:
                     too_priority = ur.get_priority()
-                    value_function_dict[(tel, tracking_number)] = too_priority / running_request_priority
+                    # Make sure __future__ division is imported to make this work correctly
+                    value_function_dict[(resource, tracking_number)] = too_priority / running_request_priority
     
         return value_function_dict
     
@@ -320,7 +324,7 @@ class Scheduler(object):
         # TODO: Change this to preemt or not preemt but not care about ToO
         # Pre-empt running blocks
         if run_type == Request.TARGET_OF_OPPORTUNITY:
-            resource_schedules_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, available_resources, network_snapshot);  
+            resource_schedules_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, available_resources, network_snapshot) 
             # Need a copy because the original is modified inside the loop
             copy_of_resources_to_schedule = list(resources_to_schedule)
             for resource in copy_of_resources_to_schedule:
@@ -386,158 +390,6 @@ class LCOGTNetworkScheduler(Scheduler):
         self.log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
     
         return schedulable_urs
-    
-    
-    def find_tels_to_preempt(self, visible_too_urs, all_too_urs, normal_urs, tels, network_snapshot):
-        ''' Preempt running blocks, if needed, to run Target of Opportunity user requests'''
-    
-        #make copy of tels since it could be modified
-        tels_copy = dict(tels)
-    
-        # Don't preemt another ToO
-        # Remove tels with running too from tels
-        all_too_tracking_numbers = [ur.tracking_number for ur in all_too_urs]           
-        for tel in tels.keys():
-            if network_snapshot.user_request_for_telescope(tel) and network_snapshot.user_request_for_telescope(tel).tracking_number in all_too_tracking_numbers:
-                del tels_copy[tel]
-    
-        value_function_dict = self.construct_value_function_dict(visible_too_urs, normal_urs, tels, network_snapshot)
-    
-        visible_too_tracking_numbers = [ur.tracking_number for ur in visible_too_urs]
-        optimal_combination = self.compute_optimal_combination(value_function_dict, visible_too_tracking_numbers, tels)
-    
-        # get telescopes where the cost of canceling is lowest and there is a running block
-        tels_to_cancel = [ combination[0] for combination in optimal_combination ] # if network_snapshot.user_request_for_telescope(combination[0])]
-    
-        return tels_to_cancel
-    
-    
-    
-    #TODO - Move to a utils library
-    def combine_excluded_intervals(self, excluded_intervals_1, excluded_intervals_2):
-        ''' Combine two dictionaries where Intervals are the values '''
-        for key in excluded_intervals_2:
-            timepoints = excluded_intervals_2[key].timepoints
-            excluded_intervals_1.setdefault(key, Intervals([])).add(timepoints)
-    
-        return excluded_intervals_1
-    
-    
-    def construct_value_function_dict(self, too_urs, normal_urs, tels, network_snapshot):
-        ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
-    
-            where value = too priority / running block priority or if no block is running at
-            that telescope, value = too priority
-    
-            NOTE: Assumes running block priority is above 1
-        '''
-    
-        normal_tracking_numbers_dict = {ur.tracking_number : ur for ur in normal_urs}
-    
-        tracking_number_to_telescopes = defaultdict(set)
-        for ur in too_urs: 
-            tracking_number = ur.tracking_number
-    
-            if ur.n_requests() > 1:
-                msg = "TOO UR %s has more than one child R, which is not supported." % tracking_number
-                msg += " Submit as separate requests."
-                self.log.info(msg)
-                continue
-    
-            for request in ur.requests:
-                for window in request.windows:
-                    tracking_number_to_telescopes[tracking_number].add(window.resource)
-    
-        value_function_dict = {};
-        for tel in tels:
-            running_at_tel = network_snapshot.user_request_for_telescope(tel) 
-            # Compute the priority of the the telescopes without ToOs
-            if running_at_tel:
-                running_request_priority = 0;
-                running_tracking_number = running_at_tel.tracking_number
-                normal_ur = normal_tracking_numbers_dict.get(running_tracking_number, None)
-                if normal_ur:
-                    running_request_priority += normal_ur.get_priority()
-                else:
-                    # The running request wasn't included in the list of schedulable urs so we don't know it's priority
-                    # This could happen if the running request has been canceled.  In this case treat it like nothing is running
-                    # Not sure if there are other ways this can happen.  Beware....
-                    # TODO: add function unit test for this case
-                    running_request_priority = 1
-            else:
-                # use a priority of 1 for telescopes without a running block
-                running_request_priority = 1
-    
-            for ur in too_urs:
-                tracking_number = ur.tracking_number
-                if tel in tracking_number_to_telescopes[tracking_number]:
-                    too_priority = ur.get_priority()
-                    value_function_dict[(tel, tracking_number)] = too_priority / running_request_priority
-    
-        return value_function_dict
-    
-    
-    def compute_optimal_combination(self, value_dict, tracking_numbers, telescopes):
-        '''
-        Compute combination of telescope to tracking number that has the highest value
-    
-        NOTE: This schedule assumes that each there will a tracking number only needs one
-              telescope to run (no compound requests).
-        '''
-        if len(tracking_numbers) < len(telescopes):
-            small_list = tracking_numbers
-            large_list = telescopes
-            zip_combinations = lambda x : zip(x, small_list)
-        else:
-            large_list = tracking_numbers
-            small_list = telescopes
-            zip_combinations = lambda x : zip(small_list, x)
-    
-        optimal_combination_value = -1
-        optimal_combinations = []
-    
-        for x in itertools.permutations(large_list, len(small_list)):
-            combinations = zip_combinations(x)
-            value = 0
-            invalid_combination = False
-            for combination in combinations:
-                try:
-                    value += value_dict[combination]
-                except KeyError:
-                    # if the combination is not in the dictionary it is not a valid option
-                    invalid_combination = True
-                    break
-    
-            if invalid_combination:
-                continue
-    
-            if value > optimal_combination_value:
-                optimal_combination_value = value
-                optimal_combinations = combinations
-    
-        return optimal_combinations
-    
-    
-    def remove_singles(self, user_reqs):
-        self.log.info("Compound Request support (single) disabled at the command line")
-        self.log.info("Compound Requests of type 'single' will be ignored")
-        singles, others = differentiate_by_type(cr_type='single', crs=user_reqs)
-        
-        return others
-    
-    
-    def remove_compounds(self, user_reqs):
-        self.log.info("Compound Request support (and/oneof/many) disabled at the command line")
-        self.log.info("Compound Requests of type 'and', 'oneof' or 'many' will be ignored")
-        
-        return filter_out_compounds(user_reqs)
-    
-    
-    def scheduling_horizon(self, estimated_scheduler_end):
-        ONE_MONTH = timedelta(weeks=4)
-        ONE_WEEK  = timedelta(weeks=1)
-        
-        return estimated_scheduler_end + ONE_WEEK
     
     
     def _log_scheduler_start_details(self, estimated_scheduler_end):
@@ -675,123 +527,6 @@ class LCOGTNetworkScheduler(Scheduler):
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         print_schedule(new_schedule, semester_start, semester_end)
         
-    
-    def unscheduleable_ur_numbers(self, unschedulable_urs):
-        return find_unschedulable_ur_numbers(unschedulable_urs)
-    
-    def filter_unscheduleable_child_requests(self, schedulable_urs):
-        return drop_empty_requests(schedulable_urs)
-    
-    
-    # TODO: refactor into smaller chunks
-    @timeit
-    def run_scheduler(self, user_reqs_dict, network_snapshot, network_model, estimated_scheduler_end):
-    
-        start_event = TimingLogger.create_start_event(datetime.utcnow())
-        self.event_bus.fire_event(start_event)
-    
-        run_type = user_reqs_dict['type']
-        user_reqs = user_reqs_dict[run_type]
-        normal_user_requests = user_reqs_dict[Request.NORMAL_OBSERVATION_TYPE]
-        too_user_requests = user_reqs_dict[Request.TARGET_OF_OPPORTUNITY]
-    
-        self._log_scheduler_start_details(estimated_scheduler_end)
-        self._log_ur_input_details(user_reqs, estimated_scheduler_end)
-    
-        if self.sched_params.no_singles:
-            user_reqs = self.remove_singles(user_reqs)
-    
-        if self.sched_params.no_compounds:
-            user_reqs = self.remove_compounds(user_reqs)
-        
-        semester_start, semester_end = get_semester_block(dt=estimated_scheduler_end)
-        
-        # Construct visibility objects for each telescope
-        self.log.info("Constructing telescope visibilities")
-        if not self.visibility_cache:
-            self.visibility_cache = construct_visibilities(network_model, semester_start, semester_end)
-
-        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, network_snapshot, estimated_scheduler_end)
-
-
-        self.log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
-        unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers  = self.filter_unscheduleable_child_requests(schedulable_urs)
-        
-
-        self.log.info("Completed unschedulable filters")
-        summarise_urs(schedulable_urs, log_msg="Passed unschedulable filters:")
-    
-        for ur in schedulable_urs:
-            log_windows(ur, log_msg="Remaining windows:")
-        
-        window_adjusted_urs = self.apply_window_filters(schedulable_urs, network_model, estimated_scheduler_end)
-        
-        self.log.info("Completed dark/rise_set filters")
-        summarise_urs(window_adjusted_urs, log_msg="Passed dark/rise filters:")
-        for ur in window_adjusted_urs:
-            log_windows(ur, log_msg="Remaining windows:")
-    
-        self.log.info('Filtering complete. Ready to construct Reservations from %d URs.' % len(window_adjusted_urs))
-    
-        # By default, cancel on all telescopes
-        tels_to_schedule = dict(network_model)
-        tels_to_cancel = []
-        
-        # TODO: Change this to preemt or not preemt but not care about ToO
-        # Pre-empt running blocks
-        if run_type == Request.TARGET_OF_OPPORTUNITY:
-            tels_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, network_model, network_snapshot);  
-            for tel in tels_to_schedule.keys():
-                if not tel in tels_to_cancel:
-                    del tels_to_schedule[tel]
-        else:
-            tels_to_cancel = tels_to_schedule.keys()
-        
-        # TODO: This logic is questionable.  exlculde_intervals in ToO case don't look correct
-        # Get TOO requests scheduled in pond, combine with excluded_intervals
-#         if run_type == Request.NORMAL_OBSERVATION_TYPE and too_user_requests:
-#             excluded_intervals = self.combine_excluded_intervals(network_interface.current_user_request_intervals_by_telescope(),
-#                                                                  network_interface.too_user_request_intervals_by_telescope())
-#         else:
-#             excluded_intervals = network_interface.current_user_request_intervals_by_telescope()
-            
-        
-        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, tels_to_schedule, estimated_scheduler_end)        
-        available_windows = self.prepare_available_windows_for_kernel(tels_to_schedule, network_snapshot, estimated_scheduler_end)
-    
-        print_compound_reservations(compound_reservations)
-    
-        # Prepare scheduler result
-        scheduler_result = SchedulerResult()
-        scheduler_result.schedule = None
-        scheduler_result.resource_schedules_to_cancel = tels_to_cancel
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
-        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
-        
-        if compound_reservations:
-            # Instantiate and run the scheduler
-            time_slicing_dict = {}
-            for t in tels_to_schedule:
-                time_slicing_dict[t] = [0, self.sched_params.slicesize_seconds]
-        
-            contractual_obligations = []
-        
-            self.log.info("Instantiating and running kernel")
-            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, time_slicing_dict)
-            new_schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
-            
-            # Put new schedule in result object
-            scheduler_result.schedule = new_schedule
-            
-            # Do post scheduling stuff
-            self.on_new_schedule(new_schedule, compound_reservations, estimated_scheduler_end)
-        else:
-            self.log.info("Nothing to schedule! Skipping kernel call...")
-            scheduler_result.resource_schedules_to_cancel = {}
-       
-       
-        return scheduler_result
 
 
 class NetworkSnapshot(object):
