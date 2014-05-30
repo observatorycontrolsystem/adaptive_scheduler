@@ -655,10 +655,10 @@ class TestSchedulerRunner(object):
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock)
         scheduler_runner.run()
 
-        assert_equal(1, network_interface_mock.get_all_user_requests)
-        assert_equal(2, network_interface_mock.cancel)
+        assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
-        assert_equal(2, network_interface_mock.cancel)
+        assert_equal(2, network_interface_mock.cancel.call_count)
         assert_equal(2, network_interface_mock.save)
+        
         
 
