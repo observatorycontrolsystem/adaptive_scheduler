@@ -1,5 +1,4 @@
 from adaptive_scheduler.printing         import pluralise as pl
-from adaptive_scheduler.model2           import RequestError
 from pond                                import get_network_running_blocks, get_network_running_intervals, cancel_schedule, PondFacadeException, send_schedule_to_pond, get_intervals_by_telescope_for_tracking_numbers
 from adaptive_scheduler.utils            import timeit
 from reqdb.client                        import ConnectionError, RequestDBError
@@ -7,6 +6,7 @@ from adaptive_scheduler.request_parser   import TreeCollapser
 from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
 
 import logging
+from datetime import datetime
 
 
 
@@ -40,6 +40,35 @@ class RunningRequest(object):
         return 'Request Number: %s at telescope %s' % (self.request_number, self.telescope)
     
 
+class ResourceUsageSnapshot(object):
+    
+    def __init__(self, timestamp, running_user_requests, extra_block_intervals):
+        self.timestamp = timestamp
+        self.running_user_requests_by_tracking_number = {}
+        self.running_user_requests_by_resource = {}
+        for ur in running_user_requests:
+            self.running_user_requests_by_tracking_number[ur.tracking_number] = ur
+            # TODO: this shoudl refer to a used resource not a telescope to make it generic
+            self.running_user_requests_by_resource[ur.telescope] = ur
+        self.extra_blocked_intervals = extra_block_intervals
+        
+    def running_tracking_numbers(self):
+        return [ur.tracking_number for ur in self.running_user_requests_by_tracking_number.keys()]
+    
+    def running_user_request(self, tracking_number):
+        return self.running_user_requests_by_tracking_number.get(tracking_number, None)
+    
+    def user_request_for_resource(self, resource):
+        return self.running_user_requests_by_resource.get(resource, None)
+    
+    def blocked_intervals(self):
+        intervals = list(self.blocked_intervals())
+        for ur in self.running_user_requests:
+            intervals.append(ur.to_interval())
+        
+        return intervals
+
+
 class PondRunningRequest(RunningRequest):
     
     def __init__(self, telescope, request_number, block_id, start, end):
@@ -56,8 +85,6 @@ class RequestDBInterface(object):
     
     def __init__(self, requestdb_client):
         self.requestdb_client = requestdb_client
-        # Force a reschedule when first started
-        self.requestdb_client.set_dirty_flag()
         self.log = logging.getLogger(__name__)
     
     
@@ -71,7 +98,7 @@ class RequestDBInterface(object):
     
     
     @timeit
-    def _get_dirty_flag(self):
+    def is_dirty(self):
         dirty_response = dict(dirty=False)
         try:
             dirty_response = self.requestdb_client.get_dirty_flag()
@@ -95,7 +122,7 @@ class RequestDBInterface(object):
         return dirty_response
     
     
-    def _clear_dirty_flag(self):
+    def clear_dirty_flag(self):
         # Clear the dirty flag
         self.log.info("Clearing dirty flag")
         try:
@@ -104,15 +131,6 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.critical("Error clearing dirty flag on DB: %s", e)
             self.log.critical("Aborting current scheduling loop.")
-    
-        return False
-        
-    def _was_dirty_and_cleared(self):
-        dirty_response = self._get_dirty_flag()
-    
-        if dirty_response['dirty'] is True:
-            if self._clear_dirty_flag():
-                return True
     
         return False
     
@@ -163,18 +181,6 @@ class RequestDBInterface(object):
         return collapsed_reqs
     
     
-    def is_dirty(self):
-        '''True if list of schedulable requests has changed since
-        dirty flag was last cleared
-        '''
-        db_is_dirty = False
-    
-        if self._was_dirty_and_cleared():
-            self.self.log.info("Dirty flag was found set and cleared.")
-            db_is_dirty = True
-            
-        return db_is_dirty
-    
     def get_all_user_requests(self, start, end):
         '''Get all user requests waiting for scheduling between
         start and end date
@@ -183,17 +189,8 @@ class RequestDBInterface(object):
     
         # Collapse each request tree
         json_user_requests = self._collapse_requests(json_user_requests)
-        model_builder = self.sched_params.get_model_builder()
-    
-        all_user_requests = []
-        for json_user_request in json_user_requests:
-            try:
-                user_request = model_builder.build_user_request(json_user_request)
-                all_user_requests.append(user_request)
-            except RequestError as e:
-                self.log.warn(e)
-                
-        return all_user_requests
+        
+        return json_user_requests
                 
                 
     def set_requests_to_unschedulable(self, unschedulable_r_numbers):
@@ -226,22 +223,28 @@ class RequestDBInterface(object):
 class PondScheduleInterface(object):
     
     def __init__(self):
+        self.running_blocks_by_telescope = None
+        self.running_intervals_by_telescope = None
+        self.too_intervals_by_telescope = None
         
+        self.log = logging.getLogger(__name__)
+    
+    def fetch_data(self, telescopes, running_window_start, running_window_end, too_tracking_numbers):
         #Fetch the data
-        self.running_blocks_by_telescope = self._fetch_running_blocks()
-        self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks)
-        self.too_intervals_by_telescope = self._fetch_too_intervals()
+        self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
+        self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
+        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end, too_tracking_numbers)
 
     
-    def _fetch_running_blocks(self):
+    def _fetch_running_blocks(self, telescopes, end_after, start_before):
         try:
-            running_blocks = get_network_running_blocks(self.telescopes, self.blocks_end_after, self.blocks_running_if_starts_before, self.blocks_start_before)
+            running_blocks = get_network_running_blocks(telescopes, end_after, start_before)
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to get running blocks from POND")
         
         # This is just logging held over from when this was in the scheduling loop
         all_running_blocks = []
-        for blocks in self.running_blocks.values():
+        for blocks in running_blocks.values():
             all_running_blocks += blocks
         self.log.info("%d %s in the running list", *pl(len(all_running_blocks), 'POND Block'))
         for block in all_running_blocks:
@@ -255,10 +258,8 @@ class PondScheduleInterface(object):
         
         return running_blocks 
     
-    def _fetch_too_intervals(self):
-        too_blocks = get_intervals_by_telescope_for_tracking_numbers(self.too_tracking_numbers, self.telescopes,
-                                           self.blocks_ends_after,
-                                           self.blocks_start_before)
+    def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
         
         return too_blocks
     
@@ -267,9 +268,11 @@ class PondScheduleInterface(object):
         running_urs = {}
         for blocks in self.running_blocks_by_telescope.values():
             for block in blocks:
+                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
+                running_request = RunningRequest(telescope, block.request_num_set()[0])
                 tracking_number = block.tracking_num_set()[0]
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
-                running_ur.add_running_request(blocks.request_number_set[0], block.id, block.start, block.end)
+                running_ur.add_running_request(running_request)
             
         return running_urs
     
@@ -332,6 +335,11 @@ class NetworkInterface(object):
         '''
         return self.user_request_interface.is_dirty()
     
+    def clear_schedulable_request_set_changed_state(self):
+        '''True if set of schedulable requests has changed
+        '''
+        return self.user_request_interface.clear_dirty_flag()
+    
     def get_all_user_requests(self, start, end):
         '''Get all user requests waiting for scheduling between
         start and end date
@@ -346,22 +354,22 @@ class NetworkInterface(object):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
     
-    def running_user_requests_by_tracking_number(self):
+    def _running_user_requests_by_tracking_number(self):
         ''' Return RunningUserRequest objects indexed by tracking number
         '''
         return self.network_schedule_interface.running_user_requests_by_tracking_number()
     
-    def running_user_requests_by_telescope(self):
-        ''' Return RunningUserRequest objects indexed by telescope
-        '''
-        return self.network_schedule_interface.running_user_requests_by_telescope()
-        
-    def running_user_request_intervals_by_telescope(self):
-        ''' Return the current run intervals by telescope
-        '''
-        return self.network_schedule_interface.running_user_request_intervals_by_telescope()
-       
-    def too_user_request_intervals_by_telescope(self):
+#     def running_user_requests_by_telescope(self):
+#         ''' Return RunningUserRequest objects indexed by telescope
+#         '''
+#         return self.network_schedule_interface.running_user_requests_by_telescope()
+#         
+#     def running_user_request_intervals_by_telescope(self):
+#         ''' Return the current run intervals by telescope
+#         '''
+#         return self.network_schedule_interface.running_user_request_intervals_by_telescope()
+#        
+    def _too_user_request_intervals_by_telescope(self):
         ''' Return the schedule ToO intervals for the supplied telescope
         '''
         return self.network_schedule_interface.too_user_request_intervals_by_telescope()
@@ -383,10 +391,19 @@ class NetworkInterface(object):
         '''
         return self.network_state_interface.update()
     
-    def current_evenvts_has_changed(self):
+    def current_events_has_changed(self):
         ''' Return True if the current network state is different from
             the previous network state.
         '''
         return self.network_state_interface.has_changed()
+    
+    # TODO: Remove too_tracking_numbers, the scheduler should be able to remember what is scheduled during last run
+    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, too_tracking_numbers):
+        now = datetime.utcnow()
+        self.network_schedule_interface.fetch_data(resources, snapshot_start, snapshot_end, too_tracking_numbers)
+        
+        return ResourceUsageSnapshot(now,
+                              self._running_user_requests_by_tracking_number().values(),
+                              self.too_user_request_intervals_by_telescope())
     
 

@@ -614,18 +614,23 @@ def create_user_request(tracking_number, priority, requests, operator):#window_d
     mock_user_request.n_requests = Mock(return_value=len(requests))
     mock_user_request.get_priority = Mock(return_value=priority)
     mock_user_request.drop_empty_children = Mock(side_effect=lambda *args : [])#[request.request_number for request in requests if len(request.windows) > 0])
+    mock_user_request.has_target_of_opportunity = Mock(return_value=reduce(lambda x,y: x and y, map(lambda r : r.observation_type == 'TARGET_OF_OPPORTUNITY', requests)))
     
     return mock_user_request
 
     
-def create_request(request_number, duration, windows, possible_telescopes):
+def create_request(request_number, duration, windows, possible_telescopes, is_too=False):
     model_windows = []
     for window in windows:
         for telescope in possible_telescopes:
             model_windows.append(Window(window, telescope))
-    mock_request = Mock(request_number=request_number, duration=duration, windows=model_windows)
+    observation_type = "NORMAL"
+    if is_too:
+        observation_type = "TARGET_OF_OPPORTUNITY"
+    mock_request = Mock(request_number=request_number, duration=duration, windows=model_windows, observation_type=observation_type)
     mock_request.get_duration = Mock(return_value=duration)
     mock_request.n_windows = Mock(return_value=len(windows))
+    
     
     return mock_request
     
@@ -633,6 +638,8 @@ def create_request(request_number, duration, windows, possible_telescopes):
 class TestSchedulerRunner(object):
      
     def test_scheduler_runner_all_interfaces_mocked(self):
+        ''' schedule should be changed through the network interface
+        '''
         request_duration_seconds = 60
         priority = 10
         too_tracking_number = 1
@@ -640,9 +647,9 @@ class TestSchedulerRunner(object):
         normal_tracking_number = 2
         normal_request_number = 2
         request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True) 
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
-        too_single_ur.has_target_of_opportunity = Mock(return_value=True)
+#         too_single_ur.has_target_of_opportunity = Mock(return_value=True)
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
         normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
         
@@ -657,8 +664,45 @@ class TestSchedulerRunner(object):
 
         assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
+        assert_equal(2, network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(2, network_interface_mock.set_user_requests_to_unschedulable.call_count)
         assert_equal(2, network_interface_mock.cancel.call_count)
-        assert_equal(2, network_interface_mock.save)
+        assert_equal(2, network_interface_mock.save.call_count)
+        assert_equal(1, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
+        
+        
+    def test_scheduler_runner_dry_run(self):
+        ''' Not write calls to network interface should be made
+        '''
+        request_duration_seconds = 60
+        priority = 10
+        too_tracking_number = 1
+        too_request_number = 1
+        normal_tracking_number = 2
+        normal_request_number = 2
+        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True) 
+        too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
+#         too_single_ur.has_target_of_opportunity = Mock(return_value=True)
+        normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
+        
+        
+        sched_params = SchedulerParameters(run_once=True, dry_run=True)
+        scheduler_mock = Mock()
+        network_interface_mock = Mock()
+        network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
+        network_model_mock = {}
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock)
+        scheduler_runner.run()
+
+        assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
+        assert_equal(2, scheduler_mock.run_scheduler.call_count)
+        assert_equal(0, network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(0, network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        assert_equal(0, network_interface_mock.cancel.call_count)
+        assert_equal(0, network_interface_mock.save.call_count)
+        assert_equal(0, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
 

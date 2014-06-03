@@ -631,26 +631,23 @@ def get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends
 
     return telescope_interval
 
-def get_network_running_intervals(running_blocks):
+def get_network_running_intervals(running_blocks_by_telescope):
     running_at_tel = {}
 
-    for key, blocks in running_blocks.items():
+    for key, blocks in running_blocks_by_telescope.items():
         running_at_tel[key] = get_intervals(blocks)
 
     return running_at_tel
 
-def get_network_running_blocks(tels, ends_after, running_if_starts_before, starts_before):
+def get_network_running_blocks(tels, ends_after, starts_before):
     n_running_total = 0
     running_at_tel = {}
-    for full_tel_name, tel in tels.items():
+    for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')
         log.debug("Acquiring running blocks and first availability at %s",
                                                           full_tel_name)
 
-        if tel.events:
-            running = []
-        else:
-            running = get_running_blocks(ends_after, running_if_starts_before, starts_before,
+        running = get_running_blocks(ends_after, starts_before,
                                                  site_name, obs_name, tel_name)
 
         running_at_tel[full_tel_name] = running
@@ -665,9 +662,9 @@ def get_network_running_blocks(tels, ends_after, running_if_starts_before, start
     return running_at_tel
 
 
-def get_running_blocks(ends_after, running_if_starts_before, starts_before, site, obs, tel):
+def get_running_blocks(ends_after, starts_before, site, obs, tel):
     schedule  = get_blocks(ends_after, starts_before, site, obs, tel)
-    cutoff_dt = schedule.end_of_overlap(running_if_starts_before)
+    cutoff_dt = schedule.end_of_overlap(starts_before)
 
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
                                              b.tracking_num_set()]

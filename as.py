@@ -20,7 +20,10 @@ from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface, PondScheduleInterface, RequestDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
-from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
+# from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
+from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
+
+from reqdb.client import SchedulerClient
 
 import argparse
 import logging
@@ -31,7 +34,7 @@ VERSION = '1.0.1'
 # Set up and configure an application scope logger
 # import logging.config
 # logging.config.fileConfig('logging.conf')
-# import logger_config
+import logger_config
 log = logging.getLogger('adaptive_scheduler')
 
 # Set up signal handling for graceful shutdown
@@ -56,9 +59,9 @@ def kill_handler(signal, frame):
         
 class RequestDBSchedulerParameters(SchedulerParameters):
     
-    def __init__(self, requestdb_url, **kwargs):
+    def __init__(self, requestdb, **kwargs):
         SchedulerParameters.__init__(self, **kwargs)
-        self.requestdb_url = requestdb_url
+        self.requestdb_url = requestdb
 
 
 def parse_args(argv):
@@ -66,31 +69,31 @@ def parse_args(argv):
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
 
-    arg_parser.add_argument("-l", "--timelimit", type=float, default=None,
+    arg_parser.add_argument("-l", "--timelimit", type=float, default=None, dest='timelimit_seconds',
                             help="The time limit of the scheduler kernel, in seconds; negative implies no limit")
-    arg_parser.add_argument("-i", "--horizon", type=float, default=7,
+    arg_parser.add_argument("-i", "--horizon", type=float, default=7, dest='horizon_days',
                             help="The scheduler's horizon, in days")
-    arg_parser.add_argument("-z", "--slicesize", type=int, default=300,
+    arg_parser.add_argument("-z", "--slicesize", type=int, default=300, dest='slicesize_seconds',
                             help="The discretization size of the scheduler, in seconds")
-    arg_parser.add_argument("-s", "--sleep", type=int, default=60,
+    arg_parser.add_argument("-s", "--sleep", type=int, default=60, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
     arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
                             help="Request DB endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
-    arg_parser.add_argument("-n", "--now", type=str,
+    arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
                             help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
-    arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat',
+    arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat', dest='telescopes_file',
                             help="Available telescopes file (default=telescopes.dat)")
-    arg_parser.add_argument("-c", "--cameras", type=str, default='camera_mappings.dat',
+    arg_parser.add_argument("-c", "--cameras", type=str, default='camera_mappings.dat', dest='cameras_file',
                             help="Instrument description file (default=camera_mappings.dat)")
-    arg_parser.add_argument("-w", "--noweather", action="store_true",
+    arg_parser.add_argument("-w", "--noweather", action="store_true", dest='no_weather',
                             help="Disable weather checking")
-    arg_parser.add_argument("--nosingles", action="store_true",
+    arg_parser.add_argument("--nosingles", action="store_true", dest='no_singles',
                                 help="Ignore the 'single' Request type")
-    arg_parser.add_argument("--nocompounds", action="store_true",
+    arg_parser.add_argument("--nocompounds", action="store_true", dest='no_compounds',
                                 help="Ignore the 'and', 'oneof' and 'many' Request types")
-    arg_parser.add_argument("--notoo", action="store_true",
+    arg_parser.add_argument("--notoo", action="store_true", dest='no_too',
                                 help="Treat Target of Opportunity Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
@@ -100,10 +103,10 @@ def parse_args(argv):
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
-    log.info("Using available telescopes file '%s'", args.telescopes)
-    log.info("Sleep period between scheduling runs set at %ds" % args.sleep)
+    log.info("Using available telescopes file '%s'", args.telescopes_file)
+    log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
     
-    sched_params = RequestDBSchedulerParameters(**args)
+    sched_params = RequestDBSchedulerParameters(**vars(args))
 
     return sched_params
 
@@ -113,7 +116,6 @@ def parse_args(argv):
 
 def main(argv):
     sched_params = parse_args(argv)
-
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
 
     if sched_params.dry_run:
@@ -130,7 +132,7 @@ def main(argv):
                            event_type=TimingLogger._EndEvent)
     
     schedule_interface = PondScheduleInterface()
-    requestdb_client = SchedulerClient()
+    requestdb_client = SchedulerClient(sched_params.requestdb_url)
     user_request_interface = RequestDBInterface(requestdb_client)
     network_state_interface = Network()
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
