@@ -18,7 +18,7 @@ class RunningUserRequest(object):
     
     def __init__(self, tracking_number, *running_requests):
         self.tracking_number = tracking_number
-        self.running_requests = running_requests
+        self.running_requests = list(running_requests)
         
     def add_running_request(self, running_request):
         self.running_requests.append(running_request)
@@ -268,10 +268,10 @@ class PondScheduleInterface(object):
         running_urs = {}
         for blocks in self.running_blocks_by_telescope.values():
             for block in blocks:
-                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
-                running_request = RunningRequest(telescope, block.request_num_set()[0])
                 tracking_number = block.tracking_num_set()[0]
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
+                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
+                running_request = RunningRequest(telescope, block.request_num_set()[0])
                 running_ur.add_running_request(running_request)
             
         return running_urs
