@@ -43,7 +43,7 @@ class RunningRequest(object):
 
 class ResourceUsageSnapshot(object):
     
-    def __init__(self, timestamp, running_user_requests, extra_block_intervals):
+    def __init__(self, timestamp, running_user_requests, user_request_priorities, extra_block_intervals):
         self.timestamp = timestamp
         self.running_user_requests_by_tracking_number = {}
         self.running_user_requests_by_resource = {}
@@ -52,6 +52,7 @@ class ResourceUsageSnapshot(object):
             for running_request in running_ur.running_requests:
                 running_user_request_list = self.running_user_requests_by_resource.setdefault(running_request.resource, [])
                 running_user_request_list.append(running_ur)
+        self.user_request_priorities = user_request_priorities
         self.extra_blocked_intervals = extra_block_intervals
         
     def running_tracking_numbers(self):
@@ -65,6 +66,9 @@ class ResourceUsageSnapshot(object):
     
     def blocked_intervals(self, resource):
         return self.extra_blocked_intervals.get(resource, Intervals([]))
+    
+    def get_priority(self, tracking_number):
+        return self.user_request_priorities.get(tracking_number, 0)
 
 
 class PondRunningRequest(RunningRequest):
@@ -386,12 +390,13 @@ class NetworkInterface(object):
         return self.network_state_interface.has_changed()
     
     # TODO: Remove too_tracking_numbers, the scheduler should be able to remember what is scheduled during last run
-    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, too_tracking_numbers):
+    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, user_request_priorities, too_tracking_numbers):
         now = datetime.utcnow()
         self.network_schedule_interface.fetch_data(resources, snapshot_start, snapshot_end, too_tracking_numbers)
         
         return ResourceUsageSnapshot(now,
                               self._running_user_requests_by_tracking_number().values(),
+                              user_request_priorities,
                               self._too_user_request_intervals_by_telescope())
         
 
@@ -454,7 +459,7 @@ class CachedInputNetworkInterface(object):
         return False
     
     # TODO: Remove too_tracking_numbers, the scheduler should be able to remember what is scheduled during last run
-    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, too_tracking_numbers):
+    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, user_request_priorities, too_tracking_numbers):
         return self.resource_usage_snapshot_data
     
 

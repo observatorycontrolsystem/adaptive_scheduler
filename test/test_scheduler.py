@@ -1,5 +1,5 @@
 from adaptive_scheduler.scheduler import Scheduler, SchedulerParameters, LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.model2 import UserRequest, Window
+from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -109,12 +109,8 @@ class TestSchduler(object):
     def test_run_scheduler_with_mocked_interfaces(self):
         event_bus_mock = Mock()
         sched_params = SchedulerParameters()
-        
-        user_request_dict = {
-                             'type' : Request.NORMAL_OBSERVATION_TYPE,
-                             Request.NORMAL_OBSERVATION_TYPE : [],
-                             Request.TARGET_OF_OPPORTUNITY : [],
-                             }
+        normal_user_requests = []
+
         network_snapshot_mock = Mock()
         network_snapshot_mock.running_tracking_numbers = Mock(return_value=[])
         intervals_mock = Mock()
@@ -125,7 +121,7 @@ class TestSchduler(object):
         
         kernel_class_mock = Mock()
         scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, network_snapshot_mock, network_model, estimated_scheduler_end)
+        scheduler_result = scheduler.run_scheduler(normal_user_requests, network_snapshot_mock, network_model, estimated_scheduler_end, preemption_enabled=False)
         
         assert_equal(None, scheduler_result.schedule)
         assert_equal({}, scheduler_result.resource_schedules_to_cancel)
@@ -170,15 +166,11 @@ class TestSchduler(object):
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.NORMAL_OBSERVATION_TYPE,
-                             Request.NORMAL_OBSERVATION_TYPE : [normal_single_ur],
-                             Request.TARGET_OF_OPPORTUNITY : [],
-                             }
+        normal_user_requests = [normal_single_ur]
         
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(normal_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=False)
 
         # Start assertions
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
@@ -222,15 +214,12 @@ class TestSchduler(object):
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.NORMAL_OBSERVATION_TYPE,
-                             Request.NORMAL_OBSERVATION_TYPE : [],
-                             Request.TARGET_OF_OPPORTUNITY : [normal_single_ur],
-                             }
+        too_user_requests = [normal_single_ur]
+        normal_user_requests = []
         
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(normal_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=False)
         
         # Start assertions
         assert_equal(None, scheduler_result.schedule)
@@ -267,16 +256,15 @@ class TestSchduler(object):
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.TARGET_OF_OPPORTUNITY,
-                             Request.NORMAL_OBSERVATION_TYPE : [],
-                             Request.TARGET_OF_OPPORTUNITY : [normal_single_ur],
-                             }
+        too_user_requests = [normal_single_ur]
+        normal_user_requests = []
         
         # Start scheduler run
-        self.network_snapshot_mock.user_request_for_telescope = Mock(return_value=None)
+        self.network_snapshot_mock.user_requests_for_resource = Mock(return_value=[])
+        self.network_snapshot_mock.get_priority = Mock(side_effect=(lambda tracking_number : 0))
+        
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=True)
         
         # Start assertions
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
@@ -323,20 +311,19 @@ class TestSchduler(object):
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.TARGET_OF_OPPORTUNITY,
-                             Request.NORMAL_OBSERVATION_TYPE : [normal_single_ur],
-                             Request.TARGET_OF_OPPORTUNITY : [too_single_ur],
-                             }
+        too_user_requests = [too_single_ur]
+        normal_user_requests = [normal_single_ur]
+        normal_user_requests_priority_by_tracking_number = {ur.tracking_number : ur.priority for ur in normal_user_requests}
         
         # Make the normal user request appear to be running
         running_request = RunningRequest('1m0a.doma.lsc', normal_request_number)
         running_user_request = RunningUserRequest(normal_tracking_number, running_request)
-        self.network_snapshot_mock.user_request_for_telescope = Mock(side_effect=(lambda tel : running_user_request if tel == '1m0a.doma.lsc' else None))
+        self.network_snapshot_mock.user_requests_for_resource = Mock(side_effect=(lambda tel : [running_user_request] if tel == '1m0a.doma.lsc' else []))
+        self.network_snapshot_mock.get_priority = Mock(side_effect=(lambda tracking_number : normal_user_requests_priority_by_tracking_number.get(tracking_number)))
         
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=True)
         
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -394,11 +381,9 @@ class TestSchduler(object):
           
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.TARGET_OF_OPPORTUNITY,
-                             Request.NORMAL_OBSERVATION_TYPE : [low_priority_normal_single_ur, high_priority_normal_single_ur],
-                             Request.TARGET_OF_OPPORTUNITY : [too_single_ur],
-                             }
+        too_user_requests = [too_single_ur]
+        normal_user_requests = [low_priority_normal_single_ur, high_priority_normal_single_ur]
+        normal_user_requests_priority_by_tracking_number = {ur.tracking_number : ur.priority for ur in normal_user_requests}
           
         # Make the normal user request appear to be running
         low_priority_running_request = RunningRequest('1m0a.doma.lsc', low_priority_normal_request_number)
@@ -406,14 +391,15 @@ class TestSchduler(object):
         low_priority_running_user_request = RunningUserRequest(low_prioirty_normal_tracking_number, low_priority_running_request)
         high_priority_running_user_request = RunningUserRequest(high_priority_normal_tracking_number, high_priority_running_request)
         running_user_requst_map = {
-                                   '1m0a.doma.lsc' : low_priority_running_user_request,
-                                   '1m0a.doma.elp' : high_priority_running_user_request,
+                                   '1m0a.doma.lsc' : [low_priority_running_user_request],
+                                   '1m0a.doma.elp' : [high_priority_running_user_request],
                                    }
-        self.network_snapshot_mock.user_request_for_telescope = Mock(side_effect=(lambda tel : running_user_requst_map.get(tel, None)))
+        self.network_snapshot_mock.user_requests_for_resource = Mock(side_effect=(lambda tel : running_user_requst_map.get(tel, [])))
+        self.network_snapshot_mock.get_priority = Mock(side_effect=(lambda tracking_number : normal_user_requests_priority_by_tracking_number.get(tracking_number)))
           
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=True)
           
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -465,11 +451,7 @@ class TestSchduler(object):
           
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        user_request_dict = {
-                             'type' : Request.TARGET_OF_OPPORTUNITY,
-                             Request.NORMAL_OBSERVATION_TYPE : [],
-                             Request.TARGET_OF_OPPORTUNITY : [new_too_single_ur, old_low_priority_too_single_ur, old_high_priority_too_single_ur],
-                             }
+        too_user_requests = [new_too_single_ur, old_low_priority_too_single_ur, old_high_priority_too_single_ur]
           
         # Make the normal user request appear to be running
         low_priority_running_request = RunningRequest('1m0a.doma.lsc', old_low_priority_too_request_number)
@@ -477,14 +459,14 @@ class TestSchduler(object):
         low_priority_running_user_request = RunningUserRequest(old_low_prioirty_too_tracking_number, low_priority_running_request)
         high_priority_running_user_request = RunningUserRequest(old_high_priority_too_tracking_number, high_priority_running_request)
         running_user_requst_map = {
-                                   '1m0a.doma.lsc' : low_priority_running_user_request,
-                                   '1m0a.doma.elp' : high_priority_running_user_request,
+                                   '1m0a.doma.lsc' : [low_priority_running_user_request],
+                                   '1m0a.doma.elp' : [high_priority_running_user_request],
                                    }
-        self.network_snapshot_mock.user_request_for_telescope = Mock(side_effect=(lambda tel : running_user_requst_map.get(tel, None)))
+        self.network_snapshot_mock.user_requests_for_resource = Mock(side_effect=(lambda tel : running_user_requst_map.get(tel, [])))
           
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(user_request_dict, self.network_snapshot_mock, self.network_model, scheduler_run_end)
+        scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=True)
           
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -620,10 +602,11 @@ def create_user_request(tracking_number, priority, requests, operator):#window_d
 
     
 def create_request(request_number, duration, windows, possible_telescopes, is_too=False):
-    model_windows = []
+    model_windows = Windows()
     for window in windows:
         for telescope in possible_telescopes:
-            model_windows.append(Window(window, telescope))
+            mock_resource = Mock(name=telescope)
+            model_windows.append(Window(window, mock_resource))
     observation_type = "NORMAL"
     if is_too:
         observation_type = "TARGET_OF_OPPORTUNITY"
@@ -660,6 +643,7 @@ class TestSchedulerRunner(object):
         network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock)
+        scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
 
         assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
@@ -694,6 +678,7 @@ class TestSchedulerRunner(object):
         network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock)
+        scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
 
         assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
