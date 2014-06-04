@@ -17,8 +17,8 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.interfaces       import NetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner, SchedulerParameters
+from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface, PondScheduleInterface, RequestDBInterface
+from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
 # from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
@@ -97,6 +97,8 @@ def parse_args(argv):
                                 help="Treat Target of Opportunity Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
+    arg_parser.add_argument("-k", "--kernel", type=str, default='gurobi',
+                            help="Options are v5, v6, gurobi. Default is gurobi")
 
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
@@ -111,6 +113,33 @@ def parse_args(argv):
     return sched_params
 
 
+
+def get_kernel_class(sched_params):
+    kernel_class = None
+    if sched_params.kernel == 'v5':
+        from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5
+        kernel_class = FullScheduler_v5
+        # Use -1 for no timelimit
+        if sched_params.timelimit_seconds == None:
+            sched_params.timelimit_seconds = -1
+    elif sched_params.kernel == 'v6':
+        from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
+        kernel_class = FullScheduler_v6
+        # Use -1 for no timelimit
+        if sched_params.timelimit_seconds == None:
+            sched_params.timelimit_seconds = -1
+    elif sched_params.kernel == 'gurobi':
+        from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
+        kernel_class = FullScheduler_gurobi
+    elif sched_params.kernel == 'mock':
+        from mock import Mock
+        kernel_mock = Mock()
+        kernel_mock.schedule_all = Mock(return_value={})
+        kernel_class = Mock(return_value=kernel_mock)
+    else:
+        raise Exception("Unknown kernel version %s" % sched_params.kernel)
+    
+    return kernel_class
 
 
 
@@ -136,8 +165,9 @@ def main(argv):
     user_request_interface = RequestDBInterface(requestdb_client)
     network_state_interface = Network()
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
+#     network_interface = CachedInputNetworkInterface('/tmp/scheduler_input.pickle')
     
-    kernel_class = FullScheduler
+    kernel_class = get_kernel_class(sched_params)
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus)
     network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)

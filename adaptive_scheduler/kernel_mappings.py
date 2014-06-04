@@ -119,25 +119,17 @@ def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
 
-
-        # Find when it's dark, and when the target is up
-        tel = tels[resource_name]
-        if tel.events:
-            rs_dark_intervals = []
-            rs_up_intervals   = []
-            rs_ha_intervals   = []
+        visibility        = visibility_from[resource_name][0]
+        rs_dark_intervals = visibility_from[resource_name][1]()
+        rs_up_intervals   = visibility_from[resource_name][2](
+                                             target=rs_target,
+                                             up=True,
+                                             airmass=req.constraints.max_airmass)
+        # HA support only currently implemented for sidereal targets
+        if 'ra' in rs_target:
+            rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
         else:
-            visibility        = visibility_from[resource_name][0]
-            rs_dark_intervals = visibility_from[resource_name][1]()
-            rs_up_intervals   = visibility_from[resource_name][2](
-                                                 target=rs_target,
-                                                 up=True,
-                                                 airmass=req.constraints.max_airmass)
-            # HA support only currently implemented for sidereal targets
-            if 'ra' in rs_target:
-                rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
-            else:
-                rs_ha_intervals   = rs_up_intervals
+            rs_ha_intervals   = rs_up_intervals
 
 
         # Convert the rise_set intervals into kernel speak
@@ -440,7 +432,7 @@ def construct_global_availability(network_model, semester_start, network_snapsho
        get a final global availability for each resource.
     '''
 
-    for tel_name in network_model.keys():
+    for tel_name in network_model:
         excluded_interval = network_snapshot.blocked_intervals(tel_name)
         norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
 

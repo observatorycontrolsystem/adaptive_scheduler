@@ -4,6 +4,7 @@ from adaptive_scheduler.utils            import timeit
 from reqdb.client                        import ConnectionError, RequestDBError
 from adaptive_scheduler.request_parser   import TreeCollapser
 from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
+from adaptive_scheduler.kernel.intervals import Intervals
 
 import logging
 from datetime import datetime
@@ -25,19 +26,19 @@ class RunningUserRequest(object):
     
     def __str__(self):
         r_str = ','.join(['(%s)' % str(r) for r in self.running_requests])
-        ur_str = 'Tracking Number: %s, Running Requests: [%s]' % (self.trackig_number, r_str)
+        ur_str = 'Tracking Number: %s, Running Requests: [%s]' % (self.tracking_number, r_str)
         
         return ur_str
 
 
 class RunningRequest(object):
 
-    def __init__(self, telescope, request_number):
-        self.telescope = telescope
+    def __init__(self, resource, request_number):
+        self.resource = resource
         self.request_number = request_number
         
     def __str__(self):
-        return 'Request Number: %s at telescope %s' % (self.request_number, self.telescope)
+        return 'Request Number: %s at telescope %s' % (self.request_number, self.resource)
     
 
 class ResourceUsageSnapshot(object):
@@ -46,27 +47,24 @@ class ResourceUsageSnapshot(object):
         self.timestamp = timestamp
         self.running_user_requests_by_tracking_number = {}
         self.running_user_requests_by_resource = {}
-        for ur in running_user_requests:
-            self.running_user_requests_by_tracking_number[ur.tracking_number] = ur
-            # TODO: this shoudl refer to a used resource not a telescope to make it generic
-            self.running_user_requests_by_resource[ur.telescope] = ur
+        for running_ur in running_user_requests:
+            self.running_user_requests_by_tracking_number[running_ur.tracking_number] = running_ur
+            for running_request in running_ur.running_requests:
+                running_user_request_list = self.running_user_requests_by_resource.setdefault(running_request.resource, [])
+                running_user_request_list.append(running_ur)
         self.extra_blocked_intervals = extra_block_intervals
         
     def running_tracking_numbers(self):
-        return [ur.tracking_number for ur in self.running_user_requests_by_tracking_number.keys()]
+        return self.running_user_requests_by_tracking_number.keys()
     
     def running_user_request(self, tracking_number):
         return self.running_user_requests_by_tracking_number.get(tracking_number, None)
     
-    def user_request_for_resource(self, resource):
-        return self.running_user_requests_by_resource.get(resource, None)
+    def user_requests_for_resource(self, resource):
+        return self.running_user_requests_by_resource.get(resource, [])
     
-    def blocked_intervals(self):
-        intervals = list(self.blocked_intervals())
-        for ur in self.running_user_requests:
-            intervals.append(ur.to_interval())
-        
-        return intervals
+    def blocked_intervals(self, resource):
+        return self.extra_blocked_intervals.get(resource, Intervals([]))
 
 
 class PondRunningRequest(RunningRequest):
@@ -290,7 +288,7 @@ class PondScheduleInterface(object):
         ''' Return the current run intervals by telescope
         '''
         return self.running_intervals_by_telescope
-       
+        
     def too_user_request_intervals_by_telescope(self):
         ''' Return the schedule ToO intervals for the supplied telescope
         '''
@@ -330,6 +328,16 @@ class NetworkInterface(object):
         self.user_request_interface = user_request_interface
         self.network_state_interface = network_state_interface
         
+    def _running_user_requests_by_tracking_number(self):
+        ''' Return RunningUserRequest objects indexed by tracking number
+        '''
+        return self.network_schedule_interface.running_user_requests_by_tracking_number()
+            
+    def _too_user_request_intervals_by_telescope(self):
+        ''' Return the schedule ToO intervals for the supplied telescope
+        '''
+        return self.network_schedule_interface.too_user_request_intervals_by_telescope()
+        
     def schedulable_request_set_has_changed(self):
         '''True if set of schedulable requests has changed
         '''
@@ -353,26 +361,6 @@ class NetworkInterface(object):
     def set_user_requests_to_unschedulable(self, unschedulable_ur_numbers):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
-    
-    def _running_user_requests_by_tracking_number(self):
-        ''' Return RunningUserRequest objects indexed by tracking number
-        '''
-        return self.network_schedule_interface.running_user_requests_by_tracking_number()
-    
-#     def running_user_requests_by_telescope(self):
-#         ''' Return RunningUserRequest objects indexed by telescope
-#         '''
-#         return self.network_schedule_interface.running_user_requests_by_telescope()
-#         
-#     def running_user_request_intervals_by_telescope(self):
-#         ''' Return the current run intervals by telescope
-#         '''
-#         return self.network_schedule_interface.running_user_request_intervals_by_telescope()
-#        
-    def _too_user_request_intervals_by_telescope(self):
-        ''' Return the schedule ToO intervals for the supplied telescope
-        '''
-        return self.network_schedule_interface.too_user_request_intervals_by_telescope()
     
     def cancel(self, start, end, dry_run=False, tels=None):
         ''' Cancel the current scheduler between start and end
@@ -404,6 +392,69 @@ class NetworkInterface(object):
         
         return ResourceUsageSnapshot(now,
                               self._running_user_requests_by_tracking_number().values(),
-                              self.too_user_request_intervals_by_telescope())
+                              self._too_user_request_intervals_by_telescope())
+        
+
+import pickle
+class CachedInputNetworkInterface(object):
+    
+    def __init__(self, input_file_name):
+        self.input_file_name = input_file_name
+        input_file = open(self.input_file_name, 'r')
+        input_data = pickle.load(input_file)
+        input_file.close()
+        self.json_user_request_list = input_data['json_user_request_list']
+        self.resource_usage_snapshot_data = input_data['resource_usage_snapshot']
+        
+    def schedulable_request_set_has_changed(self):
+        '''True if set of schedulable requests has changed
+        '''
+        return True
+    
+    def clear_schedulable_request_set_changed_state(self):
+        '''True if set of schedulable requests has changed
+        '''
+        return True
+    
+    def get_all_user_requests(self, start, end):
+        '''Get all user requests waiting for scheduling between
+        start and end date
+        '''
+        return self.json_user_request_list            
+                
+    def set_requests_to_unschedulable(self, unschedulable_r_numbers):
+        '''Update the state of all the unschedulable Requests in the DB in one go.'''
+        pass
+    
+    def set_user_requests_to_unschedulable(self, unschedulable_ur_numbers):
+        '''Update the state of all the unschedulable User Requests in the DB in one go.'''
+        pass
+    
+    def cancel(self, start, end, dry_run=False, tels=None):
+        ''' Cancel the current scheduler between start and end
+        Return the number of deleted requests
+        '''
+        return 0
+            
+    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+        ''' Save the provided observing schedule
+        Return the number of submitted requests
+        '''
+        return 0
+    
+    def get_current_events(self):
+        ''' Get the current network events
+        '''
+        return {}
+    
+    def current_events_has_changed(self):
+        ''' Return True if the current network state is different from
+            the previous network state.
+        '''
+        return False
+    
+    # TODO: Remove too_tracking_numbers, the scheduler should be able to remember what is scheduled during last run
+    def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end, too_tracking_numbers):
+        return self.resource_usage_snapshot_data
     
 

@@ -35,7 +35,7 @@ from adaptive_scheduler.model2           import ModelBuilder
 
 class SchedulerParameters(object):
     
-    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None):
+    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None, kernel='gurobi'):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
         self.cameras_file = cameras_file
@@ -49,6 +49,7 @@ class SchedulerParameters(object):
         self.run_once = run_once
         self.sleep_seconds = sleep_seconds
         self.simulate_now = simulate_now
+        self.kernel = kernel
         
         
     def get_model_builder(self):
@@ -68,7 +69,7 @@ class Scheduler(object):
         self.estimated_scheduler_end = datetime.utcnow()
     
     
-    def find_tels_to_preempt(self, preemtion_urs, all_urgent_urs, normal_urs, resources, network_snapshot):
+    def find_tels_to_preempt(self, preemtion_urs, all_urgent_urs, normal_urs, resources, resource_usage_snapshot):
         ''' Preempt running requests, if needed, to run urgent user requests'''
     
         #make copy of resource list since it could be modified
@@ -78,10 +79,11 @@ class Scheduler(object):
         # Remove any resource with running urgent requests from resource list
         all_urgent_tracking_numbers = [ur.tracking_number for ur in all_urgent_urs]           
         for resource in resources:
-            if network_snapshot.user_request_for_telescope(resource) and network_snapshot.user_request_for_telescope(resource).tracking_number in all_urgent_tracking_numbers:
-                copy_of_resources.remove(resource)
+            for running_ur in resource_usage_snapshot.user_requests_for_resource(resource):
+                if running_ur.tracking_number in all_urgent_tracking_numbers:
+                    copy_of_resources.remove(resource)
     
-        value_function_dict = self.construct_value_function_dict(preemtion_urs, normal_urs, copy_of_resources, network_snapshot)
+        value_function_dict = self.construct_value_function_dict(preemtion_urs, normal_urs, copy_of_resources, resource_usage_snapshot)
     
         preemtion_tracking_numbers = [ur.tracking_number for ur in preemtion_urs]
         optimal_combination = self.compute_optimal_combination(value_function_dict, preemtion_tracking_numbers, copy_of_resources)
@@ -102,7 +104,7 @@ class Scheduler(object):
     
         return excluded_intervals_1
     
-    def construct_value_function_dict(self, urgent_urs, normal_urs, resources, network_snapshot):
+    def construct_value_function_dict(self, urgent_urs, normal_urs, resources, resource_usage_snapshot):
         ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
     
             where value = too priority / running block priority or if no block is running at
@@ -124,28 +126,30 @@ class Scheduler(object):
                 continue
     
             for request in ur.requests:
-                for window in request.windows:
-                    tracking_number_to_resource_map[tracking_number].add(window.resource)
+                for resource, windows in request.windows:
+                    tracking_number_to_resource_map[tracking_number].add(resource)
     
         value_function_dict = {};
         for resource in resources:
-            running_at_tel = network_snapshot.user_request_for_telescope(resource) 
+            running_ur_list = resource_usage_snapshot.user_requests_for_resource(resource) 
             # Compute the priority of the the telescopes without ToOs
-            if running_at_tel:
-                running_request_priority = 0;
+            # use a priority of 1 for telescopes without a running block
+            running_request_priority = 1
+            for running_at_tel in running_ur_list:
                 running_tracking_number = running_at_tel.tracking_number
                 normal_ur = normal_tracking_numbers_dict.get(running_tracking_number, None)
+                normal_ur_prioirty = 0
                 if normal_ur:
-                    running_request_priority += normal_ur.get_priority()
+                    normal_ur_prioirty += normal_ur.get_priority()
                 else:
                     # The running request wasn't included in the list of schedulable urs so we don't know it's priority
                     # This could happen if the running request has been canceled.  In this case treat it like nothing is running
                     # Not sure if there are other ways this can happen.  Beware....
                     # TODO: add function unit test for this case
-                    running_request_priority = 1
-            else:
-                # use a priority of 1 for telescopes without a running block
-                running_request_priority = 1
+                    normal_ur_prioirty = 1
+                # Take the greater of the running priorities.  Should it be the sum? Something else?
+                if normal_ur_prioirty > running_request_priority:
+                    running_request_priority = normal_ur_prioirty
     
             for ur in urgent_urs:
                 tracking_number = ur.tracking_number
@@ -220,7 +224,7 @@ class Scheduler(object):
         return estimated_scheduler_end + ONE_WEEK
             
             
-    def apply_unschedulable_filters(self, user_reqs, network_snapshot, estimated_scheduler_end):
+    def apply_unschedulable_filters(self, user_reqs, resource_usage_snapshot, estimated_scheduler_end):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
         '''
@@ -240,7 +244,7 @@ class Scheduler(object):
         return []
     
     
-    def prepare_available_windows_for_kernel(self, network_model, network_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, network_model, resource_usage_snapshot, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
@@ -284,7 +288,7 @@ class Scheduler(object):
     
     # TODO: refactor into smaller chunks
     @timeit
-    def run_scheduler(self, user_reqs_dict, network_snapshot, available_resources, estimated_scheduler_end):
+    def run_scheduler(self, user_reqs_dict, resource_usage_snapshot, available_resources, estimated_scheduler_end):
     
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
@@ -305,7 +309,7 @@ class Scheduler(object):
             user_reqs = self.remove_compounds(user_reqs)
         
         self.log.info("Starting unschedulable filters")
-        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, network_snapshot, estimated_scheduler_end)
+        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, resource_usage_snapshot, estimated_scheduler_end)
         self.log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
         unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
         unschedulable_r_numbers  = self.filter_unscheduleable_child_requests(schedulable_urs)
@@ -317,24 +321,33 @@ class Scheduler(object):
         self.log.info("Completed window filters")
         self.after_window_filters(window_adjusted_urs)
         
-        # By default, cancel on all telescopes
+        # Remove resources with network events.  This needs to be done before
+        # finding a preemption resource to exclude unavailable resources from
+        # consideration
+        resources_to_schedule = list(available_resources)
+        for resource_name, resource in available_resources.iteritems():
+            if resource.events:
+                resources_to_schedule.remove(resource_name)
+        
+        # By default, cancel on all resources
         resources_to_schedule = list(available_resources)
         resource_schedules_to_cancel = []
         
         # TODO: Change this to preemt or not preemt but not care about ToO
         # Pre-empt running blocks
         if run_type == Request.TARGET_OF_OPPORTUNITY:
-            resource_schedules_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, available_resources, network_snapshot) 
+            resource_schedules_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, resources_to_schedule, resource_usage_snapshot) 
             # Need a copy because the original is modified inside the loop
             copy_of_resources_to_schedule = list(resources_to_schedule)
             for resource in copy_of_resources_to_schedule:
                 if not resource in resource_schedules_to_cancel:
+                    self.log.info("Removing %s from schedulable resources.  Not needed for ToO." % resource)
                     resources_to_schedule.remove(resource)
         else:
-            resource_schedules_to_cancel = resources_to_schedule
+            resource_schedules_to_cancel = available_resources
             
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, resources_to_schedule, estimated_scheduler_end)        
-        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, network_snapshot, estimated_scheduler_end)
+        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end)
     
         print_compound_reservations(compound_reservations)
     
@@ -347,22 +360,15 @@ class Scheduler(object):
         
         if compound_reservations:
             # Instantiate and run the scheduler
-            time_slicing_dict = {}
-            for t in resources_to_schedule:
-                time_slicing_dict[t] = [0, self.sched_params.slicesize_seconds]
-        
             contractual_obligations = []
         
             self.log.info("Starting scheduling kernel")
-            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, time_slicing_dict)
-            new_schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
+            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, resources_to_schedule, self.sched_params.slicesize_seconds)
+            scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             self.log.info("Completed scheduling kernel")
             
-            # Put new schedule in result object
-            scheduler_result.schedule = new_schedule
-            
             # Do post scheduling stuff
-            self.on_new_schedule(new_schedule, compound_reservations, estimated_scheduler_end)
+            self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")
             scheduler_result.resource_schedules_to_cancel = {}
@@ -415,15 +421,15 @@ class LCOGTNetworkScheduler(Scheduler):
             log_windows(ur, log_msg="Initial windows:")
             
             
-    def apply_unschedulable_filters(self, user_reqs, network_snapshot, estimated_scheduler_end):
+    def apply_unschedulable_filters(self, user_reqs, resource_usage_snapshot, estimated_scheduler_end):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
         '''
-        running_ur_tracking_numbers = network_snapshot.running_tracking_numbers()
+        running_ur_tracking_numbers = resource_usage_snapshot.running_tracking_numbers()
         tag = 'RunningBlock'
         for ur in user_reqs:
             if ur.tracking_number in running_ur_tracking_numbers:
-                msg = 'User Request is running' % network_snapshot.running_user_request(ur.tracking_number)
+                msg = 'User Request %s is running' % resource_usage_snapshot.running_user_request(ur.tracking_number)
                 ur.emit_user_feedback(msg, tag)
                 break
     
@@ -472,7 +478,7 @@ class LCOGTNetworkScheduler(Scheduler):
         return all_compound_reservations
     
     
-    def prepare_available_windows_for_kernel(self, network_model, network_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, network_model, resource_usage_snapshot, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
@@ -481,7 +487,7 @@ class LCOGTNetworkScheduler(Scheduler):
     
         # Intersect and mask out time where Blocks are currently running
         global_windows = construct_global_availability(network_model, semester_start,
-                                                       network_snapshot, resource_windows)
+                                                       resource_usage_snapshot, resource_windows)
         
         return global_windows
     
@@ -610,6 +616,17 @@ class SchedulerRunner(object):
                 time.sleep(self.sched_params.sleep_seconds)
             first_run = False
             
+            
+    def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
+        import pickle
+        output = {
+                  'json_user_request_list' : json_user_request_list,
+                  'resource_usage_snapshot' : resource_usage_snapshot
+                  }
+        outfile = open('/tmp/scheduler_input.pickle', 'w')
+        pickle.dump(output, outfile)
+        outfile.close()
+            
     def create_new_schedule(self):
         now = self.determine_scheduler_now();
         estimated_scheduler_end = now + timedelta(minutes=6)
@@ -620,7 +637,8 @@ class SchedulerRunner(object):
         normal_user_requests = []
         too_user_requests    = []
         model_builder = self.sched_params.get_model_builder()
-        for json_ur in self.network_interface.get_all_user_requests(semester_start, semester_end):
+        json_user_request_list = self.network_interface.get_all_user_requests(semester_start, semester_end)
+        for json_ur in json_user_request_list:
             try:
                 ur = model_builder.build_user_request(json_ur)
                 if not self.sched_params.no_too and ur.has_target_of_opportunity():
@@ -646,8 +664,9 @@ class SchedulerRunner(object):
             n_urs, n_rs = n_requests(too_user_requests)
             
             try:
-                network_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, short_estimated_scheduler_end, too_tracking_numbers)
-                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, network_snapshot, self.network_model, short_estimated_scheduler_end)
+                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, short_estimated_scheduler_end, too_tracking_numbers)
+                self._write_scheduler_input_files(json_user_request_list, resource_usage_snapshot)
+                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, self.network_model, short_estimated_scheduler_end)
                 
                 if not self.sched_params.dry_run:
                     # Set the states of the Requests and User Requests
@@ -674,8 +693,8 @@ class SchedulerRunner(object):
             n_urs, n_rs = n_requests(normal_user_requests)
             
             try:
-                network_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, estimated_scheduler_end, too_tracking_numbers)               
-                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, network_snapshot, self.network_model, estimated_scheduler_end)
+                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, estimated_scheduler_end, too_tracking_numbers)               
+                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, self.network_model, estimated_scheduler_end)
                 if not self.sched_params.dry_run:
                     # Set the states of the Requests and User Requests
                     self.network_interface.set_requests_to_unschedulable(scheduler_result.unschedulable_request_numbers)

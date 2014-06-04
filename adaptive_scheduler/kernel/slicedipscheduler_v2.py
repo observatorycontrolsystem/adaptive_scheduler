@@ -40,19 +40,24 @@ class SlicedIPScheduler_v2(Scheduler):
     
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
-                 contractual_obligation_list, 
-                 time_slicing_dict):
+                 contractual_obligation_list,
+                 resource_list, slice_size_seconds):
         Scheduler.__init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list)
         # time_slicing_dict is a dictionary that maps: 
         # resource-> [slice_alignment, slice_length]
-        self.time_slicing_dict = time_slicing_dict
+        self.resource_list = resource_list
+        self.slice_size_seconds = slice_size_seconds
+        self.time_slicing_dict = {}
         # these are the structures we need for the linear programming solver
         self.Yik = [] # maps idx -> [resID, window idx, priority, resource]
         self.aikt = {} # maps slice -> Yik idxs
         self.schedulerIDstring = 'slicedIPscheduler'
         self.hashes = set()
+        
+        for r in self.resource_list:
+            self.time_slicing_dict[r] = [0, self.slice_size_seconds]
 
 
     def hash_slice(self, start, resource, slice_length):
