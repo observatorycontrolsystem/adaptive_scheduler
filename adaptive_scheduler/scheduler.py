@@ -3,34 +3,36 @@ from __future__ import division
 import time
 import sys
 import logging
+import itertools
 
+from collections import defaultdict
 from datetime import datetime, timedelta
-from reqdb.requests import Request
+
+from reqdb.requests                      import Request
 from schedutils.semester_service         import get_semester_block
-from adaptive_scheduler.feedback        import TimingLogger
-from schedutils.semester_service import get_semester_code
+from adaptive_scheduler.feedback         import TimingLogger
+from schedutils.semester_service         import get_semester_code
+from adaptive_scheduler.interfaces       import ScheduleException
+from adaptive_scheduler.model2           import ModelBuilder
+from adaptive_scheduler.event_utils      import report_scheduling_outcome
+from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
+from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
-                                          summarise_urs, log_full_ur, log_windows)
-from adaptive_scheduler.model2          import (filter_out_compounds,
-                                                 differentiate_by_type, n_requests,
-                                                  RequestError)
+                                         summarise_urs, log_full_ur, log_windows)
+from adaptive_scheduler.model2   import (filter_out_compounds,
+                                         differentiate_by_type, n_requests,
+                                         RequestError)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
                                                  make_many_type_compound_reservations,
                                                  filter_for_kernel,
                                                  construct_global_availability)
-from adaptive_scheduler.request_filters import filter_urs, drop_empty_requests, find_unschedulable_ur_numbers, set_now
-from adaptive_scheduler.event_utils import report_scheduling_outcome
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils import timeit, iso_string_to_datetime
-from adaptive_scheduler.printing import pluralise as pl
-from adaptive_scheduler.interfaces import ScheduleException
-from timeit import itertools
-from collections import defaultdict
-from adaptive_scheduler.model2           import ModelBuilder
-
-
+from adaptive_scheduler.request_filters import (filter_urs,
+                                                drop_empty_requests,
+                                                find_unschedulable_ur_numbers,
+                                                set_now)
 
 
 class SchedulerParameters(object):
@@ -69,7 +71,7 @@ class Scheduler(object):
         self.estimated_scheduler_end = datetime.utcnow()
     
     
-    def find_tels_to_preempt(self, preemtion_urs, all_urgent_urs, normal_urs, resources, resource_usage_snapshot):
+    def find_resources_to_preempt(self, preemtion_urs, all_urgent_urs, normal_urs, resources, resource_usage_snapshot):
         ''' Preempt running requests, if needed, to run urgent user requests'''
     
         #make copy of resource list since it could be modified
@@ -116,16 +118,16 @@ class Scheduler(object):
         normal_tracking_numbers_dict = {ur.tracking_number : ur for ur in normal_urs}
     
         tracking_number_to_resource_map = defaultdict(set)
-        for ur in urgent_urs: 
-            tracking_number = ur.tracking_number
+        for urgent_ur in urgent_urs: 
+            tracking_number = urgent_ur.tracking_number
     
-            if ur.n_requests() > 1:
+            if urgent_ur.n_requests() > 1:
                 msg = "TOO UR %s has more than one child R, which is not supported." % tracking_number
                 msg += " Submit as separate requests."
                 self.log.info(msg)
                 continue
     
-            for request in ur.requests:
+            for request in urgent_ur.requests:
                 for resource, windows in request.windows:
                     tracking_number_to_resource_map[tracking_number].add(resource)
     
@@ -231,26 +233,26 @@ class Scheduler(object):
         return user_reqs, []
     
     
-    def apply_window_filters(self, user_reqs, network_model, estimated_scheduler_end):
+    def apply_window_filters(self, user_reqs, estimated_scheduler_end):
         ''' Returns the set of URs with windows adjusted to include only URs with windows
         suitable for scheduling
         '''
         return user_reqs
     
     
-    def prepare_for_kernel(self, window_adjusted_urs, network_model, estimated_scheduler_end):
+    def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
         return []
     
     
-    def prepare_available_windows_for_kernel(self, network_model, resource_usage_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
     
     
-    def on_run_scheduler(self, user_requests, network_model):
+    def on_run_scheduler(self, user_requests):
         ''' Handler called at beginning run_schedule
         '''
         pass
@@ -288,7 +290,7 @@ class Scheduler(object):
     
     # TODO: refactor into smaller chunks
     @timeit
-    def run_scheduler(self, user_reqs_dict, resource_usage_snapshot, available_resources, estimated_scheduler_end):
+    def run_scheduler(self, user_reqs_dict, resource_usage_snapshot, available_resources, estimated_scheduler_end, preemption_enabled=False):
     
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
@@ -300,7 +302,7 @@ class Scheduler(object):
         normal_user_requests = user_reqs_dict[Request.NORMAL_OBSERVATION_TYPE]
         too_user_requests = user_reqs_dict[Request.TARGET_OF_OPPORTUNITY]
         
-        self.on_run_scheduler(user_reqs, available_resources)
+        self.on_run_scheduler(user_reqs)
         
         if self.sched_params.no_singles:
             user_reqs = self.remove_singles(user_reqs)
@@ -317,17 +319,9 @@ class Scheduler(object):
         self.after_unschedulable_filters(schedulable_urs)
         
         self.log.info("Starting window filters")
-        window_adjusted_urs = self.apply_window_filters(schedulable_urs, available_resources, estimated_scheduler_end)
+        window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
         self.log.info("Completed window filters")
         self.after_window_filters(window_adjusted_urs)
-        
-        # Remove resources with network events.  This needs to be done before
-        # finding a preemption resource to exclude unavailable resources from
-        # consideration
-        resources_to_schedule = list(available_resources)
-        for resource_name, resource in available_resources.iteritems():
-            if resource.events:
-                resources_to_schedule.remove(resource_name)
         
         # By default, cancel on all resources
         resources_to_schedule = list(available_resources)
@@ -336,7 +330,7 @@ class Scheduler(object):
         # TODO: Change this to preemt or not preemt but not care about ToO
         # Pre-empt running blocks
         if run_type == Request.TARGET_OF_OPPORTUNITY:
-            resource_schedules_to_cancel = self.find_tels_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, resources_to_schedule, resource_usage_snapshot) 
+            resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, too_user_requests, normal_user_requests, resources_to_schedule, resource_usage_snapshot) 
             # Need a copy because the original is modified inside the loop
             copy_of_resources_to_schedule = list(resources_to_schedule)
             for resource in copy_of_resources_to_schedule:
@@ -346,7 +340,7 @@ class Scheduler(object):
         else:
             resource_schedules_to_cancel = available_resources
             
-        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, resources_to_schedule, estimated_scheduler_end)        
+        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)        
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end)
     
         print_compound_reservations(compound_reservations)
@@ -379,12 +373,13 @@ class Scheduler(object):
 
 class LCOGTNetworkScheduler(Scheduler):
     
-    def __init__(self, kernel_class, sched_params, event_bus):
+    def __init__(self, kernel_class, sched_params, event_bus, network_model):
         Scheduler.__init__(self, kernel_class, sched_params, event_bus)
         
         self.visibility_cache = {}
         self.date_fmt      = '%Y-%m-%d'
         self.date_time_fmt = '%Y-%m-%d %H:%M:%S'
+        self.network_model = network_model
     
     
     @timeit
@@ -445,7 +440,7 @@ class LCOGTNetworkScheduler(Scheduler):
         return schedulable_urs, unschedulable_urs
     
     
-    def apply_window_filters(self, user_reqs, network_model, estimated_scheduler_end):
+    def apply_window_filters(self, user_reqs, estimated_scheduler_end):
         ''' Returns the set of URs with windows adjusted to include only URs with windows
         suitable for scheduling
         '''
@@ -453,32 +448,32 @@ class LCOGTNetworkScheduler(Scheduler):
         self.log.info("Filtering on dark/rise_set")
     
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
-        for tel_name, tel in network_model.iteritems():
-            if tel.events:
-                self.log.info("Bypassing visibility calcs for %s" % tel_name)
+#         for tel_name, tel in network_model.iteritems():
+#             if tel.events:
+#                 self.log.info("Bypassing visibility calcs for %s" % tel_name)
     
-        filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache, network_model,
+        filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache,
                                         estimated_scheduler_end, semester_end, self.scheduling_horizon(estimated_scheduler_end))
         
         return filtered_window_user_reqs
     
     
-    def prepare_for_kernel(self, window_adjusted_urs, network_model, estimated_scheduler_end):
+    def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
         # Convert CompoundRequests -> CompoundReservations
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         many_urs, other_urs = differentiate_by_type('many', window_adjusted_urs)
-        many_compound_reservations = make_many_type_compound_reservations(many_urs, network_model, self.visibility_cache,
+        many_compound_reservations = make_many_type_compound_reservations(many_urs, self.visibility_cache,
                                                                 semester_start)
-        other_compound_reservations = make_compound_reservations(other_urs, network_model, self.visibility_cache,
+        other_compound_reservations = make_compound_reservations(other_urs, self.visibility_cache,
                                                        semester_start)
         all_compound_reservations = many_compound_reservations + other_compound_reservations
         
         return all_compound_reservations
     
     
-    def prepare_available_windows_for_kernel(self, network_model, resource_usage_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
@@ -486,13 +481,13 @@ class LCOGTNetworkScheduler(Scheduler):
         resource_windows = construct_resource_windows(self.visibility_cache, semester_start)
     
         # Intersect and mask out time where Blocks are currently running
-        global_windows = construct_global_availability(network_model, semester_start,
+        global_windows = construct_global_availability(available_resources, semester_start,
                                                        resource_usage_snapshot, resource_windows)
         
         return global_windows
     
     
-    def on_run_scheduler(self, user_requests, network_model):
+    def on_run_scheduler(self, user_requests):
         self._log_scheduler_start_details(self.estimated_scheduler_end)
         self._log_ur_input_details(user_requests, self.estimated_scheduler_end)
         
@@ -501,7 +496,7 @@ class LCOGTNetworkScheduler(Scheduler):
         # Construct visibility objects for each telescope
         self.log.info("Constructing telescope visibilities")
         if not self.visibility_cache:
-            self.visibility_cache = construct_visibilities(network_model, semester_start, semester_end)
+            self.visibility_cache = construct_visibilities(self.network_model, semester_start, semester_end)
         
     
     def after_unschedulable_filters(self, user_requests):
@@ -658,15 +653,23 @@ class SchedulerRunner(object):
         
         too_tracking_numbers = [ur.tracking_number for ur in too_user_requests]
         
+        # Remove resources with network events.  This needs to be done before
+        # finding a preemption resource to exclude unavailable resources from
+        # consideration
+        available_resources = []
+        for resource_name, resource in self.network_model.iteritems():
+            if not resource.events:
+                available_resources.append(resource_name)
+        
         if too_user_requests:
             self.log.info("Start ToO Scheduling")
             user_requests_dict['type'] = Request.TARGET_OF_OPPORTUNITY
             n_urs, n_rs = n_requests(too_user_requests)
             
             try:
-                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, short_estimated_scheduler_end, too_tracking_numbers)
+                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(available_resources, now, short_estimated_scheduler_end, too_tracking_numbers)
                 self._write_scheduler_input_files(json_user_request_list, resource_usage_snapshot)
-                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, self.network_model, short_estimated_scheduler_end)
+                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, available_resources, short_estimated_scheduler_end)
                 
                 if not self.sched_params.dry_run:
                     # Set the states of the Requests and User Requests
@@ -693,8 +696,8 @@ class SchedulerRunner(object):
             n_urs, n_rs = n_requests(normal_user_requests)
             
             try:
-                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, estimated_scheduler_end, too_tracking_numbers)               
-                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, self.network_model, estimated_scheduler_end)
+                resource_usage_snapshot = self.network_interface.resource_usage_snapshot(self.network_model.keys(), now, estimated_scheduler_end, too_tracking_numbers)        
+                scheduler_result = self.scheduler.run_scheduler(user_requests_dict, resource_usage_snapshot, available_resources, estimated_scheduler_end)
                 if not self.sched_params.dry_run:
                     # Set the states of the Requests and User Requests
                     self.network_interface.set_requests_to_unschedulable(scheduler_result.unschedulable_request_numbers)

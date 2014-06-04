@@ -168,8 +168,8 @@ def main(argv):
 #     network_interface = CachedInputNetworkInterface('/tmp/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
-    scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus)
     network_model = sched_params.get_model_builder().tel_network.telescopes
+    scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)
     scheduler_runner.run()
 
