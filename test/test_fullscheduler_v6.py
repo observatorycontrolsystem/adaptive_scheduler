@@ -87,28 +87,24 @@ class TestFullScheduler_v6(object):
         self.gpw4 = {}
         self.gpw4['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
 
-        slice_dict = {}
-        slice_dict['foo'] = [0,1]
-        slice_dict['bar'] = [0,1]
-
         self.fs1 = FullScheduler_v6([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs2 = FullScheduler_v6([self.cr1, self.cr4],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs3 = FullScheduler_v6([self.cr5],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs4 = FullScheduler_v6([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs5 = FullScheduler_v6([self.cr10, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs6 = FullScheduler_v6([self.cr11, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
         self.fs7 = FullScheduler_v6([self.cr12],
-                                    self.gpw3, [], slice_dict)
+                                    self.gpw3, [], ['foo', 'bar'], 1)
         self.fs8 = FullScheduler_v6([self.cr13, self.cr14, self.cr15, self.cr16],
-                                    self.gpw4, [], slice_dict)
+                                    self.gpw4, [], ['foo', 'bar'], 1)
         self.fs9 = FullScheduler_v6([self.cr17, self.cr18, self.cr19],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], ['foo', 'bar'], 1)
 
     def test_schedule_noneofand(self):
         self.fs9.schedule_all()
@@ -179,7 +175,7 @@ class TestFullScheduler_v6(object):
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
         fs = FullScheduler_v6([self.cr9],
-                              self.gpw2, [], slice_dict)
+                              self.gpw2, [], ['foo', 'bar'], 1)
         s = fs.schedule_all()
         # only one should be scheduled
 
@@ -198,10 +194,8 @@ class TestFullScheduler_v6(object):
                                 Timepoint(201000, 'end')])
         gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
                                 Timepoint(201000, 'end')])
-        slice_dict = {}
-        slice_dict['foo'] = [90000,60]
-        slice_dict['goo'] = [90000,60]
-        fs = FullScheduler_v6([cr], gpw, [], slice_dict)
+
+        fs = FullScheduler_v6([cr], gpw, [], ['foo', 'goo'], 60)
         schedule = fs.schedule_all()
 
 

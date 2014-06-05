@@ -196,7 +196,7 @@ class TestKernelMappings(object):
                       )
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
@@ -236,7 +236,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from, True)
+        received = make_dark_up_kernel_intervals(req, visibility_from, True)
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -285,7 +285,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
@@ -308,19 +308,19 @@ class TestKernelMappings(object):
         tel_name = '1m0a.doma.bpl'
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         # No event - visibility windows as normal
         assert_equal(len(received[tel_name].timepoints), 4)
 
         # No visibility windows if there's an event
         self.tels['1m0a.doma.bpl'].events = [1]
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
         assert_equal(len(received[tel_name].timepoints), 0)
 
         # And they're back when the event is gone
         self.tels['1m0a.doma.bpl'].events = []
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
         assert_equal(len(received[tel_name].timepoints), 4)
 
 
@@ -368,7 +368,7 @@ class TestKernelMappings(object):
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
         visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -433,7 +433,7 @@ class TestKernelMappings(object):
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
         visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -510,13 +510,11 @@ class TestKernelMappings(object):
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
         received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            self.tels,
                                                             visibility_from,
                                                             True)
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
         received_airmass3 = make_dark_up_kernel_intervals(req_airmass3,
-                                                          self.tels,
                                                           visibility_from,
                                                           True)
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].timepoints
@@ -532,12 +530,10 @@ class TestKernelMappings(object):
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
         received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            self.tels,
                                                             visibility_from, True)
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
         received_airmass1 = make_dark_up_kernel_intervals(req_airmass1,
-                                                          self.tels,
                                                           visibility_from,
                                                           True)
         timepoints_airmass1 = received_airmass1['1m0a.doma.bpl'].timepoints

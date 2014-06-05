@@ -138,35 +138,39 @@ class SlicedIPScheduler_v2(Scheduler):
         internal.
         Returns: a list of PossibleStart objects'''
 
-        slice_alignment = self.time_slicing_dict[resource][0]
-        slice_length = self.time_slicing_dict[resource][1]
-        slices = []
-        internal_starts = []
-        intervals.timepoints.sort()
-        for t in intervals.timepoints:
-            if t.type == 'start':
-                if t.time <= slice_alignment:
-                    start = slice_alignment
-                    internal_start = slice_alignment
-                else:
-                    # figure out start so it aligns with slice_alignment 
-                    start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
-                    # use the actual start as an internal start (may or may not align w/ slice_alignment)
-                    internal_start = t.time
-                end_time = internal_start + duration
-            elif t.type == 'end': 
-                if t.time < slice_alignment:
-                    continue
-                while t.time - start >= duration:
-                    tmp = range(start, internal_start+duration, slice_length)
-                    slices.append(tmp)
-                    internal_starts.append(internal_start)
-                    start += slice_length
-                    internal_start = start
-#        return slices, internal_starts
         ps_list = []
-        idx = 0
-        for w in slices:
-            ps_list.append(PossibleStart(resource, w, internal_starts[idx]))
+        # Make sure the resource is available.  If it is not in the time slicing dict, it's not available
+        if self.time_slicing_dict.has_key(resource):
+            slice_alignment = self.time_slicing_dict[resource][0]
+            slice_length = self.time_slicing_dict[resource][1]
+            slices = []
+            internal_starts = []
+            intervals.timepoints.sort()
+            for t in intervals.timepoints:
+                if t.type == 'start':
+                    if t.time <= slice_alignment:
+                        start = slice_alignment
+                        internal_start = slice_alignment
+                    else:
+                        # figure out start so it aligns with slice_alignment 
+                        start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
+                        # use the actual start as an internal start (may or may not align w/ slice_alignment)
+                        internal_start = t.time
+                    end_time = internal_start + duration
+                elif t.type == 'end': 
+                    if t.time < slice_alignment:
+                        continue
+                    while t.time - start >= duration:
+                        tmp = range(start, internal_start+duration, slice_length)
+                        slices.append(tmp)
+                        internal_starts.append(internal_start)
+                        start += slice_length
+                        internal_start = start
+            
+            # return slices, internal_starts
+            idx = 0
+            for w in slices:
+                ps_list.append(PossibleStart(resource, w, internal_starts[idx]))
             idx += 1
+            
         return ps_list

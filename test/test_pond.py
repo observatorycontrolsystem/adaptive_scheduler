@@ -782,6 +782,7 @@ class TestPondInteractions(object):
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(schedule, dry_run)
 
+    # TODO: replace this test with a functionaly equivelent test
     @patch('adaptive_scheduler.pond.get_intervals')
     @patch('adaptive_scheduler.pond.get_running_blocks')
     def test_blocks_arent_running_if_weather(self, mock_func1, mock_func2):
@@ -810,7 +811,6 @@ class TestPondInteractions(object):
         end = datetime(2013, 11, 3)
         now = start - timedelta(minutes=6)
 
-        import ipdb; ipdb.set_trace();
         blocks = get_network_running_blocks(tels, now, start)
         received = get_network_running_intervals(blocks)
 

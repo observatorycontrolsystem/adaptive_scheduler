@@ -58,6 +58,9 @@ class ResourceUsageSnapshot(object):
     def running_tracking_numbers(self):
         return self.running_user_requests_by_tracking_number.keys()
     
+    def running_user_requests(self):
+        return self.running_user_requests_by_tracking_number.values()
+    
     def running_user_request(self, tracking_number):
         return self.running_user_requests_by_tracking_number.get(tracking_number, None)
     

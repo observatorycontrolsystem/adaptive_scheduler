@@ -98,7 +98,7 @@ def parse_args(argv):
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default='gurobi',
-                            help="Options are v5, v6, gurobi. Default is gurobi")
+                            help="Options are v5, v6, gurobi, mock. Default is gurobi")
 
     # Handle command line arguments
     args = arg_parser.parse_args(argv)

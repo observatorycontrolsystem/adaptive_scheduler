@@ -1,6 +1,6 @@
 from adaptive_scheduler.scheduler import Scheduler, SchedulerParameters, LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.model2 import UserRequest, Window, Windows
-from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest
+from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
@@ -50,60 +50,69 @@ class TestSchduler(object):
         return ur_list
     
     def test_blacklist_running_user_requests_returns_empty_list_when_only_request_running(self):
-        scheduler = LCOGTNetworkScheduler(None, None, None, None)
+        scheduler = LCOGTNetworkScheduler(None, None, None, {})
         
         ur_tracking_numbers = ['0000000001']
-        running_ur_tracking_numbers = ['0000000001']
+        running_request = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_ur = RunningUserRequest('0000000001', running_request)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal([], schedulable_urs)
         
         ur_tracking_numbers = ['0000000001']
-        running_ur_tracking_numbers = ['0000000001', '0000000002']
+        running_request1 = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_ur1 = RunningUserRequest('0000000001', running_request1)
+        running_request2 = RunningRequest('0000000002', '1m0a.doma.elp')
+        running_ur2 = RunningUserRequest('0000000002', running_request2)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur1, running_ur2], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal([], schedulable_urs)
         
     def test_blacklist_running_user_requests_returns_empty_list_with_empty_ur_list(self):
         
-        scheduler = LCOGTNetworkScheduler(None, None, None, None)
+        scheduler = LCOGTNetworkScheduler(None, None, None, {})
         ur_tracking_numbers = []
-        running_ur_tracking_numbers = []
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal([], schedulable_urs)
         
         ur_tracking_numbers = []
-        running_ur_tracking_numbers = ['0000000001']
+        running_request = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_ur = RunningUserRequest('0000000001', running_request)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal([], schedulable_urs)
         
     def test_blacklist_running_user_requests_returns_all_requests_when_none_running(self):
         
-        scheduler = LCOGTNetworkScheduler(None, None, None, None)
+        scheduler = LCOGTNetworkScheduler(None, None, None, {})
         ur_tracking_numbers = []
-        running_ur_tracking_numbers = []
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal(len(ur_list), len(schedulable_urs))
         
         ur_tracking_numbers = ['0000000001']
-        running_ur_tracking_numbers = []
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal(len(ur_list), len(schedulable_urs))
         
         ur_tracking_numbers = ['0000000001']
-        running_ur_tracking_numbers = ['0000000002']
+        running_ur = RunningUserRequest('0000000002')
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal(len(ur_list), len(schedulable_urs))
         
         ur_tracking_numbers = ['0000000001', '0000000002']
-        running_ur_tracking_numbers = []
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
-        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, running_ur_tracking_numbers)
+        schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal(len(ur_list), len(schedulable_urs))
         
     def test_run_scheduler_with_mocked_interfaces(self):

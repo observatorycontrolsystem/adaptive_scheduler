@@ -385,7 +385,7 @@ class LCOGTNetworkScheduler(Scheduler):
     
     def _find_unblocked_running_urs_blocked_by_outage_events(self, resource_usage_snapshot):
         unblocked_ur_tracking_numbers = []
-        for running_ur in resource_usage_snapshot.running_user_requests:
+        for running_ur in resource_usage_snapshot.running_user_requests():
             if not self._is_running_ur_blocked_by_network_outage(running_ur):
                 unblocked_ur_tracking_numbers.append(running_ur.tracking_number)
                 
