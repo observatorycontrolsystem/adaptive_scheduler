@@ -810,7 +810,8 @@ class TestPondInteractions(object):
         end = datetime(2013, 11, 3)
         now = start - timedelta(minutes=6)
 
-        blocks = get_network_running_blocks(tels, now, start, end)
+        import ipdb; ipdb.set_trace();
+        blocks = get_network_running_blocks(tels, now, start)
         received = get_network_running_intervals(blocks)
 
         expected = {

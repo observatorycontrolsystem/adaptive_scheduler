@@ -372,14 +372,34 @@ class LCOGTNetworkScheduler(Scheduler):
     
     
     @timeit
-    def blacklist_running_user_requests(self, ur_list, running_ur_tracking_numbers):
+    def blacklist_running_user_requests(self, ur_list, resource_usage_snapshot):
         self.log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
         all_tns = [ur.tracking_number for ur in ur_list]
-        schedulable_tns = set(all_tns) - set(running_ur_tracking_numbers)
+        unblocked_running_ur_tracking_numbers = self._find_unblocked_running_urs_blocked_by_outage_events(resource_usage_snapshot)
+        schedulable_tns = set(all_tns) - set(unblocked_running_ur_tracking_numbers)
         schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
         self.log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
     
         return schedulable_urs
+    
+    
+    def _find_unblocked_running_urs_blocked_by_outage_events(self, resource_usage_snapshot):
+        unblocked_ur_tracking_numbers = []
+        for running_ur in resource_usage_snapshot.running_user_requests:
+            if not self._is_running_ur_blocked_by_network_outage(running_ur):
+                unblocked_ur_tracking_numbers.append(running_ur.tracking_number)
+                
+        return unblocked_ur_tracking_numbers
+        
+    
+    def _is_running_ur_blocked_by_network_outage(self, running_ur):
+        telescopes_with_outage_events = [tel_name for tel_name, tel_model in self.network_model.items() if len(tel_model.events) > 0]
+        unblocked_running_requests = 0
+        for running_r in running_ur.running_requests:
+            if not running_r.resource in telescopes_with_outage_events:
+                unblocked_running_requests += 1
+        
+        return unblocked_running_requests < 1
     
     
     def _log_scheduler_start_details(self, estimated_scheduler_end):
@@ -419,7 +439,7 @@ class LCOGTNetworkScheduler(Scheduler):
                 break
     
         # Remove running user requests from consideration, and get the availability edge
-        user_reqs = self.blacklist_running_user_requests(user_reqs, running_ur_tracking_numbers)
+        user_reqs = self.blacklist_running_user_requests(user_reqs, resource_usage_snapshot)
     
         # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
         self.log.info("Filtering for unschedulability")

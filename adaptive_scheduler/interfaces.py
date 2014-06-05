@@ -278,20 +278,20 @@ class PondScheduleInterface(object):
             
         return running_urs
     
-    def running_user_requests_by_telescope(self):
-        result = {}
-        for tel in self.telescopes:
-            result[tel] = None
-            if self.running_blocks_by_telescope.get(tel, []):
-                result[tel] = self.running_blocks_by_telescope.get(tel)
+#     def running_user_requests_by_telescope(self):
+#         result = {}
+#         for tel in self.telescopes:
+#             result[tel] = None
+#             if self.running_blocks_by_telescope.get(tel, []):
+#                 result[tel] = self.running_blocks_by_telescope.get(tel)
+#         
+#         return result
         
-        return result
         
-        
-    def running_user_request_intervals_by_telescope(self):
-        ''' Return the current run intervals by telescope
-        '''
-        return self.running_intervals_by_telescope
+#     def running_user_request_intervals_by_telescope(self):
+#         ''' Return the current run intervals by telescope
+#         '''
+#         return self.running_intervals_by_telescope
         
     def too_user_request_intervals_by_telescope(self):
         ''' Return the schedule ToO intervals for the supplied telescope
