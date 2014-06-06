@@ -652,9 +652,8 @@ class TestSchedulerRunner(object):
         network_interface_mock = Mock()
         network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
-        too_input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
-        normal_input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=False)
-        input_factory = SchedulingInputFactory(too_input_provider, normal_input_provider)
+        input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
+        input_factory = SchedulingInputFactory(input_provider)
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
@@ -690,9 +689,8 @@ class TestSchedulerRunner(object):
         network_interface_mock = Mock()
         network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
-        too_input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
-        normal_input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=False)
-        input_factory = SchedulingInputFactory(too_input_provider, normal_input_provider)
+        input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
+        input_factory = SchedulingInputFactory(input_provider)
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
