@@ -310,10 +310,11 @@ class PondScheduleInterface(object):
             tels = self.telescopes
             
         n_deleted = 0
-        try:
-            n_deleted = cancel_schedule(self.telescopes, start, end, dry_run)
-        except PondFacadeException, pfe:
-            raise ScheduleException(pfe, "Unable to cancel POND schedule")
+        if tels:
+            try:
+                n_deleted = cancel_schedule(tels, start, end, dry_run)
+            except PondFacadeException, pfe:
+                raise ScheduleException(pfe, "Unable to cancel POND schedule")
             
         return n_deleted
             
