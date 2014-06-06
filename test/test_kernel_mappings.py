@@ -23,6 +23,7 @@ from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 
+from mock import Mock
 from datetime import datetime
 
 
@@ -195,7 +196,7 @@ class TestKernelMappings(object):
                       )
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
@@ -235,7 +236,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from, True)
+        received = make_dark_up_kernel_intervals(req, visibility_from, True)
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -284,7 +285,7 @@ class TestKernelMappings(object):
 
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
@@ -300,27 +301,6 @@ class TestKernelMappings(object):
         for resource_name, received_intervals in received.iteritems():
             for i, received_tp in enumerate(received_intervals.timepoints):
                 assert_equal(received_tp.time, rise_set_dark_intervals[i])
-
-
-    def test_visibility_intervals_are_weather_dependent(self):
-        req = self.make_constrained_request()
-        tel_name = '1m0a.doma.bpl'
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
-
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
-
-        # No event - visibility windows as normal
-        assert_equal(len(received[tel_name].timepoints), 4)
-
-        # No visibility windows if there's an event
-        self.tels['1m0a.doma.bpl'].events = [1]
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
-        assert_equal(len(received[tel_name].timepoints), 0)
-
-        # And they're back when the event is gone
-        self.tels['1m0a.doma.bpl'].events = []
-        received = make_dark_up_kernel_intervals(req, self.tels, visibility_from)
-        assert_equal(len(received[tel_name].timepoints), 4)
 
 
     def test_visibility_intervals_are_limited_by_hour_angle(self):
@@ -367,7 +347,7 @@ class TestKernelMappings(object):
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
         visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -432,7 +412,7 @@ class TestKernelMappings(object):
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
         visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, tels, visibility_from)
+        received = make_dark_up_kernel_intervals(req, visibility_from)
 
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -454,7 +434,7 @@ class TestKernelMappings(object):
 
 
     def test_construct_global_availability(self):
-        tel_name = '1m0a.doma.tst'
+        tel_name = '1m0a.doma.bpl'
         sem_start = datetime(2012, 10, 1)
 
         # Resource is available from 3-7
@@ -477,13 +457,13 @@ class TestKernelMappings(object):
         dt2 = datetime(2013, 3, 22, 4)
         dt3 = datetime(2013, 3, 22, 5)
         now = dt2
-        running_at_tel = {
-                           tel_name : Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')]),
-                         }
+        running_at_tel = Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')])
+        network_snapshot_mock = Mock()
+        network_snapshot_mock.blocked_intervals = Mock(return_value=running_at_tel)
 
         # Expected available intervals after masking are
         # 3-4, 5-7
-        received = construct_global_availability(sem_start, running_at_tel,
+        received = construct_global_availability(self.tels, sem_start, network_snapshot_mock,
                                                  resource_windows)
         received_int = received[tel_name]
         assert_equal(len(received_int.timepoints), 4)
@@ -509,13 +489,11 @@ class TestKernelMappings(object):
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
         received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            self.tels,
                                                             visibility_from,
                                                             True)
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
         received_airmass3 = make_dark_up_kernel_intervals(req_airmass3,
-                                                          self.tels,
                                                           visibility_from,
                                                           True)
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].timepoints
@@ -531,12 +509,10 @@ class TestKernelMappings(object):
         visibility_from = construct_visibilities(self.tels, self.start, self.end)
 
         received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            self.tels,
                                                             visibility_from, True)
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
 
         received_airmass1 = make_dark_up_kernel_intervals(req_airmass1,
-                                                          self.tels,
                                                           visibility_from,
                                                           True)
         timepoints_airmass1 = received_airmass1['1m0a.doma.bpl'].timepoints

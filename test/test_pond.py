@@ -12,9 +12,9 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
-                                      get_network_running_blocks, get_blocks_by_request,
+                                      get_network_running_blocks,
                                       get_network_running_intervals,
-    blacklist_running_blocks)
+                                      get_intervals_by_telescope_for_tracking_numbers)
 from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
@@ -592,11 +592,7 @@ class TestPond(object):
                       'elp' : [non_too_block],
                       'coj' : [too_block]
                       }
-        block_list = TestPondInteractions.configure_mocks(func_mock, cutoff_dt, fake_block)
-
-        ends_after = datetime(2013, 8, 18, 0, 0, 0)
-        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
-        starts_before = datetime(2013, 8, 18, 0, 0, 0)
+        TestPondInteractions.configure_mocks(func_mock, cutoff_dt, fake_block)
 
         ur1 = UserRequest(
                            operator='single',
@@ -614,7 +610,8 @@ class TestPond(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        too_blocks = get_blocks_by_request([ur1], tels, start, end)
+        tracking_numbers = [ur1.tracking_number]
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
 
         expected = {
                     '1m0a.doma.coj' : Intervals([Timepoint(too_block.start, 'start'),
@@ -657,84 +654,6 @@ class TestPondInteractions(object):
 
         return
 
-    @patch('lcogtpond.schedule.Schedule.get')
-    def test_blacklist_running_blocks_no_running_blocks(self, func_mock):
-
-        cutoff_dt       = datetime(2013, 8, 18, 0, 0, 0)
-        fake_block_list = []
-        block_list = self.configure_mocks(func_mock, cutoff_dt, fake_block_list)
-
-        ends_after = datetime(2013, 8, 18, 0, 0, 0)
-        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
-        starts_before = datetime(2013, 8, 18, 0, 0, 0)
-
-        ur1 = UserRequest(
-                           operator='single',
-                           requests=None,
-                           proposal=None,
-                           tracking_number='0000000001',
-                           group_id=None,
-                           expires=None,
-                         )
-
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        tels = {
-                 '1m0a.doma.elp' : tel_mock1,
-                 '1m0a.doma.coj' : tel_mock2
-               }
-
-        ur_list = [ur1]
-        schedulable_urs = blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before)[0]
-
-        assert_equal(ur_list, schedulable_urs)
-
-
-    @patch('lcogtpond.schedule.Schedule.get')
-    def test_blacklist_running_blocks_with_running_block(self, func_mock):
-
-        cutoff_dt = datetime(2013, 8, 18, 0, 0, 0)
-
-        block = self.make_fake_block(datetime(2013, 8, 18, 0, 0, 0) - timedelta(seconds=1), tracking_num_set=['0000000001'])
-        block.end = datetime(2013, 8, 18, 0, 0, 0) + timedelta(seconds=100)
-        block.id = 15
-
-
-        fake_block_list = [block]
-        block_list = self.configure_mocks(func_mock, cutoff_dt, fake_block_list)
-
-        ends_after = datetime(2013, 8, 18, 0, 0, 0)
-        running_if_starts_before = datetime(2013, 8, 18, 0, 0, 0)
-        starts_before = datetime(2013, 8, 18, 0, 0, 0)
-
-        ur1 = UserRequest(
-                           operator='single',
-                           requests=None,
-                           proposal=None,
-                           tracking_number='0000000001',
-                           group_id=None,
-                           expires=None,
-                         )
-
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        tels = {
-                 '1m0a.doma.elp' : tel_mock1,
-                 '1m0a.doma.coj' : tel_mock2
-               }
-
-        ur_list = [ur1]
-        schedulable_urs = blacklist_running_blocks(ur_list, tels, ends_after, running_if_starts_before, starts_before)[0]
-
-        assert_equal([], schedulable_urs)
 
     @patch('lcogtpond.block.Block.cancel_blocks')
     def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
@@ -862,44 +781,7 @@ class TestPondInteractions(object):
 
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(schedule, dry_run)
-
-    @patch('adaptive_scheduler.pond.get_intervals')
-    @patch('adaptive_scheduler.pond.get_running_blocks')
-    def test_blocks_arent_running_if_weather(self, mock_func1, mock_func2):
-
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        mock_func1.return_value = ("test", ["test"])
-
-        def return_func(*args, **kwargs):
-            if args[0]:
-                return "interval"
-            else:
-                return "empty"
-
-        mock_func2.side_effect = return_func
-
-        tels = {
-                 '1m0a.doma.lsc' : tel_mock1,
-                 '1m0a.doma.cpt' : tel_mock2
-               }
-        start = datetime(2013, 10, 3)
-        end = datetime(2013, 11, 3)
-        now = start - timedelta(minutes=6)
-
-        blocks = get_network_running_blocks(tels, now, start, end)
-        received = get_network_running_intervals(blocks)
-
-        expected = {
-                    '1m0a.doma.lsc' : "empty",
-                    '1m0a.doma.cpt' : "interval"
-                    }
-
-        assert_equal(received, expected)
+        
 
     def test_build_block(self):
         raise SkipTest

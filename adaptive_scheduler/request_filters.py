@@ -54,7 +54,6 @@ February 2013
 from datetime import datetime, timedelta
 from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.log      import UserRequestLogger
-from reqdb.client                import ConnectionError, RequestDBError
 
 
 import logging
@@ -103,30 +102,7 @@ def _for_all_ur_windows(ur_list, filter_test):
     return ur_list
 
 
-def set_rs_to_unschedulable(client, unschedulable_r_numbers):
-    '''Update the state of all the unschedulable Requests in the DB in one go.'''
-    try:
-        client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
-    except ConnectionError as e:
-        log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
-    except RequestDBError as e:
-        msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
-        log.error(msg)
 
-    return
-
-
-def set_urs_to_unschedulable(client, unschedulable_ur_numbers):
-    '''Update the state of all the unschedulable User Requests in the DB in one go.'''
-    try:
-        client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
-    except ConnectionError as e:
-        log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
-    except RequestDBError as e:
-        msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
-        log.error(msg)
-
-    return
 
 
 def filter_urs(ur_list):
@@ -148,31 +124,9 @@ def find_unschedulable_ur_numbers(unschedulable_urs):
     return unschedulable_ur_numbers
 
 
-def filter_and_set_unschedulable_urs(client, ur_list, user_now, dry_run=False):
+def set_now(user_now):
     global now
     now = user_now
-
-    schedulable_urs, unschedulable_urs = filter_urs(ur_list)
-
-    log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
-
-    # Find the child Request numbers of ok URs which need to be marked UNSCHEDULABLE
-    # For example, a MANY where the first child has no window any more
-    dropped_r_numbers = drop_empty_requests(schedulable_urs)
-
-    if dry_run:
-        log.info("Dry-run: Not updating any Request DB states")
-    else:
-        log.info("Updating Request DB states")
-
-    # Find the tracking numbers of the URs which need to be marked UNSCHEDULABLE
-    unschedulable_ur_numbers = find_unschedulable_ur_numbers(unschedulable_urs)
-
-    # Set the states of the Requests and User Requests
-    set_rs_to_unschedulable(client, dropped_r_numbers)
-    set_urs_to_unschedulable(client, unschedulable_ur_numbers)
-
-    return schedulable_urs
 
 
 @log_urs
