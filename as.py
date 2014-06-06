@@ -18,7 +18,7 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters
+from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider
 from adaptive_scheduler.monitoring.network_status   import Network
 # from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
@@ -170,7 +170,10 @@ def main(argv):
     kernel_class = get_kernel_class(sched_params)
     network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
-    scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model)
+    too_input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
+    normal_input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=False)
+    input_factory = SchedulingInputFactory(too_input_provider, normal_input_provider)
+    scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model, input_factory)
     scheduler_runner.run()
 
 
