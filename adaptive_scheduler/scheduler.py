@@ -686,7 +686,7 @@ class SchedulingInputFactory():
         if is_too_input:
             filename = '/tmp/normal_scheduling_input_%s.pickle'
         filename = filename % file_timestamp
-        scheduler_input.write_to_file(filename)
+        scheduler_input.write_input_to_file(filename)
         
         return scheduler_input
     
