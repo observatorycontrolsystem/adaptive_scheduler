@@ -789,7 +789,7 @@ class SchedulingInput(object):
                   'estimated_scheduler_end' : self.estimated_scheduler_end,
                   'json_user_request_list' : self.json_user_request_list,
                   'resource_usage_snapshot' : self.resource_usage_snapshot,
-                  'available_resources' : self.available_resource,
+                  'available_resources' : self.available_resources,
                   'is_too_input' : self.is_too_input
                   }
         outfile = open(filename, 'w')
