@@ -634,7 +634,7 @@ class SchedulerRunner(object):
                 n_deleted = self.network_interface.cancel(scheduler_input.estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.resource_schedules_to_cancel)
                 
                 # Write new schedule
-                n_submitted = self.network_interface.save(scheduler_result.new_schedule, semester_start, self.sched_params.cameras_file, self.sched_params.dry_run)
+                n_submitted = self.network_interface.save(scheduler_result.schedule, semester_start, self.sched_params.cameras_file, self.sched_params.dry_run)
                 #TODO: Lost this logging function during refactor somewhere
 #                 self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
         except ScheduleException, se:
