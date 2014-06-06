@@ -631,7 +631,7 @@ class SchedulerRunner(object):
                 
                 # Delete old schedule
                 # TODO: make sure this cancels anything currently running
-                n_deleted = self.network_interface.cancel(scheduler_input.estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.telescope_schedules_to_cancel)
+                n_deleted = self.network_interface.cancel(scheduler_input.estimated_scheduler_end, semester_end, self.sched_params.dry_run, scheduler_result.resource_schedules_to_cancel)
                 
                 # Write new schedule
                 n_submitted = self.network_interface.save(scheduler_result.new_schedule, semester_start, self.sched_params.cameras_file, self.sched_params.dry_run)
