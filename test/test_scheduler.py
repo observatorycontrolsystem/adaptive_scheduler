@@ -650,15 +650,22 @@ class TestSchedulerRunner(object):
         sched_params = SchedulerParameters(run_once=True)
         scheduler_mock = Mock()
         network_interface_mock = Mock()
-        network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
-        input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
-        input_factory = SchedulingInputFactory(input_provider)
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory)
+        
+        too_input_mock = Mock()
+        too_input_mock.user_requests = [too_single_ur]
+        too_input_mock.estimated_scheduler_end = datetime.utcnow()
+        mock_input_factory = Mock()
+        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        normal_input_mock = Mock()
+        normal_input_mock.user_requests = [normal_single_ur]
+        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
+        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
 
-        assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
         assert_equal(2, network_interface_mock.set_requests_to_unschedulable.call_count)
         assert_equal(2, network_interface_mock.set_user_requests_to_unschedulable.call_count)
@@ -668,7 +675,7 @@ class TestSchedulerRunner(object):
         
         
     def test_scheduler_runner_dry_run(self):
-        ''' Not write calls to network interface should be made
+        ''' No write calls to network interface should be made
         '''
         request_duration_seconds = 60
         priority = 10
@@ -687,15 +694,22 @@ class TestSchedulerRunner(object):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         scheduler_mock = Mock()
         network_interface_mock = Mock()
-        network_interface_mock.get_all_user_requests = Mock(return_value=[too_single_ur, normal_single_ur])
         network_model_mock = {}
-        input_provider = SchedulingInputProvider(sched_params, network_interface_mock, network_model_mock, is_too_input=True)
-        input_factory = SchedulingInputFactory(input_provider)
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory)
+
+        too_input_mock = Mock()
+        too_input_mock.user_requests = [too_single_ur]
+        too_input_mock.estimated_scheduler_end = datetime.utcnow()
+        mock_input_factory = Mock()
+        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        normal_input_mock = Mock()
+        normal_input_mock.user_requests = [normal_single_ur]
+        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
+        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
         scheduler_runner.run()
 
-        assert_equal(1, network_interface_mock.get_all_user_requests.call_count)
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
         assert_equal(0, network_interface_mock.set_requests_to_unschedulable.call_count)
         assert_equal(0, network_interface_mock.set_user_requests_to_unschedulable.call_count)
@@ -704,4 +718,26 @@ class TestSchedulerRunner(object):
         assert_equal(0, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
+class TestSchedulerInputProvider(object):
+    
+    @patch('adaptive_scheduler.scheduler.SchedulingInputProvider._get_json_user_request_list')
+    def test_provider_doesnt_consider_blocks_running_on_resources_with_events(self, mock1):
+        '''Should exclude resources with events from resource usage snapshot
+        '''
+        available_resource = 'available'
+        unavailable_resource = 'unavailable'
+        network_model = {
+                         available_resource : Mock(events=[]),
+                         unavailable_resource : Mock(events=[1]),
+                         }
+        
+        sched_params = SchedulerParameters()
+        mock_network_interface = Mock()
+        input_provider = SchedulingInputProvider(sched_params, mock_network_interface, network_model, False)
+        input_provider.refresh()
+        assert_true(available_resource in input_provider.available_resources)
+        assert_true(unavailable_resource not in input_provider.available_resources)
+        assert_true(available_resource in mock_network_interface.resource_usage_snapshot.call_args[0][0])
+        assert_true(unavailable_resource not in mock_network_interface.resource_usage_snapshot.call_args[0][0])
 
+        

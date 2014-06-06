@@ -2,6 +2,7 @@ from mock import Mock
 from reqdb.client import ConnectionError, RequestDBError, SchedulerClient
 from adaptive_scheduler.interfaces import RequestDBInterface
 
+from nose.tools import assert_equal
 class TestRequestDBInterface(object):
     
     def __init__(self):
@@ -53,3 +54,11 @@ class TestRequestDBInterface(object):
 
         msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % exception_str
         self.log_mock.error.assert_called_with(msg)
+        
+    
+    def test_request_db_dirty_flag_is_invalid(self):
+        dirty_response = 'lalalala'
+        
+        mock_client = Mock()
+        requestdb_interface = RequestDBInterface(mock_client)
+        assert_equal(requestdb_interface._request_db_dirty_flag_is_invalid(dirty_response), True)

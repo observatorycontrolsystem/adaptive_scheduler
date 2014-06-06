@@ -781,45 +781,7 @@ class TestPondInteractions(object):
 
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(schedule, dry_run)
-
-    # TODO: replace this test with a functionaly equivelent test
-    @patch('adaptive_scheduler.pond.get_intervals')
-    @patch('adaptive_scheduler.pond.get_running_blocks')
-    def test_blocks_arent_running_if_weather(self, mock_func1, mock_func2):
-
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        mock_func1.return_value = ("test", ["test"])
-
-        def return_func(*args, **kwargs):
-            if args[0]:
-                return "interval"
-            else:
-                return "empty"
-
-        mock_func2.side_effect = return_func
-
-        tels = {
-                 '1m0a.doma.lsc' : tel_mock1,
-                 '1m0a.doma.cpt' : tel_mock2
-               }
-        start = datetime(2013, 10, 3)
-        end = datetime(2013, 11, 3)
-        now = start - timedelta(minutes=6)
-
-        blocks = get_network_running_blocks(tels, now, start)
-        received = get_network_running_intervals(blocks)
-
-        expected = {
-                    '1m0a.doma.lsc' : "empty",
-                    '1m0a.doma.cpt' : "interval"
-                    }
-
-        assert_equal(received, expected)
+        
 
     def test_build_block(self):
         raise SkipTest

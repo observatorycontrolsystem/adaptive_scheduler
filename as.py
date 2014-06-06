@@ -18,7 +18,7 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider
+from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider
 from adaptive_scheduler.monitoring.network_status   import Network
 # from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
@@ -99,7 +99,9 @@ def parse_args(argv):
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default='gurobi',
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
-
+    arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=None,
+                            help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
+    
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
 
@@ -170,7 +172,11 @@ def main(argv):
     kernel_class = get_kernel_class(sched_params)
     network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
-    input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
+    if sched_params.input_file_name:
+        too_infile, normal_infile = sched_params.input_file_name.split(',')
+        input_provider = FileBasedSchedulingInputProvider(too_infile, normal_infile, is_too_mode=True)
+    else:
+        input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
     input_factory = SchedulingInputFactory(input_provider)
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model, input_factory)
     scheduler_runner.run()

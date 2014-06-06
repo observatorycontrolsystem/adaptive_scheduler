@@ -37,7 +37,7 @@ from adaptive_scheduler.request_filters import (filter_urs,
 
 class SchedulerParameters(object):
     
-    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None, kernel='gurobi'):
+    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None, kernel='gurobi', input_file_name=None):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
         self.cameras_file = cameras_file
@@ -52,6 +52,7 @@ class SchedulerParameters(object):
         self.sleep_seconds = sleep_seconds
         self.simulate_now = simulate_now
         self.kernel = kernel
+        self.input_file_name = input_file_name
         
         
     def get_model_builder(self):
@@ -677,14 +678,15 @@ class SchedulingInputFactory():
     def _create_scheduling_input(self, input_provider, is_too_input):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
-                        input_provider.estimated_scheduling_end,
+                        input_provider.estimated_scheduler_end,
                         input_provider.json_user_request_list,
                         input_provider.resource_usage_snapshot,
-                        input_provider.available_resources)
+                        input_provider.available_resources,
+                        is_too_input)
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = '/tmp/too_scheduling_input_%s.pickle'
+        filename = '/tmp/normal_scheduling_input_%s.pickle'
         if is_too_input:
-            filename = '/tmp/normal_scheduling_input_%s.pickle'
+            filename = '/tmp/too_scheduling_input_%s.pickle'
         filename = filename % file_timestamp
         scheduler_input.write_input_to_file(filename)
         
@@ -697,7 +699,7 @@ class SchedulingInputFactory():
     
     
     def create_normal_scheduling_input(self):
-        self.input_provider.clear_too_mode()
+        self.input_provider.set_normal_mode()
         return self._create_scheduling_input(self.input_provider, False)
 
 
@@ -750,7 +752,7 @@ import pickle
 
 class SchedulingInput(object):
     
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_end, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input=False):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_end, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_end = estimated_scheduler_end
@@ -820,18 +822,16 @@ class SchedulingInputProvider(object):
     
         # TODO: Hide these behind read only properties
         self.scheduler_now = None
-        self.estimated_scheduling_end = None
+        self.estimated_scheduler_end = None
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
-        
-        self.refresh()
     
     
     def refresh(self):
         # The order of these is important
         self.scheduler_now = self._get_scheduler_now()
-        self.estimated_scheduling_end = self._get_estimated_scheduling_end()
+        self.estimated_scheduler_end = self._get_estimated_scheduler_end()
         self.json_user_request_list = self._get_json_user_request_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
@@ -842,7 +842,7 @@ class SchedulingInputProvider(object):
         self.refresh()
     
     
-    def clear_too_mode(self):
+    def set_normal_mode(self):
         self.is_too_input = False
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
     
@@ -861,7 +861,7 @@ class SchedulingInputProvider(object):
         return now
     
     
-    def _get_estimated_scheduling_end(self):
+    def _get_estimated_scheduler_end(self):
         if self.is_too_input:
             return self.scheduler_now + timedelta(minutes=2)
         else:
@@ -869,7 +869,7 @@ class SchedulingInputProvider(object):
     
     
     def _get_json_user_request_list(self):
-        semester_start, semester_end = get_semester_block(dt=self.estimated_scheduling_end)
+        semester_start, semester_end = get_semester_block(dt=self.estimated_scheduler_end)
         ur_list =  self.network_interface.get_all_user_requests(semester_start, semester_end)
         
         return ur_list
@@ -887,8 +887,50 @@ class SchedulingInputProvider(object):
     def _get_resource_usage_snapshot(self):
         user_request_priorities = self.utils.user_request_priorities(self.json_user_request_list)
         too_tracking_numbers = self.utils.too_tracking_numbers(self.json_user_request_list)
-        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduling_end, user_request_priorities, too_tracking_numbers)
+        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduler_end, user_request_priorities, too_tracking_numbers)
         
         return snapshot
         
+
+class FileBasedSchedulingInputProvider(object):
     
+    def __init__(self, too_input_file, normal_input_file, is_too_mode):
+        self.too_input_file = too_input_file
+        self.normal_input_file = normal_input_file
+        self.is_too_input = is_too_mode
+        
+        self.sched_params = None
+        self.scheduler_now = None
+        self.estimated_scheduler_end = None
+        self.json_user_request_list = None
+        self.available_resources = None
+        self.resource_usage_snapshot = None
+        
+        self.refresh()
+    
+    
+    def refresh(self):
+        input_filename = self.normal_input_file
+        if self.is_too_input:
+            input_filename = self.too_input_file
+        input_file = open(input_filename, 'r')
+        pickle_input = pickle.load(input_file)
+        input_file.close()
+        
+        self.sched_params = pickle_input['sched_params']
+        self.scheduler_now = pickle_input['scheduler_now']
+        self.estimated_scheduler_end = pickle_input['estimated_scheduler_end']
+        self.json_user_request_list = pickle_input['json_user_request_list']
+        self.available_resources = pickle_input['available_resources']
+        self.resource_usage_snapshot = pickle_input['resource_usage_snapshot']
+        
+    
+    def set_too_mode(self):
+        self.is_too_input = True
+        self.refresh()
+    
+    
+    def clear_too_mode(self):
+        self.is_too_input = False
+        self.refresh()
+        

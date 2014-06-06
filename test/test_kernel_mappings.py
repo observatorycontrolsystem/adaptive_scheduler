@@ -303,27 +303,6 @@ class TestKernelMappings(object):
                 assert_equal(received_tp.time, rise_set_dark_intervals[i])
 
 
-    def test_visibility_intervals_are_weather_dependent(self):
-        req = self.make_constrained_request()
-        tel_name = '1m0a.doma.bpl'
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
-
-        received = make_dark_up_kernel_intervals(req, visibility_from)
-
-        # No event - visibility windows as normal
-        assert_equal(len(received[tel_name].timepoints), 4)
-
-        # No visibility windows if there's an event
-        self.tels['1m0a.doma.bpl'].events = [1]
-        received = make_dark_up_kernel_intervals(req, visibility_from)
-        assert_equal(len(received[tel_name].timepoints), 0)
-
-        # And they're back when the event is gone
-        self.tels['1m0a.doma.bpl'].events = []
-        received = make_dark_up_kernel_intervals(req, visibility_from)
-        assert_equal(len(received[tel_name].timepoints), 4)
-
-
     def test_visibility_intervals_are_limited_by_hour_angle(self):
 
         window_dict = {
