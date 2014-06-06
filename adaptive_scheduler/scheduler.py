@@ -557,24 +557,7 @@ class SchedulerRunner(object):
         self.network_model = network_model
         self.log = logging.getLogger(__name__)
         
-    def determine_scheduler_now(self):
-        '''Use a static command line datetime if provided, or default to utcnow, with a
-           little extra to cover the scheduler's run time.'''
-        if self.sched_params.simulate_now:
-            try:
-                now = iso_string_to_datetime(self.sched_params.simulate_now)
-            except ValueError as e:
-                self.log.critical(e)
-                self.log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
-                self.log.critical("Aborting scheduler run.")
-                sys.exit()
-        # ...otherwise offset 'now' to account for the duration of the scheduling run
-        else:
-            now = datetime.utcnow()
     
-        self.log.info("Using a 'now' of %s", now)
-    
-        return now
     
     def scheduler_rerun_required(self):
         ''' Return True if scheduler should be run now
@@ -630,39 +613,12 @@ class SchedulerRunner(object):
         outfile = open('/tmp/scheduler_input.pickle', 'w')
         pickle.dump(output, outfile)
         outfile.close()
-        
-        
-    def json_urs_to_scheduler_model_urs(self, json_user_requests):
-        scheduler_model_urs = []
-        model_builder = self.sched_params.get_model_builder()
-        for json_ur in json_user_requests:
-            try:
-                scheduler_model_ur = model_builder.build_user_request(json_ur)
-                scheduler_model_urs.append(scheduler_model_ur)
-            except RequestError as e:
-                self.log.warn(e)
-        
-        return scheduler_model_urs
     
     
-    def sort_scheduler_models_urs_by_type(self, schedule_model_user_requests):
-        scheduler_models_urs_by_type = {
-                                        'too' : [],
-                                        'normal' : []
-                                        }
-        for scheduler_model_ur in schedule_model_user_requests:
-            if scheduler_model_ur.has_target_of_opportunity():
-                scheduler_models_urs_by_type['too'].append(scheduler_model_ur)
-            else:
-                scheduler_models_urs_by_type['normal'].append(scheduler_model_ur)
-                
-        return scheduler_models_urs_by_type
-    
-    
-    def call_scheduler(self, user_requests, available_resources, semester_start, semester_end, now, estimated_scheduler_end, user_request_priorities, too_tracking_numbers, preemption_enabled):
+    def call_scheduler(self, user_requests, available_resources, now, estimated_scheduler_end, resource_usage_snapshot, preemption_enabled):
         n_urs, n_rs = n_requests(user_requests)
+        semester_start, semester_end = get_semester_block(dt=estimated_scheduler_end)
         try:
-            resource_usage_snapshot = self.network_interface.resource_usage_snapshot(available_resources, now, estimated_scheduler_end, user_request_priorities, too_tracking_numbers)
             scheduler_result = self.scheduler.run_scheduler(user_requests, resource_usage_snapshot, available_resources, estimated_scheduler_end, preemption_enabled=preemption_enabled)
             
             if not self.sched_params.dry_run:
@@ -683,38 +639,23 @@ class SchedulerRunner(object):
         
             
     def create_new_schedule(self):
-        now = self.determine_scheduler_now();
-        estimated_scheduler_end = now + timedelta(minutes=6)
-        short_estimated_scheduler_end = now + timedelta(minutes=2)
-        semester_start, semester_end = get_semester_block(dt=short_estimated_scheduler_end)
-        
-        json_user_request_list = self.network_interface.get_all_user_requests(semester_start, semester_end)        
-        scheduler_mode_urs = self.json_urs_to_scheduler_model_urs(json_user_request_list)
-        user_request_priorities = {ur.tracking_number : ur.get_priority() for ur in scheduler_mode_urs}
-        scheduler_models_urs_by_type = self.sort_scheduler_models_urs_by_type(scheduler_mode_urs)
-        too_tracking_numbers = [ur.tracking_number for ur in scheduler_models_urs_by_type['too']]
-        
-        self.log.info("Received %d ToO User Requests" % len(scheduler_models_urs_by_type['too']))
-        self.log.info("Received %d Normal User Requests" % len(scheduler_models_urs_by_type['normal']))
-        
-        # Remove resources with network events.
-        available_resources = []
-        for resource_name, resource in self.network_model.iteritems():
-            if not resource.events:
-                available_resources.append(resource_name)
+#         self.log.info("Received %d ToO User Requests" % len(too_user_requests))
+#         self.log.info("Received %d Normal User Requests" % len(normal_user_requests))
                 
 #         self._write_scheduler_input_files(json_user_request_list, resource_usage_snapshot)
-        if scheduler_models_urs_by_type['too']:
+        scheduler_input = self.input_factory.create_too_scheduling_input()
+        if scheduler_input.too_user_requests:
             self.log.info("Start ToO Scheduling")
-            self.call_scheduler(scheduler_models_urs_by_type['too'], available_resources, semester_start, semester_end, now, short_estimated_scheduler_end, user_request_priorities, too_tracking_numbers, preemption_enabled=True)
+            self.call_scheduler(scheduler_input, preemption_enabled=True)
             self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
     
         # Run the scheduling loop, if there are any User Requests
-        if scheduler_models_urs_by_type['normal']:
+        scheduler_input = self.input_factory.create_normal_scheduling_input()
+        if scheduler_input.normal_user_requests:
             self.log.info("Start Normal Scheduling")
-            self.call_scheduler(scheduler_models_urs_by_type['normal'], available_resources, semester_start, semester_end, now, estimated_scheduler_end, user_request_priorities, too_tracking_numbers, preemption_enabled=False)
+            self.call_scheduler(scheduler_input, preemption_enabled=False)
             self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
@@ -723,5 +664,168 @@ class SchedulerRunner(object):
         if not self.sched_params.dry_run:
             self.network_interface.clear_schedulable_request_set_changed_state()
         sys.stdout.flush()
+
+
+class SchedulingInputFactory():
+    
+    def __init__(self, too_input_provider, normal_input_provider):
+        self.too_input_provider = too_input_provider
+        self.normal_input_prover = normal_input_provider
         
-            
+    
+    def _create_scheduling_input(self, input_provider):
+        scheduler_input = SchedulingInput(input_provider.scheduler_now(),
+                        input_provider.too_scheduling_estimated_end(),
+                        input_provider.json_user_request_list,
+                        input_provider.resurce_usage_snapshot,
+                        input_provider.available_resources)
+        
+        return scheduler_input
+    
+    
+    def create_too_scheduling_input(self):
+        return self._create_scheduling_input(self.too_input_provider)
+    
+    
+    def create_normal_scheduling_input(self):
+        return self._create_scheduling_input(self.normal_input_provider)
+    
+    
+class SchedulingInput():
+    
+    def __init__(self, scheduler_now, estimated_scheduler_end, json_user_request_list, resource_usage_snapshot, available_resources):
+        self.scheduler_now = scheduler_now
+        self.estimated_scheduler_end = estimated_scheduler_end
+        self.json_user_request_list = json_user_request_list
+        self.resource_usage_snapshot = resource_usage_snapshot
+        self.available_resources = available_resources
+    
+    
+    def _json_urs_to_scheduler_model_urs(self):
+        scheduler_model_urs = []
+        model_builder = self.sched_params.get_model_builder()
+        for json_ur in self.json_user_requests:
+            try:
+                scheduler_model_ur = model_builder.build_user_request(json_ur)
+                scheduler_model_urs.append(scheduler_model_ur)
+            except RequestError as e:
+                self.log.warn(e)
+        
+        return scheduler_model_urs
+    
+    
+    def _sort_scheduler_models_urs_by_type(self, schedule_model_user_requests):
+        scheduler_models_urs_by_type = {
+                                        'too' : [],
+                                        'normal' : []
+                                        }
+        for scheduler_model_ur in schedule_model_user_requests:
+            if scheduler_model_ur.has_target_of_opportunity():
+                scheduler_models_urs_by_type['too'].append(scheduler_model_ur)
+            else:
+                scheduler_models_urs_by_type['normal'].append(scheduler_model_ur)
+                
+        return scheduler_models_urs_by_type
+        
+    
+    def too_user_requests(self):
+        scheduler_model_urs = self._json_urs_to_scheduler_model_urs()
+        scheduler_models_urs_by_type = self._sort_scheduler_models_urs_by_type(scheduler_model_urs)
+        
+        return scheduler_models_urs_by_type['too']
+        
+        
+    def normal_user_requests(self):
+        scheduler_model_urs = self._json_urs_to_scheduler_model_urs()
+        scheduler_models_urs_by_type = self._sort_scheduler_models_urs_by_type(scheduler_model_urs)
+        
+        return scheduler_models_urs_by_type['normal']
+    
+    
+    def user_request_priorities(self):
+        scheduler_model_urs = self._json_urs_to_scheduler_model_urs(self.json_user_request_list)
+        priorities_map = {ur.tracking_number : ur.get_priority() for ur in scheduler_model_urs}
+         
+        return priorities_map
+     
+     
+    def too_tracking_numbers(self):
+        scheduler_model_urs = self._json_urs_to_scheduler_model_urs(self.json_user_request_list)
+        scheduler_models_urs_by_type = self._sort_scheduler_models_urs_by_type(scheduler_model_urs)
+        too_tracking_numbers = [ur.tracking_number for ur in scheduler_models_urs_by_type['too']]
+         
+        return too_tracking_numbers
+    
+    
+    def write_input_to_file(self):
+        import pickle
+        output = {
+                  'scheduler_now' : self.scheduler_now,
+                  'estimated_scheduler_end' : self.estimated_scheduler_end,
+                  'json_user_request_list' : self.json_user_request_list,
+                  'resource_usage_snapshot' : self.resource_usage_snapshot,
+                  'available_resources' : self.available_resource
+                  }
+        outfile = open('/tmp/scheduler_input.pickle', 'w')
+        pickle.dump(output, outfile)
+        outfile.close()
+
+
+class SchedulingInputProvider(object):
+    
+    def __init__(self, sched_params, network_interface, is_too_input=False):
+        self.sched_params = sched_params
+        self.network_interface = network_interface
+        self.is_too_input
+        
+    
+    def json_user_request_list(self):
+        semester_start, semester_end = get_semester_block(dt=self.too_scheduling_end())
+        ur_list =  self.network_interface.get_all_user_requests(semester_start, semester_end)
+        
+        return ur_list
+    
+    
+    def scheduler_now(self):
+        '''Use a static command line datetime if provided, or default to utcnow, with a
+           little extra to cover the scheduler's run time.'''
+        if self.sched_params.simulate_now:
+            try:
+                now = iso_string_to_datetime(self.sched_params.simulate_now)
+            except ValueError as e:
+                self.log.critical(e)
+                self.log.critical("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
+                self.log.critical("Aborting scheduler run.")
+                sys.exit()
+        # ...otherwise offset 'now' to account for the duration of the scheduling run
+        else:
+            now = datetime.utcnow()
+    
+        self.log.info("Using a 'now' of %s", now)
+    
+        return now
+    
+    
+    def estimated_scheduling_end(self):
+        if self.is_too_input:
+            return self.scheduler_now() + timedelta(minutes=2)
+        else:
+            return self.scheduler_now() + timedelta(minutes=6)
+    
+    
+    def available_resource(self):
+        resources = []
+        for resource_name, resource in self.network_model.iteritems():
+            if not resource.events:
+                resources.append(resource_name)
+                
+        return resources
+    
+    
+    def resource_usage_snapshot(self):
+        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources(), self.scheduler_now(), self.estimated_scheduling_end(), self.user_request_priorities(), self.too_tracking_numbers())
+        
+        return snapshot
+        
+        
+    
