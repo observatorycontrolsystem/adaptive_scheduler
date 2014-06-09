@@ -337,7 +337,7 @@ class Scheduler(object):
     
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
-        scheduler_result.schedule = None
+        scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = resource_schedules_to_cancel
         scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
         scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
@@ -349,6 +349,12 @@ class Scheduler(object):
             self.log.info("Starting scheduling kernel")
             kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, resources_to_schedule, self.sched_params.slicesize_seconds)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
+            
+            # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
+            # Limit canceled resources to those where user_requests were canceled
+            if(preemption_enabled):
+                scheduler_result.resource_schedules_to_cancel = scheduler_result.schedule.keys()
+                
             self.log.info("Completed scheduling kernel")
             
             # Do post scheduling stuff

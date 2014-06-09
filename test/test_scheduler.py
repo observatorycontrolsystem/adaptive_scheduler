@@ -132,7 +132,7 @@ class TestSchduler(object):
         scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
         scheduler_result = scheduler.run_scheduler(normal_user_requests, network_snapshot_mock, network_model, estimated_scheduler_end, preemption_enabled=False)
         
-        assert_equal(None, scheduler_result.schedule)
+        assert_equal({}, scheduler_result.schedule)
         assert_equal({}, scheduler_result.resource_schedules_to_cancel)
         assert_equal([], scheduler_result.unschedulable_user_request_numbers)
         assert_equal([], scheduler_result.unschedulable_request_numbers)
@@ -489,7 +489,57 @@ class TestSchduler(object):
         assert_equal([], scheduler_result.resource_schedules_to_cancel)
         assert_equal([], scheduler_result.unschedulable_user_request_numbers)
         assert_equal([], scheduler_result.unschedulable_request_numbers)
+        
+    @patch.object(Scheduler, 'apply_window_filters')    
+    @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
+    @patch.object(Scheduler, 'prepare_for_kernel')    
+    def test_run_scheduler_too_mode_with_schedulable_not_visible_too_single_ur(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock, apply_window_filters_mock):
+        '''Should result in empty too schedule result
+        '''
+        # Build mock user requests
+        request_duration_seconds = 60
+        priority = 10
+        tracking_number = 1
+        request_number = 1
+        target_telescope = '1m0a.doma.elp' 
+        request_windows = create_user_request_windows([])
+        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope], is_too=True) 
+        too_single_ur = create_user_request(tracking_number, priority, [request], 'single')
+    
+        # Build mock reservation list
+        prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
+        
+#         # Create available intervals mock
+#         available_start = datetime.strptime("2013-05-22 19:30:00", '%Y-%m-%d %H:%M:%S')
+#         available_end = datetime.strptime("2013-05-22 19:40:00", '%Y-%m-%d %H:%M:%S')
+#         available_intervals = {
+#                                target_telescope : self.build_intervals([(available_start, available_end),], self.normalize_windows_to)
+#                                } 
+        
+        # UR is not visible so don't let it come out of window filters
+        apply_window_filters_mock.return_value = []
+#         prepare_available_windows_for_kernel_mock.return_value = available_intervals
+        
+        # Create unmocked Scheduler parameters
+        scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
+        too_user_requests = [too_single_ur]
+        
+        self.network_snapshot_mock.user_requests_for_resource = Mock(return_value=[])
+        
+        # Start scheduler run
+        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, self.network_model, scheduler_run_end, preemption_enabled=True)
 
+        # Start assertions
+        assert_equal({}, scheduler_result.schedule)
+        assert_false(self.is_scheduled(request_number, scheduler_result.schedule))
+        assert_equal([], sorted(scheduler_result.resource_schedules_to_cancel))
+        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        assert_equal([], scheduler_result.unschedulable_request_numbers)
+
+        # Make sure the prepare_for_kernel_mock is called once with empty UR list
+        assert_equal(1, prepare_for_kernel_mock.call_count)
+        assert_equal([], prepare_for_kernel_mock.call_args[0][0])
     
     def is_scheduled(self, request_number, schedule):
         for resource, reservations in schedule.iteritems():
@@ -594,7 +644,7 @@ def create_user_request_windows(start_end_tuples):
                          'start' : start,
                          'end'   : end,
                        }
-    windows.append(window_dict)
+        windows.append(window_dict)
     
     return windows
     
