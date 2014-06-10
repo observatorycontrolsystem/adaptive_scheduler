@@ -17,8 +17,11 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface, PondScheduleInterface, RequestDBInterface
-from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, Scheduler, SchedulerRunner, SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider
+from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface
+from adaptive_scheduler.pond             import PondScheduleInterface
+from adaptive_scheduler.requestdb        import RequestDBInterface 
+from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
+from adaptive_scheduler.scheduler_input  import SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider
 from adaptive_scheduler.monitoring.network_status   import Network
 # from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler

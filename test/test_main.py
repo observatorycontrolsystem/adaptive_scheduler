@@ -8,8 +8,6 @@ from nose.tools import assert_equal
 import shlex
 adaptive_scheduler = __import__('as')
 
-from adaptive_scheduler.interfaces import RequestDBInterface
-
 
 class TestMain(object):
 

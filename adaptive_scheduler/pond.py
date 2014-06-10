@@ -25,7 +25,6 @@ It maps objects across domains from 1) -> 2) (described below).
 Author: Eric Saunders
 February 2012
 '''
-from datetime import datetime
 import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
@@ -37,6 +36,7 @@ from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
+from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 
 from schedutils.instruments            import InstrumentFactory
 
@@ -54,6 +54,107 @@ log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
+
+
+class PondRunningRequest(RunningRequest):
+    
+    def __init__(self, telescope, request_number, block_id, start, end):
+        RunningRequest.__init__(self, telescope, request_number)
+        self.block_id = block_id
+        self.start = start
+        self.end = end
+
+    def __str__(self):
+        return RunningRequest.__str__(self) + ", block_id: %s, start: %s, end: %s" % (self.block_id, self.start, self.end)
+
+
+class PondScheduleInterface(object):
+    
+    def __init__(self):
+        self.running_blocks_by_telescope = None
+        self.running_intervals_by_telescope = None
+        self.too_intervals_by_telescope = None
+        
+        self.log = logging.getLogger(__name__)
+    
+    def fetch_data(self, telescopes, running_window_start, running_window_end, too_tracking_numbers):
+        #Fetch the data
+        self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
+        self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
+        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end, too_tracking_numbers)
+
+    
+    def _fetch_running_blocks(self, telescopes, end_after, start_before):
+        try:
+            running_blocks = get_network_running_blocks(telescopes, end_after, start_before)
+        except PondFacadeException, pfe:
+            raise ScheduleException(pfe, "Unable to get running blocks from POND")
+        
+        # This is just logging held over from when this was in the scheduling loop
+        all_running_blocks = []
+        for blocks in running_blocks.values():
+            all_running_blocks += blocks
+        self.log.info("%d %s in the running list", *pl(len(all_running_blocks), 'POND Block'))
+        for block in all_running_blocks:
+            msg = "UR %s has a running block (id=%d, finishing at %s)" % (
+                                                         block.tracking_num_set()[0],
+                                                         block.id,
+                                                         block.end
+                                                       )
+            self.log.debug(msg)
+        # End of logging block
+        
+        return running_blocks 
+    
+    def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
+        
+        return too_blocks
+    
+    
+    def running_user_requests_by_tracking_number(self):
+        running_urs = {}
+        for blocks in self.running_blocks_by_telescope.values():
+            for block in blocks:
+                tracking_number = block.tracking_num_set()[0]
+                running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
+                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
+                running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
+                running_ur.add_running_request(running_request)
+            
+        return running_urs
+        
+    def too_user_request_intervals_by_telescope(self):
+        ''' Return the schedule ToO intervals for the supplied telescope
+        '''
+        return self.too_intervals_by_telescope
+    
+    
+    def cancel(self, start, end, dry_run=False, tels=None):
+        ''' Cancel the current scheduler between start and end
+        '''
+        # Clean out all existing scheduled blocks during a normal run but not ToO
+        if tels is None:
+            tels = self.telescopes
+            
+        n_deleted = 0
+        if tels:
+            try:
+                n_deleted = cancel_schedule(tels, start, end, dry_run)
+            except PondFacadeException, pfe:
+                raise ScheduleException(pfe, "Unable to cancel POND schedule")
+            
+        return n_deleted
+            
+    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+        ''' Save the provided observing schedule
+        '''
+        # Convert the kernel schedule into POND blocks, and send them to the POND
+        n_submitted = send_schedule_to_pond(schedule, semester_start,
+                                            camera_mappings, dry_run)
+        
+        return n_submitted
+
 
 
 def log_info_dry_run(msg, dry_run):

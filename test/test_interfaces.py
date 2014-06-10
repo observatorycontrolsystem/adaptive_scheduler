@@ -1,6 +1,6 @@
 from mock import Mock
 from reqdb.client import ConnectionError, RequestDBError, SchedulerClient
-from adaptive_scheduler.interfaces import RequestDBInterface
+from adaptive_scheduler.requestdb import RequestDBInterface
 
 from nose.tools import assert_equal
 class TestRequestDBInterface(object):

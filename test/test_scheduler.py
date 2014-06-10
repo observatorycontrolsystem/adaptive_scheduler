@@ -1,4 +1,5 @@
-from adaptive_scheduler.scheduler import Scheduler, SchedulerParameters, LCOGTNetworkScheduler, SchedulerRunner, SchedulingInputProvider, SchedulingInputFactory, SchedulerResult
+from adaptive_scheduler.scheduler import Scheduler, LCOGTNetworkScheduler, SchedulerRunner, SchedulerResult
+from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInputFactory 
 from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -797,7 +798,7 @@ class TestSchedulerRunner(object):
         
 class TestSchedulerInputProvider(object):
     
-    @patch('adaptive_scheduler.scheduler.SchedulingInputProvider._get_json_user_request_list')
+    @patch('adaptive_scheduler.scheduler_input.SchedulingInputProvider._get_json_user_request_list')
     def test_provider_doesnt_consider_blocks_running_on_resources_with_events(self, mock1):
         '''Should exclude resources with events from resource usage snapshot
         '''
