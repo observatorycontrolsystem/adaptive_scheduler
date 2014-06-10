@@ -968,7 +968,7 @@ class FileBasedSchedulingInputProvider(object):
         self.refresh()
     
     
-    def clear_too_mode(self):
+    def set_normal_mode(self):
         self.is_too_input = False
         self.refresh()
         

@@ -276,25 +276,10 @@ class PondScheduleInterface(object):
                 tracking_number = block.tracking_num_set()[0]
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
                 telescope = block.telescope + '.' +  block.observatory + '.' + block.site
-                running_request = RunningRequest(telescope, block.request_num_set()[0])
+                running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
                 running_ur.add_running_request(running_request)
             
         return running_urs
-    
-#     def running_user_requests_by_telescope(self):
-#         result = {}
-#         for tel in self.telescopes:
-#             result[tel] = None
-#             if self.running_blocks_by_telescope.get(tel, []):
-#                 result[tel] = self.running_blocks_by_telescope.get(tel)
-#         
-#         return result
-        
-        
-#     def running_user_request_intervals_by_telescope(self):
-#         ''' Return the current run intervals by telescope
-#         '''
-#         return self.running_intervals_by_telescope
         
     def too_user_request_intervals_by_telescope(self):
         ''' Return the schedule ToO intervals for the supplied telescope
