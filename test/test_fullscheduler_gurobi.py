@@ -105,28 +105,34 @@ class TestFullScheduler_gurobi(object):
         slice_dict = {}
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
+        resource_list = ['foo', 'bar']
+        slice_size_seconds = 1
 
         # compound_reservation_list, globally_possible_windows_dict, contractual_obligations_list, time_slicing_dict
+#            def __init__(self, compound_reservation_list, 
+#                 globally_possible_windows_dict, 
+#                 contractual_obligation_list, 
+#                 resource_list, slice_size_seconds)
         self.fs1 = FullScheduler_gurobi([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs2 = FullScheduler_gurobi([self.cr1, self.cr4],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs3 = FullScheduler_gurobi([self.cr5],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs4 = FullScheduler_gurobi([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs5 = FullScheduler_gurobi([self.cr10, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs6 = FullScheduler_gurobi([self.cr11, self.cr2, self.cr3], 
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs7 = FullScheduler_gurobi([self.cr12],
-                                    self.gpw3, [], slice_dict)
+                                    self.gpw3, [], resource_list, slice_size_seconds)
         self.fs8 = FullScheduler_gurobi([self.cr13, self.cr14, self.cr15, self.cr16],
-                                    self.gpw4, [], slice_dict)
+                                    self.gpw4, [], resource_list, slice_size_seconds)
         self.fs9 = FullScheduler_gurobi([self.cr17,self.cr18,self.cr19],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
         self.fs10 = FullScheduler_gurobi([self.cr20,self.cr21,self.cr22],
-                                    self.gpw2, [], slice_dict)
+                                    self.gpw2, [], resource_list, slice_size_seconds)
 
 
     # This is testing that we schedule earlier rather than later if given the choice
@@ -201,11 +207,10 @@ class TestFullScheduler_gurobi(object):
 
 
     def test_schedule_triple_oneof(self):
-        slice_dict = {}
-        slice_dict['foo'] = [0,1]
-        slice_dict['bar'] = [0,1]
+        resource_list = ['foo', 'bar']
+        slice_size_seconds = 1
         fs = FullScheduler_gurobi([self.cr9],
-                              self.gpw2, [], slice_dict)
+                              self.gpw2, [], resource_list, slice_size_seconds)
         s = fs.schedule_all()
         # only one should be scheduled
 
@@ -224,10 +229,9 @@ class TestFullScheduler_gurobi(object):
                                 Timepoint(201000, 'end')])
         gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
                                 Timepoint(201000, 'end')])
-        slice_dict = {}
-        slice_dict['foo'] = [90000,60]
-        slice_dict['goo'] = [90000,60]
-        fs = FullScheduler_gurobi([cr], gpw, [], slice_dict)
+        resource_list = ['foo', 'bar']
+        slice_size_seconds = 300
+        fs = FullScheduler_gurobi([cr], gpw, [], resource_list, slice_size_seconds)
         schedule = fs.schedule_all()
 
 
