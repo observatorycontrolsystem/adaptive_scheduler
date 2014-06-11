@@ -12,17 +12,22 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       send_blocks_to_pond, build_block,
                                       send_schedule_to_pond, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
-                                      get_network_running_blocks)
+                                      get_network_running_blocks,
+                                      get_network_running_intervals,
+                                      get_intervals_by_telescope_for_tracking_numbers)
 from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-from adaptive_scheduler.camera_mapping import create_camera_mapping
+from adaptive_scheduler.camera_mapping        import create_camera_mapping
+from adaptive_scheduler.kernel.timepoint      import Timepoint
+from adaptive_scheduler.kernel.intervals      import Intervals
 
 import lcogtpond
+from lcogtpond import block
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import collections
 
 
@@ -378,6 +383,27 @@ class TestPond(object):
                                  camera_mapping = self.mapping,
                                )
 
+
+    def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
+                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group',
+                          tracking_number='0000000001', request_number='0000000001'):
+        scheduled_block = Block(
+                                 location=location,
+                                 start=start,
+                                 end=end,
+                                 group_id=group_id,
+                                 tracking_number=tracking_number,
+                                 request_number=request_number,
+                                 camera_mapping=self.mapping,
+                               )
+
+        scheduled_block.add_proposal(self.valid_proposal)
+        scheduled_block.add_target(self.valid_target)
+        scheduled_block.add_molecule(self.valid_expose_mol)
+
+        return scheduled_block.create_pond_block()
+
+
     def test_proposal_lists_missing_fields(self):
         missing  = self.proposal.list_missing_fields()
 
@@ -385,7 +411,6 @@ class TestPond(object):
                       missing,
                       ['proposal_id', 'user_id', 'tag_id', 'priority']
                     )
-
 
 
     def test_scheduled_block_lists_missing_fields(self):
@@ -412,6 +437,10 @@ class TestPond(object):
 
         self.one_metre_block.create_pond_block()
 
+        self.create_pond_block()
+
+    def test_create_pond_block(self):
+        received = self.create_pond_block()
 
     def test_create_pond_block_with_expose_mol(self):
         self.one_metre_block.add_proposal(self.valid_proposal)
@@ -553,6 +582,42 @@ class TestPond(object):
 
         received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
 
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_get_too_blocks(self, func_mock):
+        too_block = self.create_pond_block(location='1m0a.doma.coj', tracking_number='0000000001')
+        non_too_block = self.create_pond_block(location='1m0a.doma.elp', tracking_number='0000000002')
+
+        cutoff_dt = datetime(2013, 8, 18, 0, 0, 0)
+        fake_block = {
+                      'elp' : [non_too_block],
+                      'coj' : [too_block]
+                      }
+        TestPondInteractions.configure_mocks(func_mock, cutoff_dt, fake_block)
+
+        ur1 = UserRequest(
+                           operator='single',
+                           requests=None,
+                           proposal=None,
+                           tracking_number='0000000001',
+                           group_id=None,
+                           expires=None,
+                         )
+
+        tels = {
+                 '1m0a.doma.elp' : [],
+                 '1m0a.doma.coj' : []
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        tracking_numbers = [ur1.tracking_number]
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
+
+        expected = {
+                    '1m0a.doma.coj' : Intervals([Timepoint(too_block.start, 'start'),
+                                                 Timepoint(too_block.end, 'end')])
+                    }
+        assert_equal(expected, too_blocks)
 
 class TestPondInteractions(object):
     def setup(self):
@@ -577,15 +642,17 @@ class TestPondInteractions(object):
         return FakeBlock(start_dt, tracking_num_set)
 
 
-    def configure_mocks(self, func_mock, cutoff_dt, fake_block_list):
-        mock_schedule          = Mock(spec=lcogtpond.schedule.Schedule)
-        func_mock.return_value = mock_schedule
-        mock_schedule.end_of_overlap.return_value = cutoff_dt
+    @staticmethod
+    def configure_mocks(func_mock, cutoff_dt, fake_blocks):
+        def mapping(**kwargs):
+            mock_schedule = Mock(spec=lcogtpond.schedule.Schedule)
+            mock_schedule.blocks = fake_blocks if isinstance(fake_blocks, list) else fake_blocks[kwargs.get('site')]
+            mock_schedule.end_of_overlap.return_value = cutoff_dt
+            return mock_schedule
+        
+        func_mock.side_effect = mapping
 
-        block_list           = fake_block_list
-        mock_schedule.blocks = block_list
-
-        return block_list
+        return
 
 
     @patch('lcogtpond.block.Block.cancel_blocks')
@@ -599,7 +666,7 @@ class TestPondInteractions(object):
 
 
     @patch('lcogtpond.block.Block.cancel_blocks')
-    def test_cancel_blocks_called_when_dry_run(self, func_mock):
+    def test_cancel_blocks_called_when_dry_run_not_set(self, func_mock):
         dry_run = False
         reason = 'Superceded by new schedule'
         FakeBlock = collections.namedtuple('FakeBlock', 'id')
@@ -685,38 +752,6 @@ class TestPondInteractions(object):
         mock_func.assert_called_with([mock_pond_block])
 
 
-    @patch('adaptive_scheduler.pond.get_running_blocks')
-    def test_blocks_arent_running_if_weather(self, mock_func1):
-        tel_mock1 = Mock()
-        tel_mock2 = Mock()
-
-        tel_mock1.events = [1, 2, 3]
-        tel_mock2.events = []
-
-        mock_func1.return_value = ('me', ['you'])
-
-        tels = {
-                 '1m0a.doma.lsc' : tel_mock1,
-                 '1m0a.doma.cpt' : tel_mock2
-               }
-        start = datetime(2013, 10, 3)
-        end   = datetime(2013, 11, 3)
-
-        received = get_network_running_blocks(tels, start, end)
-
-        expected = {
-                     '1m0a.doma.lsc' : {
-                                         'cutoff'  : start,
-                                         'running' : []
-                                       },
-                     '1m0a.doma.cpt' : {
-                                         'cutoff'  : 'me',
-                                         'running' : ['you']
-                                       },
-                   }
-
-        assert_equal(received, expected)
-
 
     @patch('adaptive_scheduler.pond.send_blocks_to_pond')
     @patch('adaptive_scheduler.pond.build_block')
@@ -746,7 +781,7 @@ class TestPondInteractions(object):
 
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(schedule, dry_run)
-
+        
 
     def test_build_block(self):
         raise SkipTest
@@ -787,7 +822,7 @@ class TestPondInteractions(object):
 
         camera_mappings_file = 'camera_mappings.dat'
 
-        received = build_block(reservation, request, compound_request, self.start, 
+        received = build_block(reservation, request, compound_request, self.start,
                                camera_mappings_file)
         missing = received.list_missing_fields()
         print "Missing %r fields" % missing

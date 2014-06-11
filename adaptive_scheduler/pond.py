@@ -25,7 +25,6 @@ It maps objects across domains from 1) -> 2) (described below).
 Author: Eric Saunders
 February 2012
 '''
-from datetime import datetime
 import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
@@ -37,6 +36,7 @@ from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
+from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 
 from schedutils.instruments            import InstrumentFactory
 
@@ -48,10 +48,113 @@ from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
 import logging
+from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.kernel.timepoint import Timepoint
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
+
+
+class PondRunningRequest(RunningRequest):
+    
+    def __init__(self, telescope, request_number, block_id, start, end):
+        RunningRequest.__init__(self, telescope, request_number)
+        self.block_id = block_id
+        self.start = start
+        self.end = end
+
+    def __str__(self):
+        return RunningRequest.__str__(self) + ", block_id: %s, start: %s, end: %s" % (self.block_id, self.start, self.end)
+
+
+class PondScheduleInterface(object):
+    
+    def __init__(self):
+        self.running_blocks_by_telescope = None
+        self.running_intervals_by_telescope = None
+        self.too_intervals_by_telescope = None
+        
+        self.log = logging.getLogger(__name__)
+    
+    def fetch_data(self, telescopes, running_window_start, running_window_end, too_tracking_numbers):
+        #Fetch the data
+        self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
+        self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
+        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end, too_tracking_numbers)
+
+    
+    def _fetch_running_blocks(self, telescopes, end_after, start_before):
+        try:
+            running_blocks = get_network_running_blocks(telescopes, end_after, start_before)
+        except PondFacadeException, pfe:
+            raise ScheduleException(pfe, "Unable to get running blocks from POND")
+        
+        # This is just logging held over from when this was in the scheduling loop
+        all_running_blocks = []
+        for blocks in running_blocks.values():
+            all_running_blocks += blocks
+        self.log.info("%d %s in the running list", *pl(len(all_running_blocks), 'POND Block'))
+        for block in all_running_blocks:
+            msg = "UR %s has a running block (id=%d, finishing at %s)" % (
+                                                         block.tracking_num_set()[0],
+                                                         block.id,
+                                                         block.end
+                                                       )
+            self.log.debug(msg)
+        # End of logging block
+        
+        return running_blocks 
+    
+    def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
+        too_blocks = get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
+        
+        return too_blocks
+    
+    
+    def running_user_requests_by_tracking_number(self):
+        running_urs = {}
+        for blocks in self.running_blocks_by_telescope.values():
+            for block in blocks:
+                tracking_number = block.tracking_num_set()[0]
+                running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
+                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
+                running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
+                running_ur.add_running_request(running_request)
+            
+        return running_urs
+        
+    def too_user_request_intervals_by_telescope(self):
+        ''' Return the schedule ToO intervals for the supplied telescope
+        '''
+        return self.too_intervals_by_telescope
+    
+    
+    def cancel(self, start, end, dry_run=False, tels=None):
+        ''' Cancel the current scheduler between start and end
+        '''
+        # Clean out all existing scheduled blocks during a normal run but not ToO
+        if tels is None:
+            tels = self.telescopes
+            
+        n_deleted = 0
+        if tels:
+            try:
+                n_deleted = cancel_schedule(tels, start, end, dry_run)
+            except PondFacadeException, pfe:
+                raise ScheduleException(pfe, "Unable to cancel POND schedule")
+            
+        return n_deleted
+            
+    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+        ''' Save the provided observing schedule
+        '''
+        # Convert the kernel schedule into POND blocks, and send them to the POND
+        n_submitted = send_schedule_to_pond(schedule, semester_start,
+                                            camera_mappings, dry_run)
+        
+        return n_submitted
+
 
 
 def log_info_dry_run(msg, dry_run):
@@ -128,7 +231,7 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
         specific_ag = resolve_instrument(ag_name, site, obs, tel, mapping)
     else:
         # With no autoguider specified, we go with the preferred autoguider
-        ag_match    = mapping.find_by_camera(specific_camera)
+        ag_match = mapping.find_by_camera(specific_camera)
 
         if not ag_match:
             msg = "Couldn't find any autoguider for '%s' at %s.%s.%s" % (
@@ -338,12 +441,12 @@ class Block(object):
         # 1) Create a POND ScheduledBlock
         telescope, observatory, site = split_location(self.location)
         block_build_args = dict(
-                                start       = self.start,
-                                end         = self.end,
-                                site        = site,
-                                observatory = observatory,
-                                telescope   = telescope,
-                                priority    = self.priority
+                                start=self.start,
+                                end=self.end,
+                                site=site,
+                                observatory=observatory,
+                                telescope=telescope,
+                                priority=self.priority
                                 )
 
         # If constraints are provided, include them in the block
@@ -363,13 +466,13 @@ class Block(object):
         if isinstance(self.target, SiderealTarget):
             # 2a) Construct the Pointing Coordinate
             coord = pointing.ra_dec(
-                                     ra  = self.target.ra.in_degrees(),
-                                     dec = self.target.dec.in_degrees()
+                                     ra=self.target.ra.in_degrees(),
+                                     dec=self.target.dec.in_degrees()
                                    )
             # 2b) Construct the Pointing
             pond_pointing = pointing.sidereal(
-                                               name  = self.target.name,
-                                               coord = coord,
+                                               name=self.target.name,
+                                               coord=coord,
                                              )
 
         elif isinstance(self.target, NonSiderealTarget):
@@ -415,7 +518,7 @@ class Block(object):
                 filter_or_slit = molecule.spectra_slit
             mol_summary_msg = "Building %s molecule %d/%d (%dx%.03d %s)" % (
                                                                              molecule.type,
-                                                                             i+1,
+                                                                             i + 1,
                                                                              len(self.molecules),
                                                                              molecule.exposure_count,
                                                                              molecule.exposure_time,
@@ -511,12 +614,12 @@ def make_simple_pond_block(compound_reservation, semester_start):
     dt_start, dt_end = get_cr_datetimes(compound_reservation, semester_start)
 
     pond_block = PondBlock.build(
-                                    start       = dt_start,
-                                    end         = dt_end,
-                                    site        = compound_reservation.resource,
-                                    observatory = compound_reservation.resource,
-                                    telescope   = compound_reservation.resource,
-                                    priority    = compound_reservation.priority
+                                  start=dt_start,
+                                  end=dt_end,
+                                  site=compound_reservation.resource,
+                                  observatory=compound_reservation.resource,
+                                  telescope=compound_reservation.resource,
+                                  priority=compound_reservation.priority
                                 )
     return pond_block
 
@@ -539,20 +642,20 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
     camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
     block = Block(
-                   location           = reservation.scheduled_resource,
-                   start              = res_start,
-                   end                = res_end,
-                   group_id           = compound_request.group_id,
-                   tracking_number    = compound_request.tracking_number,
-                   request_number     = request.request_number,
-                   camera_mapping     = camera_mapping,
+                   location=reservation.scheduled_resource,
+                   start=res_start,
+                   end=res_end,
+                   group_id=compound_request.group_id,
+                   tracking_number=compound_request.tracking_number,
+                   request_number=request.request_number,
+                   camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
-                   priority           = 30,
-                   max_airmass        = request.constraints.max_airmass,
-                   min_lunar_distance = request.constraints.min_lunar_distance,
-                   max_lunar_phase    = request.constraints.max_lunar_phase,
-                   max_seeing         = request.constraints.max_seeing,
-                   min_transparency   = request.constraints.min_transparency,
+                   priority=30,
+                   max_airmass=request.constraints.max_airmass,
+                   min_lunar_distance=request.constraints.min_lunar_distance,
+                   max_lunar_phase=request.constraints.max_lunar_phase,
+                   max_seeing=request.constraints.max_seeing,
+                   min_transparency=request.constraints.min_transparency,
                  )
 
     block.add_proposal(compound_request.proposal)
@@ -600,65 +703,57 @@ def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_ru
     return n_submitted_total
 
 
+def get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
+    telescope_blocks = {}     
+    for full_tel_name in tels:
+        tel_name, obs_name, site_name = full_tel_name.split('.')
+        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
+        
+        filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+        telescope_blocks[full_tel_name] = filtered_blocks
+        
+    return telescope_blocks
+
+
 @timeit
-def blacklist_running_blocks(ur_list, tels, start, end):
-    running_at_tel  = get_network_running_blocks(tels, start, end)
+def get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
+    '''
+        return a map of telescopes to intervals of given tracking number
+    '''
+    telescope_interval = {}
+    blocks_by_telescope_for_tracking_numbers = get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
+    
+    for full_tel_name in tels:
+        blocks = blocks_by_telescope_for_tracking_numbers.get(full_tel_name, [])
 
-    all_running_blocks = []
-    for run_dict in running_at_tel.values():
-        running_blocks = run_dict['running']
-        all_running_blocks += running_blocks
+        intervals = get_intervals(blocks)
+        if not intervals.is_empty():
+            telescope_interval[full_tel_name] = intervals
 
-    log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
-    log.info("%d %s in the running blacklist", *pl(len(all_running_blocks), 'UR'))
-    for block in all_running_blocks:
-        msg = "UR %s has a running block (id=%d, finishing at %s)" % (
-                                                     block.tracking_num_set()[0],
-                                                     block.id,
-                                                     block.end
-                                                   )
-        log.debug(msg)
-        tag = 'RunningBlock'
-        msg = 'This Request has a running block (id=%d, finishing at %s)' % (
-                                                                             block.id,
-                                                                             block.end
-                                                                            )
-        for ur in ur_list:
-            if ur.tracking_number == block.tracking_num_set()[0]:
-                ur.emit_user_feedback(msg, tag)
-                break
+    return telescope_interval
 
+def get_network_running_intervals(running_blocks_by_telescope):
+    running_at_tel = {}
 
-    all_tns         = [ur.tracking_number for ur in ur_list]
-    running_tns     = [block.tracking_num_set()[0] for block in all_running_blocks]
-    schedulable_tns = set(all_tns) - set(running_tns)
-    schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
+    for key, blocks in running_blocks_by_telescope.items():
+        running_at_tel[key] = get_intervals(blocks)
 
-    log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
+    return running_at_tel
 
-    return schedulable_urs, running_at_tel
-
-
-def get_network_running_blocks(tels, start, end):
+def get_network_running_blocks(tels, ends_after, starts_before):
     n_running_total = 0
-    running_at_tel  = {}
-    for full_tel_name, tel in tels.iteritems():
+    running_at_tel = {}
+    for full_tel_name in tels:
         tel_name, obs_name, site_name = full_tel_name.split('.')
         log.debug("Acquiring running blocks and first availability at %s",
                                                           full_tel_name)
 
-        if tel.events:
-            cutoff, running = start, []
-        else:
-            cutoff, running = get_running_blocks(start, end, site_name,
-                                                 obs_name, tel_name)
+        running = get_running_blocks(ends_after, starts_before,
+                                                 site_name, obs_name, tel_name)
 
-        running_at_tel[full_tel_name] = {
-                                          'cutoff'  : cutoff,
-                                          'running' : running
-                                        }
+        running_at_tel[full_tel_name] = running
 
-        n_running    = len(running)
+        n_running = len(running)
         _, block_str = pl(n_running, 'block')
         log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
         n_running_total += n_running
@@ -668,25 +763,29 @@ def get_network_running_blocks(tels, start, end):
     return running_at_tel
 
 
-@retry_or_reraise(max_tries=6, delay=10)
-def get_running_blocks(start, end, site, obs, tel):
-    schedule  = Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel,
-                             canceled_blocks=False)
-    cutoff_dt = schedule.end_of_overlap(start)
+def get_running_blocks(ends_after, starts_before, site, obs, tel):
+    schedule  = get_blocks(ends_after, starts_before, site, obs, tel)
+    cutoff_dt = schedule.end_of_overlap(starts_before)
 
     running = [b for b in schedule.blocks if b.start < cutoff_dt and
                                              b.tracking_num_set()]
 
-    return cutoff_dt, running
+    return running
 
 
-@retry_or_reraise(max_tries=6, delay=10)
+def get_intervals(blocks):
+    ''' Create Intervals from given blocks  '''
+    timepoints = []
+    for block in blocks:
+        timepoints.append(Timepoint(block.start, 'start'))
+        timepoints.append(Timepoint(block.end, 'end'))
+
+    return Intervals(timepoints)
+
+
 def get_deletable_blocks(start, end, site, obs, tel):
     # Only retrieve blocks which have not been cancelled
-    schedule  = Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel,
-                             canceled_blocks=False)
+    schedule = get_blocks(start, end, site, obs, tel)
 
     cutoff_dt = schedule.end_of_overlap(start)
     to_delete = [b for b in schedule.blocks if b.start >= cutoff_dt and
@@ -703,6 +802,12 @@ def get_deletable_blocks(start, end, site, obs, tel):
 
     return to_delete
 
+#@retry_or_reraise(max_tries=6, delay=10)
+def get_blocks(start, end, site, obs, tel):
+    # Only retrieve blocks which have not been cancelled
+    return Schedule.get(start=start, end=end, site=site,
+                             observatory=obs, telescope=tel,
+                             canceled_blocks=False)
 
 @timeit
 def cancel_schedule(tels, start, end, dry_run=False):

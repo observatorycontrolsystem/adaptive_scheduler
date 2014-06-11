@@ -108,7 +108,7 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
+def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
     '''Find the set of intervals where the target of the provided request it is both
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
@@ -119,25 +119,17 @@ def make_dark_up_kernel_intervals(req, tels, visibility_from, verbose=False):
     intersections_for_resource = {}
     for resource_name in req.windows.windows_for_resource:
 
-
-        # Find when it's dark, and when the target is up
-        tel = tels[resource_name]
-        if tel.events:
-            rs_dark_intervals = []
-            rs_up_intervals   = []
-            rs_ha_intervals   = []
+        visibility        = visibility_from[resource_name][0]
+        rs_dark_intervals = visibility_from[resource_name][1]()
+        rs_up_intervals   = visibility_from[resource_name][2](
+                                             target=rs_target,
+                                             up=True,
+                                             airmass=req.constraints.max_airmass)
+        # HA support only currently implemented for sidereal targets
+        if 'ra' in rs_target:
+            rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
         else:
-            visibility        = visibility_from[resource_name][0]
-            rs_dark_intervals = visibility_from[resource_name][1]()
-            rs_up_intervals   = visibility_from[resource_name][2](
-                                                 target=rs_target,
-                                                 up=True,
-                                                 airmass=req.constraints.max_airmass)
-            # HA support only currently implemented for sidereal targets
-            if 'ra' in rs_target:
-                rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
-            else:
-                rs_ha_intervals   = rs_up_intervals
+            rs_ha_intervals   = rs_up_intervals
 
 
         # Convert the rise_set intervals into kernel speak
@@ -230,7 +222,7 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
-def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, scheduling_horizon):
+def filter_for_kernel(crs, visibility_from, semester_start, semester_end, scheduling_horizon):
     '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any URs that are now too
        small to hold their duration after this consideration, so they are not passed
@@ -267,7 +259,7 @@ def filter_for_kernel(crs, visibility_from, tels, semester_start, semester_end, 
 
 
     # Filter on rise_set/airmass
-    crs = filter_on_visibility(crs, tels, visibility_from)
+    crs = filter_on_visibility(crs, visibility_from)
 
     # Clean up now impossible Requests
     crs = filter_on_duration(crs)
@@ -287,11 +279,11 @@ def list_available_tels(visibility_from):
 
 
 @log_windows
-def filter_on_visibility(crs, tels, visibility_from):
+def filter_on_visibility(crs, visibility_from):
     for cr in crs:
         ur_log.info("Intersecting windows with dark/up intervals", cr.tracking_number)
         for r in cr.requests:
-            r = compute_intersections(r, tels, visibility_from)
+            r = compute_intersections(r, visibility_from)
             if r.has_windows():
                 tag = 'RequestIsVisible'
                 msg = 'Request %s (UR %s) is visible (%d windows remaining)' % (r.request_number,
@@ -309,9 +301,9 @@ def filter_on_visibility(crs, tels, visibility_from):
     return crs
 
 
-def compute_intersections(req, tels, visibility_from):
+def compute_intersections(req, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
-    intersections_for_resource = make_dark_up_kernel_intervals(req, tels,
+    intersections_for_resource = make_dark_up_kernel_intervals(req,
                                                                visibility_from,
                                                                verbose=True)
     req.windows = intervals_to_windows(req, intersections_for_resource)
@@ -334,7 +326,7 @@ def intervals_to_windows(req, intersections_for_resource):
 
 
 @timeit
-def make_compound_reservations(compound_requests, tels, visibility_from, semester_start):
+def make_compound_reservations(compound_requests, visibility_from, semester_start):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
 
@@ -342,7 +334,7 @@ def make_compound_reservations(compound_requests, tels, visibility_from, semeste
     to_schedule = []
     for c_req in compound_requests:
 
-        dark_ups = find_dark_ups_of_children(c_req, tels, visibility_from)
+        dark_ups = find_dark_ups_of_children(c_req, visibility_from)
 
         # Make and store the CompoundReservation
         compound_res = construct_compound_reservation(c_req, dark_ups, semester_start)
@@ -351,11 +343,11 @@ def make_compound_reservations(compound_requests, tels, visibility_from, semeste
     return to_schedule
 
 
-def find_dark_ups_of_children(c_req, tels, visibility_from):
+def find_dark_ups_of_children(c_req, visibility_from):
     # Find the dark/up intervals for each Request in this CompoundRequest
     dark_ups = []
     for req in c_req.requests:
-        intersections_for_resource = make_dark_up_kernel_intervals(req, tels,
+        intersections_for_resource = make_dark_up_kernel_intervals(req,
                                                                    visibility_from,
                                                                    verbose=False)
         dark_ups.append(intersections_for_resource)
@@ -364,14 +356,14 @@ def find_dark_ups_of_children(c_req, tels, visibility_from):
 
 
 @timeit
-def make_many_type_compound_reservations(many_compound_requests, tels, visibility_from,
+def make_many_type_compound_reservations(many_compound_requests, visibility_from,
                                          semester_start):
     '''Parse a list of CompoundRequests of type 'many', and produce a corresponding
        list of CompoundReservations. Each 'many' will produce one CompoundReservation
        per Request child.'''
     to_schedule = []
     for many_c_req in many_compound_requests:
-        dark_ups = find_dark_ups_of_children(many_c_req, tels, visibility_from)
+        dark_ups = find_dark_ups_of_children(many_c_req, visibility_from)
 
         # Produce a distinct CR for each R in a 'many'
         # We do this because the kernel knows nothing about 'many', and will treat
@@ -434,17 +426,16 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     return visibility_from
 
 
-def construct_global_availability(now, semester_start, running_at_tel, resource_windows):
-    '''Use the cutoff time to make unavailable portions of each resource where an
-       observation is running. Normalise and intersect with the resource windows to
+def construct_global_availability(available_resources, semester_start, network_snapshot, resource_windows):
+    '''Use the exclude_intervals to make unavailable portions of each resource where an
+       observation is running/too request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
     '''
 
-    for tel_name in running_at_tel:
-        running_interval = Intervals([Timepoint(now, 'start'),
-                                      Timepoint(running_at_tel[tel_name]['cutoff'], 'end')])
-        norm_running_interval = normalise_dt_intervals(running_interval, semester_start)
+    for resource_name in available_resources:
+        excluded_interval = network_snapshot.blocked_intervals(resource_name)
+        norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
 
-        resource_windows[tel_name] = resource_windows[tel_name].subtract(norm_running_interval)
+        resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_excluded_interval)
 
     return resource_windows

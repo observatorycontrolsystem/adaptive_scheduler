@@ -107,7 +107,7 @@ class Scheduler(object):
         # remove that resource from the free_windows_dict.
         # if there are NO MORE resources, then return False.
         for resource in reservation.free_windows_dict.keys():
-            reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect([self.globally_possible_windows_dict[resource]])
+            reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect([self.globally_possible_windows_dict.get(resource, Intervals([]))])
             reservation.clean_up_free_windows(resource)
             if reservation.free_windows_dict[resource].is_empty():
                 del(reservation.free_windows_dict[resource])
