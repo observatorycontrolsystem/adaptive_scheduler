@@ -240,3 +240,70 @@ class TestFullScheduler_gurobi(object):
         assert_equal(self.r9.scheduled, False)
         assert_equal(self.r10.scheduled, False)
         
+    def test_schedule_order_dependent_resources(self):
+        s1 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        s2 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation_v2([r1], 'single')
+        gpw = {}
+        gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
+        gpw['foo'] = Intervals([])#[Timepoint(1500, 'start'), Timepoint(2000, 'end')])
+        
+        fs = FullScheduler_gurobi([cr], gpw, [], ['goo', 'foo'], 60)
+        schedule = fs.schedule_all()
+        print schedule
+        assert_equal(1, len(schedule['goo']))
+
+        s1 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        s2 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation_v2([r1], 'single')
+        gpw = {}
+        gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
+        gpw['foo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
+
+        fs = FullScheduler_gurobi([cr], gpw, [], ['foo', 'goo'], 60)
+        schedule = fs.schedule_all()
+        print schedule
+        assert_equal(1, len(schedule['goo']))
+        
+        s1 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        s2 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation_v2([r1], 'single')
+        gpw = {}
+        gpw['foo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
+        gpw['goo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
+
+        
+        fs = FullScheduler_gurobi([cr], gpw, [], ['goo', 'foo'], 60)
+        schedule = fs.schedule_all()
+        print schedule
+        assert_equal(1, len(schedule['foo']))
+
+        s1 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        s2 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation_v2([r1], 'single')
+        gpw = {}
+        gpw['foo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
+        gpw['goo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
+
+        
+        fs = FullScheduler_gurobi([cr], gpw, [], ['foo', 'goo'], 60)
+        schedule = fs.schedule_all()
+        print schedule
+        assert_equal(1, len(schedule['foo'])) 
+        
+        
+    def test_schedule_no_available_windows(self):
+        s1 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        s2 = Intervals([Timepoint(0, 'start'), Timepoint(1000, 'end')])
+        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation_v2([r1], 'single')
+        gpw = {}
+        gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
+        
+        fs = FullScheduler_gurobi([cr], gpw, [], ['foo'], 60)
+        schedule = fs.schedule_all()
+        

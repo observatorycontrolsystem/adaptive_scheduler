@@ -4,8 +4,10 @@ from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
+from adaptive_scheduler.kernel.intervals import Intervals
 from reqdb.requests import Request
 # import helpers
 
@@ -248,9 +250,10 @@ class TestSchduler(object):
         priority = 10
         tracking_number = 1
         request_number = 1
-        target_telescope = '1m0a.doma.elp'
+        telescope1 = '1m0a.doma.elp'
+        telescope2 = '1m0a.doma.lsc'
         request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
-        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope, '1m0a.doma.lsc'], is_too=True) 
+        request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[telescope1, telescope2], is_too=True) 
         too_single_ur = create_user_request(tracking_number, priority, [request], 'single')
         
         # Build mock reservation list
@@ -259,8 +262,14 @@ class TestSchduler(object):
         # Create available intervals mock
         available_start = datetime.strptime("2013-05-22 19:30:00", '%Y-%m-%d %H:%M:%S')
         available_end = datetime.strptime("2013-05-22 19:40:00", '%Y-%m-%d %H:%M:%S')
+        wont_work_start = datetime.strptime("2013-05-23 19:30:00", '%Y-%m-%d %H:%M:%S')
+        wont_work_end = datetime.strptime("2013-05-23 19:40:00", '%Y-%m-%d %H:%M:%S')
+        from adaptive_scheduler.kernel.intervals import Intervals
         available_intervals = {
-                               target_telescope : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
+                               telescope1 : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
+                               telescope2 : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
+#                                '1m0a.doma.lsc' : Intervals([]),
+#                                 '1m0a.doma.lsc' : self.build_intervals([(wont_work_start, wont_work_end),], self.normalize_windows_to),
                                } 
         prepare_available_windows_for_kernel_mock.return_value = available_intervals
         
@@ -274,20 +283,17 @@ class TestSchduler(object):
         
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         
-        # TODO: Why does this fail
-#         scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, ['1m0a.doma.lsc', '1m0a.doma.elp'], scheduler_run_end, preemption_enabled=True)
-        # but not this
         scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, ['1m0a.doma.elp', '1m0a.doma.lsc'], scheduler_run_end, preemption_enabled=True)
         
         # Start assertions
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(request_number, scheduler_result.schedule))
-        assert_true(self.is_schedule_on_resource(request_number, scheduler_result.schedule, target_telescope))
         assert_true(self.doesnt_start_before(request_number, scheduler_result.schedule, available_start, self.normalize_windows_to))
         assert_true(self.doesnt_start_after(request_number, scheduler_result.schedule, available_end - timedelta(seconds=request_duration_seconds), self.normalize_windows_to))
         assert_true(self.scheduled_duration_is(request_number, scheduler_result.schedule, self.sched_params.slicesize_seconds, request_duration_seconds))
         
-        assert_equal(['1m0a.doma.elp'], scheduler_result.resource_schedules_to_cancel)
+        assert_equal(1, len(scheduler_result.resource_schedules_to_cancel))
+        assert_true(scheduler_result.resource_schedules_to_cancel[0] in ['1m0a.doma.lsc', '1m0a.doma.elp'])
         assert_equal([], scheduler_result.unschedulable_user_request_numbers)
         assert_equal([], scheduler_result.unschedulable_request_numbers)
         
@@ -615,12 +621,12 @@ class TestSchduler(object):
             res.request = request
             reservation_list.append(res)
             
-        compound_reservation_mock = Mock(reservation_list=[res])
+        compound_reservation_mock = CompoundReservation(reservation_list, 'single')
         
         return compound_reservation_mock
     
     
-    def build_intervals(self, start_end_tuples, normailze_to):
+    def build_intervals(self, start_end_tuples, normalize_to):
         timepoints = []
         for start, end in start_end_tuples:
             start_timepoint = Timepoint(time=start, type='start')
@@ -628,8 +634,8 @@ class TestSchduler(object):
             timepoints.append(start_timepoint)
             timepoints.append(end_timepoint)
             
-        epoch_timepoints = Mock(timepoints=timepoints)
-        intervals = normalise_dt_intervals(epoch_timepoints, normailze_to)
+        epoch_timepoints = Intervals(timepoints)
+        intervals = normalise_dt_intervals(epoch_timepoints, normalize_to)
         return intervals
     
     

@@ -31,7 +31,7 @@ from adaptive_scheduler.printing import plural_str as pl
 from schedutils.semester_service import get_semester_code
 
 #from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
+# from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.request_filters import filter_urs, drop_empty_requests, find_unschedulable_ur_numbers, set_now
 from adaptive_scheduler.eventbus        import get_eventbus
 from adaptive_scheduler.feedback        import TimingLogger

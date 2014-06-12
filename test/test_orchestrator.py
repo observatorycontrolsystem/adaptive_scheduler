@@ -9,11 +9,12 @@ Author: Eric Saunders
 August 2013
 '''
 
-from adaptive_scheduler.orchestrator import update_telescope_events, report_scheduling_outcome, \
+from adaptive_scheduler.orchestrator import (report_scheduling_outcome,
     combine_excluded_intervals, compute_optimal_combination, construct_value_function_dict, \
-    preempt_running_blocks
+    preempt_running_blocks)
 from adaptive_scheduler.model2       import Telescope
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.scheduler import update_network_model
 
 from nose.tools import assert_equal
 import mock
@@ -30,20 +31,20 @@ class TestOrchestrator(object):
         pass
 
 
-    def test_update_telescope_events_no_events(self):
+    def test_update_network_model_no_events(self):
         events = {}
         tels = {
                  '1m0a.doma.lsc' : Telescope(),
                  '1m0a.doma.coj' : Telescope(),
                }
 
-        update_telescope_events(tels, events)
+        update_network_model(tels, events)
 
         assert_equal(tels['1m0a.doma.lsc'].events, [])
         assert_equal(tels['1m0a.doma.coj'].events, [])
 
 
-    def test_update_telescope_events_one_event(self):
+    def test_update_network_model_one_event(self):
         events = {
                    '1m0a.doma.lsc' : ['event1', 'event2'],
                  }
@@ -52,7 +53,7 @@ class TestOrchestrator(object):
                  '1m0a.doma.coj' : Telescope(),
                }
 
-        update_telescope_events(tels, events)
+        update_network_model(tels, events)
 
         assert_equal(tels['1m0a.doma.lsc'].events, ['event1', 'event2'])
         assert_equal(tels['1m0a.doma.coj'].events, [])

@@ -15,14 +15,14 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 January 2014
 '''
 
-from reservation_v3 import *
+# from reservation_v3 import *
 #from contracts_v2 import *
-import copy
+# import copy
 import numpy
 #from openopt import LP
 from scipy.sparse import coo_matrix
 #from slicedipscheduler import *
-from slicedipscheduler_v2 import *
+from slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit
 
 import cvxopt

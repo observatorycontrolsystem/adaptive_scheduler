@@ -47,7 +47,7 @@ class SlicedIPScheduler_v2(Scheduler):
                  contractual_obligation_list)
         # time_slicing_dict is a dictionary that maps: 
         # resource-> [slice_alignment, slice_length]
-        self.resource_list = resource_list
+#         self.resource_list = resource_list
         self.slice_size_seconds = slice_size_seconds
         self.time_slicing_dict = {}
         # these are the structures we need for the linear programming solver
@@ -56,7 +56,7 @@ class SlicedIPScheduler_v2(Scheduler):
         self.schedulerIDstring = 'slicedIPscheduler'
         self.hashes = set()
         
-        for r in self.resource_list:
+        for r in resource_list:
             self.time_slicing_dict[r] = [0, self.slice_size_seconds]
 
 
@@ -168,6 +168,7 @@ class SlicedIPScheduler_v2(Scheduler):
                         internal_start = start
             
             # return slices, internal_starts
+            ps_list = []
             idx = 0
             for w in slices:
                 ps_list.append(PossibleStart(resource, w, internal_starts[idx]))
