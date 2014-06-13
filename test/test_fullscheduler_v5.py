@@ -78,21 +78,21 @@ class TestFullScheduler_v5(object):
         self.gpw4['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
 
         self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs2 = FullScheduler_v5([self.cr1, self.cr4],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs3 = FullScheduler_v5([self.cr5],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs4 = FullScheduler_v5([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs5 = FullScheduler_v5([self.cr10, self.cr2, self.cr3], 
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3], 
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs7 = FullScheduler_v5([self.cr12],
-                                    self.gpw3, [], ['foo', 'bar'], 1)
+                                    self.gpw3, [], 1)
         self.fs8 = FullScheduler_v5([self.cr13, self.cr14, self.cr15, self.cr16],
-                                    self.gpw4, [], ['foo', 'bar'], 1)
+                                    self.gpw4, [], 1)
 
 
     def test_schedule_all_4inarow(self):
@@ -157,7 +157,7 @@ class TestFullScheduler_v5(object):
         slice_dict['foo'] = [0,1]
         slice_dict['bar'] = [0,1]
         fs = FullScheduler_v5([self.cr9],
-                              self.gpw2, [], ['foo', 'bar'], 1)
+                              self.gpw2, [], 1)
         s = fs.schedule_all()
         # only one should be scheduled
 
@@ -176,7 +176,7 @@ class TestFullScheduler_v5(object):
                                 Timepoint(201000, 'end')])
         gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
                                 Timepoint(201000, 'end')])
-        fs = FullScheduler_v5([cr], gpw, [], ['foo', 'goo'], 60)
+        fs = FullScheduler_v5([cr], gpw, [], 60)
         schedule = fs.schedule_all()
 
 

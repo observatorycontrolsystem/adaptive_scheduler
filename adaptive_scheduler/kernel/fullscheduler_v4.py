@@ -27,11 +27,11 @@ class FullScheduler_v4(SlicedIPScheduler):
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
-                 resource_list, slice_size_seconds):
+                 slice_size_seconds):
         SlicedIPScheduler.__init__(self, compound_reservation_list, 
                                    globally_possible_windows_dict, 
                                    contractual_obligation_list, 
-                                   resource_list, slice_size_seconds)
+                                   slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerDense'
     
 

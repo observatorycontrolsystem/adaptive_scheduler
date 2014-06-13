@@ -48,13 +48,13 @@ class TestSlicedIPScheduler(object):
         self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
 
         self.fs1 = SlicedIPScheduler([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs2 = SlicedIPScheduler([self.cr1, self.cr4],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs3 = SlicedIPScheduler([self.cr5],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         self.fs4 = SlicedIPScheduler([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], ['foo', 'bar'], 1)
+                                    self.gpw2, [], 1)
         
 
     def test_create(self):

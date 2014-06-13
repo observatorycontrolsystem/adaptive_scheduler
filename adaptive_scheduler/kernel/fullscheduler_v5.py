@@ -31,12 +31,12 @@ class FullScheduler_v5(SlicedIPScheduler_v2):
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
-                 resource_list, slice_size_seconds):
+                 slice_size_seconds):
 #        SlicedIPScheduler.__init__(self, compound_reservation_list, 
         SlicedIPScheduler_v2.__init__(self, compound_reservation_list, 
                                    globally_possible_windows_dict, 
                                    contractual_obligation_list, 
-                                   resource_list, slice_size_seconds)
+                                   slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
 
 

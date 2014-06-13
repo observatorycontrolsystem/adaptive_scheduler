@@ -1,6 +1,6 @@
 from adaptive_scheduler.scheduler import Scheduler, LCOGTNetworkScheduler, SchedulerRunner, SchedulerResult
 from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInputFactory 
-from adaptive_scheduler.model2 import UserRequest, Window, Windows
+from adaptive_scheduler.model2 import UserRequest, Window, Windows, Telescope
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -139,13 +139,204 @@ class TestSchduler(object):
         assert_equal({}, scheduler_result.resource_schedules_to_cancel)
         assert_equal([], scheduler_result.unschedulable_user_request_numbers)
         assert_equal([], scheduler_result.unschedulable_request_numbers)
-    
+        
+        
+    def test_constructing_value_matrix(self):
+        # tel2 is not used
+        tels = ['1m0a.doma.tel1', '1m0a.doma.tel2']
+        
+        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_r1 = create_request(1, 60, windows, tels, is_too=True)
+        too_ur1 = create_user_request(1, 20, [too_r1], 'single')
+        too_r2 = create_request(2, 60, windows, tels, is_too=True)
+        too_ur2 = create_user_request(2, 100, [too_r2], 'single')
+
+        too_urs = [too_ur1, too_ur2]
+
+        normal_r1 = create_request(30, 60, windows, tels, is_too=False)
+        normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
+
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        user_request_priorities = {}
+        user_request_priorities[normal_ur1.tracking_number] = normal_ur1.get_priority()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, user_request_priorities, extra_block_intervals)
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        matrix = scheduler.construct_value_function_dict(too_urs, tels, resource_usage_snapshot)
+
+        expected = {
+                    ('1m0a.doma.tel1', 1) : 2.0,
+                    ('1m0a.doma.tel1', 2) : 10.0,
+                    ('1m0a.doma.tel2', 1) : 20.0,
+                    ('1m0a.doma.tel2', 2) : 100.0,
+                    }
+
+        assert_equal(matrix, expected)
+        
+        
+    def test_combine_running_and_too_requests(self):
+        start = datetime(2012, 1, 1, 0, 0, 0)
+        end = datetime(2012, 1, 2, 0, 0, 0)
+        running = {
+                   '0m4a.aqwb.coj' : Intervals([Timepoint(start, 'start'), Timepoint(end, 'end')])
+                  }
+        too = {
+               '0m4a.aqwb.coj' : Intervals([Timepoint(start + timedelta(seconds=10), 'start'), Timepoint(end + timedelta(seconds=10), 'end')])
+               }
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combined = scheduler.combine_excluded_intervals(running, too)
+
+        expected = {
+                    '0m4a.aqwb.coj' : Intervals([Timepoint(start, 'start'), Timepoint(end + timedelta(seconds=10), 'end')])
+                    }
+
+        assert_equal(expected, combined)
+        
+    def test_optimal_schedule(self):
+        telescope_request_dict = {
+                                  ('tel1', 1) : 6,
+                                  ('tel1', 2) : 7,
+                                  ('tel2', 1) : 8,
+                                  ('tel2', 2) : 10
+                                  }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(telescope_request_dict, tracking_numbers, telescopes)
+
+        expected_combinations = [('tel1', 1), ('tel2', 2)]
+
+        assert_equal(combinations, expected_combinations)
+
+
+    def test_optimal_schedule_more_telescopes(self):
+        telescope_request_dict = {
+                                  ('tel1', 1) : 6,
+                                  ('tel1', 2) : 7,
+                                  ('tel2', 1) : 8,
+                                  ('tel2', 2) : 10,
+                                  ('tel3', 1) : 12,
+                                  ('tel3', 2) : 14
+                                  }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2', 'tel3']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(telescope_request_dict, tracking_numbers, telescopes)
+
+        expected_combinations = [('tel2', 1), ('tel3', 2)]
+
+        assert_equal(combinations, expected_combinations)
+        
+        
+    def test_preempt_running_blocks(self):
+        tels = [
+                '1m0a.doma.tel1',
+                '1m0a.doma.tel2',
+                '1m0a.doma.tel3'
+                ]
+        
+        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_r1 = create_request(1, 60, windows, tels, is_too=True)
+        too_ur1 = create_user_request(1, 20, [too_r1], 'single')
+        too_r2 = create_request(2, 60, windows, tels, is_too=True)
+        too_ur2 = create_user_request(2, 100, [too_r2], 'single')
+        too_r3 = create_request(3, 60, windows, tels, is_too=True)
+        too_ur3 = create_user_request(3, 100, [too_r3], 'single')
+
+        normal_r1 = create_request(30, 60, windows, tels, is_too=False)
+        normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
+        
+        too_urs = [too_ur1, too_ur2]
+        all_too_urs = [too_ur1, too_ur2, too_ur3]
+        
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
+        running_r3 = RunningRequest( '1m0a.doma.tel3', too_ur3.tracking_number)
+        running_ur3 = RunningUserRequest(too_ur3.tracking_number, running_r3)
+        running_user_requests = [running_ur1, running_ur3]
+        
+        user_request_priorities = {}
+        user_request_priorities[too_ur1.tracking_number] = too_ur1.get_priority()
+        user_request_priorities[too_ur2.tracking_number] = too_ur2.get_priority()
+        user_request_priorities[too_ur3.tracking_number] = too_ur3.get_priority()
+        user_request_priorities[normal_ur1.tracking_number] = normal_ur1.get_priority()
+        
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, user_request_priorities, extra_block_intervals)
+
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        resurces_to_schedule = scheduler.find_resources_to_preempt(too_urs, all_too_urs, tels, resource_usage_snapshot)
+        expected_resurces_to_schedule = ['1m0a.doma.tel1', '1m0a.doma.tel2']
+        assert_equal(expected_resurces_to_schedule, resurces_to_schedule)
+
+
+    def test_preempt_running_blocks_no_preemption(self):
+        tels = [
+                '1m0a.doma.tel1',
+                '1m0a.doma.tel2',
+                '1m0a.doma.tel3'
+                ]
+        
+        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        too_r1 = create_request(1, 60, windows, tels, is_too=True)
+        too_ur1 = create_user_request(1, 20, [too_r1], 'single')
+        too_r2 = create_request(2, 60, windows, tels, is_too=True)
+        too_ur2 = create_user_request(2, 100, [too_r2], 'single')
+
+        normal_r1 = create_request(30, 60, windows, tels, is_too=False)
+        normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
+        
+        too_urs = [too_ur1, too_ur2]
+        all_too_urs = [too_ur1, too_ur2]
+        
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        
+        user_request_priorities = {}
+        user_request_priorities[too_ur1.tracking_number] = too_ur1.get_priority()
+        user_request_priorities[too_ur2.tracking_number] = too_ur2.get_priority()
+        user_request_priorities[normal_ur1.tracking_number] = normal_ur1.get_priority()
+        
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, user_request_priorities, extra_block_intervals)
+
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        resources_to_schedule = scheduler.find_resources_to_preempt(too_urs, all_too_urs, tels, resource_usage_snapshot)
+        expected_resources_to_schedule = ['1m0a.doma.tel2', '1m0a.doma.tel3']
+        assert_equal(expected_resources_to_schedule, resources_to_schedule)
     
     
     def prepare_for_kernel_side_effect_factory(self, normailze_to_date):
         
         def side_effect(user_requests, estimated_scheduler_end):
             return [self.build_compound_reservation(ur, normalize_windows_to=normailze_to_date) for ur in user_requests]
+        
+        return side_effect
+    
+    def prepare_available_windows_for_kernel_side_effect_factory(self, available_intervals):
+        
+        def side_effect(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end):
+            return {r:i for r,i in available_intervals.items() if r in resources_to_schedule}
         
         return side_effect
     
@@ -174,7 +365,7 @@ class TestSchduler(object):
         available_intervals = {
                                target_telescope : self.build_intervals([(available_start, available_end),], self.normalize_windows_to)
                                } 
-        prepare_available_windows_for_kernel_mock.return_value = available_intervals
+        prepare_available_windows_for_kernel_mock.side_effect = self.prepare_available_windows_for_kernel_side_effect_factory(available_intervals)
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
@@ -268,10 +459,8 @@ class TestSchduler(object):
         available_intervals = {
                                telescope1 : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
                                telescope2 : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
-#                                '1m0a.doma.lsc' : Intervals([]),
-#                                 '1m0a.doma.lsc' : self.build_intervals([(wont_work_start, wont_work_end),], self.normalize_windows_to),
                                } 
-        prepare_available_windows_for_kernel_mock.return_value = available_intervals
+        prepare_available_windows_for_kernel_mock.side_effect = self.prepare_available_windows_for_kernel_side_effect_factory(available_intervals) 
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
@@ -282,7 +471,6 @@ class TestSchduler(object):
         self.network_snapshot_mock.get_priority = Mock(side_effect=(lambda tracking_number : 0))
         
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        
         scheduler_result = scheduler.run_scheduler(too_user_requests, self.network_snapshot_mock, ['1m0a.doma.elp', '1m0a.doma.lsc'], scheduler_run_end, preemption_enabled=True)
         
         # Start assertions
@@ -325,7 +513,7 @@ class TestSchduler(object):
         available_intervals = {
                                '1m0a.doma.elp' : self.build_intervals([(available_start, available_end),], self.normalize_windows_to),
                                } 
-        prepare_available_windows_for_kernel_mock.return_value = available_intervals
+        prepare_available_windows_for_kernel_mock.side_effect = self.prepare_available_windows_for_kernel_side_effect_factory(available_intervals)
         
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
@@ -394,7 +582,7 @@ class TestSchduler(object):
         available_intervals = {
                                '1m0a.doma.lsc' : self.build_intervals([(available_start, available_end),], self.normalize_windows_to)
                               } 
-        prepare_available_windows_for_kernel_mock.return_value = available_intervals
+        prepare_available_windows_for_kernel_mock.side_effect = self.prepare_available_windows_for_kernel_side_effect_factory(available_intervals)
           
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
@@ -464,7 +652,8 @@ class TestSchduler(object):
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
           
         # Create available intervals mock
-        prepare_available_windows_for_kernel_mock.return_value = {}
+        available_intervals = {}
+        prepare_available_windows_for_kernel_mock.side_effect = self.prepare_available_windows_for_kernel_side_effect_factory(available_intervals)
           
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
@@ -681,6 +870,46 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     
     
 class TestSchedulerRunner(object):
+    
+    def setup(self):
+        mock_kernel_class = Mock
+        sched_params = SchedulerParameters()
+        mock_event_bus = Mock
+        self.scheduler = Scheduler(mock_kernel_class, sched_params, mock_event_bus)
+        
+        self.mock_network_interface = Mock()
+        self.network_model = {}
+        mock_input_factory = Mock()
+        self.scheduler_runner = SchedulerRunner(sched_params, self.scheduler, self.mock_network_interface, self.network_model, mock_input_factory)
+
+
+    def test_update_network_model_no_events(self):
+        self.network_model['1m0a.doma.lsc'] = Telescope()
+        self.network_model['1m0a.doma.coj'] = Telescope()
+        
+        current_events = {}
+        current_events['1m0a.doma.lsc'] = []
+        current_events['1m0a.doma.lcoj'] = []
+        self.mock_network_interface.get_current_events = Mock(return_value=current_events)
+        self.scheduler_runner.update_network_model()
+
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+
+
+    def test_update_network_model_one_event(self):
+        self.network_model['1m0a.doma.lsc'] = Telescope()
+        self.network_model['1m0a.doma.coj'] = Telescope()
+        
+        current_events = {}
+        current_events['1m0a.doma.lsc'] = ['event1', 'event2']
+        current_events['1m0a.doma.coj'] = []
+        self.mock_network_interface.get_current_events = Mock(return_value=current_events)
+        self.scheduler_runner.update_network_model()
+
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, ['event1', 'event2'])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+    
      
     def test_scheduler_runner_all_interfaces_mocked(self):
         ''' schedule should be changed through the network interface

@@ -320,7 +320,7 @@ class Scheduler(object):
             contractual_obligations = []
         
             self.log.info("Starting scheduling kernel")
-            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, resources_to_schedule, self.sched_params.slicesize_seconds)
+            kernel   = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level

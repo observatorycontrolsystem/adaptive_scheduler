@@ -41,7 +41,7 @@ class SlicedIPScheduler_v2(Scheduler):
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list,
-                 resource_list, slice_size_seconds):
+                 slice_size_seconds):
         Scheduler.__init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list)
@@ -56,7 +56,7 @@ class SlicedIPScheduler_v2(Scheduler):
         self.schedulerIDstring = 'slicedIPscheduler'
         self.hashes = set()
         
-        for r in resource_list:
+        for r in self.resource_list:
             self.time_slicing_dict[r] = [0, self.slice_size_seconds]
 
 

@@ -207,10 +207,9 @@ class TestFullScheduler_gurobi(object):
 
 
     def test_schedule_triple_oneof(self):
-        resource_list = ['foo', 'bar']
         slice_size_seconds = 1
         fs = FullScheduler_gurobi([self.cr9],
-                              self.gpw2, [], resource_list, slice_size_seconds)
+                              self.gpw2, [], slice_size_seconds)
         s = fs.schedule_all()
         # only one should be scheduled
 
@@ -229,9 +228,8 @@ class TestFullScheduler_gurobi(object):
                                 Timepoint(201000, 'end')])
         gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
                                 Timepoint(201000, 'end')])
-        resource_list = ['foo', 'bar']
         slice_size_seconds = 300
-        fs = FullScheduler_gurobi([cr], gpw, [], resource_list, slice_size_seconds)
+        fs = FullScheduler_gurobi([cr], gpw, [], slice_size_seconds)
         schedule = fs.schedule_all()
 
 
@@ -249,7 +247,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
         gpw['foo'] = Intervals([])#[Timepoint(1500, 'start'), Timepoint(2000, 'end')])
         
-        fs = FullScheduler_gurobi([cr], gpw, [], ['goo', 'foo'], 60)
+        fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
         print schedule
         assert_equal(1, len(schedule['goo']))
@@ -262,7 +260,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
         gpw['foo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
 
-        fs = FullScheduler_gurobi([cr], gpw, [], ['foo', 'goo'], 60)
+        fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
         print schedule
         assert_equal(1, len(schedule['goo']))
@@ -276,7 +274,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
 
         
-        fs = FullScheduler_gurobi([cr], gpw, [], ['goo', 'foo'], 60)
+        fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
         print schedule
         assert_equal(1, len(schedule['foo']))
@@ -290,7 +288,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([Timepoint(1500, 'start'), Timepoint(2000, 'end')])
 
         
-        fs = FullScheduler_gurobi([cr], gpw, [], ['foo', 'goo'], 60)
+        fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
         print schedule
         assert_equal(1, len(schedule['foo'])) 
@@ -304,6 +302,6 @@ class TestFullScheduler_gurobi(object):
         gpw = {}
         gpw['goo'] = Intervals([Timepoint(250, 'start'), Timepoint(750, 'end')])
         
-        fs = FullScheduler_gurobi([cr], gpw, [], ['foo'], 60)
+        fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
         
