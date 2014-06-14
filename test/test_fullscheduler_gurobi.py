@@ -114,25 +114,25 @@ class TestFullScheduler_gurobi(object):
 #                 contractual_obligation_list, 
 #                 resource_list, slice_size_seconds)
         self.fs1 = FullScheduler_gurobi([self.cr1, self.cr2, self.cr3], 
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs2 = FullScheduler_gurobi([self.cr1, self.cr4],
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs3 = FullScheduler_gurobi([self.cr5],
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs4 = FullScheduler_gurobi([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs5 = FullScheduler_gurobi([self.cr10, self.cr2, self.cr3], 
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs6 = FullScheduler_gurobi([self.cr11, self.cr2, self.cr3], 
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs7 = FullScheduler_gurobi([self.cr12],
-                                    self.gpw3, [], resource_list, slice_size_seconds)
+                                    self.gpw3, [], slice_size_seconds)
         self.fs8 = FullScheduler_gurobi([self.cr13, self.cr14, self.cr15, self.cr16],
-                                    self.gpw4, [], resource_list, slice_size_seconds)
+                                    self.gpw4, [], slice_size_seconds)
         self.fs9 = FullScheduler_gurobi([self.cr17,self.cr18,self.cr19],
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
         self.fs10 = FullScheduler_gurobi([self.cr20,self.cr21,self.cr22],
-                                    self.gpw2, [], resource_list, slice_size_seconds)
+                                    self.gpw2, [], slice_size_seconds)
 
 
     # This is testing that we schedule earlier rather than later if given the choice
