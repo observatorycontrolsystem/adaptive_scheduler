@@ -28,12 +28,14 @@ class RunningUserRequest(object):
 
 class RunningRequest(object):
 
-    def __init__(self, resource, request_number):
+    def __init__(self, resource, request_number, start, end):
         self.resource = resource
         self.request_number = request_number
+        self.start = start
+        self.end = end
         
     def __str__(self):
-        return 'Request Number: %s at telescope %s' % (self.request_number, self.resource)
+        return 'Request Number: %s at telescope %s, start: %s, end: %s' % (self.request_number, self.resource, self.start, self.end)
     
 
 class ResourceUsageSnapshot(object):

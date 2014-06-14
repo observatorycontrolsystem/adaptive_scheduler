@@ -56,7 +56,7 @@ class TestSchduler(object):
         scheduler = LCOGTNetworkScheduler(None, None, None, {})
         
         ur_tracking_numbers = ['0000000001']
-        running_request = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_request = RunningRequest('0000000001', '1m0a.doma.elp', Mock(), Mock())
         running_ur = RunningUserRequest('0000000001', running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
@@ -64,9 +64,9 @@ class TestSchduler(object):
         assert_equal([], schedulable_urs)
         
         ur_tracking_numbers = ['0000000001']
-        running_request1 = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_request1 = RunningRequest('0000000001', '1m0a.doma.elp', Mock(), Mock())
         running_ur1 = RunningUserRequest('0000000001', running_request1)
-        running_request2 = RunningRequest('0000000002', '1m0a.doma.elp')
+        running_request2 = RunningRequest('0000000002', '1m0a.doma.elp', Mock(), Mock())
         running_ur2 = RunningUserRequest('0000000002', running_request2)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur1, running_ur2], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
@@ -83,7 +83,7 @@ class TestSchduler(object):
         assert_equal([], schedulable_urs)
         
         ur_tracking_numbers = []
-        running_request = RunningRequest('0000000001', '1m0a.doma.elp')
+        running_request = RunningRequest('0000000001', '1m0a.doma.elp', Mock(), Mock())
         running_ur = RunningUserRequest('0000000001', running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
         ur_list = self.build_ur_list(*ur_tracking_numbers)
@@ -156,7 +156,7 @@ class TestSchduler(object):
         normal_r1 = create_request(30, 60, windows, tels, is_too=False)
         normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
 
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number, Mock(), Mock())
         running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
         running_user_requests = [running_ur1]
         extra_block_intervals = {}
@@ -262,9 +262,9 @@ class TestSchduler(object):
         too_urs = [too_ur1, too_ur2]
         all_too_urs = [too_ur1, too_ur2, too_ur3]
         
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number, Mock(), Mock())
         running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
-        running_r3 = RunningRequest( '1m0a.doma.tel3', too_ur3.tracking_number)
+        running_r3 = RunningRequest( '1m0a.doma.tel3', too_ur3.tracking_number, Mock(), Mock())
         running_ur3 = RunningUserRequest(too_ur3.tracking_number, running_r3)
         running_user_requests = [running_ur1, running_ur3]
         
@@ -305,7 +305,7 @@ class TestSchduler(object):
         too_urs = [too_ur1, too_ur2]
         all_too_urs = [too_ur1, too_ur2]
         
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number)
+        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number, Mock(), Mock())
         running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
         running_user_requests = [running_ur1]
         
@@ -522,7 +522,7 @@ class TestSchduler(object):
         normal_user_requests_priority_by_tracking_number = {ur.tracking_number : ur.priority for ur in normal_user_requests}
         
         # Make the normal user request appear to be running
-        running_request = RunningRequest('1m0a.doma.lsc', normal_request_number)
+        running_request = RunningRequest('1m0a.doma.lsc', normal_request_number, Mock(), Mock())
         running_user_request = RunningUserRequest(normal_tracking_number, running_request)
         self.network_snapshot_mock.user_requests_for_resource = Mock(side_effect=(lambda tel : [running_user_request] if tel == '1m0a.doma.lsc' else []))
         self.network_snapshot_mock.get_priority = Mock(side_effect=(lambda tracking_number : normal_user_requests_priority_by_tracking_number.get(tracking_number)))
@@ -591,8 +591,8 @@ class TestSchduler(object):
         normal_user_requests_priority_by_tracking_number = {ur.tracking_number : ur.priority for ur in normal_user_requests}
           
         # Make the normal user request appear to be running
-        low_priority_running_request = RunningRequest('1m0a.doma.lsc', low_priority_normal_request_number)
-        high_priority_running_request = RunningRequest('1m0a.doma.elp', high_prioirty_normal_request_number)
+        low_priority_running_request = RunningRequest('1m0a.doma.lsc', low_priority_normal_request_number, Mock(), Mock())
+        high_priority_running_request = RunningRequest('1m0a.doma.elp', high_prioirty_normal_request_number, Mock(), Mock())
         low_priority_running_user_request = RunningUserRequest(low_prioirty_normal_tracking_number, low_priority_running_request)
         high_priority_running_user_request = RunningUserRequest(high_priority_normal_tracking_number, high_priority_running_request)
         running_user_requst_map = {
@@ -660,8 +660,8 @@ class TestSchduler(object):
         too_user_requests = [new_too_single_ur, old_low_priority_too_single_ur, old_high_priority_too_single_ur]
           
         # Make the normal user request appear to be running
-        low_priority_running_request = RunningRequest('1m0a.doma.lsc', old_low_priority_too_request_number)
-        high_priority_running_request = RunningRequest('1m0a.doma.elp', old_high_priority_too_request_number)
+        low_priority_running_request = RunningRequest('1m0a.doma.lsc', old_low_priority_too_request_number, Mock(), Mock())
+        high_priority_running_request = RunningRequest('1m0a.doma.elp', old_high_priority_too_request_number, Mock(), Mock())
         low_priority_running_user_request = RunningUserRequest(old_low_prioirty_too_tracking_number, low_priority_running_request)
         high_priority_running_user_request = RunningUserRequest(old_high_priority_too_tracking_number, high_priority_running_request)
         running_user_requst_map = {
@@ -909,7 +909,92 @@ class TestSchedulerRunner(object):
 
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, ['event1', 'event2'])
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        
+        
+    def test_determine_resource_cancelation_start_date_for_reservation_conflicting_running_request(self):
+        ''' Should use default cancelation date when reservation overlaps with running request
+        '''
+        mock_reservation = Mock(scheduled_start=0)
+        scheduled_reservations = [mock_reservation]
+        
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_user_request = RunningUserRequest(1, running_request)
+        running_user_requests = [running_user_request]
+        
+        default_cancelation_start_date = start + timedelta(minutes=30)
+        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
+        
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+        
+        expected_cancelation_start_date = default_cancelation_start_date
+        assert_equal(expected_cancelation_start_date, cancelation_start_date)
+        
     
+    def test_determine_resource_cancelation_start_date_for_reservation_not_conflicting_running_request(self):
+        ''' Should cancel after running block has finished when reservation does not overlap with running request
+        '''
+        mock_reservation = Mock(scheduled_start=0)
+        scheduled_reservations = [mock_reservation]
+        
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_user_request = RunningUserRequest(1, running_request)
+        running_user_requests = [running_user_request]
+        
+        default_cancelation_start_date = start + timedelta(minutes=30)
+        schedule_denoramlization_date = start + timedelta(minutes=61)
+        
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+        
+        expected_cancelation_start_date = end
+        assert_equal(expected_cancelation_start_date, cancelation_start_date)
+        
+    
+    def test_determine_resource_cancelation_start_date_for_reservation_no_running_request(self):
+        ''' Should use default cancelation date when reservation overlaps with running request
+        '''
+        mock_reservation = Mock(scheduled_start=0)
+        scheduled_reservations = [mock_reservation]
+         
+        running_user_requests = []
+         
+        default_cancelation_start_date = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
+         
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+         
+        expected_cancelation_start_date = default_cancelation_start_date
+        assert_equal(expected_cancelation_start_date, cancelation_start_date)
+        
+        
+    def test_determine_schedule_cancelation_start_dates(self):
+        mock_reservation_elp = Mock(scheduled_start=0)
+        mock_reservation_lsc = Mock(scheduled_start=0)
+        scheduled_reservations = {}
+        scheduled_reservations['1m0a.doma.elp'] = [mock_reservation_elp]
+        scheduled_reservations['1m0a.doma.lsc'] = [mock_reservation_lsc]
+        
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_user_request = RunningUserRequest(1, running_request)
+        resource_usage_snapshot = ResourceUsageSnapshot(Mock(), [running_user_request], Mock(), Mock())
+        
+        default_cancelation_start_date = start + timedelta(minutes=30)
+        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
+        default_cancelation_end_date = default_cancelation_start_date + timedelta(days=300)
+        
+        cancelation_start_dates = self.scheduler_runner._determine_schedule_cancelation_start_dates(['1m0a.doma.elp','1m0a.doma.lsc'], scheduled_reservations, resource_usage_snapshot, default_cancelation_start_date, default_cancelation_end_date, schedule_denoramlization_date)
+        
+        expected_cancelation_start_dates = {
+                                            '1m0a.doma.elp' : (default_cancelation_start_date, default_cancelation_end_date),
+                                            '1m0a.doma.lsc' : (default_cancelation_start_date, default_cancelation_end_date)
+                                            }
+        assert_equal(expected_cancelation_start_dates, cancelation_start_dates)
+        
      
     def test_scheduler_runner_all_interfaces_mocked(self):
         ''' schedule should be changed through the network interface
@@ -969,8 +1054,8 @@ class TestSchedulerRunner(object):
         input_factory_mock.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
         
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory_mock)
-        too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'])
-        normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'])
+        too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock()]})
+        normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]})
         scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input, preemption_enabled: too_scheduler_result_mock if preemption_enabled else normal_scheduler_result_mock)
         clear_resource_schedules_mock = Mock()
         scheduler_runner.clear_resource_schedules = clear_resource_schedules_mock
@@ -978,6 +1063,7 @@ class TestSchedulerRunner(object):
         scheduler_runner.set_requests_to_unscheduleable = Mock()
         scheduler_runner.set_user_requests_to_unschedulable = Mock()
 
+        scheduler_runner._determine_resource_cancelation_start_date = Mock(return_value = Mock())
         scheduler_runner.create_new_schedule()
         
         

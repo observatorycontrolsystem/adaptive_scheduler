@@ -59,13 +59,11 @@ ur_log = UserRequestLogger(multi_ur_log)
 class PondRunningRequest(RunningRequest):
     
     def __init__(self, telescope, request_number, block_id, start, end):
-        RunningRequest.__init__(self, telescope, request_number)
+        RunningRequest.__init__(self, telescope, request_number, start, end)
         self.block_id = block_id
-        self.start = start
-        self.end = end
 
     def __str__(self):
-        return RunningRequest.__str__(self) + ", block_id: %s, start: %s, end: %s" % (self.block_id, self.start, self.end)
+        return RunningRequest.__str__(self) + ", block_id: %s" % (self.block_id)
 
 
 class PondScheduleInterface(object):
@@ -130,17 +128,13 @@ class PondScheduleInterface(object):
         return self.too_intervals_by_telescope
     
     
-    def cancel(self, start, end, dry_run=False, tels=None):
+    def cancel(self, cancelation_dates_by_resource):
         ''' Cancel the current scheduler between start and end
-        '''
-        # Clean out all existing scheduled blocks during a normal run but not ToO
-        if tels is None:
-            tels = self.telescopes
-            
+        ''' 
         n_deleted = 0
-        if tels:
+        if cancelation_dates_by_resource:
             try:
-                n_deleted = cancel_schedule(tels, start, end, dry_run)
+                n_deleted = cancel_schedule(cancelation_dates_by_resource)
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
             
@@ -786,21 +780,19 @@ def get_intervals(blocks):
 def get_deletable_blocks(start, end, site, obs, tel):
     # Only retrieve blocks which have not been cancelled
     schedule = get_blocks(start, end, site, obs, tel)
-
-    cutoff_dt = schedule.end_of_overlap(start)
-    to_delete = [b for b in schedule.blocks if b.start >= cutoff_dt and
-                                               b.tracking_num_set()]
+    # Filter out blocks not placed by scheduler, they have not tracking number
+    scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
 
     log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
                                                               tel, obs, site,
                                                               start, end)
-    log.info("%d/%d were placed by the scheduler and will be deleted", len(to_delete),
+    log.info("%d/%d were placed by the scheduler and will be deleted", len(scheduler_placed_blocks),
                                                                        len(schedule.blocks))
-    if to_delete:
-        to_delete_nums = [b.tracking_num_set() for b in to_delete]
+    if scheduler_placed_blocks:
+        to_delete_nums = [b.tracking_num_set() for b in scheduler_placed_blocks]
         log.debug("Deleting: %s", to_delete_nums)
 
-    return to_delete
+    return scheduler_placed_blocks
 
 #@retry_or_reraise(max_tries=6, delay=10)
 def get_blocks(start, end, site, obs, tel):
@@ -810,9 +802,9 @@ def get_blocks(start, end, site, obs, tel):
                              canceled_blocks=False)
 
 @timeit
-def cancel_schedule(tels, start, end, dry_run=False):
+def cancel_schedule(cancelation_dates_by_resource):
     all_to_delete = []
-    for full_tel_name in tels:
+    for full_tel_name, (start, end) in cancelation_dates_by_resource.iteritems():
         tel, obs, site = full_tel_name.split('.')
         log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
                                                              start, end)
@@ -824,23 +816,16 @@ def cancel_schedule(tels, start, end, dry_run=False):
 
         _, block_str = pl(n_to_delete, 'block')
         msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
-        if dry_run:
-            msg = "Dry-run: Would have cancelled " + msg
-        else:
-            msg = "Cancelled " + msg
+        msg = "Cancelled " + msg
         log.info(msg)
 
 
-    cancel_blocks(all_to_delete, dry_run)
+    cancel_blocks(all_to_delete)
 
     return len(all_to_delete)
 
 
-def cancel_blocks(to_delete, dry_run=False):
-
-    if dry_run:
-        return len(to_delete)
-
+def cancel_blocks(to_delete):
     ids = [b.id for b in to_delete]
     try:
         PondBlock.cancel_blocks(ids, reason="Superceded by new schedule", delete=True)

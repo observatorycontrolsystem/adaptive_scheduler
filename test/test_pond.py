@@ -656,70 +656,29 @@ class TestPondInteractions(object):
 
 
     @patch('lcogtpond.block.Block.cancel_blocks')
-    def test_cancel_blocks_not_called_when_dry_run(self, func_mock):
-        dry_run = True
-        FakeBlock = collections.namedtuple('FakeBlock', 'id')
-        to_delete = [FakeBlock(id=id) for id in range(10)]
-
-        cancel_blocks(to_delete, dry_run)
-        assert_equal(func_mock.called, False)
-
-
-    @patch('lcogtpond.block.Block.cancel_blocks')
     def test_cancel_blocks_called_when_dry_run_not_set(self, func_mock):
-        dry_run = False
         reason = 'Superceded by new schedule'
         FakeBlock = collections.namedtuple('FakeBlock', 'id')
         ids = range(10)
         to_delete = [FakeBlock(id=id) for id in ids]
 
-        cancel_blocks(to_delete, dry_run)
+        cancel_blocks(to_delete)
         func_mock.assert_called_once_with(ids, reason=reason, delete=True)
-
-
-    @patch('lcogtpond.schedule.Schedule.get')
-    def test_delete_blocks_that_exceed_cutoff(self, func_mock):
-        cutoff_dt    = datetime(2013, 8, 18, 0, 0, 0)
-
-        # Should be deleted (so return it)
-        block_start1 = datetime(2013, 8, 19, 0, 0, 0)
-        fake_block1  = self.make_fake_block(block_start1, tracking_num_set=True)
-
-        # Should not be deleted (so don't return it)
-        block_start2 = datetime(2013, 8, 17, 0, 0, 0)
-        fake_block2  = self.make_fake_block(block_start2, tracking_num_set=True)
-
-        # Should not be deleted (no tracking number)
-        block_start3 = datetime(2013, 8, 17, 0, 0, 0)
-        fake_block3  = self.make_fake_block(block_start2, tracking_num_set=False)
-
-        # Should not be deleted (no tracking number)
-        block_start4 = datetime(2013, 8, 19, 0, 0, 0)
-        fake_block4  = self.make_fake_block(block_start2, tracking_num_set=False)
-
-        block_list = self.configure_mocks(func_mock, cutoff_dt,
-                                          [fake_block1, fake_block2])
-
-        to_delete = get_deletable_blocks(self.start, self.end, self.site,
-                                         self.obs, self.tel)
-
-        assert_equal(to_delete, [fake_block1])
 
 
     @patch('adaptive_scheduler.pond.get_deletable_blocks')
     @patch('adaptive_scheduler.pond.cancel_blocks')
     def test_cancel_schedule(self, func_mock1, func_mock2):
-        tels = ['1m0a.doma.lsc']
-        dry_run = False
+        start_end_by_resource = {'1m0a.doma.lsc' : (self.start, self.end)}
 
         delete_list = [1, 2, 3]
 
         func_mock2.return_value = delete_list
-
-        n_deleted = cancel_schedule(tels, self.start, self.end, dry_run)
+        
+        n_deleted = cancel_schedule(start_end_by_resource)
 
         func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel)
-        func_mock1.assert_called_with(delete_list, False)
+        func_mock1.assert_called_with(delete_list)
         assert_equal(n_deleted, len(delete_list))
 
 
