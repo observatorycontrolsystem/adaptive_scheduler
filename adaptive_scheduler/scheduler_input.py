@@ -164,7 +164,10 @@ class SchedulingInput(object):
                   'is_too_input' : self.is_too_input
                   }
         outfile = open(filename, 'w')
-        pickle.dump(output, outfile)
+        try:
+            pickle.dump(output, outfile)
+        except pickle.PickleError, pe:
+            print pe
         outfile.close()
         
     
