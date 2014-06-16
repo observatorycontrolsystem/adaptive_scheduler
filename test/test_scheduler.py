@@ -1048,12 +1048,12 @@ class TestSchedulerRunner(object):
         sched_params = SchedulerParameters(run_once=True)
         scheduler_mock = Mock()
         network_interface_mock = Mock()
-        network_model_mock = Mock()
+        network_model = sched_params.get_model_builder().tel_network.telescopes
         input_factory_mock = Mock()
         input_factory_mock.create_too_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
         input_factory_mock.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, input_factory_mock)
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, input_factory_mock)
         too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock()]})
         normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]})
         scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input, preemption_enabled: too_scheduler_result_mock if preemption_enabled else normal_scheduler_result_mock)
@@ -1071,6 +1071,10 @@ class TestSchedulerRunner(object):
         assert_equal(2, clear_resource_schedules_mock.call_count)
         assert_true('1m0a.doma.lsc' in clear_resource_schedules_mock.call_args_list[0][0][0])
         assert_true('1m0a.doma.lsc' not in clear_resource_schedules_mock.call_args_list[1][0][0])
+        
+        non_too_resouces = [resource for resource in network_model.keys() if resource != '1m0a.doma.lsc']
+        for resource in network_model.keys():
+            assert_equal(non_too_resouces,  clear_resource_schedules_mock.call_args_list[1][0][0].keys())
         
         
     def test_scheduler_runner_dry_run(self):

@@ -648,19 +648,19 @@ class SchedulerRunner(object):
     def _determine_schedule_cancelation_start_dates(self, resources_to_cancel, schedule_by_resource, resource_usage_snapshot, default_cancelation_start, default_cancelation_end, schedule_denoramlization_date):
         cancelation_dates_by_resource = {}
         for resource in resources_to_cancel:
-            start = self._determine_resource_cancelation_start_date(schedule_by_resource[resource], resource_usage_snapshot.user_requests_for_resource(resource), default_cancelation_start, schedule_denoramlization_date)
+            scheduled_at_resource = schedule_by_resource.get(resource, [])
+            start = self._determine_resource_cancelation_start_date(scheduled_at_resource, resource_usage_snapshot.user_requests_for_resource(resource), default_cancelation_start, schedule_denoramlization_date)
             end = default_cancelation_end
             cancelation_dates_by_resource[resource] = (start, end)
             
         return cancelation_dates_by_resource
     
-    def apply_scheduler_result(self, scheduler_result, scheduler_input, dont_clear_resources=[]):
+    def apply_scheduler_result(self, scheduler_result, scheduler_input, resources_to_clear):
         semester_start, semester_end = get_semester_block(dt=scheduler_input.estimated_scheduler_end)
         self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
         self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
         # TODO: make sure this cancels anything currently running in the ToO case
-        resources_to_cancel = [r for r in scheduler_result.resource_schedules_to_cancel if r not in dont_clear_resources]
-        cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(resources_to_cancel, scheduler_result.schedule, scheduler_input.resource_usage_snapshot, scheduler_input.estimated_scheduler_end, semester_end, semester_start)
+        cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(resources_to_clear, scheduler_result.schedule, scheduler_input.resource_usage_snapshot, scheduler_input.estimated_scheduler_end, semester_end, semester_start)
         n_deleted = self.clear_resource_schedules(cancelation_dates_by_resource)
         # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save 
         n_submitted = self.save_resource_schedules(scheduler_result.schedule, semester_start)
@@ -673,30 +673,28 @@ class SchedulerRunner(object):
 #         self.log.info("Received %d Normal User Requests" % len(normal_user_requests))
                 
 #         self._write_scheduler_input_files(json_user_request_list, resource_usage_snapshot)
-        scheduler_result = None
+        too_scheduler_result = None
         scheduler_input = self.input_factory.create_too_scheduling_input()
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
-            scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=True)
-            if scheduler_result and not self.sched_params.dry_run:
-                self.apply_scheduler_result(scheduler_result, scheduler_input)
+            too_scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=True)
+            if too_scheduler_result and not self.sched_params.dry_run:
+                self.apply_scheduler_result(too_scheduler_result, scheduler_input, too_scheduler_result.schedule.keys())
             self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
-        
-        
-        
-        dont_cancel_resources = []
-        if scheduler_result:
-            dont_cancel_resources = scheduler_result.resource_schedules_to_cancel
-        
+            
         # Run the scheduling loop, if there are any User Requests
         scheduler_input = self.input_factory.create_normal_scheduling_input()
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
             scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=False)
             if scheduler_result and not self.sched_params.dry_run:
-                self.apply_scheduler_result(scheduler_result, scheduler_input, dont_cancel_resources)
+                resources_to_clear = self.network_model.keys()
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        resources_to_clear.remove(too_resource)
+                self.apply_scheduler_result(scheduler_result, scheduler_input, resources_to_clear)
             self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
