@@ -2,6 +2,7 @@ from adaptive_scheduler.model2           import ModelBuilder, RequestError
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from schedutils.semester_service         import get_semester_block
 
+import logging
 import pickle
 from datetime import datetime, timedelta
 
@@ -74,6 +75,7 @@ class SchedulingInputUtils(object):
     
     def __init__(self, model_builder):
         self.model_builder = model_builder
+        self.log = logging.getLogger(__name__)
 
     def json_urs_to_scheduler_model_urs(self, json_user_request_list):
         scheduler_model_urs = []
