@@ -112,11 +112,11 @@ class NetworkInterface(object):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
     
-    def cancel(self, start, end, dry_run=False, tels=None):
+    def cancel(self, cancelation_dates_by_resource):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
-        return self.network_schedule_interface.cancel(start, end, dry_run, tels)
+        return self.network_schedule_interface.cancel(cancelation_dates_by_resource)
             
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
@@ -181,7 +181,7 @@ class CachedInputNetworkInterface(object):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         pass
     
-    def cancel(self, start, end, dry_run=False, tels=None):
+    def cancel(self, cancelation_dates_by_resource):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
