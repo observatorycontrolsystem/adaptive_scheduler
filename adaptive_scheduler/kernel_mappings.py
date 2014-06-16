@@ -390,16 +390,17 @@ def construct_resource_windows_orig(visibility_from, semester_start):
     return resource_windows
 
 
-def construct_resource_windows(visibility_from, semester_start):
+def construct_resource_windows(visibility_from, semester_start, availabile_resources):
     '''Construct the set of epoch time windows for each resource, during which that
        resource is available.'''
 
     resource_windows = {}
     for tel_name, visibility_tuple in visibility_from.iteritems():
-        rs_dark_intervals = visibility_tuple[1]()
-        dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
-        ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
-        resource_windows[tel_name] = ep_dark_intervals
+        if tel_name in availabile_resources:
+            rs_dark_intervals = visibility_tuple[1]()
+            dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
+            ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
+            resource_windows[tel_name] = ep_dark_intervals
 
     return resource_windows
 

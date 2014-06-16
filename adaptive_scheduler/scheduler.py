@@ -469,7 +469,7 @@ class LCOGTNetworkScheduler(Scheduler):
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         # Translate when telescopes are available into kernel speak
-        resource_windows = construct_resource_windows(self.visibility_cache, semester_start)
+        resource_windows = construct_resource_windows(self.visibility_cache, semester_start, available_resources)
     
         # Intersect and mask out time where Blocks are currently running
         global_windows = construct_global_availability(available_resources, semester_start,
