@@ -691,9 +691,10 @@ class SchedulerRunner(object):
             scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=False)
             if scheduler_result and not self.sched_params.dry_run:
                 resources_to_clear = self.network_model.keys()
-                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                    if reservation_list:
-                        resources_to_clear.remove(too_resource)
+                if too_scheduler_result: 
+                    for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                        if reservation_list:
+                            resources_to_clear.remove(too_resource)
                 self.apply_scheduler_result(scheduler_result, scheduler_input, resources_to_clear)
             self.log.info("End Normal Scheduling")
         else:
