@@ -1200,6 +1200,48 @@ class TestSchedulerRunner(object):
         assert_equal(0, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
+    def test_scheduler_runner_update_network_model_with_new_event(self):
+        sched_params = SchedulerParameters()
+        scheduler_mock = Mock()
+        network_interface_mock = Mock()
+        
+        mock_input_factory = Mock()
+        network_model = {
+                         '1m0a.doma.elp' : Telescope(),
+                         '1m0a.doma.lsc' : Telescope()
+                         }
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, mock_input_factory)
+        
+        network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp' : ['event']})
+        scheduler_runner.update_network_model()
+        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        
+        
+    def test_scheduler_runner_update_network_model_clear_event(self):
+        sched_params = SchedulerParameters()
+        scheduler_mock = Mock()
+        network_interface_mock = Mock()
+        
+        mock_input_factory = Mock()
+        network_model = {
+                         '1m0a.doma.elp' : Telescope(),
+                         '1m0a.doma.lsc' : Telescope()
+                         }
+        network_model['1m0a.doma.elp'].events.append('event')
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, mock_input_factory)
+
+        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        
+        network_interface_mock.get_current_events = Mock(return_value={})
+        scheduler_runner.update_network_model()
+        assert_equal(network_model['1m0a.doma.elp'].events, [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.elp should have no events")
+            
+        
+        
+        
 class TestSchedulerInputProvider(object):
     
     @patch('adaptive_scheduler.scheduler_input.SchedulingInputProvider._get_json_user_request_list')

@@ -563,6 +563,8 @@ class SchedulerRunner(object):
                                                                     telescope_name,
                                                                     current_events[telescope_name])
                 self.log.info(msg)
+            else:
+                telescope.events = []
     
         return
     
