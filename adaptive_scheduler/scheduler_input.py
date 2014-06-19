@@ -52,9 +52,9 @@ class SchedulingInputFactory():
                         input_provider.available_resources,
                         is_too_input)
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = '/tmp/normal_scheduling_input_%s.pickle'
+        filename = '/data/adaptive_scheduler/input_states/normal_scheduling_input_%s.pickle'
         if is_too_input:
-            filename = '/tmp/too_scheduling_input_%s.pickle'
+            filename = '/data/adaptive_scheduler/input_states/too_scheduling_input_%s.pickle'
         filename = filename % file_timestamp
         scheduler_input.write_input_to_file(filename)
         

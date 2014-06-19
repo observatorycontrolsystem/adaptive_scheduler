@@ -170,7 +170,7 @@ def main(argv):
     user_request_interface = RequestDBInterface(requestdb_client)
     network_state_interface = Network()
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
-#     network_interface = CachedInputNetworkInterface('/tmp/scheduler_input.pickle')
+#     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
     network_model = sched_params.get_model_builder().tel_network.telescopes

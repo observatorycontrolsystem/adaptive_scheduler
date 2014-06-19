@@ -598,7 +598,7 @@ class SchedulerRunner(object):
                   'json_user_request_list' : json_user_request_list,
                   'resource_usage_snapshot' : resource_usage_snapshot
                   }
-        outfile = open('/tmp/scheduler_input.pickle', 'w')
+        outfile = open('/data/adaptive_scheduler/input_states/scheduler_input.pickle', 'w')
         pickle.dump(output, outfile)
         outfile.close()
     
