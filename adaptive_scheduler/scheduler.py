@@ -43,6 +43,7 @@ class Scheduler(object):
         self.event_bus = event_bus
         self.log = logging.getLogger(__name__)
         self.estimated_scheduler_end = datetime.utcnow()
+        self.scheduler_summary_messages = []
     
     
     def find_resources_to_preempt(self, preemtion_urs, all_urgent_urs, resources, resource_usage_snapshot):
@@ -539,6 +540,8 @@ class SchedulerRunner(object):
         self.network_model = network_model
         self.input_factory = input_factory
         self.log = logging.getLogger(__name__)
+        # List of strings to be printed in final scheduling summary
+        self.summary_events = []
         
     
     
@@ -603,6 +606,7 @@ class SchedulerRunner(object):
     def call_scheduler(self, scheduler_input, preemption_enabled):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
         n_urs, n_rs = n_requests(scheduler_input.user_requests)
+        self.summary_events.append("Received %d %s (%d %s) from Request DB" % (pl(n_urs, 'User Request') + pl(n_rs, 'Request')))
         scheduler_result = None
         try:
             scheduler_result = self.scheduler.run_scheduler(scheduler_input.user_requests, scheduler_input.resource_usage_snapshot, scheduler_input.available_resources, scheduler_input.estimated_scheduler_end, preemption_enabled=preemption_enabled)
@@ -666,15 +670,22 @@ class SchedulerRunner(object):
         n_deleted = self.clear_resource_schedules(cancelation_dates_by_resource)
         # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save 
         n_submitted = self.save_resource_schedules(scheduler_result.schedule, semester_start)
-        # TODO: Lost this logging function during refactor somewhere
-        #self.write_scheduling_log(n_urs, n_rs, n_deleted, n_submitted, self.sched_params.dry_run)
+        self.summary_events.append("In total, deleted %d previously scheduled %s" % pl(n_deleted, 'block'))
+        self.summary_events.append("Submitted %d new %s to the POND" % pl(n_submitted, 'block'))
+    
+    def _write_scheduling_summary_log(self, header_msg):
+        self.log.info("------------------")
+        self.log.info(header_msg)
+        if self.sched_params.dry_run:
+            self.log.info("(DRY-RUN: No delete or submit took place)")
+        self.log.info("------------------")
+        for msg in self.summary_events:
+            self.log.info(msg)
+        self.log.info("Scheduling complete.")
+        self.summary_events = []
     
     
     def create_new_schedule(self):
-#         self.log.info("Received %d ToO User Requests" % len(too_user_requests))
-#         self.log.info("Received %d Normal User Requests" % len(normal_user_requests))
-                
-#         self._write_scheduler_input_files(json_user_request_list, resource_usage_snapshot)
         too_scheduler_result = None
         scheduler_input = self.input_factory.create_too_scheduling_input()
         if scheduler_input.user_requests:
@@ -682,10 +693,11 @@ class SchedulerRunner(object):
             too_scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=True)
             if too_scheduler_result and not self.sched_params.dry_run:
                 self.apply_scheduler_result(too_scheduler_result, scheduler_input, too_scheduler_result.schedule.keys())
+            self._write_scheduling_summary_log("ToO Scheduling Summary")
             self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
-            
+        
         # Run the scheduling loop, if there are any User Requests
         scheduler_input = self.input_factory.create_normal_scheduling_input()
         if scheduler_input.user_requests:
@@ -698,6 +710,7 @@ class SchedulerRunner(object):
                         if reservation_list:
                             resources_to_clear.remove(too_resource)
                 self.apply_scheduler_result(scheduler_result, scheduler_input, resources_to_clear)
+            self._write_scheduling_summary_log("Normal Scheduling Summary")
             self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
@@ -706,5 +719,7 @@ class SchedulerRunner(object):
         if not self.sched_params.dry_run:
             self.network_interface.clear_schedulable_request_set_changed_state()
         sys.stdout.flush()
+        
+        
 
 

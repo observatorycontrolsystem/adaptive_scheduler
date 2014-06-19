@@ -872,15 +872,18 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
 class TestSchedulerRunner(object):
     
     def setup(self):
-        mock_kernel_class = Mock
-        sched_params = SchedulerParameters()
-        mock_event_bus = Mock
-        self.scheduler = Scheduler(mock_kernel_class, sched_params, mock_event_bus)
+        self.mock_kernel_class = Mock()
+        self.sched_params = SchedulerParameters(run_once=True)
+        self.mock_event_bus = Mock()
+        self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
         
-        self.mock_network_interface = Mock()
+        self.network_interface_mock = Mock()
+        self.network_interface_mock.cancel = Mock(return_value=0)
+        self.network_interface_mock.save = Mock(return_value=0)
+        
         self.network_model = {}
-        mock_input_factory = Mock()
-        self.scheduler_runner = SchedulerRunner(sched_params, self.scheduler, self.mock_network_interface, self.network_model, mock_input_factory)
+        self.mock_input_factory = Mock()
+        self.scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
 
 
     def test_update_network_model_no_events(self):
@@ -890,7 +893,7 @@ class TestSchedulerRunner(object):
         current_events = {}
         current_events['1m0a.doma.lsc'] = []
         current_events['1m0a.doma.lcoj'] = []
-        self.mock_network_interface.get_current_events = Mock(return_value=current_events)
+        self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, [])
@@ -904,11 +907,41 @@ class TestSchedulerRunner(object):
         current_events = {}
         current_events['1m0a.doma.lsc'] = ['event1', 'event2']
         current_events['1m0a.doma.coj'] = []
-        self.mock_network_interface.get_current_events = Mock(return_value=current_events)
+        self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, ['event1', 'event2'])
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        
+        
+    def test_scheduler_runner_update_network_model_with_new_event(self):
+        network_model = {
+                         '1m0a.doma.elp' : Telescope(),
+                         '1m0a.doma.lsc' : Telescope()
+                         }
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
+        
+        self.network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp' : ['event']})
+        scheduler_runner.update_network_model()
+        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        
+        
+    def test_scheduler_runner_update_network_model_clear_event(self):
+        network_model = {
+                         '1m0a.doma.elp' : Telescope(),
+                         '1m0a.doma.lsc' : Telescope()
+                         }
+        network_model['1m0a.doma.elp'].events.append('event')
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
+
+        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        
+        self.network_interface_mock.get_current_events = Mock(return_value={})
+        scheduler_runner.update_network_model()
+        assert_equal(network_model['1m0a.doma.elp'].events, [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.elp should have no events")
         
         
     def test_determine_resource_cancelation_start_date_for_reservation_conflicting_running_request(self):
@@ -1008,37 +1041,29 @@ class TestSchedulerRunner(object):
         request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True) 
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
-#         too_single_ur.has_target_of_opportunity = Mock(return_value=True)
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
         normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
-        
-        
-        sched_params = SchedulerParameters(run_once=True)
-        scheduler_mock = Mock()
-        scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
-        network_interface_mock = Mock()
-        network_model_mock = {}
+                
+        self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
         too_input_mock = Mock()
         too_input_mock.user_requests = [too_single_ur]
         too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory = Mock()
-        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
         normal_input_mock = Mock()
         normal_input_mock.user_requests = [normal_single_ur]
         normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
-        scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
         scheduler_runner.run()
 
-        assert_equal(2, scheduler_mock.run_scheduler.call_count)
-        assert_equal(2, network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(2, network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(2, network_interface_mock.cancel.call_count)
-        assert_equal(2, network_interface_mock.save.call_count)
-        assert_equal(1, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
+        assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
+        assert_equal(2, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(2, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_equal(2, self.network_interface_mock.save.call_count)
+        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
     def test_scheduler_runner_no_too_requests(self):
@@ -1052,33 +1077,27 @@ class TestSchedulerRunner(object):
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
         normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
         
-        
-        sched_params = SchedulerParameters(run_once=True)
-        scheduler_mock = Mock()
-        scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
-        network_interface_mock = Mock()
-        network_model_mock = {}
+        self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
         too_input_mock = Mock()
         too_input_mock.user_requests = []
         too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory = Mock()
-        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
         normal_input_mock = Mock()
         normal_input_mock.user_requests = [normal_single_ur]
         normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[normal_single_ur])
         scheduler_runner.run()
 
-        assert_equal(1, scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(1, network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(1, network_interface_mock.cancel.call_count)
-        assert_equal(1, network_interface_mock.save.call_count)
-        assert_equal(1, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
+        assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
+        assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        assert_equal(1, self.network_interface_mock.cancel.call_count)
+        assert_equal(1, self.network_interface_mock.save.call_count)
+        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
     
     def test_scheduler_runner_no_normal_requests(self):
@@ -1092,68 +1111,54 @@ class TestSchedulerRunner(object):
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True) 
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
         
-        sched_params = SchedulerParameters(run_once=True)
-        scheduler_mock = Mock()
-        scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
-        network_interface_mock = Mock()
-        network_model_mock = {}
+        self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
         too_input_mock = Mock()
         too_input_mock.user_requests = [too_single_ur]
         too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory = Mock()
-        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
         normal_input_mock = Mock()
         normal_input_mock.user_requests = []
         normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur])
         scheduler_runner.run()
 
-        assert_equal(1, scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(1, network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(1, network_interface_mock.cancel.call_count)
-        assert_equal(1, network_interface_mock.save.call_count)
-        assert_equal(1, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
+        assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
+        assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        assert_equal(1, self.network_interface_mock.cancel.call_count)
+        assert_equal(1, self.network_interface_mock.save.call_count)
+        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
     def test_call_scheduler_cancels_proper_resources(self):
         ''' Only resources scheduled for ToO should be canceled after ToO scheduling run
         and should not be cancelled before saving normal schedule
         '''
-        sched_params = SchedulerParameters(run_once=True)
-        scheduler_mock = Mock()
-        network_interface_mock = Mock()
-        network_model = sched_params.get_model_builder().tel_network.telescopes
-        input_factory_mock = Mock()
-        input_factory_mock.create_too_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
-        input_factory_mock.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
+        network_model = self.sched_params.get_model_builder().tel_network.telescopes
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, input_factory_mock)
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
         too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock()]})
         normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]})
         scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input, preemption_enabled: too_scheduler_result_mock if preemption_enabled else normal_scheduler_result_mock)
-        clear_resource_schedules_mock = Mock()
-        scheduler_runner.clear_resource_schedules = clear_resource_schedules_mock
-        scheduler_runner.save_resource_schedules = Mock()
-        scheduler_runner.set_requests_to_unscheduleable = Mock()
-        scheduler_runner.set_user_requests_to_unschedulable = Mock()
 
         scheduler_runner._determine_resource_cancelation_start_date = Mock(return_value = Mock())
         scheduler_runner.create_new_schedule()
         
         
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
-        assert_equal(2, clear_resource_schedules_mock.call_count)
-        assert_true('1m0a.doma.lsc' in clear_resource_schedules_mock.call_args_list[0][0][0])
-        assert_true('1m0a.doma.lsc' not in clear_resource_schedules_mock.call_args_list[1][0][0])
+        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
+        assert_true('1m0a.doma.lsc' not in self.network_interface_mock.cancel.call_args_list[1][0][0])
         
         non_too_resouces = [resource for resource in network_model.keys() if resource != '1m0a.doma.lsc']
         for resource in network_model.keys():
-            assert_equal(non_too_resouces,  clear_resource_schedules_mock.call_args_list[1][0][0].keys())
+            assert_equal(non_too_resouces,  self.network_interface_mock.cancel.call_args_list[1][0][0].keys())
         
         
     def test_scheduler_runner_dry_run(self):
@@ -1175,71 +1180,26 @@ class TestSchedulerRunner(object):
         
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         scheduler_mock = Mock()
-        network_interface_mock = Mock()
         network_model_mock = {}
 
         too_input_mock = Mock()
         too_input_mock.user_requests = [too_single_ur]
         too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory = Mock()
-        mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
         normal_input_mock = Mock()
         normal_input_mock.user_requests = [normal_single_ur]
         normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
         
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model_mock, mock_input_factory)
-        scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur, normal_single_ur])
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, self.network_interface_mock, network_model_mock, self.mock_input_factory)
         scheduler_runner.run()
 
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
-        assert_equal(0, network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(0, network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(0, network_interface_mock.cancel.call_count)
-        assert_equal(0, network_interface_mock.save.call_count)
-        assert_equal(0, network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
-        
-        
-    def test_scheduler_runner_update_network_model_with_new_event(self):
-        sched_params = SchedulerParameters()
-        scheduler_mock = Mock()
-        network_interface_mock = Mock()
-        
-        mock_input_factory = Mock()
-        network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
-                         }
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, mock_input_factory)
-        
-        network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp' : ['event']})
-        scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
-        
-        
-    def test_scheduler_runner_update_network_model_clear_event(self):
-        sched_params = SchedulerParameters()
-        scheduler_mock = Mock()
-        network_interface_mock = Mock()
-        
-        mock_input_factory = Mock()
-        network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
-                         }
-        network_model['1m0a.doma.elp'].events.append('event')
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, network_interface_mock, network_model, mock_input_factory)
-
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
-        
-        network_interface_mock.get_current_events = Mock(return_value={})
-        scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, [], "1m0a.doma.elp should have no events")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.elp should have no events")
-            
-        
+        assert_equal(0, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        assert_equal(0, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        assert_equal(0, self.network_interface_mock.cancel.call_count)
+        assert_equal(0, self.network_interface_mock.save.call_count)
+        assert_equal(0, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
         
 class TestSchedulerInputProvider(object):
