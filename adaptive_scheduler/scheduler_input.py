@@ -13,7 +13,14 @@ class SchedulingInputException(Exception):
 
 class SchedulerParameters(object):
     
-    def __init__(self, dry_run=False, run_once=False, telescopes_file='telescopes.dat', cameras_file='camera_mappings', no_weather=False, no_singles=False, no_compounds=False, no_too=False, timelimit_seconds=None, slicesize_seconds=300, horizon_days=7.0, sleep_seconds=60, simulate_now=None, kernel='gurobi', input_file_name=None):
+    def __init__(self, dry_run=False, run_once=False,
+                 telescopes_file='telescopes.dat',
+                 cameras_file='camera_mappings', no_weather=False,
+                 no_singles=False, no_compounds=False, no_too=False,
+                 timelimit_seconds=None, slicesize_seconds=300,
+                 horizon_days=7.0, sleep_seconds=60, simulate_now=None,
+                 kernel='gurobi', input_file_name=None,
+                 too_run_time=120, normal_run_time=360):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
         self.cameras_file = cameras_file
@@ -29,6 +36,8 @@ class SchedulerParameters(object):
         self.simulate_now = simulate_now
         self.kernel = kernel
         self.input_file_name = input_file_name
+        self.too_run_time = too_run_time
+        self.normal_run_time = normal_run_time
         
         
     def get_model_builder(self):
@@ -37,7 +46,14 @@ class SchedulerParameters(object):
         return mb
     
     
-class SchedulingInputFactory():
+class RequestDBSchedulerParameters(SchedulerParameters):
+    
+    def __init__(self, requestdb, **kwargs):
+        SchedulerParameters.__init__(self, **kwargs)
+        self.requestdb_url = requestdb
+    
+    
+class SchedulingInputFactory(object):
     
     def __init__(self, input_provider):
         self.input_provider = input_provider
@@ -61,13 +77,17 @@ class SchedulingInputFactory():
         return scheduler_input
     
     
-    def create_too_scheduling_input(self):
+    def create_too_scheduling_input(self, estimated_scheduling_seconds=None):
         self.input_provider.set_too_mode()
+        if estimated_scheduling_seconds:
+            self.input_provider.set_too_run_time(estimated_scheduling_seconds)
         return self._create_scheduling_input(self.input_provider, True)
     
     
-    def create_normal_scheduling_input(self):
+    def create_normal_scheduling_input(self, estimated_scheduling_seconds=None):
         self.input_provider.set_normal_mode()
+        if estimated_scheduling_seconds:
+            self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
         return self._create_scheduling_input(self.input_provider, False)
 
 
@@ -187,6 +207,9 @@ class SchedulingInputProvider(object):
         self.network_model = network_model
         self.is_too_input = is_too_input
         self.utils = SchedulingInputUtils(sched_params.get_model_builder())
+        
+        self._estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
+        self._estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
     
         # TODO: Hide these behind read only properties
         self.scheduler_now = None
@@ -205,6 +228,14 @@ class SchedulingInputProvider(object):
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
         
     
+    def set_too_run_time(self, seconds):
+        self._estimated_too_run_time = timedelta(seconds=seconds)
+
+
+    def set_normal_run_time(self, seconds):
+        self._estimated_normal_scheduing_time = timedelta(seconds=seconds)
+    
+    
     def set_too_mode(self):
         self.is_too_input = True
         self.refresh()
@@ -212,7 +243,7 @@ class SchedulingInputProvider(object):
     
     def set_normal_mode(self):
         self.is_too_input = False
-        self.resource_usage_snapshot = self._get_resource_usage_snapshot()
+        self.refresh()
     
     
     def _get_scheduler_now(self):
@@ -231,9 +262,9 @@ class SchedulingInputProvider(object):
     
     def _get_estimated_scheduler_end(self):
         if self.is_too_input:
-            return self.scheduler_now + timedelta(minutes=2)
+            return self.scheduler_now + self._estimated_too_run_time
         else:
-            return self.scheduler_now + timedelta(minutes=6)
+            return self.scheduler_now + self._estimated_normal_run_time
     
     
     def _get_json_user_request_list(self):
@@ -275,6 +306,15 @@ class FileBasedSchedulingInputProvider(object):
         self.resource_usage_snapshot = None
         
         self.refresh()
+        
+    def set_too_scheduling_time(self, seconds):
+        # Do nothing, we want to use whatever came from the input file
+        pass
+
+
+    def set_normal_scheduling_time(self, seconds):
+        # Do nothing, we want to use whatever came from the input file
+        pass
     
     
     def refresh(self):

@@ -21,7 +21,7 @@ from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNet
 from adaptive_scheduler.pond             import PondScheduleInterface
 from adaptive_scheduler.requestdb        import RequestDBInterface 
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.scheduler_input  import SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider
+from adaptive_scheduler.scheduler_input  import SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, RequestDBSchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
 # from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
@@ -60,11 +60,7 @@ def kill_handler(signal, frame):
 # TODO: Write unit tests for these methods
     
         
-class RequestDBSchedulerParameters(SchedulerParameters):
-    
-    def __init__(self, requestdb, **kwargs):
-        SchedulerParameters.__init__(self, **kwargs)
-        self.requestdb_url = requestdb
+
 
 
 def parse_args(argv):

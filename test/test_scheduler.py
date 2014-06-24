@@ -1,5 +1,5 @@
 from adaptive_scheduler.scheduler import Scheduler, LCOGTNetworkScheduler, SchedulerRunner, SchedulerResult
-from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInputFactory 
+from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInputFactory, SchedulingInput 
 from adaptive_scheduler.model2 import UserRequest, Window, Windows, Telescope
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -1200,6 +1200,121 @@ class TestSchedulerRunner(object):
         assert_equal(0, self.network_interface_mock.cancel.call_count)
         assert_equal(0, self.network_interface_mock.save.call_count)
         assert_equal(0, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
+        
+
+
+class TestSchedulerRunnerUseOfRunTimes(object):
+    
+    def setup(self):
+        self.sched_params = SchedulerParameters()
+        self.scheduler = Mock()
+        self.scheduler.run_scheduler = Mock(return_value=SchedulerResult())
+        self.network_interface = Mock()
+        self.network_interface.cancel = Mock(return_value=0)
+        self.network_interface.save = Mock(return_value=0)
+        self.network_model = {}
+        self.input_factory = Mock()
+    
+    
+    def create_user_request_list(self):
+        request_duration_seconds = 60
+        priority = 10
+        too_tracking_number = 1
+        too_request_number = 1
+        normal_tracking_number = 2
+        normal_request_number = 2
+        request_windows = create_user_request_windows(
+                            (
+                             ("2013-05-22 19:00:00", "2013-05-22 20:00:00"),
+                            ))
+        too_request = create_request(too_request_number,
+                                     duration=request_duration_seconds,
+                                     windows=request_windows,
+                                     possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'],
+                                     is_too=True) 
+        too_single_ur = create_user_request(too_tracking_number, priority,
+                                            [too_request], 'single')
+        normal_request = create_request(normal_request_number,
+                                        duration=request_duration_seconds,
+                                        windows=request_windows,
+                                        possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc']) 
+        normal_single_ur = create_user_request(normal_tracking_number,
+                                               priority, [normal_request],
+                                               'single')
+        
+        return [normal_single_ur, too_single_ur]
+    
+    
+    def setup_mock_create_input_factory(self, user_requests):
+        snapshot = ResourceUsageSnapshot(datetime.utcnow, [], {}, [])
+        too_scheduling_input = Mock(user_requests=user_requests,
+                                    scheduler_now=datetime.utcnow(),
+                                    estimated_scheduler_end=datetime.utcnow(),
+                                    resource_usage_snapshot=snapshot)
+        normal_scheduling_input = Mock(user_requests=user_requests,
+                                       scheduler_now=datetime.utcnow(),
+                                       estimated_scheduler_end=datetime.utcnow(),
+                                       resource_usage_snapshot=snapshot)
+        too_input_mock = Mock(return_value=too_scheduling_input)
+        self.input_factory.create_too_scheduling_input = too_input_mock
+        normal_input_mock = Mock(return_value=normal_scheduling_input)
+        self.input_factory.create_normal_scheduling_input = normal_input_mock
+        
+
+    def test_create_new_schedule_uses_estimated_run_time(self):
+        '''Should use estimated run times but should not set estimates because
+        of empty input
+        '''
+        self.setup_mock_create_input_factory([])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler,
+                                           self.network_interface,
+                                           self.network_model,
+                                           self.input_factory)
+        expected_too_run_time_arg = scheduler_runner.estimated_too_run_timedelta
+        expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
+        scheduler_runner.create_new_schedule()
+        
+        assert_equal(1, self.input_factory.create_too_scheduling_input.call_count)
+        assert_equal(expected_too_run_time_arg.total_seconds(),
+                     self.input_factory.create_too_scheduling_input.call_args[0][0])
+        assert_equal(expected_too_run_time_arg,
+                     scheduler_runner.estimated_too_run_timedelta,
+                     msg="Estimated run time should not change")
+        
+        assert_equal(1, self.input_factory.create_normal_scheduling_input.call_count)
+        assert_equal(expected_normal_run_time_arg.total_seconds(),
+                     self.input_factory.create_normal_scheduling_input.call_args[0][0])
+        assert_equal(expected_normal_run_time_arg,
+                     scheduler_runner.estimated_normal_run_timedelta,
+                     msg="Estimated run time should not change")
+        
+        
+    def test_create_new_schedule_uses_and_sets_estimated_run_time(self):
+        '''Should use estimated run times and should set estimates
+        '''
+        self.setup_mock_create_input_factory(self.create_user_request_list())
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler,
+                                           self.network_interface,
+                                           self.network_model,
+                                           self.input_factory)
+        expected_too_run_time_arg = scheduler_runner.estimated_too_run_timedelta
+        expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
+        scheduler_runner.create_new_schedule()
+        
+        assert_equal(1, self.input_factory.create_too_scheduling_input.call_count)
+        assert_equal(expected_too_run_time_arg.total_seconds(),
+                     self.input_factory.create_too_scheduling_input.call_args[0][0])
+        assert_not_equal(expected_too_run_time_arg,
+                         scheduler_runner.estimated_too_run_timedelta,
+                         msg="Estimated run time should have change")
+        
+        assert_equal(1, self.input_factory.create_normal_scheduling_input.call_count)
+        assert_equal(expected_normal_run_time_arg.total_seconds(),
+                     self.input_factory.create_normal_scheduling_input.call_args[0][0])
+        assert_not_equal(expected_normal_run_time_arg,
+                         scheduler_runner.estimated_normal_run_timedelta,
+                         msg="Estimated run time should have changed")
+        
         
         
 class TestSchedulerInputProvider(object):

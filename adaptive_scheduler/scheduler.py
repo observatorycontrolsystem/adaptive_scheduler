@@ -543,6 +543,9 @@ class SchedulerRunner(object):
         # List of strings to be printed in final scheduling summary
         self.summary_events = []
         
+        self.estimated_too_run_timedelta = timedelta(seconds=120)
+        self.estimated_normal_run_timedelta = timedelta(seconds=360)
+        
     
     
     def scheduler_rerun_required(self):
@@ -662,14 +665,21 @@ class SchedulerRunner(object):
         return cancelation_dates_by_resource
     
     def apply_scheduler_result(self, scheduler_result, scheduler_input, resources_to_clear):
-        semester_start, semester_end = get_semester_block(dt=scheduler_input.estimated_scheduler_end)
+        semester_start, semester_end = \
+                get_semester_block(dt=scheduler_input.estimated_scheduler_end)
         self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
         self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
         # TODO: make sure this cancels anything currently running in the ToO case
-        cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(resources_to_clear, scheduler_result.schedule, scheduler_input.resource_usage_snapshot, scheduler_input.estimated_scheduler_end, semester_end, semester_start)
+        cancelation_dates_by_resource = \
+        self._determine_schedule_cancelation_start_dates(
+            resources_to_clear, scheduler_result.schedule,
+            scheduler_input.resource_usage_snapshot,
+            scheduler_input.estimated_scheduler_end,
+            semester_end, semester_start)
         n_deleted = self.clear_resource_schedules(cancelation_dates_by_resource)
         # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save 
-        n_submitted = self.save_resource_schedules(scheduler_result.schedule, semester_start)
+        n_submitted = self.save_resource_schedules(scheduler_result.schedule,
+                                                   semester_start)
         self.summary_events.append("In total, deleted %d previously scheduled %s" % pl(n_deleted, 'block'))
         self.summary_events.append("Submitted %d new %s to the POND" % pl(n_submitted, 'block'))
     
@@ -687,19 +697,25 @@ class SchedulerRunner(object):
     
     def create_new_schedule(self):
         too_scheduler_result = None
-        scheduler_input = self.input_factory.create_too_scheduling_input()
+        too_scheduling_start = datetime.utcnow()
+        scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
             too_scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=True)
             if too_scheduler_result and not self.sched_params.dry_run:
-                self.apply_scheduler_result(too_scheduler_result, scheduler_input, too_scheduler_result.schedule.keys())
+                self.apply_scheduler_result(too_scheduler_result,
+                                            scheduler_input,
+                                            too_scheduler_result.schedule.keys())
+            too_scheduling_end = datetime.utcnow()
+            self.estimated_too_run_timedelta = too_scheduling_end - too_scheduling_start
             self._write_scheduling_summary_log("ToO Scheduling Summary")
             self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
         
         # Run the scheduling loop, if there are any User Requests
-        scheduler_input = self.input_factory.create_normal_scheduling_input()
+        normal_scheduling_start = datetime.utcnow()
+        scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
             scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=False)
@@ -709,7 +725,11 @@ class SchedulerRunner(object):
                     for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
                         if reservation_list:
                             resources_to_clear.remove(too_resource)
-                self.apply_scheduler_result(scheduler_result, scheduler_input, resources_to_clear)
+                self.apply_scheduler_result(scheduler_result,
+                                            scheduler_input,
+                                            resources_to_clear)
+            normal_scheduling_end = datetime.utcnow()
+            self.estimated_normal_run_timedelta = normal_scheduling_end - normal_scheduling_start 
             self._write_scheduling_summary_log("Normal Scheduling Summary")
             self.log.info("End Normal Scheduling")
         else:
