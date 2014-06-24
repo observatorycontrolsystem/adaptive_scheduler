@@ -867,6 +867,25 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     
     
     return mock_request
+
+
+def create_scheduler_input(user_requests):
+    input_mock = Mock()
+    input_mock.scheduler_now = datetime.utcnow()
+    input_mock.estimated_scheduler_end = datetime.utcnow()
+    input_mock.user_requests = user_requests
+    
+    return input_mock
+
+
+def create_scheduler_input_factory(too_user_requests, normal_user_requests):
+    too_input_mock = create_scheduler_input(too_user_requests)
+    normal_input_mock = create_scheduler_input(normal_user_requests)
+    mock_input_factory = Mock()
+    mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
+    mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
+    
+    return mock_input_factory
     
     
 class TestSchedulerRunner(object):
@@ -1046,16 +1065,8 @@ class TestSchedulerRunner(object):
                 
         self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
-        too_input_mock = Mock()
-        too_input_mock.user_requests = [too_single_ur]
-        too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
-        normal_input_mock = Mock()
-        normal_input_mock.user_requests = [normal_single_ur]
-        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
-        
-        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
+        mock_input_factory = create_scheduler_input_factory([too_single_ur], [normal_single_ur])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
         scheduler_runner.run()
 
         assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
@@ -1079,16 +1090,8 @@ class TestSchedulerRunner(object):
         
         self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
-        too_input_mock = Mock()
-        too_input_mock.user_requests = []
-        too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
-        normal_input_mock = Mock()
-        normal_input_mock.user_requests = [normal_single_ur]
-        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
-        
-        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
+        mock_input_factory = create_scheduler_input_factory([], [normal_single_ur])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[normal_single_ur])
         scheduler_runner.run()
 
@@ -1113,16 +1116,8 @@ class TestSchedulerRunner(object):
         
         self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         
-        too_input_mock = Mock()
-        too_input_mock.user_requests = [too_single_ur]
-        too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
-        normal_input_mock = Mock()
-        normal_input_mock.user_requests = []
-        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
-        
-        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
+        mock_input_factory = create_scheduler_input_factory([too_single_ur], [])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur])
         scheduler_runner.run()
 
@@ -1182,16 +1177,8 @@ class TestSchedulerRunner(object):
         scheduler_mock = Mock()
         network_model_mock = {}
 
-        too_input_mock = Mock()
-        too_input_mock.user_requests = [too_single_ur]
-        too_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input_mock)
-        normal_input_mock = Mock()
-        normal_input_mock.user_requests = [normal_single_ur]
-        normal_input_mock.estimated_scheduler_end = datetime.utcnow()
-        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value = normal_input_mock)
-        
-        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, self.network_interface_mock, network_model_mock, self.mock_input_factory)
+        mock_input_factory = create_scheduler_input_factory([too_single_ur], [normal_single_ur])
+        scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, self.network_interface_mock, network_model_mock, mock_input_factory)
         scheduler_runner.run()
 
         assert_equal(2, scheduler_mock.run_scheduler.call_count)

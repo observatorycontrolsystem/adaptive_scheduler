@@ -78,16 +78,18 @@ class SchedulingInputFactory(object):
     
     
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None):
-        self.input_provider.set_too_mode()
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
+        self.input_provider.set_too_mode()
+        
         return self._create_scheduling_input(self.input_provider, True)
     
     
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None):
-        self.input_provider.set_normal_mode()
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
+        self.input_provider.set_normal_mode()
+        
         return self._create_scheduling_input(self.input_provider, False)
 
 
@@ -233,7 +235,7 @@ class SchedulingInputProvider(object):
 
 
     def set_normal_run_time(self, seconds):
-        self._estimated_normal_scheduing_time = timedelta(seconds=seconds)
+        self._estimated_normal_run_time = timedelta(seconds=seconds)
     
     
     def set_too_mode(self):
