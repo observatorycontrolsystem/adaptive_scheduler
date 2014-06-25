@@ -340,8 +340,8 @@ class PondMoleculeFactory(object):
 class Block(object):
 
     def __init__(self, location, start, end, group_id, tracking_number,
-                 request_number, camera_mapping, priority=0, max_airmass=None,
-                 min_lunar_distance=None, max_lunar_phase=None,
+                 request_number, camera_mapping, priority=0, is_too=False,
+                 max_airmass=None, min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
         self.location           = location
@@ -351,6 +351,7 @@ class Block(object):
         self.tracking_number    = str(tracking_number)
         self.request_number     = str(request_number)
         self.priority           = priority
+        self.is_too             = is_too
 
         self.camera_mapping     = camera_mapping
 
@@ -440,7 +441,8 @@ class Block(object):
                                 site=site,
                                 observatory=observatory,
                                 telescope=telescope,
-                                priority=self.priority
+                                priority=self.priority,
+                                is_too=self.is_too
                                 )
 
         # If constraints are provided, include them in the block
@@ -635,6 +637,7 @@ def make_simple_pond_schedule(schedule, semester_start):
 def build_block(reservation, request, compound_request, semester_start, camera_mappings_file):
     camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
+    is_too = request.observation_type == 'TARGET_OF_OPPORTUNITY'
     block = Block(
                    location=reservation.scheduled_resource,
                    start=res_start,
@@ -645,6 +648,7 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
                    camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
                    priority=30,
+                    is_too = is_too,
                    max_airmass=request.constraints.max_airmass,
                    min_lunar_distance=request.constraints.min_lunar_distance,
                    max_lunar_phase=request.constraints.max_lunar_phase,

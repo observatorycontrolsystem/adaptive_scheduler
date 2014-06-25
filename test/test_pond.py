@@ -742,8 +742,8 @@ class TestPondInteractions(object):
         mock_func2.assert_called_once_with(schedule, dry_run)
         
 
-    def test_build_block(self):
-        raise SkipTest
+    def test_build_normal_block(self):
+#         raise SkipTest
         reservation = Reservation(
                                    priority = None,
                                    duration = 10,
@@ -785,4 +785,51 @@ class TestPondInteractions(object):
                                camera_mappings_file)
         missing = received.list_missing_fields()
         print "Missing %r fields" % missing
-        1/0
+        
+        assert_equal(received.is_too, False, "Should not be a ToO block")
+        
+    
+    def test_build_normal_block(self):
+#         raise SkipTest
+        reservation = Reservation(
+                                   priority = None,
+                                   duration = 10,
+                                   possible_windows_dict = {}
+                                 )
+        reservation.scheduled_start = 0
+
+        proposal = Proposal()
+        target   = SiderealTarget()
+
+        compound_request = UserRequest(
+                                            operator = 'single',
+                                            requests = None,
+                                            proposal = proposal,
+                                            expires  = None,
+                                            tracking_number = None,
+                                            group_id = None
+                                          )
+
+        constraints = Constraints(
+                                   max_airmass        = None,
+                                   min_lunar_distance = None,
+                                   max_lunar_phase    = None,
+                                   max_seeing         = None,
+                                   min_transparency   = None
+                                 )
+
+        request = Request(
+                           target         = target,
+                           molecules      = [],
+                           windows        = None,
+                           constraints    = constraints,
+                           request_number = None,
+                           observation_type = "TARGET_OF_OPPORTUNITY"
+                           )
+
+        camera_mappings_file = 'camera_mappings.dat'
+
+        received = build_block(reservation, request, compound_request, self.start,
+                               camera_mappings_file)
+        
+        assert_equal(received.is_too, True, "Should be a ToO block")
