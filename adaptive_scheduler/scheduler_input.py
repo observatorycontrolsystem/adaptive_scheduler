@@ -309,12 +309,12 @@ class FileBasedSchedulingInputProvider(object):
         
         self.refresh()
         
-    def set_too_scheduling_time(self, seconds):
+    def set_too_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
 
 
-    def set_normal_scheduling_time(self, seconds):
+    def set_normal_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
     

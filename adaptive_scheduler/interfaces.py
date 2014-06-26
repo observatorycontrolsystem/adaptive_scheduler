@@ -1,4 +1,5 @@
 from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.kernel.timepoint import Timepoint
 
 import pickle
 # import logging
@@ -66,6 +67,17 @@ class ResourceUsageSnapshot(object):
     
     def blocked_intervals(self, resource):
         return self.extra_blocked_intervals.get(resource, Intervals([]))
+    
+    def running_intervals(self, resource):
+        timepoint_list = []
+        running_urs = self.running_user_requests_by_resource.get(resource, [])
+        for running_ur in running_urs:
+            for running_r in running_ur.running_requests:
+                timepoint_list.append(Timepoint(running_r.start, 'start'))
+                timepoint_list.append(Timepoint(running_r.end, 'end'))
+        intervals = Intervals(timepoint_list)
+        
+        return intervals
     
     def get_priority(self, tracking_number):
         return self.user_request_priorities.get(tracking_number, 0)

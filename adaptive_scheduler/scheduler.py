@@ -219,7 +219,7 @@ class Scheduler(object):
         return []
     
     
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
@@ -305,7 +305,7 @@ class Scheduler(object):
             resource_schedules_to_cancel = available_resources
             
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)        
-        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end)
+        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled)
     
         print_compound_reservations(compound_reservations)
     
@@ -419,7 +419,6 @@ class LCOGTNetworkScheduler(Scheduler):
             if ur.tracking_number in running_ur_tracking_numbers:
                 msg = 'User Request %s is running' % resource_usage_snapshot.running_user_request(ur.tracking_number)
                 ur.emit_user_feedback(msg, tag)
-                break
     
         # Remove running user requests from consideration, and get the availability edge
         user_reqs = self.blacklist_running_user_requests(user_reqs, resource_usage_snapshot)
@@ -465,7 +464,7 @@ class LCOGTNetworkScheduler(Scheduler):
         return all_compound_reservations
     
     
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
@@ -474,7 +473,7 @@ class LCOGTNetworkScheduler(Scheduler):
     
         # Intersect and mask out time where Blocks are currently running
         global_windows = construct_global_availability(available_resources, semester_start,
-                                                       resource_usage_snapshot, resource_windows)
+                                                       resource_usage_snapshot, resource_windows, preemption_enabled)
         
         return global_windows
     

@@ -118,6 +118,15 @@ class TestSchduler(object):
         schedulable_urs = scheduler.blacklist_running_user_requests(ur_list, resource_usage_snapshot)
         assert_equal(len(ur_list), len(schedulable_urs))
         
+        
+#     def test_blacklist_running_sub_requests_only(self):
+#         '''Test that the not running children of a MANY user request are not prevented
+#         from being scheduled by another child request that is running
+#         '''
+#         self.assert_equal(True, False)
+        
+        
+        
     def test_run_scheduler_with_mocked_interfaces(self):
         event_bus_mock = Mock()
         sched_params = SchedulerParameters()
@@ -335,7 +344,7 @@ class TestSchduler(object):
     
     def prepare_available_windows_for_kernel_side_effect_factory(self, available_intervals):
         
-        def side_effect(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end):
+        def side_effect(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
             return {r:i for r,i in available_intervals.items() if r in resources_to_schedule}
         
         return side_effect

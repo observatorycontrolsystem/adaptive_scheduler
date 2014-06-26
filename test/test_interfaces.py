@@ -1,6 +1,10 @@
+from datetime import datetime, timedelta
 from mock import Mock
 from reqdb.client import ConnectionError, RequestDBError, SchedulerClient
 from adaptive_scheduler.requestdb import RequestDBInterface
+from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, ResourceUsageSnapshot
+from adaptive_scheduler.kernel.timepoint import Timepoint
+from adaptive_scheduler.kernel.intervals import Intervals
 
 from nose.tools import assert_equal
 class TestRequestDBInterface(object):
@@ -62,3 +66,17 @@ class TestRequestDBInterface(object):
         mock_client = Mock()
         requestdb_interface = RequestDBInterface(mock_client)
         assert_equal(requestdb_interface._request_db_dirty_flag_is_invalid(dirty_response), True)
+        
+        
+class TestResourceUsageSnapshot(object):
+    
+    def test_running_intervals(self):
+        start = datetime.utcnow()
+        end = start + timedelta(minutes=10)
+        running_r = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_ur = RunningUserRequest(1, running_r)
+        snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {1 : 10}, [])
+        assert_equal(Intervals([]), snapshot.running_intervals('1m0a.doma.lsc'))
+        assert_equal(Intervals([Timepoint(start, 'start'), Timepoint(end, 'end')]), snapshot.running_intervals('1m0a.doma.elp'))
+        
+        
