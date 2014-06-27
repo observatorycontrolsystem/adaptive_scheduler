@@ -6,7 +6,7 @@ from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, Re
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.intervals import Intervals
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_true
 class TestRequestDBInterface(object):
     
     def __init__(self):
@@ -78,5 +78,50 @@ class TestResourceUsageSnapshot(object):
         snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {1 : 10}, [])
         assert_equal(Intervals([]), snapshot.running_intervals('1m0a.doma.lsc'))
         assert_equal(Intervals([Timepoint(start, 'start'), Timepoint(end, 'end')]), snapshot.running_intervals('1m0a.doma.elp'))
+    
+    
+    def test_running_requests_for_resources_returns_empty_list_no_resources_available(self):
+        running_request = RunningRequest('1m0a.doma.elp', '0000000001', Mock(), Mock())
+        running_ur = RunningUserRequest('0000000001', running_request)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
+        running_requests = resource_usage_snapshot.running_requests_for_resources([])
+        assert_equal([], running_requests)
         
+        running_request1 = RunningRequest('1m0a.doma.elp', '0000000001', Mock(), Mock())
+        running_ur1 = RunningUserRequest('0000000001', running_request1)
+        running_request2 = RunningRequest('1m0a.doma.elp', '0000000002', Mock(), Mock())
+        running_ur2 = RunningUserRequest('0000000002', running_request2)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur1, running_ur2], {}, {})
+        running_requests = resource_usage_snapshot.running_requests_for_resources([])
+        assert_equal([], running_requests)
+        
+    def test_running_requests_for_resources_returns_empty_list_no_requests_are_running(self):
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {}, {})
+        running_requests = resource_usage_snapshot.running_requests_for_resources(['1m0a.doma.elp'])
+        assert_equal([], running_requests)
+        
+        running_request = RunningRequest('1m0a.doma.elp', '0000000001', Mock(), Mock())
+        running_ur = RunningUserRequest('0000000001', running_request)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur], {}, {})
+        running_requests = resource_usage_snapshot.running_requests_for_resources(['1m0a.doma.lsc'])
+        assert_equal([], running_requests)
+        
+    def test_running_requests_for_resources_returns_running_requests(self):
+#         import ipdb; ipdb.set_trace();
+        running_request1 = RunningRequest('1m0a.doma.elp', '0000000001', Mock(), Mock())
+        running_ur1 = RunningUserRequest('0000000001', running_request1)
+        running_request2 = RunningRequest('1m0a.doma.lsc', '0000000002', Mock(), Mock())
+        running_ur2 = RunningUserRequest('0000000002', running_request2)
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [running_ur1, running_ur2], {}, {})
+        running_requests = resource_usage_snapshot.running_requests_for_resources(['1m0a.doma.elp', '1m0a.doma.lsc'])
+        assert_equal(2, len(running_requests))
+        assert_true(running_request1 in running_requests)
+        assert_true(running_request2 in running_requests)
+        
+        
+#     def test_blacklist_running_sub_requests_only(self):
+#         '''Test that the not running children of a MANY user request are not prevented
+#         from being scheduled by another child request that is running
+#         '''
+#         self.assert_equal(True, False)
         

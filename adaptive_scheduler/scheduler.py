@@ -199,7 +199,7 @@ class Scheduler(object):
         return estimated_scheduler_end + ONE_WEEK
             
             
-    def apply_unschedulable_filters(self, user_reqs, resource_usage_snapshot, estimated_scheduler_end):
+    def apply_unschedulable_filters(self, user_reqs, estimated_scheduler_end, running_request_numbers):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
         '''
@@ -257,12 +257,14 @@ class Scheduler(object):
         return find_unschedulable_ur_numbers(unschedulable_urs)
     
     
-    def filter_unscheduleable_child_requests(self, user_requests):
+    def find_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
         request numbers 
         '''
-        return drop_empty_requests(user_requests)
+        windowsless_r_numbers  = drop_empty_requests(user_requests)
+        unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
+        return unschedulable_r_numbers
     
     
     # TODO: refactor into smaller chunks
@@ -280,9 +282,11 @@ class Scheduler(object):
         if self.sched_params.no_compounds:
             user_reqs = self.remove_compounds(user_reqs)
         
-        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, resource_usage_snapshot, estimated_scheduler_end)
+        running_requests = resource_usage_snapshot.running_requests_for_resources(available_resources)
+        running_request_numbers = [r.request_number for r in running_requests]
+        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end, running_request_numbers)
         unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers  = self.filter_unscheduleable_child_requests(schedulable_urs)
+        unschedulable_r_numbers = self.find_unschedulable_child_requests(schedulable_urs, running_request_numbers)
         self.after_unschedulable_filters(schedulable_urs)
         
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
@@ -354,37 +358,6 @@ class LCOGTNetworkScheduler(Scheduler):
         self.network_model = network_model
     
     
-    @timeit
-    def blacklist_running_user_requests(self, ur_list, resource_usage_snapshot):
-        self.log.info("Before applying running blacklist, %d schedulable %s", *pl(len(ur_list), 'UR'))
-        all_tns = [ur.tracking_number for ur in ur_list]
-        unblocked_running_ur_tracking_numbers = self._find_unblocked_running_urs_blocked_by_outage_events(resource_usage_snapshot)
-        schedulable_tns = set(all_tns) - set(unblocked_running_ur_tracking_numbers)
-        schedulable_urs = [ur for ur in ur_list if ur.tracking_number in schedulable_tns]
-        self.log.info("After running blacklist, %d schedulable %s", *pl(len(schedulable_urs), 'UR'))
-    
-        return schedulable_urs
-    
-    
-    def _find_unblocked_running_urs_blocked_by_outage_events(self, resource_usage_snapshot):
-        unblocked_ur_tracking_numbers = []
-        for running_ur in resource_usage_snapshot.running_user_requests():
-            if not self._is_running_ur_blocked_by_network_outage(running_ur):
-                unblocked_ur_tracking_numbers.append(running_ur.tracking_number)
-                
-        return unblocked_ur_tracking_numbers
-        
-    
-    def _is_running_ur_blocked_by_network_outage(self, running_ur):
-        telescopes_with_outage_events = [tel_name for tel_name, tel_model in self.network_model.items() if len(tel_model.events) > 0]
-        unblocked_running_requests = 0
-        for running_r in running_ur.running_requests:
-            if not running_r.resource in telescopes_with_outage_events:
-                unblocked_running_requests += 1
-        
-        return unblocked_running_requests < 1
-    
-    
     def _log_scheduler_start_details(self, estimated_scheduler_end):
         semester_start, semester_end = get_semester_block(dt=estimated_scheduler_end)
         self.log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
@@ -408,26 +381,18 @@ class LCOGTNetworkScheduler(Scheduler):
             log_windows(ur, log_msg="Initial windows:")
             
             
-    def apply_unschedulable_filters(self, user_reqs, resource_usage_snapshot, estimated_scheduler_end):
+    def apply_unschedulable_filters(self, user_reqs, estimated_scheduler_end, running_request_numbers):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
         '''
         self.log.info("Starting unschedulable filters")
-        running_ur_tracking_numbers = resource_usage_snapshot.running_tracking_numbers()
-        tag = 'RunningBlock'
-        for ur in user_reqs:
-            if ur.tracking_number in running_ur_tracking_numbers:
-                msg = 'User Request %s is running' % resource_usage_snapshot.running_user_request(ur.tracking_number)
-                ur.emit_user_feedback(msg, tag)
-    
-        # Remove running user requests from consideration, and get the availability edge
-        user_reqs = self.blacklist_running_user_requests(user_reqs, resource_usage_snapshot)
+        
     
         # Filter by window, and set UNSCHEDULABLE on the Request DB as necessary
         self.log.info("Filtering for unschedulability")
         
         set_now(estimated_scheduler_end)
-        schedulable_urs, unschedulable_urs = filter_urs(user_reqs)
+        schedulable_urs, unschedulable_urs = filter_urs(user_reqs, running_request_numbers)
         self.log.info("Found %d unschedulable %s after filtering", *pl(len(unschedulable_urs), 'UR'))
         self.log.info("Completed unschedulable filters")
         
