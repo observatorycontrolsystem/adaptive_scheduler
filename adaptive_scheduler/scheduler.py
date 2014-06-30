@@ -257,7 +257,7 @@ class Scheduler(object):
         return find_unschedulable_ur_numbers(unschedulable_urs)
     
     
-    def find_unschedulable_child_requests(self, user_requests, running_request_numbers):
+    def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
         request numbers 
@@ -286,7 +286,7 @@ class Scheduler(object):
         running_request_numbers = [r.request_number for r in running_requests]
         schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end, running_request_numbers)
         unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers = self.find_unschedulable_child_requests(schedulable_urs, running_request_numbers)
+        unschedulable_r_numbers = self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
         self.after_unschedulable_filters(schedulable_urs)
         
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)

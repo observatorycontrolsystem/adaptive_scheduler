@@ -241,7 +241,7 @@ def filter_for_kernel(crs, visibility_from, semester_start, semester_end, schedu
     singles = filter_out_future_windows(singles, horizon=scheduling_horizon)
     #TODO: Add the duration filter here?
     # Clean up Requests without any windows
-    singles = filter_on_type(singles)
+    singles = filter_on_type(singles, [])
     log.info("After filtering, %d singles remain" % len(singles))
 
 
@@ -251,7 +251,7 @@ def filter_for_kernel(crs, visibility_from, semester_start, semester_end, schedu
     compounds = truncate_upper_crossing_windows(compounds)
     compounds = filter_out_future_windows(compounds)
     # Clean up Requests without any windows
-    compounds = filter_on_type(compounds)
+    compounds = filter_on_type(compounds, [])
     log.info("After filtering, %d compounds remain" % len(compounds))
 
     crs = singles + compounds

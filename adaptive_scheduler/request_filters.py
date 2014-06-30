@@ -334,7 +334,7 @@ def filter_on_expiry(ur_list):
 @log_urs
 def filter_on_type(ur_list, running_request_numbers):
     '''Case 9: Only return URs which can still be completed (have enough child
-       Requests with Windows remaining).'''
+       Requests with Windows remaining or running requests).'''
     new_ur_list = []
     for ur in ur_list:
         if ur.is_schedulable(running_request_numbers):
