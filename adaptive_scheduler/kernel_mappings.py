@@ -263,7 +263,7 @@ def filter_for_kernel(crs, visibility_from, semester_start, semester_end, schedu
 
     # Clean up now impossible Requests
     crs = filter_on_duration(crs)
-    crs = filter_on_type(crs)
+    crs = filter_on_type(crs, [])
 
     return crs
 
