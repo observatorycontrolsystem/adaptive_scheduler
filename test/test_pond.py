@@ -20,10 +20,10 @@ from adaptive_scheduler.model2 import (Proposal, Target,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-from adaptive_scheduler.camera_mapping        import create_camera_mapping
+
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-
+from schedutils.camera_mapping        import create_camera_mapping
 import lcogtpond
 from lcogtpond import block
 

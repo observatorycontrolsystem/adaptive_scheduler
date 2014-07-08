@@ -21,10 +21,10 @@ from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
-from adaptive_scheduler.camera_mapping        import create_camera_mapping
 from schedutils                               import semester_service
 from schedutils.utils                         import EqualityMixin, DefaultMixin
 from schedutils.instruments                   import InstrumentFactory
+from schedutils.camera_mapping                import create_camera_mapping
 
 from datetime    import datetime
 import ast
