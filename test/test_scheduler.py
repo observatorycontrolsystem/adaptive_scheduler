@@ -1312,6 +1312,54 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                          msg="Estimated run time should have changed")
         
         
+    def test_scheduler_rerun_required_calls_schedulable_request_set_has_changed(self):
+        '''scheduler_rerun_required should always call network_interface.schedulable_request_set_has_changed
+        '''
+        self.sched_params.run_once = True
+        self.setup_mock_create_input_factory([])
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler,
+                                           self.network_interface,
+                                           self.network_model,
+                                           self.input_factory)
+        
+        scheduler_runner.scheduler_rerun_required()
+        assert_equal(1, self.network_interface.schedulable_request_set_has_changed.call_count)
+        
+        
+    def test_scheduler_rerun_required_does_not_call_schedulable_request_set_has_changed_on_dry_run(self):
+        '''scheduler_rerun_required should always call network_interface.schedulable_request_set_has_changed
+        '''
+        self.sched_params.run_once = True
+        self.sched_params.dry_run = True
+        self.setup_mock_create_input_factory([])
+        self.network_interface.current_events_has_changed = Mock(return_value=True)
+        self.network_interface.schedulable_request_set_has_changed = Mock(return_value=False)
+        scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler,
+                                           self.network_interface,
+                                           self.network_model,
+                                           self.input_factory)
+        
+        scheduler_runner.scheduler_rerun_required()
+        assert_equal(0, self.network_interface.schedulable_request_set_has_changed.call_count)
+        
+        
+    def test_scheduler_rerun_required_returns_true_when_current_events_has_changed(self):
+        '''scheduler_rerun_required should always call network_interface.schedulable_request_set_has_changed
+        '''
+        self.sched_params.run_once = True
+        self.setup_mock_create_input_factory([])
+        for return_val in [True, False]:
+            self.network_interface.current_events_has_changed = Mock(return_value=return_val)
+            self.network_interface.schedulable_request_set_has_changed = Mock(return_value=False)
+            scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler,
+                                               self.network_interface,
+                                               self.network_model,
+                                               self.input_factory)
+            rerun_required = scheduler_runner.scheduler_rerun_required()
+            assert_equal(1, self.network_interface.schedulable_request_set_has_changed.call_count)
+            assert_equal(rerun_required, return_val, msg="scheduler_rerun_required returned %s when network_interface.current_events_has_changed returned %s" % (rerun_required, return_val))
+        
+        
         
 class TestSchedulerInputProvider(object):
     

@@ -555,8 +555,14 @@ class SchedulerRunner(object):
         if self.network_interface.current_events_has_changed():
             self.log.info("Telescope network events were found.")
             network_has_changed = True
+        
+        # Must call this function to force the requestdb to update it's internal states
+        # but don't do on a dry run because it changes the network state
+        request_set_changed = True
+        if not self.sched_params.dry_run:
+            request_set_changed = self.network_interface.schedulable_request_set_has_changed()
             
-        return network_has_changed or self.network_interface.schedulable_request_set_has_changed()
+        return network_has_changed or request_set_changed
     
     
     def update_network_model(self):
@@ -582,8 +588,8 @@ class SchedulerRunner(object):
             else:
                 self.update_network_model()
             
-            # Always run the scheduler on the first run    
-            if first_run or self.scheduler_rerun_required():
+            # Always run the scheduler on the first run
+            if self.scheduler_rerun_required() or first_run:
                 self.create_new_schedule()
                 
             if self.sched_params.run_once:
