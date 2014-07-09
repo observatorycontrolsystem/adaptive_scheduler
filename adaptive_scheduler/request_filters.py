@@ -148,7 +148,7 @@ def run_all_filters(ur_list, running_request_numbers):
 
 @log_windows
 def filter_out_windows_for_running_requests(ur_list, running_request_numbers):
-    '''Case 1: The window exists entirely in the past.'''
+    '''Case 1: Remove windows for requests that are already running'''
     def filter_test(w, ur, r):
         if r.request_number in running_request_numbers:
             tag = 'RequestIsRunning'
@@ -166,7 +166,7 @@ def filter_out_windows_for_running_requests(ur_list, running_request_numbers):
 #------------------
 @log_windows
 def filter_out_past_windows(ur_list):
-    '''Case 1: The window exists entirely in the past.'''
+    '''Case 2: The window exists entirely in the past.'''
     def filter_test(w, ur, r):
         if w.end > now:
             return True
@@ -182,7 +182,7 @@ def filter_out_past_windows(ur_list):
 
 @log_windows
 def truncate_lower_crossing_windows(ur_list):
-    '''Case 2: The window starts in the past, but finishes at a
+    '''Case 3: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
 
     def truncate_lower_crossing(w, ur, r):

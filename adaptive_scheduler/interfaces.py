@@ -84,6 +84,7 @@ class ResourceUsageSnapshot(object):
     
     
     def running_requests_for_resources(self, resources):
+        '''Get the set of running requests for the named resource'''
         running_requests = []
         for running_ur in self.running_user_requests():
             for running_r in running_ur.running_requests:

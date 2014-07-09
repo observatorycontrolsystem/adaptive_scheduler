@@ -499,12 +499,12 @@ class CompoundRequest(DefaultMixin):
             return is_ok_to_return
 
 
-    def _is_schedulable_hard(self):
+    def _is_schedulable_hard(self, running_request_numbers):
         is_ok_to_return = {
-                            'and'    : (False, lambda r: not r.has_windows()),
-                            'oneof'  : (True,  lambda r: r.has_windows()),
-                            'single' : (True,  lambda r: r.has_windows()),
-                            'many'   : (True,  lambda r: r.has_windows())
+                            'and'    : (False, lambda r: not r.has_windows() and not r.request_number in running_request_numbers),
+                            'oneof'  : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
+                            'single' : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
+                            'many'   : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers)
                           }
 
         for r in self.requests:
