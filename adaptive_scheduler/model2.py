@@ -638,23 +638,28 @@ class ModelBuilder(object):
 
 
     def build_user_request(self, cr_dict):
+        tracking_number = cr_dict['tracking_number']
+        operator = cr_dict['operator']
         requests, invalid_requests  = self.build_requests(cr_dict['requests'])
         if invalid_requests:
             log.warn("Found %s", pl(len(invalid_requests), 'invalid Request'))
+            if operator.lower() == 'and':
+                msg = "Invalid request found within 'AND' UR %s making UR invalid" % tracking_number
+                raise RequestError(msg)
 
         if not requests:
-            msg = "No valid Requests for UR %s" % cr_dict['tracking_number']
+            msg = "No valid Requests for UR %s" % tracking_number
             raise RequestError(msg)
 
         proposal  = Proposal(cr_dict['proposal'])
         expiry_dt = iso_string_to_datetime(cr_dict['expires'])
 
         user_request = UserRequest(
-                                    operator        = cr_dict['operator'],
+                                    operator        = operator,
                                     requests        = requests,
                                     proposal        = proposal,
                                     expires         = expiry_dt,
-                                    tracking_number = cr_dict['tracking_number'],
+                                    tracking_number = tracking_number,
                                     group_id        = cr_dict['group_id']
                                   )
 
