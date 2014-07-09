@@ -81,6 +81,17 @@ class ResourceUsageSnapshot(object):
     
     def get_priority(self, tracking_number):
         return self.user_request_priorities.get(tracking_number, 0)
+    
+    
+    def running_requests_for_resources(self, resources):
+        '''Get the set of running requests for the named resource'''
+        running_requests = []
+        for running_ur in self.running_user_requests():
+            for running_r in running_ur.running_requests:
+                if running_r.resource in resources:
+                    running_requests.append(running_r)
+        
+        return running_requests
 
 
 class NetworkInterface(object):

@@ -105,11 +105,11 @@ def _for_all_ur_windows(ur_list, filter_test):
 
 
 
-def filter_urs(ur_list):
+def filter_urs(ur_list, running_request_numbers):
 
     # Don't use sets here, unless you like non-deterministic orderings
     # The solve may be sensitive to order, so don't mess with it
-    schedulable_urs = run_all_filters(ur_list)
+    schedulable_urs = run_all_filters(ur_list, running_request_numbers)
     unschedulable_urs = []
     for ur in ur_list:
         if ur not in schedulable_urs:
@@ -130,9 +130,10 @@ def set_now(user_now):
 
 
 @log_urs
-def run_all_filters(ur_list):
+def run_all_filters(ur_list, running_request_numbers):
     '''Execute all the filters, in the correct order. Windows may be discarded or
        truncated during this process. Unschedulable User Requests are discarded.'''
+    ur_list = filter_out_windows_for_running_requests(ur_list, running_request_numbers)
     ur_list = filter_on_pending(ur_list)
     ur_list = filter_on_expiry(ur_list)
     ur_list = filter_out_past_windows(ur_list)
@@ -140,22 +141,38 @@ def run_all_filters(ur_list):
     ur_list = truncate_upper_crossing_windows(ur_list)
     ur_list = filter_out_future_windows(ur_list)
     ur_list = filter_on_duration(ur_list)
-    ur_list = filter_on_type(ur_list)
+    ur_list = filter_on_type(ur_list, running_request_numbers)
 
     return ur_list
+
+
+@log_windows
+def filter_out_windows_for_running_requests(ur_list, running_request_numbers):
+    '''Case 1: Remove windows for requests that are already running'''
+    def filter_test(w, ur, r):
+        if r.request_number in running_request_numbers:
+            tag = 'RequestIsRunning'
+            msg = 'Request %s Window (at %s) %s -> %s removed because request is currently running' % (r.request_number, w.get_resource_name(),
+                                                               w.start, w.end)
+            ur.emit_user_feedback(msg, tag)
+            return False
+        else:
+            return True
+
+    return _for_all_ur_windows(ur_list, filter_test)
 
 
 # A) Window Filters
 #------------------
 @log_windows
 def filter_out_past_windows(ur_list):
-    '''Case 1: The window exists entirely in the past.'''
+    '''Case 2: The window exists entirely in the past.'''
     def filter_test(w, ur, r):
         if w.end > now:
             return True
         else:
             tag = 'WindowInPast'
-            msg = 'Window (at %s) %s -> %s falls before %s' % (w.get_resource_name(),
+            msg = 'Request %s Window (at %s) %s -> %s falls before %s' % (r.request_number, w.get_resource_name(),
                                                                w.start, w.end, now)
             ur.emit_user_feedback(msg, tag)
             return False
@@ -165,13 +182,13 @@ def filter_out_past_windows(ur_list):
 
 @log_windows
 def truncate_lower_crossing_windows(ur_list):
-    '''Case 2: The window starts in the past, but finishes at a
+    '''Case 3: The window starts in the past, but finishes at a
        schedulable time. Remove the unschedulable portion of the window.'''
 
     def truncate_lower_crossing(w, ur, r):
         if w.start < now < w.end:
             tag = 'WindowTruncatedLower'
-            msg = 'Window (at %s) %s -> %s truncated to %s' % (w.get_resource_name(),
+            msg = 'Request %s Window (at %s) %s -> %s truncated to %s' % (r.request_number, w.get_resource_name(),
                                                                w.start, w.end, now)
             ur.emit_user_feedback(msg, tag)
             w.start = now
@@ -198,7 +215,7 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
                 effective_horizon = horizon
         if w.start < effective_horizon < w.end:
             tag = 'WindowTruncatedUpper'
-            msg = 'Window (at %s) %s -> %s truncated to %s' % (w.get_resource_name(), 
+            msg = 'Request %s Window (at %s) %s -> %s truncated to %s' % (r.request_number, w.get_resource_name(), 
                                                                w.start, w.end, effective_horizon)
             ur.emit_user_feedback(msg, tag)
             w.end = effective_horizon
@@ -226,7 +243,8 @@ def filter_out_future_windows(ur_list, horizon=None):
             return True
         else:
             tag = 'WindowBeyondHorizon'
-            msg = 'Window (at %s) %s -> %s starts after the scheduling horizon (%s)' % (
+            msg = 'Request %s Window (at %s) %s -> %s starts after the scheduling horizon (%s)' % (
+                                                                                r.request_number,
                                                                                 w.get_resource_name(),
                                                                                 w.start,
                                                                                 w.end,
@@ -253,7 +271,8 @@ def filter_on_duration(ur_list, filter_executor=_for_all_ur_windows):
             return True
         else:
             tag = 'WindowTooSmall'
-            msg = "Window (at %s) %s -> %s too small for duration '%s'" % (w.get_resource_name(),
+            msg = "Request %s Window (at %s) %s -> %s too small for duration '%s'" % (r.request_number,
+                                                                           w.get_resource_name(),
                                                                            w.start, w.end, duration)
             ur.emit_user_feedback(msg, tag)
             return False
@@ -313,12 +332,12 @@ def filter_on_expiry(ur_list):
     return not_expired
 
 @log_urs
-def filter_on_type(ur_list):
+def filter_on_type(ur_list, running_request_numbers):
     '''Case 9: Only return URs which can still be completed (have enough child
-       Requests with Windows remaining).'''
+       Requests with Windows remaining or running requests).'''
     new_ur_list = []
     for ur in ur_list:
-        if ur.is_schedulable():
+        if ur.is_schedulable(running_request_numbers):
             new_ur_list.append(ur)
         else:
             tag = 'UserRequestImpossible'

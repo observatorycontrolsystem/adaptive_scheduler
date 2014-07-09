@@ -479,32 +479,32 @@ class CompoundRequest(DefaultMixin):
         return is_too_request
 
 
-    def is_schedulable(self):
-        return self._is_schedulable_easy()
+    def is_schedulable(self, running_request_numbers):
+        return self._is_schedulable_easy(running_request_numbers)
 
 
-    def _is_schedulable_easy(self):
+    def _is_schedulable_easy(self, running_request_numbers):
             if self.operator == 'and':
                 is_ok_to_return = True
                 for r in self.requests:
-                    if not r.has_windows():
+                    if not r.has_windows() and not r.request_number in running_request_numbers:
                         return False
 
             elif self.operator in ('oneof', 'single', 'many'):
                 is_ok_to_return = False
                 for r in self.requests:
-                    if r.has_windows():
+                    if r.has_windows() or r.request_number in running_request_numbers:
                         return True
 
             return is_ok_to_return
 
 
-    def _is_schedulable_hard(self):
+    def _is_schedulable_hard(self, running_request_numbers):
         is_ok_to_return = {
-                            'and'    : (False, lambda r: not r.has_windows()),
-                            'oneof'  : (True,  lambda r: r.has_windows()),
-                            'single' : (True,  lambda r: r.has_windows()),
-                            'many'   : (True,  lambda r: r.has_windows())
+                            'and'    : (False, lambda r: not r.has_windows() and not r.request_number in running_request_numbers),
+                            'oneof'  : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
+                            'single' : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
+                            'many'   : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers)
                           }
 
         for r in self.requests:

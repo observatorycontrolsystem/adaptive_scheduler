@@ -13,6 +13,7 @@ import helpers
 
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
+                                                 filter_out_windows_for_running_requests,
                                                  filter_on_expiry,
                                                  filter_out_past_windows,
                                                  filter_out_future_windows,
@@ -171,7 +172,7 @@ class TestWindowFilters(object):
 
 
     @patch("adaptive_scheduler.model2.semester_service")
-    def test_filters_out_only_future_windows(self, mock_semester_service):
+    def test_filters_out_only_future_windows2(self, mock_semester_service):
         mock_semester_service.get_semester_end.return_value = self.semester_end
 
         horizon = datetime(2013, 7, 1)
@@ -362,10 +363,11 @@ class TestWindowFilters(object):
         ur = Mock()
 
         r = Mock()
+        r.request_number = '0000000001'
         r.duration = 5*24*3600
 
         arg_list[1](w, ur, r)
-        expected_msg = "Window (at elp) 2013-10-01 00:00:00 -> 2013-10-03 00:00:00 too small for duration '5 days, 0:00:00'"
+        expected_msg = "Request %s Window (at elp) 2013-10-01 00:00:00 -> 2013-10-03 00:00:00 too small for duration '5 days, 0:00:00'" % r.request_number
         expected_tag = 'WindowTooSmall'
         ur.emit_user_feedback.assert_called_with(expected_msg, expected_tag)
 
@@ -408,7 +410,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,), (window_dict2,) ]
         ur1, window_list = self.create_user_request(windows, operator='and')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 1)
 
 
@@ -416,7 +419,8 @@ class TestWindowFilters(object):
         windows = [ (), () ]
         ur1, window_list = self.create_user_request(windows, operator='and')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 0)
 
 
@@ -428,7 +432,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,), () ]
         ur1, window_list = self.create_user_request(windows, operator='and')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
 
         assert_equal(len(received_ur_list), 0)
 
@@ -445,7 +450,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1, window_dict2), () ]
         ur1, window_list = self.create_user_request(windows, operator='and')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 0)
 
 
@@ -461,7 +467,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,), (window_dict2,) ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 1)
 
 
@@ -473,7 +480,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,), () ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 1)
 
 
@@ -489,7 +497,8 @@ class TestWindowFilters(object):
         windows = [ (window_dict1, window_dict2), () ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 1)
 
 
@@ -497,7 +506,8 @@ class TestWindowFilters(object):
         windows = [ (), () ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 0)
 
 
@@ -505,7 +515,8 @@ class TestWindowFilters(object):
         windows = [ () ]
         ur1, window_list = self.create_user_request(windows, operator='single')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 0)
 
 
@@ -521,8 +532,55 @@ class TestWindowFilters(object):
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
 
-        received_ur_list = filter_on_type([ur1])
+        running_request_numbers = []
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
         assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_SINGLE_no_windows_but_running(self):
+        windows = [()]
+        ur1, window_list = self.create_user_request(windows, operator='single')
+        ur_list = [ur1]
+        assert_equal(1, len(ur_list))
+        assert_equal(1, len(ur_list[0].requests))
+        assert_equal(0, ur_list[0].requests[0].windows.size())
+        running_request_numbers = ['0000000005']
+        received_ur_list = filter_on_type([ur1], running_request_numbers)
+        assert_equal(len(received_ur_list), 1)
+
+
+    def test_filter_on_type_NON_SINGLE_both_requests_no_windows_but_running(self):
+        for operator in ('and', 'many', 'oneof'):
+            windows = [(), ()]
+            ur1, window_list = self.create_user_request(windows, operator=operator)
+            ur_list = [ur1]
+            assert_equal(1, len(ur_list))
+            assert_equal(2, len(ur_list[0].requests))
+            assert_equal(0, ur_list[0].requests[0].windows.size())
+            assert_equal(0, ur_list[0].requests[1].windows.size())
+            running_request_numbers = ['0000000005', '0000000006']
+            received_ur_list = filter_on_type([ur1], running_request_numbers)
+            assert_equal(len(received_ur_list), 1, msg="User Request should not be filtered for operator '%s'" % operator)
+            assert_equal(2, len(ur_list[0].requests), msg="Requests should not be filtered from user request with operator '%s'" % operator)
+
+
+    def test_filter_on_type_NON_SINGLE_both_one_request_no_windows_but_running(self):
+        for operator in ('and', 'many', 'oneof'):
+            window_dict1 = {
+                             'start' : "2013-03-01 00:00:00",
+                             'end'   : "2013-03-01 00:30:00",
+                           }
+            windows = [(), (window_dict1,)]
+            ur1, window_list = self.create_user_request(windows, operator='and')
+            ur_list = [ur1]
+            assert_equal(1, len(ur_list))
+            assert_equal(2, len(ur_list[0].requests))
+            assert_equal(0, ur_list[0].requests[0].windows.size())
+            assert_equal(1, ur_list[0].requests[1].windows.size())
+            running_request_numbers = ['0000000005']
+            received_ur_list = filter_on_type([ur1], running_request_numbers)
+            assert_equal(len(received_ur_list), 1, msg="User Request should not be filtered for operator '%s'" % operator)
+            assert_equal(2, len(ur_list[0].requests), msg="Requests should not be filtered from user request with operator '%s'" % operator)
 
 
     def test_drop_empty_requests(self):
@@ -593,12 +651,64 @@ class TestWindowFilters(object):
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
         ur1.expires = datetime(2013, 12, 1)
+        running_request_numbers = []
         with patch.object(Request, 'duration') as mock_duration:
             mock_duration.__get__ = Mock(return_value=3600.0)
-            received_ur_list = run_all_filters([ur1])
+            received_ur_list = run_all_filters([ur1], running_request_numbers)
 
         assert_equal(len(received_ur_list), 1)
+        
+        
+    def test_filter_out_windows_for_running_requests_single(self):
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, operator='single')
 
+        running_request_numbers = ['0000000005']
+        ur_list = [ur1]
+        assert_equal(1, len(ur_list))
+        assert_equal(1, len(ur_list[0].requests))
+        assert_equal(2, ur_list[0].requests[0].windows.size())
+        received_ur_list = filter_out_windows_for_running_requests(ur_list, running_request_numbers)
+        assert_equal(1, len(received_ur_list))
+        assert_equal(1, len(received_ur_list[0].requests))
+        assert_equal(0, received_ur_list[0].requests[0].windows.size())
+        
+        
+    def test_filter_out_windows_for_running_requests_many(self):
+        window_dict1 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        window_dict2 = {
+                         'start' : "2013-03-01 00:00:00",
+                         'end'   : "2013-03-01 00:30:00",
+                       }
+        windows = [ (window_dict1, window_dict2), (window_dict1, window_dict2) ]
+        ur1, window_list = self.create_user_request(windows, operator='many')
+
+        running_request_numbers = ['0000000005']
+        ur_list = [ur1]
+        assert_equal(1, len(ur_list))
+        assert_equal(['0000000005', '0000000006'], [r.request_number for r in ur_list[0].requests])
+        assert_equal(2, len(ur_list[0].requests))
+        assert_equal(2, ur_list[0].requests[0].windows.size())
+        assert_equal(2, ur_list[0].requests[1].windows.size())
+        received_ur_list = filter_out_windows_for_running_requests([ur1], running_request_numbers)
+        assert_equal(1, len(received_ur_list))
+        assert_equal(2, len(received_ur_list[0].requests))
+        for r in received_ur_list[0].requests:
+            if r.request_number == '0000000005':
+                assert_equal(0, r.windows.size())
+            if r.request_number == '0000000006':
+                assert_equal(2, r.windows.size())
 
     
 
