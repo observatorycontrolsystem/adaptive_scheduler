@@ -804,7 +804,7 @@ def get_blocks(start, end, site, obs, tel):
     # Only retrieve blocks which have not been cancelled
     return Schedule.get(start=start, end=end, site=site,
                              observatory=obs, telescope=tel,
-                             canceled_blocks=False)
+                             canceled_blocks=False, use_master_db=True)
 
 @timeit
 def cancel_schedule(cancelation_dates_by_resource):
