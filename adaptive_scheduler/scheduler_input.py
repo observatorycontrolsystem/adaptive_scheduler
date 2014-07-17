@@ -20,7 +20,8 @@ class SchedulerParameters(object):
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None,
-                 too_run_time=120, normal_run_time=360):
+                 too_run_time=120, normal_run_time=360,
+                 pond_port=12345, pond_host='scheduler.lco.gtn'):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
         self.cameras_file = cameras_file
@@ -38,6 +39,8 @@ class SchedulerParameters(object):
         self.input_file_name = input_file_name
         self.too_run_time = too_run_time
         self.normal_run_time = normal_run_time
+        self.pond_port = pond_port
+        self.pond_host = pond_host
         
         
     def get_model_builder(self):

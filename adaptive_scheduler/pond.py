@@ -69,7 +69,9 @@ class PondRunningRequest(RunningRequest):
 
 class PondScheduleInterface(object):
     
-    def __init__(self):
+    def __init__(self, host=None, port=None):
+        self.host = host
+        self.port = port
         self.running_blocks_by_telescope = None
         self.running_intervals_by_telescope = None
         self.too_intervals_by_telescope = None
@@ -85,7 +87,7 @@ class PondScheduleInterface(object):
     
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
         try:
-            running_blocks = get_network_running_blocks(telescopes, end_after, start_before)
+            running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to get running blocks from POND")
         
@@ -106,7 +108,7 @@ class PondScheduleInterface(object):
         return running_blocks 
     
     def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
-        too_blocks = get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
+        too_blocks = self._get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
         
         return too_blocks
     
@@ -135,7 +137,7 @@ class PondScheduleInterface(object):
         n_deleted = 0
         if cancelation_dates_by_resource:
             try:
-                n_deleted = cancel_schedule(cancelation_dates_by_resource)
+                n_deleted = self._cancel_schedule(cancelation_dates_by_resource)
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
             
@@ -145,11 +147,209 @@ class PondScheduleInterface(object):
         ''' Save the provided observing schedule
         '''
         # Convert the kernel schedule into POND blocks, and send them to the POND
-        n_submitted = send_schedule_to_pond(schedule, semester_start,
+        n_submitted = self._send_schedule_to_pond(schedule, semester_start,
                                             camera_mappings, dry_run)
         
         return n_submitted
+    
+    
+    @timeit
+    def _send_schedule_to_pond(self, schedule, semester_start, camera_mappings_file, dry_run=False):
+        '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
+    
+        blocks_by_resource = {}
+        for resource_name, reservations in schedule.items():
+            blocks_by_resource[resource_name] = []
+            for reservation in reservations:
+                block = build_block(reservation, reservation.request,
+                                    reservation.compound_request, semester_start,
+                                    camera_mappings_file)
+    
+                blocks_by_resource[resource_name].append(block)
+    
+        sent_blocks, not_sent_blocks= self._send_blocks_to_pond(blocks_by_resource, dry_run)
+    
+        # Summarise what was supposed to have been sent
+        # The sorting is just a way to iterate through the output in a human-readable way
+        n_submitted_total = 0
+        for resource_name in sorted(sent_blocks, key=lambda x: x[::-1]):
+            n_submitted = len(sent_blocks[resource_name])
+            n_not_sent  = len(not_sent_blocks[resource_name])
+            _, block_str = pl(n_submitted, 'block')
+            msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
+            if n_not_sent:
+                msg += " (%s)" % plural_str(n_not_sent, "bad block")
+            log_info_dry_run(msg, dry_run)
+            n_submitted_total += n_submitted
+    
+    
+        return n_submitted_total
+    
+    
+    def _send_blocks_to_pond(self, blocks_by_resource, dry_run=False):
+        pond_blocks     = []
+        sent_blocks     = {}
+        not_sent_blocks = {}
+        for resource_name, blocks in blocks_by_resource.items():
+            sent_blocks[resource_name]     = []
+            not_sent_blocks[resource_name] = []
+            for block in blocks:
+                try:
+                    pb = block.create_pond_block()
+                    pond_blocks.append(pb)
+                    msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
+                                                                             block.tracking_number,
+                                                                             pb.telescope,
+                                                                             pb.observatory,
+                                                                             pb.site)
+                    if dry_run:
+                        msg = "Dry-run: Would have sent " + msg
+                    else:
+                        msg = "Sent " + msg
+                    log.debug(msg)
+                    ur_log.info(msg, block.tracking_number)
+                    sent_blocks[resource_name].append(block)
+                except (IncompleteBlockError, InstrumentResolutionError) as e:
+                    msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
+                                                                       block.request_number,
+                                                                       block.tracking_number)
+                    log.error(msg)
+                    ur_log.error(msg, block.tracking_number)
+                    log.error(e)
+                    ur_log.error(e, block.tracking_number)
+                    not_sent_blocks[resource_name].append(block)
+    
+    
+        if not dry_run:
+            try:
+                PondBlock.save_blocks(pond_blocks, port=self.port, host=self.host)
+            except BlockSaveException as e:
+                log.error(e)
+    
+        return sent_blocks, not_sent_blocks
+    
+    
+    def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
+        telescope_blocks = {}     
+        for full_tel_name in tels:
+            tel_name, obs_name, site_name = full_tel_name.split('.')
+            blocks = self._get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
+            
+            filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+            telescope_blocks[full_tel_name] = filtered_blocks
+            
+        return telescope_blocks
+    
+    
+    @timeit
+    def _get_intervals_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
+        '''
+            return a map of telescopes to intervals of given tracking number
+        '''
+        telescope_interval = {}
+        blocks_by_telescope_for_tracking_numbers = self._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
+        
+        for full_tel_name in tels:
+            blocks = blocks_by_telescope_for_tracking_numbers.get(full_tel_name, [])
+    
+            intervals = get_intervals(blocks)
+            if not intervals.is_empty():
+                telescope_interval[full_tel_name] = intervals
+    
+        return telescope_interval
 
+
+    #@retry_or_reraise(max_tries=6, delay=10)
+    def _get_blocks(self, start, end, site, obs, tel):
+        # Only retrieve blocks which have not been cancelled
+        return Schedule.get(start=start, end=end, site=site,
+                                 observatory=obs, telescope=tel,
+                                 canceled_blocks=False, use_master_db=True, port=self.port, host=self.host)
+        
+        
+    def _get_deletable_blocks(self, start, end, site, obs, tel):
+        # Only retrieve blocks which have not been cancelled
+        schedule = self._get_blocks(start, end, site, obs, tel)
+        # Filter out blocks not placed by scheduler, they have not tracking number
+        scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
+    
+        log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
+                                                                  tel, obs, site,
+                                                                  start, end)
+        log.info("%d/%d were placed by the scheduler and will be deleted", len(scheduler_placed_blocks),
+                                                                           len(schedule.blocks))
+        if scheduler_placed_blocks:
+            to_delete_nums = [b.tracking_num_set() for b in scheduler_placed_blocks]
+            log.debug("Deleting: %s", to_delete_nums)
+    
+        return scheduler_placed_blocks
+    
+    
+    @timeit
+    def _cancel_schedule(self, cancelation_dates_by_resource):
+        all_to_delete = []
+        for full_tel_name, (start, end) in cancelation_dates_by_resource.iteritems():
+            tel, obs, site = full_tel_name.split('.')
+            log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
+                                                                 start, end)
+    
+            to_delete = self._get_deletable_blocks(start, end, site, obs, tel)
+    
+            n_to_delete = len(to_delete)
+            all_to_delete.extend(to_delete)
+    
+            _, block_str = pl(n_to_delete, 'block')
+            msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
+            msg = "Cancelled " + msg
+            log.info(msg)
+    
+    
+        self._cancel_blocks(all_to_delete)
+    
+        return len(all_to_delete)
+
+
+    def _cancel_blocks(self, to_delete):
+        ids = [b.id for b in to_delete]
+        try:
+            PondBlock.cancel_blocks(ids, reason="Superceded by new schedule", delete=True, port=self.port, host=self.host)
+        except BlockCancelException as e:
+            log.error(e)
+    
+        return len(to_delete)
+    
+    
+    def _get_network_running_blocks(self, tels, ends_after, starts_before):
+        n_running_total = 0
+        running_at_tel = {}
+        for full_tel_name in tels:
+            tel_name, obs_name, site_name = full_tel_name.split('.')
+            log.debug("Acquiring running blocks and first availability at %s",
+                                                              full_tel_name)
+    
+            running = self._get_running_blocks(ends_after, starts_before,
+                                                     site_name, obs_name, tel_name)
+    
+            running_at_tel[full_tel_name] = running
+    
+            n_running = len(running)
+            _, block_str = pl(n_running, 'block')
+            log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
+            n_running_total += n_running
+    
+        log.info("Network-wide, found %d running %s", n_running_total, block_str)
+    
+        return running_at_tel
+    
+    
+    def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
+        schedule  = self._get_blocks(ends_after, starts_before, site, obs, tel)
+        cutoff_dt = schedule.end_of_overlap(starts_before)
+    
+        running = [b for b in schedule.blocks if b.start < cutoff_dt and
+                                                 b.tracking_num_set()]
+    
+        return running
 
 
 def log_info_dry_run(msg, dry_run):
@@ -560,81 +760,6 @@ class Block(object):
         return pond_block
 
 
-def send_blocks_to_pond(blocks_by_resource, dry_run=False):
-    pond_blocks     = []
-    sent_blocks     = {}
-    not_sent_blocks = {}
-    for resource_name, blocks in blocks_by_resource.items():
-        sent_blocks[resource_name]     = []
-        not_sent_blocks[resource_name] = []
-        for block in blocks:
-            try:
-                pb = block.create_pond_block()
-                pond_blocks.append(pb)
-                msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
-                                                                         block.tracking_number,
-                                                                         pb.telescope,
-                                                                         pb.observatory,
-                                                                         pb.site)
-                if dry_run:
-                    msg = "Dry-run: Would have sent " + msg
-                else:
-                    msg = "Sent " + msg
-                log.debug(msg)
-                ur_log.info(msg, block.tracking_number)
-                sent_blocks[resource_name].append(block)
-            except (IncompleteBlockError, InstrumentResolutionError) as e:
-                msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
-                                                                   block.request_number,
-                                                                   block.tracking_number)
-                log.error(msg)
-                ur_log.error(msg, block.tracking_number)
-                log.error(e)
-                ur_log.error(e, block.tracking_number)
-                not_sent_blocks[resource_name].append(block)
-
-
-    if not dry_run:
-        try:
-            PondBlock.save_blocks(pond_blocks)
-        except BlockSaveException as e:
-            log.error(e)
-
-    return sent_blocks, not_sent_blocks
-
-
-
-def make_simple_pond_block(compound_reservation, semester_start):
-    '''Create a minimal POND block, with no molecule information. This is not
-       useful for realistic requests, but helpful for debugging and simulation.'''
-
-    dt_start, dt_end = get_cr_datetimes(compound_reservation, semester_start)
-
-    pond_block = PondBlock.build(
-                                  start=dt_start,
-                                  end=dt_end,
-                                  site=compound_reservation.resource,
-                                  observatory=compound_reservation.resource,
-                                  telescope=compound_reservation.resource,
-                                  priority=compound_reservation.priority
-                                )
-    return pond_block
-
-
-def make_simple_pond_schedule(schedule, semester_start):
-    '''Given a set of Reservations, construct simple POND blocks corresponding to
-       them. This is helpful for debugging and simulation.'''
-
-    pond_blocks = []
-
-    for resource_reservations in schedule.values():
-        for res in resource_reservations:
-            pond_block = make_pond_block(res, semester_start)
-            pond_blocks.append(pond_block)
-
-    return pond_blocks
-
-
 def build_block(reservation, request, compound_request, semester_start, camera_mappings_file):
     camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
@@ -669,68 +794,6 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
     return block
 
 
-@timeit
-def send_schedule_to_pond(schedule, semester_start, camera_mappings_file, dry_run=False):
-    '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
-
-    blocks_by_resource = {}
-    for resource_name, reservations in schedule.items():
-        blocks_by_resource[resource_name] = []
-        for reservation in reservations:
-            block = build_block(reservation, reservation.request,
-                                reservation.compound_request, semester_start,
-                                camera_mappings_file)
-
-            blocks_by_resource[resource_name].append(block)
-
-    sent_blocks, not_sent_blocks= send_blocks_to_pond(blocks_by_resource, dry_run)
-
-    # Summarise what was supposed to have been sent
-    # The sorting is just a way to iterate through the output in a human-readable way
-    n_submitted_total = 0
-    for resource_name in sorted(sent_blocks, key=lambda x: x[::-1]):
-        n_submitted = len(sent_blocks[resource_name])
-        n_not_sent  = len(not_sent_blocks[resource_name])
-        _, block_str = pl(n_submitted, 'block')
-        msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
-        if n_not_sent:
-            msg += " (%s)" % plural_str(n_not_sent, "bad block")
-        log_info_dry_run(msg, dry_run)
-        n_submitted_total += n_submitted
-
-
-    return n_submitted_total
-
-
-def get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
-    telescope_blocks = {}     
-    for full_tel_name in tels:
-        tel_name, obs_name, site_name = full_tel_name.split('.')
-        blocks = get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
-        
-        filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
-        telescope_blocks[full_tel_name] = filtered_blocks
-        
-    return telescope_blocks
-
-
-@timeit
-def get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before):
-    '''
-        return a map of telescopes to intervals of given tracking number
-    '''
-    telescope_interval = {}
-    blocks_by_telescope_for_tracking_numbers = get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
-    
-    for full_tel_name in tels:
-        blocks = blocks_by_telescope_for_tracking_numbers.get(full_tel_name, [])
-
-        intervals = get_intervals(blocks)
-        if not intervals.is_empty():
-            telescope_interval[full_tel_name] = intervals
-
-    return telescope_interval
-
 def get_network_running_intervals(running_blocks_by_telescope):
     running_at_tel = {}
 
@@ -738,38 +801,6 @@ def get_network_running_intervals(running_blocks_by_telescope):
         running_at_tel[key] = get_intervals(blocks)
 
     return running_at_tel
-
-def get_network_running_blocks(tels, ends_after, starts_before):
-    n_running_total = 0
-    running_at_tel = {}
-    for full_tel_name in tels:
-        tel_name, obs_name, site_name = full_tel_name.split('.')
-        log.debug("Acquiring running blocks and first availability at %s",
-                                                          full_tel_name)
-
-        running = get_running_blocks(ends_after, starts_before,
-                                                 site_name, obs_name, tel_name)
-
-        running_at_tel[full_tel_name] = running
-
-        n_running = len(running)
-        _, block_str = pl(n_running, 'block')
-        log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
-        n_running_total += n_running
-
-    log.info("Network-wide, found %d running %s", n_running_total, block_str)
-
-    return running_at_tel
-
-
-def get_running_blocks(ends_after, starts_before, site, obs, tel):
-    schedule  = get_blocks(ends_after, starts_before, site, obs, tel)
-    cutoff_dt = schedule.end_of_overlap(starts_before)
-
-    running = [b for b in schedule.blocks if b.start < cutoff_dt and
-                                             b.tracking_num_set()]
-
-    return running
 
 
 def get_intervals(blocks):
@@ -780,64 +811,6 @@ def get_intervals(blocks):
         timepoints.append(Timepoint(block.end, 'end'))
 
     return Intervals(timepoints)
-
-
-def get_deletable_blocks(start, end, site, obs, tel):
-    # Only retrieve blocks which have not been cancelled
-    schedule = get_blocks(start, end, site, obs, tel)
-    # Filter out blocks not placed by scheduler, they have not tracking number
-    scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
-
-    log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
-                                                              tel, obs, site,
-                                                              start, end)
-    log.info("%d/%d were placed by the scheduler and will be deleted", len(scheduler_placed_blocks),
-                                                                       len(schedule.blocks))
-    if scheduler_placed_blocks:
-        to_delete_nums = [b.tracking_num_set() for b in scheduler_placed_blocks]
-        log.debug("Deleting: %s", to_delete_nums)
-
-    return scheduler_placed_blocks
-
-#@retry_or_reraise(max_tries=6, delay=10)
-def get_blocks(start, end, site, obs, tel):
-    # Only retrieve blocks which have not been cancelled
-    return Schedule.get(start=start, end=end, site=site,
-                             observatory=obs, telescope=tel,
-                             canceled_blocks=False, use_master_db=True)
-
-@timeit
-def cancel_schedule(cancelation_dates_by_resource):
-    all_to_delete = []
-    for full_tel_name, (start, end) in cancelation_dates_by_resource.iteritems():
-        tel, obs, site = full_tel_name.split('.')
-        log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
-                                                             start, end)
-
-        to_delete = get_deletable_blocks(start, end, site, obs, tel)
-
-        n_to_delete = len(to_delete)
-        all_to_delete.extend(to_delete)
-
-        _, block_str = pl(n_to_delete, 'block')
-        msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
-        msg = "Cancelled " + msg
-        log.info(msg)
-
-
-    cancel_blocks(all_to_delete)
-
-    return len(all_to_delete)
-
-
-def cancel_blocks(to_delete):
-    ids = [b.id for b in to_delete]
-    try:
-        PondBlock.cancel_blocks(ids, reason="Superceded by new schedule", delete=True)
-    except BlockCancelException as e:
-        log.error(e)
-
-    return len(to_delete)
 
 
 class IncompleteBlockError(Exception):

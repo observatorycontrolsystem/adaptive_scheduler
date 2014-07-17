@@ -100,6 +100,10 @@ def parse_args(argv):
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=None,
                             help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
+    arg_parser.add_argument("--pondport", type=int, dest='pond_port',
+                                help="Port for POND communication", default=12345)
+    arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
+                                help="Hostname for POND communication", default='scheduler.lco.gtn')
     
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
@@ -161,7 +165,7 @@ def main(argv):
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
     
-    schedule_interface = PondScheduleInterface()
+    schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
     requestdb_client = SchedulerClient(sched_params.requestdb_url)
     user_request_interface = RequestDBInterface(requestdb_client)
     network_state_interface = Network()

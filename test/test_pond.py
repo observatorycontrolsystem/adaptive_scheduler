@@ -7,14 +7,9 @@ from mock       import patch, Mock, MagicMock
 from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       InstrumentResolutionError,
                                       PondFacadeException, PondMoleculeFactory,
-                                      cancel_blocks,
-                                      get_deletable_blocks, cancel_schedule,
-                                      send_blocks_to_pond, build_block,
-                                      send_schedule_to_pond, retry_or_reraise,
+                                      build_block, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
-                                      get_network_running_blocks,
-                                      get_network_running_intervals,
-                                      get_intervals_by_telescope_for_tracking_numbers)
+                                      PondScheduleInterface)
 from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
@@ -501,7 +496,7 @@ class TestPond(object):
         assert_equal(type(pond_mol), lcogtpond.molecule.Arc)
         assert_equal(pond_mol.inst_name, 'floyds02')
         assert_equal(hasattr(pond_mol, 'ag_name'), False)
-        assert_equal(hasattr(pond_mol, 'pointing'), False)
+        assert_equal(hasattr(pond_mol, 'pointing'), True)
 
 
     def test_create_pond_block_with_lamp_flat_mol(self):
@@ -515,7 +510,7 @@ class TestPond(object):
         assert_equal(type(pond_mol), lcogtpond.molecule.LampFlat)
         assert_equal(pond_mol.inst_name, 'floyds02')
         assert_equal(hasattr(pond_mol, 'ag_name'), False)
-        assert_equal(hasattr(pond_mol, 'pointing'), False)
+        assert_equal(hasattr(pond_mol, 'pointing'), True)
 
 
     def test_resolve_instrument_pass_through_if_camera_specified(self):
@@ -611,7 +606,8 @@ class TestPond(object):
         end = datetime(2013, 11, 3)
 
         tracking_numbers = [ur1.tracking_number]
-        too_blocks = get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
+        pond_interface = PondScheduleInterface()
+        too_blocks = pond_interface._get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
 
         expected = {
                     '1m0a.doma.coj' : Intervals([Timepoint(too_block.start, 'start'),
@@ -662,12 +658,13 @@ class TestPondInteractions(object):
         ids = range(10)
         to_delete = [FakeBlock(id=id) for id in ids]
 
-        cancel_blocks(to_delete)
-        func_mock.assert_called_once_with(ids, reason=reason, delete=True)
+        pond_interface = PondScheduleInterface()
+        pond_interface._cancel_blocks(to_delete)
+        func_mock.assert_called_once_with(ids, reason=reason, delete=True, port=None, host=None)
 
 
-    @patch('adaptive_scheduler.pond.get_deletable_blocks')
-    @patch('adaptive_scheduler.pond.cancel_blocks')
+    @patch('adaptive_scheduler.pond.PondScheduleInterface._get_deletable_blocks')
+    @patch('adaptive_scheduler.pond.PondScheduleInterface._cancel_blocks')
     def test_cancel_schedule(self, func_mock1, func_mock2):
         start_end_by_resource = {'1m0a.doma.lsc' : (self.start, self.end)}
 
@@ -675,7 +672,8 @@ class TestPondInteractions(object):
 
         func_mock2.return_value = delete_list
         
-        n_deleted = cancel_schedule(start_end_by_resource)
+        pond_interface = PondScheduleInterface()
+        n_deleted = pond_interface._cancel_schedule(start_end_by_resource)
 
         func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel)
         func_mock1.assert_called_with(delete_list)
@@ -689,8 +687,9 @@ class TestPondInteractions(object):
         dry_run = True
 
         blocks = {'foo' : [Mock()]}
-
-        send_blocks_to_pond(blocks, dry_run)
+        
+        pond_interface = PondScheduleInterface()
+        pond_interface._send_blocks_to_pond(blocks, dry_run)
         assert not mock_func.called, 'Dry run flag was ignored'
 
 
@@ -705,14 +704,15 @@ class TestPondInteractions(object):
         mock_block.tracking_number = '0000000001'
 
         blocks = {'foo' : [mock_block]}
+        
+        pond_interface = PondScheduleInterface()
+        pond_interface._send_blocks_to_pond(blocks, dry_run)
 
-        send_blocks_to_pond(blocks, dry_run)
-
-        mock_func.assert_called_with([mock_pond_block])
+        mock_func.assert_called_with([mock_pond_block], host=None, port=None)
 
 
 
-    @patch('adaptive_scheduler.pond.send_blocks_to_pond')
+    @patch('adaptive_scheduler.pond.PondScheduleInterface._send_blocks_to_pond')
     @patch('adaptive_scheduler.pond.build_block')
     def test_dont_send_schedule_to_pond_if_dry_run(self, mock_func1, mock_func2):
 
@@ -735,7 +735,8 @@ class TestPondInteractions(object):
         mock_func2.return_value = ( {'1m0a.doma.lsc' : ['block 1', 'block 2']},
                                     {'1m0a.doma.lsc' : ['block 3']} )
 
-        n_submitted_total = send_schedule_to_pond(schedule, self.start,
+        pond_interface = PondScheduleInterface()
+        n_submitted_total = pond_interface._send_schedule_to_pond(schedule, self.start,
                                                   camera_mappings_file, dry_run)
 
         assert_equal(n_submitted_total, 2)
