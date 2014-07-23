@@ -337,6 +337,7 @@ class PondScheduleInterface(object):
             log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
             n_running_total += n_running
     
+        _, block_str = pl(n_running_total, 'block')
         log.info("Network-wide, found %d running %s", n_running_total, block_str)
     
         return running_at_tel
