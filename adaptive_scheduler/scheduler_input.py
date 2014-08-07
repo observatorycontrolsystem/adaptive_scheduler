@@ -13,7 +13,7 @@ class SchedulingInputException(Exception):
 
 
 class SchedulerParameters(object):
-    
+
     def __init__(self, dry_run=False, run_once=False,
                  telescopes_file='telescopes.dat',
                  cameras_file='camera_mappings', no_weather=False,
@@ -42,27 +42,27 @@ class SchedulerParameters(object):
         self.normal_run_time = normal_run_time
         self.pond_port = pond_port
         self.pond_host = pond_host
-        
-        
+
+
     def get_model_builder(self):
         mb = ModelBuilder(self.telescopes_file, self.cameras_file)
         
         return mb
-    
-    
+
+
 class RequestDBSchedulerParameters(SchedulerParameters):
-    
+
     def __init__(self, requestdb, **kwargs):
         SchedulerParameters.__init__(self, **kwargs)
         self.requestdb_url = requestdb
-    
-    
+
+
 class SchedulingInputFactory(object):
-    
+
     def __init__(self, input_provider):
         self.input_provider = input_provider
-        
-    
+
+
     def _create_scheduling_input(self, input_provider, is_too_input, output_path=None):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
@@ -80,16 +80,16 @@ class SchedulingInputFactory(object):
             scheduler_input.write_input_to_file(filename)
         
         return scheduler_input
-    
-    
+
+
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
         self.input_provider.set_too_mode()
         
         return self._create_scheduling_input(self.input_provider, True, output_path)
-    
-    
+
+
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
@@ -99,10 +99,11 @@ class SchedulingInputFactory(object):
 
 
 class SchedulingInputUtils(object):
-    
+
     def __init__(self, model_builder):
         self.model_builder = model_builder
         self.log = logging.getLogger(__name__)
+
 
     def json_urs_to_scheduler_model_urs(self, json_user_request_list):
         scheduler_model_urs = []
@@ -114,32 +115,30 @@ class SchedulingInputUtils(object):
                 self.log.warn(e)
         
         return scheduler_model_urs
-    
-    
-    def sort_scheduler_models_urs_by_type(self, schedule_model_user_requests):
+
+
+    def sort_scheduler_models_urs_by_type(self, scheduler_model_user_requests):
         scheduler_models_urs_by_type = {
                                         'too' : [],
                                         'normal' : []
                                         }
-        for scheduler_model_ur in schedule_model_user_requests:
+        for scheduler_model_ur in scheduler_model_user_requests:
             if scheduler_model_ur.has_target_of_opportunity():
                 scheduler_models_urs_by_type['too'].append(scheduler_model_ur)
             else:
                 scheduler_models_urs_by_type['normal'].append(scheduler_model_ur)
                 
         return scheduler_models_urs_by_type
-    
-    
-    def user_request_priorities(self, json_user_request_list):
-        scheduler_model_urs = self.json_urs_to_scheduler_model_urs(json_user_request_list)
-        priorities_map = {ur.tracking_number : ur.get_priority() for ur in scheduler_model_urs}
+
+
+    def user_request_priorities(self, scheduler_model_user_requests):
+        priorities_map = {ur.tracking_number : ur.get_priority() for ur in scheduler_model_user_requests}
          
         return priorities_map
-    
-    
-    def too_tracking_numbers(self, json_user_request_list):
-        scheduler_model_urs = self.json_urs_to_scheduler_model_urs(json_user_request_list)
-        scheduler_models_urs_by_type = self.sort_scheduler_models_urs_by_type(scheduler_model_urs)
+
+
+    def too_tracking_numbers(self, scheduler_model_user_requests):
+        scheduler_models_urs_by_type = self.sort_scheduler_models_urs_by_type(scheduler_model_user_requests)
         too_tracking_numbers = [ur.tracking_number for ur in scheduler_models_urs_by_type['too']]
          
         return too_tracking_numbers
@@ -157,29 +156,56 @@ class SchedulingInput(object):
         self.available_resources = available_resources
         self.is_too_input = is_too_input
         self.utils = SchedulingInputUtils(sched_params.get_model_builder())
-    
         
-    @property
-    def user_requests(self):
+        self._scheduler_model_too_user_requests = None
+        self._scheduler_model_normal_user_requests = None
+
+
+    def _convert_json_user_requests_to_scheduler_model(self):
         scheduler_model_urs = self.utils.json_urs_to_scheduler_model_urs(self.json_user_request_list)
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
-        
+        self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
+        self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
+
+
+    @property
+    def user_requests(self):
         if self.is_too_input:
-            return scheduler_models_urs_by_type['too']
+            return self.too_user_requests
         else:
-            return scheduler_models_urs_by_type['normal']
-    
-    
+            return self.normal_user_requests()
+
+
+    @property
+    def too_user_requests(self):
+        if(self._scheduler_model_too_user_requests == None):
+            self._convert_json_user_requests_to_scheduler_model()
+            
+        return self._scheduler_model_too_user_requests
+
+
+    @property
+    def normal_user_requests(self):
+        if(self._scheduler_model_normal_user_requests == None):
+            self._convert_json_user_requests_to_scheduler_model()
+            
+        return self._scheduler_model_normal_user_requests
+
+
     @property
     def user_request_priorities(self):
-        return self.utils.user_request_priorities(self.json_user_request_list)
-     
-    
+        priorities = {}
+        priorities.update(self.utils.user_request_priorities(self.too_user_requests))
+        priorities.update(self.utils.user_request_priorities(self.normal_user_requests))
+        
+        return priorities
+
+
     @property 
     def too_tracking_numbers(self):
-        return self.utils.too_tracking_numbers(self.json_user_request_list)
-    
-    
+        return self.utils.too_tracking_numbers(self.too_user_requests)
+
+
     def write_input_to_file(self, filename):
         output = {
                   'sched_params' : self.sched_params,
@@ -196,8 +222,8 @@ class SchedulingInput(object):
         except pickle.PickleError, pe:
             print pe
         outfile.close()
-        
-    
+
+
     @staticmethod
     def read_from_file(self, filename):
         infile = open(filename, 'r')
@@ -207,7 +233,7 @@ class SchedulingInput(object):
 
 
 class SchedulingInputProvider(object):
-    
+
     def __init__(self, sched_params, network_interface, network_model, is_too_input=False):
         self.sched_params = sched_params
         self.network_interface = network_interface
@@ -217,15 +243,15 @@ class SchedulingInputProvider(object):
         
         self._estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
         self._estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
-    
+        
         # TODO: Hide these behind read only properties
         self.scheduler_now = None
         self.estimated_scheduler_end = None
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
-    
-    
+
+
     def refresh(self):
         # The order of these is important
         self.scheduler_now = self._get_scheduler_now()
@@ -233,26 +259,26 @@ class SchedulingInputProvider(object):
         self.json_user_request_list = self._get_json_user_request_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
-        
-    
+
+
     def set_too_run_time(self, seconds):
         self._estimated_too_run_time = timedelta(seconds=seconds)
 
 
     def set_normal_run_time(self, seconds):
         self._estimated_normal_run_time = timedelta(seconds=seconds)
-    
-    
+
+
     def set_too_mode(self):
         self.is_too_input = True
         self.refresh()
-    
-    
+
+
     def set_normal_mode(self):
         self.is_too_input = False
         self.refresh()
-    
-    
+
+
     def _get_scheduler_now(self):
         '''Use a static command line datetime if provided, or default to utcnow, with a
            little extra to cover the scheduler's run time.'''
@@ -265,22 +291,22 @@ class SchedulingInputProvider(object):
         else:
             now = datetime.utcnow()
         return now
-    
-    
+
+
     def _get_estimated_scheduler_end(self):
         if self.is_too_input:
             return self.scheduler_now + self._estimated_too_run_time
         else:
             return self.scheduler_now + self._estimated_normal_run_time
-    
-    
+
+
     def _get_json_user_request_list(self):
         semester_start, semester_end = get_semester_block(dt=self.estimated_scheduler_end)
         ur_list =  self.network_interface.get_all_user_requests(semester_start, semester_end)
         
         return ur_list
-    
-    
+
+
     def _get_available_resources(self):
         resources = []
         for resource_name, resource in self.network_model.iteritems():
@@ -288,15 +314,15 @@ class SchedulingInputProvider(object):
                 resources.append(resource_name)
                 
         return resources
-    
-    
+
+
     def _get_resource_usage_snapshot(self):
         user_request_priorities = self.utils.user_request_priorities(self.json_user_request_list)
         too_tracking_numbers = self.utils.too_tracking_numbers(self.json_user_request_list)
         snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduler_end, user_request_priorities, too_tracking_numbers)
         
         return snapshot
-        
+
 
 class FileBasedSchedulingInputProvider(object):
     
@@ -313,7 +339,8 @@ class FileBasedSchedulingInputProvider(object):
         self.resource_usage_snapshot = None
         
         self.refresh()
-        
+
+
     def set_too_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
@@ -322,8 +349,8 @@ class FileBasedSchedulingInputProvider(object):
     def set_normal_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
-    
-    
+
+
     def refresh(self):
         input_filename = self.normal_input_file
         if self.is_too_input:
@@ -338,14 +365,14 @@ class FileBasedSchedulingInputProvider(object):
         self.json_user_request_list = pickle_input['json_user_request_list']
         self.available_resources = pickle_input['available_resources']
         self.resource_usage_snapshot = pickle_input['resource_usage_snapshot']
-        
-    
+
+
     def set_too_mode(self):
         self.is_too_input = True
         self.refresh()
-    
-    
+
+
     def set_normal_mode(self):
         self.is_too_input = False
         self.refresh()
-        
+
