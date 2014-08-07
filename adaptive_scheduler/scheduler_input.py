@@ -2,6 +2,7 @@ from adaptive_scheduler.model2           import ModelBuilder, RequestError
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from schedutils.semester_service         import get_semester_block
 
+import os
 import logging
 import pickle
 from datetime import datetime, timedelta
@@ -62,7 +63,7 @@ class SchedulingInputFactory(object):
         self.input_provider = input_provider
         
     
-    def _create_scheduling_input(self, input_provider, is_too_input):
+    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
                         input_provider.estimated_scheduler_end,
@@ -70,30 +71,31 @@ class SchedulingInputFactory(object):
                         input_provider.resource_usage_snapshot,
                         input_provider.available_resources,
                         is_too_input)
-        file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = '/data/adaptive_scheduler/input_states/normal_scheduling_input_%s.pickle'
-        if is_too_input:
-            filename = '/data/adaptive_scheduler/input_states/too_scheduling_input_%s.pickle'
-        filename = filename % file_timestamp
-        scheduler_input.write_input_to_file(filename)
+        if output_path:
+            file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            filename = os.path.join(output_path, 'normal_scheduling_input_%s.pickle')
+            if is_too_input:
+                filename = os.path.join(output_path, 'too_scheduling_input_%s.pickle')
+            filename = filename % file_timestamp
+            scheduler_input.write_input_to_file(filename)
         
         return scheduler_input
     
     
-    def create_too_scheduling_input(self, estimated_scheduling_seconds=None):
+    def create_too_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
         self.input_provider.set_too_mode()
         
-        return self._create_scheduling_input(self.input_provider, True)
+        return self._create_scheduling_input(self.input_provider, True, output_path)
     
     
-    def create_normal_scheduling_input(self, estimated_scheduling_seconds=None):
+    def create_normal_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
         self.input_provider.set_normal_mode()
         
-        return self._create_scheduling_input(self.input_provider, False)
+        return self._create_scheduling_input(self.input_provider, False, output_path)
 
 
 class SchedulingInputUtils(object):

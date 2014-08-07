@@ -131,7 +131,7 @@ class TestSchedulingInputFactory(object):
     def test_create_too_scheduling(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
-        factory.create_too_scheduling_input(100)
+        factory.create_too_scheduling_input(100, output_path=None)
         assert_equal(1, input_provider.set_too_mode.call_count)
         assert_equal(1, input_provider.set_too_run_time.call_count)
         assert_equal(100, input_provider.set_too_run_time.call_args[0][0])
@@ -140,7 +140,7 @@ class TestSchedulingInputFactory(object):
     def test_create_too_scheduling_no_estimate_provided(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
-        factory.create_too_scheduling_input()
+        factory.create_too_scheduling_input(output_path=None)
         assert_equal(1, input_provider.set_too_mode.call_count)
         assert_equal(0, input_provider.set_too_run_time.call_count)
         
@@ -148,7 +148,7 @@ class TestSchedulingInputFactory(object):
     def test_create_normal_scheduling(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
-        factory.create_normal_scheduling_input(600)
+        factory.create_normal_scheduling_input(600, output_path=None)
         assert_equal(1, input_provider.set_normal_mode.call_count)
         assert_equal(1, input_provider.set_normal_run_time.call_count)
         assert_equal(600, input_provider.set_normal_run_time.call_args[0][0])
@@ -157,7 +157,7 @@ class TestSchedulingInputFactory(object):
     def test_create_normal_scheduling_no_estimate_provided(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
-        factory.create_normal_scheduling_input()
+        factory.create_normal_scheduling_input(output_path=None)
         assert_equal(1, input_provider.set_normal_mode.call_count)
         assert_equal(0, input_provider.set_normal_run_time.call_count)
         
