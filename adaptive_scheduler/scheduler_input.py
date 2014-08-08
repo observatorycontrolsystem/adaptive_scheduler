@@ -173,7 +173,7 @@ class SchedulingInput(object):
         if self.is_too_input:
             return self.too_user_requests
         else:
-            return self.normal_user_requests()
+            return self.normal_user_requests
 
 
     @property
