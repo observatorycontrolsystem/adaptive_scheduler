@@ -46,7 +46,7 @@ class Scheduler(object):
         self.scheduler_summary_messages = []
     
     
-    def find_resources_to_preempt(self, preemtion_urs, all_urgent_urs, resources, resource_usage_snapshot):
+    def find_resources_to_preempt(self, preemtion_urs, all_urgent_urs, resources, resource_usage_snapshot, all_ur_priorities):
         ''' Preempt running requests, if needed, to run urgent user requests'''
     
         #make copy of resource list since it could be modified
@@ -60,7 +60,7 @@ class Scheduler(object):
                 if running_ur.tracking_number in all_urgent_tracking_numbers:
                     copy_of_resources.remove(resource)
     
-        value_function_dict = self.construct_value_function_dict(preemtion_urs, copy_of_resources, resource_usage_snapshot)
+        value_function_dict = self.construct_value_function_dict(preemtion_urs, copy_of_resources, resource_usage_snapshot, all_ur_priorities)
     
         preemtion_tracking_numbers = [ur.tracking_number for ur in preemtion_urs]
         optimal_combination = self.compute_optimal_combination(value_function_dict, preemtion_tracking_numbers, copy_of_resources)
@@ -81,7 +81,7 @@ class Scheduler(object):
     
         return excluded_intervals_1
     
-    def construct_value_function_dict(self, urgent_urs, resources, resource_usage_snapshot):
+    def construct_value_function_dict(self, urgent_urs, resources, resource_usage_snapshot, ur_priorities):
         ''' Constructs a value dictionary of tuple (telescope, tracking_number) to value
     
             where value = too priority / running block priority or if no block is running at
@@ -115,7 +115,7 @@ class Scheduler(object):
             for running_at_tel in running_ur_list:
                 running_tracking_number = running_at_tel.tracking_number
                 normal_ur_prioirty = 0
-                normal_ur_prioirty += resource_usage_snapshot.get_priority(running_tracking_number)
+                normal_ur_prioirty += ur_priorities.get(running_tracking_number, 0)
 #                 else:
 #                     # The running request wasn't included in the list of schedulable urs so we don't know it's priority
 #                     # This could happen if the running request has been canceled.  In this case treat it like nothing is running
@@ -269,10 +269,17 @@ class Scheduler(object):
     
     # TODO: refactor into smaller chunks
     @timeit
-    def run_scheduler(self, user_reqs, resource_usage_snapshot, available_resources, estimated_scheduler_end, preemption_enabled=False):
-    
+    def run_scheduler(self, scheduler_input, preemption_enabled=False):
+        
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
+        
+        user_reqs = scheduler_input.user_requests
+        resource_usage_snapshot = scheduler_input.resource_usage_snapshot
+        available_resources = scheduler_input.available_resources
+        estimated_scheduler_end = scheduler_input.estimated_scheduler_end
+        all_ur_priorities = scheduler_input.user_request_priorities
+        
         self.estimated_scheduler_end = estimated_scheduler_end
         self.on_run_scheduler(user_reqs)
         
@@ -298,7 +305,7 @@ class Scheduler(object):
         
         # Pre-empt running blocks
         if preemption_enabled:
-            resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, user_reqs, resources_to_schedule, resource_usage_snapshot) 
+            resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, user_reqs, resources_to_schedule, resource_usage_snapshot, all_ur_priorities) 
             # Need a copy because the original is modified inside the loop
             copy_of_resources_to_schedule = list(resources_to_schedule)
             for resource in copy_of_resources_to_schedule:
@@ -576,14 +583,14 @@ class SchedulerRunner(object):
         outfile.close()
     
     
-    def call_scheduler(self, scheduler_input, preemption_enabled):
+    def call_scheduler(self, scheduler_input):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
         self.log.info("Estimated scheduler run time is %d minutes", (scheduler_input.estimated_scheduler_end - scheduler_input.scheduler_now).total_seconds() / 60.0)
         n_urs, n_rs = n_requests(scheduler_input.user_requests)
         self.summary_events.append("Received %d %s (%d %s) from Request DB" % (pl(n_urs, 'User Request') + pl(n_rs, 'Request')))
         scheduler_result = None
         try:
-            scheduler_result = self.scheduler.run_scheduler(scheduler_input.user_requests, scheduler_input.resource_usage_snapshot, scheduler_input.available_resources, scheduler_input.estimated_scheduler_end, preemption_enabled=preemption_enabled)
+            scheduler_result = self.scheduler.run_scheduler(scheduler_input, preemption_enabled=scheduler_input.is_too_input)
         except ScheduleException, se:
             self.log.error(se, "aborting run")
         
@@ -672,7 +679,7 @@ class SchedulerRunner(object):
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
-            too_scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=True)
+            too_scheduler_result = self.call_scheduler(scheduler_input)
             if too_scheduler_result and not self.sched_params.dry_run:
                 self.apply_scheduler_result(too_scheduler_result,
                                             scheduler_input,
@@ -689,7 +696,7 @@ class SchedulerRunner(object):
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
-            scheduler_result = self.call_scheduler(scheduler_input, preemption_enabled=False)
+            scheduler_result = self.call_scheduler(scheduler_input)
             if scheduler_result and not self.sched_params.dry_run:
                 resources_to_clear = self.network_model.keys()
                 if too_scheduler_result: 

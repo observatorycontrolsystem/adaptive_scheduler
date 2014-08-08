@@ -108,7 +108,7 @@ class PondScheduleInterface(object):
         return running_blocks 
     
     def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
-        too_blocks = self._get_intervals_by_telescope_for_tracking_numbers(too_tracking_numbers, telescopes, end_after, start_before)
+        too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
         
         return too_blocks
     
@@ -233,9 +233,22 @@ class PondScheduleInterface(object):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            blocks = self._get_blocks(ends_after, starts_before, site_name, obs_name, tel_name).blocks
+            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name).blocks
             
             filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+            telescope_blocks[full_tel_name] = filtered_blocks
+            
+        return telescope_blocks
+    
+    
+    def _get_too_blocks_by_telescope(self, tels, ends_after, starts_before):
+        telescope_blocks = {}     
+        for full_tel_name in tels:
+            tel_name, obs_name, site_name = full_tel_name.split('.')
+            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True).blocks
+            
+            # Remove blocks that dont have tracking numbers
+            filtered_blocks = filter(lambda block: block.tracking_num_set(), blocks)
             telescope_blocks[full_tel_name] = filtered_blocks
             
         return telescope_blocks
@@ -259,17 +272,36 @@ class PondScheduleInterface(object):
         return telescope_interval
 
 
+    @timeit
+    def _get_too_intervals_by_telescope(self, tels, ends_after, starts_before):
+        '''
+            return a map of telescopes to intervals of given tracking number
+        '''
+        telescope_interval = {}
+        too_blocks_by_telescope = self._get_too_blocks_by_telescope(tels, ends_after, starts_before)
+        
+        for full_tel_name in tels:
+            blocks = too_blocks_by_telescope.get(full_tel_name, [])
+    
+            intervals = get_intervals(blocks)
+            if not intervals.is_empty():
+                telescope_interval[full_tel_name] = intervals
+    
+        return telescope_interval
+
     #@retry_or_reraise(max_tries=6, delay=10)
-    def _get_blocks(self, start, end, site, obs, tel):
+    def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled
         return Schedule.get(start=start, end=end, site=site,
                                  observatory=obs, telescope=tel,
-                                 canceled_blocks=False, use_master_db=True, port=self.port, host=self.host)
+                                 canceled_blocks=False, use_master_db=True,
+                                 too_blocks=too_blocks,
+                                 port=self.port, host=self.host)
         
         
     def _get_deletable_blocks(self, start, end, site, obs, tel):
         # Only retrieve blocks which have not been cancelled
-        schedule = self._get_blocks(start, end, site, obs, tel)
+        schedule = self._get_schedule(start, end, site, obs, tel)
         # Filter out blocks not placed by scheduler, they have not tracking number
         scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
     
@@ -344,7 +376,7 @@ class PondScheduleInterface(object):
     
     
     def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
-        schedule  = self._get_blocks(ends_after, starts_before, site, obs, tel)
+        schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
         cutoff_dt = schedule.end_of_overlap(starts_before)
     
         running = [b for b in schedule.blocks if b.start < cutoff_dt and
