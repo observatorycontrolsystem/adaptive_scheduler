@@ -173,7 +173,7 @@ class SchedulingInput(object):
         if self.is_too_input:
             return self.too_user_requests
         else:
-            return self.normal_user_requests()
+            return self.normal_user_requests
 
 
     @property
@@ -317,9 +317,7 @@ class SchedulingInputProvider(object):
 
 
     def _get_resource_usage_snapshot(self):
-        user_request_priorities = self.utils.user_request_priorities(self.json_user_request_list)
-        too_tracking_numbers = self.utils.too_tracking_numbers(self.json_user_request_list)
-        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduler_end, user_request_priorities, too_tracking_numbers)
+        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduler_end)
         
         return snapshot
 
