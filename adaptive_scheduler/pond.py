@@ -78,11 +78,11 @@ class PondScheduleInterface(object):
         
         self.log = logging.getLogger(__name__)
     
-    def fetch_data(self, telescopes, running_window_start, running_window_end, too_tracking_numbers):
+    def fetch_data(self, telescopes, running_window_start, running_window_end):
         #Fetch the data
         self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
-        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end, too_tracking_numbers)
+        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
 
     
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
@@ -107,7 +107,7 @@ class PondScheduleInterface(object):
         
         return running_blocks 
     
-    def _fetch_too_intervals(self, telescopes, end_after, start_before, too_tracking_numbers):
+    def _fetch_too_intervals(self, telescopes, end_after, start_before):
         too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
         
         return too_blocks
