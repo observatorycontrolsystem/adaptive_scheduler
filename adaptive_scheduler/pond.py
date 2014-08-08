@@ -292,11 +292,13 @@ class PondScheduleInterface(object):
     #@retry_or_reraise(max_tries=6, delay=10)
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled
-        return Schedule.get(start=start, end=end, site=site,
+        args = dict(start=start, end=end, site=site,
                                  observatory=obs, telescope=tel,
                                  canceled_blocks=False, use_master_db=True,
-                                 too_blocks=too_blocks,
                                  port=self.port, host=self.host)
+        if too_blocks:
+            args['too_blocks'] = too_blocks
+        return Schedule.get(**args)
         
         
     def _get_deletable_blocks(self, start, end, site, obs, tel):
