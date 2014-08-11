@@ -696,7 +696,13 @@ class SchedulerRunner(object):
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
-            scheduler_result = self.call_scheduler(scheduler_input)
+            
+            import cProfile
+            prof = cProfile.Profile()
+            scheduler_result = prof.runcall(self.call_scheduler, scheduler_input)
+            prof.dump_stats('call_scheduler.pstat')
+            
+#             scheduler_result = self.call_scheduler(scheduler_input)
             if scheduler_result and not self.sched_params.dry_run:
                 resources_to_clear = self.network_model.keys()
                 if too_scheduler_result: 
