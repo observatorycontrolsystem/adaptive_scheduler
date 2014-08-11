@@ -24,7 +24,6 @@ Aug 2013: added sanity checks and exception raising.
 from timepoint import *
 import math
 import copy
-from heapq import merge
 
 
 class IntervalsError(Exception):
@@ -245,24 +244,19 @@ class Intervals(object):
             self.type = 'free'
 
 
-    def intersect(self, list_of_others, sort=False):
+    def intersect(self, list_of_others):
         ''' Intersects Intervals in list_of_others with self. Returns
         a new Intervals object containing only those intervals that
         were in the intersection of everything. If the intersection
         was empty, it returns None.'''
         intersection = []
-        merged_timepoints = []
         # Unless sort is set to True, assume the input is already sorted
-        if sort:
-            merged_timepoints = list(self.timepoints)
-            # merge all lists of timepoints
-            for other in list_of_others:
-                merged_timepoints.extend(other.timepoints)
-            # sort the merged list
-            merged_timepoints.sort()
-        else:
-            merged_timepoints = [self.timepoints] + [o.timepoints for o in list_of_others]
-            merged_timepoints = merge(*merged_timepoints)
+        merged_timepoints = list(self.timepoints)
+        # merge all lists of timepoints
+        for other in list_of_others:
+            merged_timepoints.extend(other.timepoints)
+        # sort the merged list
+        merged_timepoints.sort()
         # walk through merged list popping up flags
         flag     = 0
         max_flag = len(list_of_others)+1
@@ -285,7 +279,7 @@ class Intervals(object):
             return Intervals([])
 
 
-    def subtract(self, other, sort=False):
+    def subtract(self, other):
         ''' Returns a new Intervals object containing those intervals in self
         that are not in other (i.e. the relative complement of other in self).
         '''
@@ -297,15 +291,11 @@ class Intervals(object):
         for t in self.timepoints:
             t.id=2
         
-        # Unless sort is set to True, assume the input is already sorted
-        if sort:
-            merged_timepoints = list(self.timepoints)
-            # merge the two lists
-            merged_timepoints.extend(other.timepoints)
-            # sort the merged list
-            merged_timepoints.sort()
-        else:
-            merged_timepoints = merge(self.timepoints, other.timepoints)
+        merged_timepoints = list(self.timepoints)
+        # merge the two lists
+        merged_timepoints.extend(other.timepoints)
+        # sort the merged list
+        merged_timepoints.sort()
         # walk through merged list popping up flags
         flag = 0
         for t in merged_timepoints:
@@ -363,23 +353,20 @@ class IntervalsUtility(object):
         return retlist
         
 
-    def get_coverage_count(self, intervals_base, intervals_list, sort=False):
+    def get_coverage_count(self, intervals_base, intervals_list):
         ''' undefined for intervals not in intervals_base, 
         returns # of intervals covering in intervals_list
         returns 0 otherwise. 
         output is formatted by intervals_to_retval() '''
         # algorithm: first intersect all intervals in interval_list with 
         # intervals_base to throw out undefined spots. 
-        new_intervals_list = [i.intersect([intervals_base], sort) for i in intervals_list]
+        new_intervals_list = [i.intersect([intervals_base]) for i in intervals_list]
         # then add up all the timepoints &  sort them
         # Unless sort is set to True, assume the input is already sorted
         all_tps = []
-        if sort:
-            for i in new_intervals_list: 
-                all_tps.extend(i.timepoints)
-            all_tps.sort()
-        else:
-            all_tps = list(merge(*[i.timepoints for i in new_intervals_list]))
+        for i in new_intervals_list: 
+            all_tps.extend(i.timepoints)
+        all_tps.sort()
         # walk thru in order, incrementing when hitting a start, 
         # decrementing when hitting an end, make a list of all the numbers
         height_list    = []
