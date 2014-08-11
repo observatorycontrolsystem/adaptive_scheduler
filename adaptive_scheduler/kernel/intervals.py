@@ -24,6 +24,7 @@ Aug 2013: added sanity checks and exception raising.
 from timepoint import *
 import math
 import copy
+from heapq import merge
 
 
 class IntervalsError(Exception):
@@ -37,6 +38,7 @@ class Intervals(object):
         # type should be 'busy' or 'free'
         self.timepoints       = timepoints
         self.type             = type
+        
         self.timepoints.sort()
         self.clean_up()
         
@@ -89,12 +91,12 @@ class Intervals(object):
 
     def add(self, timepoints):
         self.timepoints.extend(timepoints)
-        self.clean_up()
+        self.clean_up(sort=True)
 
 
     def get_total_time(self):
         ''' Returns the total amount of time in the intervals '''
-        sum   = 0
+        sum_val   = 0
         start = 0
         self.clean_up()
         if self.timepoints:
@@ -102,8 +104,8 @@ class Intervals(object):
                 if t.type == 'start':
                     start = t.time
                 else:
-                    sum = sum + (t.time - start)
-        return sum
+                    sum_val = sum_val + (t.time - start)
+        return sum_val
 
 
     def find_interval_of_length(self, length):
@@ -118,30 +120,32 @@ class Intervals(object):
         return -1
 
 
-    def trim_to_time(self, total_time):
+    def trim_to_time(self, total_time, sort=False):
         ''' Trims the intervals from the beginning, so they sum up to
         total_time. Alters the Intervals object itself, returns nothing.'''
-        sum         = 0
+        sum_val         = 0
         start       = 0
         trimmed_tps = []
-        self.timepoints.sort()
+        # Unless sort is set to True, assume the input is already sorted
+        if sort:
+            self.timepoints.sort()
         for t in self.timepoints:
             if t.type == 'start':
                 start = t.time
                 trimmed_tps.append(t)
             else:
-                sum = sum + (t.time - start)
-                if sum > total_time:
-                    trim_time = sum-total_time
+                sum_val = sum_val + (t.time - start)
+                if sum_val > total_time:
+                    trim_time = sum_val-total_time
                     trimmed_tps.append(Timepoint(t.time-trim_time, 'end'))
                     self.timepoints = trimmed_tps
                     return
                 else:
                     trimmed_tps.append(t)
-                if sum == total_time:
+                if sum_val == total_time:
                     self.timepoints = trimmed_tps
                     return
-        if sum < total_time:
+        if sum_val < total_time:
             # TODO: this should be an exception
             print "error: asked me to trim intervals to more than their total time\n"
 
@@ -162,9 +166,11 @@ class Intervals(object):
             self.timepoints.remove(tp)
         
 
-    def clean_up(self):
+    def clean_up(self, sort=False):
         if self.timepoints:
-            self.timepoints.sort()
+            # Unless sort is set to True, assume the input is already sorted
+            if sort:
+                self.timepoints.sort()
             # remove end & start with same time -- they cancel
             previous_tp   = None
             clean_tps     = []
@@ -198,14 +204,16 @@ class Intervals(object):
             self.sanity_check()
 
 
-    def complement(self, absolute_start, absolute_end):
+    def complement(self, absolute_start, absolute_end, sort=False):
         ''' Turns a list of intervals denoting free times
         into a list denoting busy times and vice versa.
         Replaces self.timepoints and returns nothing.
         absolute_start and absolute_end must be defined, so we know
         how to close off the ends. '''
         if self.timepoints:
-            self.timepoints.sort()
+            # Unless sort is set to True, assume the input is already sorted
+            if sort:
+                self.timepoints.sort()
             # figure out the start
             if self.timepoints[0].time == absolute_start:
                 start = self.timepoints[1].time
@@ -237,18 +245,24 @@ class Intervals(object):
             self.type = 'free'
 
 
-    def intersect(self, list_of_others):
+    def intersect(self, list_of_others, sort=False):
         ''' Intersects Intervals in list_of_others with self. Returns
         a new Intervals object containing only those intervals that
         were in the intersection of everything. If the intersection
         was empty, it returns None.'''
         intersection = []
-        merged_timepoints = list(self.timepoints)
-        # merge all lists of timepoints
-        for other in list_of_others:
-            merged_timepoints.extend(other.timepoints)
-        # sort the merged list
-        merged_timepoints.sort()
+        merged_timepoints = []
+        # Unless sort is set to True, assume the input is already sorted
+        if sort:
+            merged_timepoints = list(self.timepoints)
+            # merge all lists of timepoints
+            for other in list_of_others:
+                merged_timepoints.extend(other.timepoints)
+            # sort the merged list
+            merged_timepoints.sort()
+        else:
+            merged_timepoints = [self.timepoints] + [o.timepoints for o in list_of_others]
+            merged_timepoints = merge(*merged_timepoints)
         # walk through merged list popping up flags
         flag     = 0
         max_flag = len(list_of_others)+1
@@ -271,7 +285,7 @@ class Intervals(object):
             return Intervals([])
 
 
-    def subtract(self, other):
+    def subtract(self, other, sort=False):
         ''' Returns a new Intervals object containing those intervals in self
         that are not in other (i.e. the relative complement of other in self).
         '''
@@ -282,11 +296,16 @@ class Intervals(object):
             t.id=1
         for t in self.timepoints:
             t.id=2
-        merged_timepoints = list(self.timepoints)
-        # merge the two lists
-        merged_timepoints.extend(other.timepoints)
-        # sort the merged list
-        merged_timepoints.sort()
+        
+        # Unless sort is set to True, assume the input is already sorted
+        if sort:
+            merged_timepoints = list(self.timepoints)
+            # merge the two lists
+            merged_timepoints.extend(other.timepoints)
+            # sort the merged list
+            merged_timepoints.sort()
+        else:
+            merged_timepoints = merge(self.timepoints, other.timepoints)
         # walk through merged list popping up flags
         flag = 0
         for t in merged_timepoints:
@@ -344,19 +363,23 @@ class IntervalsUtility(object):
         return retlist
         
 
-    def get_coverage_count(self, intervals_base, intervals_list):
+    def get_coverage_count(self, intervals_base, intervals_list, sort=False):
         ''' undefined for intervals not in intervals_base, 
         returns # of intervals covering in intervals_list
         returns 0 otherwise. 
         output is formatted by intervals_to_retval() '''
         # algorithm: first intersect all intervals in interval_list with 
         # intervals_base to throw out undefined spots. 
-        new_intervals_list = [i.intersect([intervals_base]) for i in intervals_list]
+        new_intervals_list = [i.intersect([intervals_base], sort) for i in intervals_list]
         # then add up all the timepoints &  sort them
+        # Unless sort is set to True, assume the input is already sorted
         all_tps = []
-        for i in new_intervals_list: 
-            all_tps.extend(i.timepoints)
-        all_tps.sort()
+        if sort:
+            for i in new_intervals_list: 
+                all_tps.extend(i.timepoints)
+            all_tps.sort()
+        else:
+            all_tps = list(merge(*[i.timepoints for i in new_intervals_list]))
         # walk thru in order, incrementing when hitting a start, 
         # decrementing when hitting an end, make a list of all the numbers
         height_list    = []
