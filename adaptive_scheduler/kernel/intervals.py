@@ -250,7 +250,6 @@ class Intervals(object):
         were in the intersection of everything. If the intersection
         was empty, it returns None.'''
         intersection = []
-        # Unless sort is set to True, assume the input is already sorted
         merged_timepoints = list(self.timepoints)
         # merge all lists of timepoints
         for other in list_of_others:
@@ -260,6 +259,7 @@ class Intervals(object):
         # walk through merged list popping up flags
         flag     = 0
         max_flag = len(list_of_others)+1
+        # This loop requires a sorted list as input to work correctly
         for t in merged_timepoints:
             if t.type == 'start':
                 if flag == max_flag:
@@ -362,7 +362,6 @@ class IntervalsUtility(object):
         # intervals_base to throw out undefined spots. 
         new_intervals_list = [i.intersect([intervals_base]) for i in intervals_list]
         # then add up all the timepoints &  sort them
-        # Unless sort is set to True, assume the input is already sorted
         all_tps = []
         for i in new_intervals_list: 
             all_tps.extend(i.timepoints)
