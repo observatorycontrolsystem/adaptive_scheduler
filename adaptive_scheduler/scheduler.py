@@ -516,7 +516,7 @@ class SchedulerRunner(object):
         
         self.estimated_too_run_timedelta = timedelta(seconds=120)
         self.estimated_normal_run_timedelta = timedelta(seconds=360)
-        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=0.03)
+        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=0.05)
         
     
     
@@ -737,7 +737,7 @@ class SchedulerRunner(object):
                         
                 else:
                     # update runtime estimate and rerun
-                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule not be submitted.")
+                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                     run_time_exceeded_estimate = True
             
             if run_time_exceeded_estimate:
