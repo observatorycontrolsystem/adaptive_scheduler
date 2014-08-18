@@ -751,7 +751,7 @@ class SchedulerRunner(object):
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
             
             
-            self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta)
+            self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta.total_seconds())
             self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
