@@ -696,7 +696,7 @@ class SchedulerRunner(object):
                 save_estimate_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(too_scheduler_result)
                 estimated_scheduling_end = datetime.utcnow() + save_estimate_timedelta
                 self.log.info("Estimated time to apply scheduler result is %d seconds" % save_estimate_timedelta.total_seconds())
-                if estimated_scheduling_end < too_scheduling_start + self.estimated_normal_run_timedelta:
+                if estimated_scheduling_end < too_scheduling_start + self.estimated_too_run_timedelta:
                     self.apply_scheduler_result(too_scheduler_result,
                                                 scheduler_input,
                                                 too_scheduler_result.schedule.keys())
