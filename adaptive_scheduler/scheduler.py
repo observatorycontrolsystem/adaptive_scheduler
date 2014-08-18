@@ -733,7 +733,7 @@ class SchedulerRunner(object):
                     after_apply = datetime.utcnow()
                     if(n_submitted > 0):
                         self.avg_save_time_per_reservation_timedelta = timedelta(seconds=(after_apply - before_apply).total_seconds() / n_submitted)
-                        self.log.info("Avg save time per reservation was " + self.avg_save_time_per_reservation_timedelta)
+                        self.log.info("Avg save time per reservation was %f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
                         
                 else:
                     # update runtime estimate and rerun
