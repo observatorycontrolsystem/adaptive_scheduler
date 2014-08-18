@@ -686,25 +686,48 @@ class SchedulerRunner(object):
     def create_new_schedule(self):
         too_scheduler_result = None
         too_scheduling_start = datetime.utcnow()
+        estimated_scheduling_end = too_scheduling_start + self.estimated_too_run_timedelta
+        runtime_exceeded_estimate = False
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
             too_scheduler_result = self.call_scheduler(scheduler_input)
             if too_scheduler_result and not self.sched_params.dry_run:
-                self.apply_scheduler_result(too_scheduler_result,
-                                            scheduler_input,
-                                            too_scheduler_result.schedule.keys())
-            too_scheduling_end = datetime.utcnow()
-            self.estimated_too_run_timedelta = too_scheduling_end - too_scheduling_start
-            self._write_scheduling_summary_log("ToO Scheduling Summary")
+                save_estimate_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(too_scheduler_result)
+                estimated_scheduling_end = datetime.utcnow() + save_estimate_timedelta
+                self.log.info("Estimated time to apply scheduler result is %d seconds" % save_estimate_timedelta.total_seconds())
+                if estimated_scheduling_end < too_scheduling_start + self.estimated_normal_run_timedelta:
+                    self.apply_scheduler_result(too_scheduler_result,
+                                                scheduler_input,
+                                                too_scheduler_result.schedule.keys())
+                else:
+                    # update runtime estimate and rerun
+                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
+                    runtime_exceeded_estimate = True
+                    
+            if runtime_exceeded_estimate:
+                too_scheduling_timedelta = estimated_scheduling_end - too_scheduling_start
+                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
+            else:
+                too_scheduling_end = datetime.utcnow()
+                too_scheduling_timedelta = too_scheduling_end - too_scheduling_start
+                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
+                self._write_scheduling_summary_log("ToO Scheduling Summary")
+                
+            self.log.info("New runtime estimate is %s seconds" % self.estimated_too_run_timedelta.total_seconds())
             self.log.info("End ToO Scheduling")
+            
+            if runtime_exceeded_estimate:
+                self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
+                return
+            
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
         
         # Run the scheduling loop, if there are any User Requests
         normal_scheduling_start = datetime.utcnow()
         estimated_scheduling_end = normal_scheduling_start + self.estimated_normal_run_timedelta
-        run_time_exceeded_estimate = False
+        runtime_exceeded_estimate = False
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
@@ -738,9 +761,9 @@ class SchedulerRunner(object):
                 else:
                     # update runtime estimate and rerun
                     self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
-                    run_time_exceeded_estimate = True
+                    runtime_exceeded_estimate = True
             
-            if run_time_exceeded_estimate:
+            if runtime_exceeded_estimate:
                 normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
             else:
