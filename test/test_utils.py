@@ -9,7 +9,8 @@ import calendar
 from adaptive_scheduler.utils import (merge_dicts, normalise, unnormalise,
                                       datetime_to_epoch, epoch_to_datetime,
                                       datetime_to_normalised_epoch,
-                                      normalised_epoch_to_datetime, split_location)
+                                      normalised_epoch_to_datetime, split_location,
+                                      estimate_runtime)
 
 
 class TestMergeDicts(object):
@@ -140,3 +141,42 @@ class TestDateEpochConversions(object):
         # Check conversion plus normalisation/unnormalisation
         normed_epoch_value = datetime_to_normalised_epoch(dt_value, dt_start)
         assert_equal(normalised_epoch_to_datetime(normed_epoch_value, start), dt_value)
+        
+        
+class TestRuntimeEstimate(object):
+    
+    def test_runtime_estimate_exceeded(self):
+        estimate = timedelta(seconds=300)
+        actual = timedelta(seconds=301)
+        backoff_rate = 2.0
+        pad_percent = 5.0
+        new_estimate = estimate_runtime(estimate, actual, backoff_rate=backoff_rate, pad_percent=pad_percent)
+        
+        assert_equal(new_estimate, timedelta(seconds=backoff_rate * estimate.total_seconds()))
+        
+    def test_runtime_estimate_equals_actual(self):
+        estimate = timedelta(seconds=300)
+        actual = timedelta(seconds=300)
+        backoff_rate = 2.0
+        pad_percent = 5.0
+        new_estimate = estimate_runtime(estimate, actual, backoff_rate=backoff_rate, pad_percent=pad_percent)
+        
+        assert_equal(new_estimate, timedelta(seconds=actual.total_seconds() * (1 + pad_percent/100.0)))
+        
+    def test_runtime_estimate_less_than_actual_has_pad(self):
+        estimate = timedelta(seconds=300)
+        actual = timedelta(seconds=299)
+        backoff_rate = 2.0
+        pad_percent = 5.0
+        new_estimate = estimate_runtime(estimate, actual, backoff_rate=backoff_rate, pad_percent=pad_percent)
+        
+        assert_equal(new_estimate, timedelta(seconds=actual.total_seconds() * (1 + pad_percent/100.0)))
+        
+    def test_runtime_estimate_less_than_actual(self):
+        estimate = timedelta(seconds=300)
+        actual = timedelta(seconds=200)
+        backoff_rate = 2.0
+        pad_percent = 5.0
+        new_estimate = estimate_runtime(estimate, actual, backoff_rate=backoff_rate, pad_percent=pad_percent)
+        
+        assert_equal(new_estimate, timedelta(seconds=estimate.total_seconds() - (estimate.total_seconds() - actual.total_seconds()) / backoff_rate))

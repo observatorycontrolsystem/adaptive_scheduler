@@ -15,7 +15,7 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
                                          summarise_urs, log_full_ur, log_windows)
@@ -516,6 +516,7 @@ class SchedulerRunner(object):
         
         self.estimated_too_run_timedelta = timedelta(seconds=120)
         self.estimated_normal_run_timedelta = timedelta(seconds=360)
+        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=0.03)
         
     
     
@@ -660,6 +661,8 @@ class SchedulerRunner(object):
                                                    semester_start)
         self.summary_events.append("In total, deleted %d previously scheduled %s" % pl(n_deleted, 'block'))
         self.summary_events.append("Submitted %d new %s to the POND" % pl(n_submitted, 'block'))
+        
+        return n_submitted
     
     def _write_scheduling_summary_log(self, header_msg):
         self.log.info("------------------")
@@ -672,6 +675,13 @@ class SchedulerRunner(object):
         self.log.info("Scheduling complete.")
         self.summary_events = []
     
+    
+    def _count_reservations(self, scheduler_result):
+        reservation_cnt = 0
+        for resource, reservations in scheduler_result.schedule.items():
+            reservation_cnt += len(reservations)
+            
+        return reservation_cnt
     
     def create_new_schedule(self):
         too_scheduler_result = None
@@ -693,6 +703,8 @@ class SchedulerRunner(object):
         
         # Run the scheduling loop, if there are any User Requests
         normal_scheduling_start = datetime.utcnow()
+        estimated_scheduling_end = normal_scheduling_start + self.estimated_normal_run_timedelta
+        run_time_exceeded_estimate = False
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
@@ -709,12 +721,37 @@ class SchedulerRunner(object):
                     for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
                         if reservation_list:
                             resources_to_clear.remove(too_resource)
-                self.apply_scheduler_result(scheduler_result,
-                                            scheduler_input,
-                                            resources_to_clear)
-            normal_scheduling_end = datetime.utcnow()
-            self.estimated_normal_run_timedelta = normal_scheduling_end - normal_scheduling_start 
-            self._write_scheduling_summary_log("Normal Scheduling Summary")
+                
+                save_estimate_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(scheduler_result)
+                estimated_scheduling_end = datetime.utcnow() + save_estimate_timedelta
+                self.log.info("Estimated time to apply scheduler result is %d seconds" % save_estimate_timedelta.total_seconds())
+                if estimated_scheduling_end < normal_scheduling_start + self.estimated_normal_run_timedelta:
+                    before_apply = datetime.utcnow()
+                    n_submitted = self.apply_scheduler_result(scheduler_result,
+                                                scheduler_input,
+                                                resources_to_clear)
+                    after_apply = datetime.utcnow()
+                    if(n_submitted > 0):
+                        self.avg_save_time_per_reservation_timedelta = (after_apply - before_apply) / n_submitted
+                        self.log.info("Avg save time per reservation was " + self.avg_save_time_per_reservation_timedelta)
+                        
+                else:
+                    # update runtime estimate and rerun
+                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule not be submitted.")
+                    run_time_exceeded_estimate = True
+            
+            if run_time_exceeded_estimate:
+                normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+            else:
+                normal_scheduling_end = datetime.utcnow()
+                normal_scheduling_timedelta = normal_scheduling_end - normal_scheduling_start
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+                self.log.info("Normal scheduling took %d seconds" % normal_scheduling_timedelta.total_seconds())
+                self._write_scheduling_summary_log("Normal Scheduling Summary")
+            
+            
+            self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta)
             self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
@@ -725,5 +762,3 @@ class SchedulerRunner(object):
         sys.stdout.flush()
         
         
-
-
