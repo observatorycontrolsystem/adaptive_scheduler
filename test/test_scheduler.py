@@ -1149,6 +1149,7 @@ class TestSchedulerRunner(object):
         
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         scheduler_mock = Mock()
+        scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         network_model_mock = {}
 
         mock_input_factory = create_scheduler_input_factory([too_single_ur], [normal_single_ur])

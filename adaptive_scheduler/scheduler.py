@@ -514,9 +514,9 @@ class SchedulerRunner(object):
         # List of strings to be printed in final scheduling summary
         self.summary_events = []
         
-        self.estimated_too_run_timedelta = timedelta(seconds=120)
-        self.estimated_normal_run_timedelta = timedelta(seconds=360)
-        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=0.05)
+        self.estimated_too_run_timedelta = timedelta(seconds=sched_params.too_runtime_seconds)
+        self.estimated_normal_run_timedelta = timedelta(seconds=sched_params.normal_runtime_seconds)
+        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=sched_params.avg_reservation_save_time_seconds)
         
     
     
@@ -643,7 +643,21 @@ class SchedulerRunner(object):
             
         return cancelation_dates_by_resource
     
-    def apply_scheduler_result(self, scheduler_result, scheduler_input, resources_to_clear):
+    def apply_scheduler_result(self, scheduler_result, scheduler_input, resources_to_clear, apply_deadline):
+        if self.sched_params.dry_run:
+            self.log.warn("Dry run. Schedule will not be saved.")
+            return 0
+        
+        if not scheduler_result:
+            self.log.warn("Empty scheduler result. Schedule will not be saved.")
+            return 0
+        
+        estimated_apply_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(scheduler_result)
+        estimated_apply_completion = datetime.utcnow() + estimated_apply_timedelta
+        self.log.info("Estimated time to apply scheduler result is %d seconds" % estimated_apply_timedelta.total_seconds())
+        if estimated_apply_completion > apply_deadline:
+            raise EstimateExceededException("Estimated end time %s is after deadline %s" % (str(estimated_apply_completion), str(apply_deadline)))
+        
         semester_start, semester_end = \
                 get_semester_block(dt=scheduler_input.estimated_scheduler_end)
         self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
@@ -683,99 +697,80 @@ class SchedulerRunner(object):
             
         return reservation_cnt
     
+    
     def create_new_schedule(self):
         too_scheduler_result = None
         too_scheduling_start = datetime.utcnow()
         estimated_scheduling_end = too_scheduling_start + self.estimated_too_run_timedelta
-        runtime_exceeded_estimate = False
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
+        
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
             too_scheduler_result = self.call_scheduler(scheduler_input)
-            if too_scheduler_result and not self.sched_params.dry_run:
-                save_estimate_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(too_scheduler_result)
-                estimated_scheduling_end = datetime.utcnow() + save_estimate_timedelta
-                self.log.info("Estimated time to apply scheduler result is %d seconds" % save_estimate_timedelta.total_seconds())
-                if estimated_scheduling_end < too_scheduling_start + self.estimated_too_run_timedelta:
-                    self.apply_scheduler_result(too_scheduler_result,
+            try:
+                deadline = too_scheduling_start + self.estimated_too_run_timedelta
+                self.apply_scheduler_result(too_scheduler_result,
                                                 scheduler_input,
-                                                too_scheduler_result.schedule.keys())
-                else:
-                    # update runtime estimate and rerun
-                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
-                    runtime_exceeded_estimate = True
-                    
-            if runtime_exceeded_estimate:
-                too_scheduling_timedelta = estimated_scheduling_end - too_scheduling_start
-                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
-            else:
+                                                too_scheduler_result.schedule.keys(),
+                                                deadline)
                 too_scheduling_end = datetime.utcnow()
                 too_scheduling_timedelta = too_scheduling_end - too_scheduling_start
                 self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self._write_scheduling_summary_log("ToO Scheduling Summary")
                 
-            self.log.info("New runtime estimate is %s seconds" % self.estimated_too_run_timedelta.total_seconds())
-            self.log.info("End ToO Scheduling")
-            
-            if runtime_exceeded_estimate:
+            except EstimateExceededException, eee:
+                self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
+                too_scheduling_timedelta = estimated_scheduling_end - too_scheduling_start
+                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
                 return
-            
+            finally:
+                self.log.info("New runtime estimate is %s seconds" % self.estimated_too_run_timedelta.total_seconds())
+                self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
         
         # Run the scheduling loop, if there are any User Requests
         normal_scheduling_start = datetime.utcnow()
         estimated_scheduling_end = normal_scheduling_start + self.estimated_normal_run_timedelta
-        runtime_exceeded_estimate = False
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
             
-#             import cProfile
-#             prof = cProfile.Profile()
-#             scheduler_result = prof.runcall(self.call_scheduler, scheduler_input)
-#             prof.dump_stats('call_scheduler.pstat')
-            
-            scheduler_result = self.call_scheduler(scheduler_input)
-            if scheduler_result and not self.sched_params.dry_run:
-                resources_to_clear = self.network_model.keys()
-                if too_scheduler_result: 
-                    for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                        if reservation_list:
-                            resources_to_clear.remove(too_resource)
-                
-                save_estimate_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(scheduler_result)
-                estimated_scheduling_end = datetime.utcnow() + save_estimate_timedelta
-                self.log.info("Estimated time to apply scheduler result is %d seconds" % save_estimate_timedelta.total_seconds())
-                if estimated_scheduling_end < normal_scheduling_start + self.estimated_normal_run_timedelta:
-                    before_apply = datetime.utcnow()
-                    n_submitted = self.apply_scheduler_result(scheduler_result,
-                                                scheduler_input,
-                                                resources_to_clear)
-                    after_apply = datetime.utcnow()
-                    if(n_submitted > 0):
-                        self.avg_save_time_per_reservation_timedelta = timedelta(seconds=(after_apply - before_apply).total_seconds() / n_submitted)
-                        self.log.info("Avg save time per reservation was %f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
-                        
-                else:
-                    # update runtime estimate and rerun
-                    self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
-                    runtime_exceeded_estimate = True
-            
-            if runtime_exceeded_estimate:
-                normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
-                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+            if scheduler_input.profile:
+                import cProfile
+                prof = cProfile.Profile()
+                scheduler_result = prof.runcall(self.call_scheduler, scheduler_input)
+                prof.dump_stats('call_scheduler.pstat')
             else:
+                scheduler_result = self.call_scheduler(scheduler_input)
+            resources_to_clear = self.network_model.keys()
+            if too_scheduler_result: 
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        resources_to_clear.remove(too_resource)
+            try:
+                deadline = normal_scheduling_start + self.estimated_normal_run_timedelta
+                before_apply = datetime.utcnow()
+                n_submitted = self.apply_scheduler_result(scheduler_result,
+                                            scheduler_input,
+                                            resources_to_clear, deadline)
+                after_apply = datetime.utcnow()
+                if(n_submitted > 0):
+                    self.avg_save_time_per_reservation_timedelta = timedelta(seconds=(after_apply - before_apply).total_seconds() / n_submitted)
+                    self.log.info("Avg save time per reservation was %f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
                 normal_scheduling_end = datetime.utcnow()
                 normal_scheduling_timedelta = normal_scheduling_end - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 self.log.info("Normal scheduling took %d seconds" % normal_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
-            
-            
-            self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta.total_seconds())
-            self.log.info("End Normal Scheduling")
+            except EstimateExceededException, eee:
+                self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
+                normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+            finally:
+                self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta.total_seconds())
+                self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
         
@@ -785,3 +780,5 @@ class SchedulerRunner(object):
         sys.stdout.flush()
         
         
+class EstimateExceededException(Exception):
+    pass
