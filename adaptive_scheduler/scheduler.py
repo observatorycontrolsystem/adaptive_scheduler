@@ -656,7 +656,7 @@ class SchedulerRunner(object):
         estimated_apply_completion = datetime.utcnow() + estimated_apply_timedelta
         self.log.info("Estimated time to apply scheduler result is %d seconds" % estimated_apply_timedelta.total_seconds())
         if estimated_apply_completion > apply_deadline:
-            raise EstimateExceededException("Estimated end time %s is after deadline %s" % (str(estimated_apply_completion), str(apply_deadline)))
+            raise EstimateExceededException("Estimated end time %s is after deadline %s" % (str(estimated_apply_completion), str(apply_deadline)), estimated_apply_completion)
         
         semester_start, semester_end = \
                 get_semester_block(dt=scheduler_input.estimated_scheduler_end)
@@ -719,7 +719,7 @@ class SchedulerRunner(object):
                 
             except EstimateExceededException, eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
-                too_scheduling_timedelta = estimated_scheduling_end - too_scheduling_start
+                too_scheduling_timedelta = eee.new_estimate - too_scheduling_start
                 self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
                 raise eee
@@ -767,7 +767,7 @@ class SchedulerRunner(object):
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
             except EstimateExceededException, eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
-                normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
+                normal_scheduling_timedelta = eee.new_estimate - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 raise eee
             finally:
@@ -805,4 +805,7 @@ class SchedulerRunner(object):
         
         
 class EstimateExceededException(Exception):
-    pass
+    
+    def __init__(self, msg, new_estimate):
+        Exception.__init__(msg)
+        self.new_estimate = new_estimate
