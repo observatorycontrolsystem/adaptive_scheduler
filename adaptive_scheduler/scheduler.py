@@ -697,9 +697,8 @@ class SchedulerRunner(object):
             
         return reservation_cnt
     
-    
-    def create_new_schedule(self):
-        too_scheduler_result = None
+    def create_too_schedule(self):
+        too_scheduler_result = SchedulerResult()
         too_scheduling_start = datetime.utcnow()
         estimated_scheduling_end = too_scheduling_start + self.estimated_too_run_timedelta
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
@@ -723,21 +722,25 @@ class SchedulerRunner(object):
                 too_scheduling_timedelta = estimated_scheduling_end - too_scheduling_start
                 self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
-                return
+                raise eee
             finally:
                 self.log.info("New runtime estimate is %s seconds" % self.estimated_too_run_timedelta.total_seconds())
                 self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
-        
+    
+        return too_scheduler_result
+    
+    def create_normal_schedule(self, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
+        scheduler_result = SchedulerResult()
         normal_scheduling_start = datetime.utcnow()
         estimated_scheduling_end = normal_scheduling_start + self.estimated_normal_run_timedelta
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
             
-            if scheduler_input.profile:
+            if self.sched_params.profiling_enabled:
                 import cProfile
                 prof = cProfile.Profile()
                 scheduler_result = prof.runcall(self.call_scheduler, scheduler_input)
@@ -745,10 +748,8 @@ class SchedulerRunner(object):
             else:
                 scheduler_result = self.call_scheduler(scheduler_input)
             resources_to_clear = self.network_model.keys()
-            if too_scheduler_result: 
-                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                    if reservation_list:
-                        resources_to_clear.remove(too_resource)
+            for resource in dont_cancel_resources:
+                    resources_to_clear.remove(resource)
             try:
                 deadline = normal_scheduling_start + self.estimated_normal_run_timedelta
                 before_apply = datetime.utcnow()
@@ -768,16 +769,39 @@ class SchedulerRunner(object):
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                 normal_scheduling_timedelta = estimated_scheduling_end - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+                raise eee
             finally:
                 self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta.total_seconds())
                 self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
-        
-        # Only clear the change state if scheduling is succesful and not a dry run
-        if not self.sched_params.dry_run:
-            self.network_interface.clear_schedulable_request_set_changed_state()
-        sys.stdout.flush()
+            
+        return scheduler_result
+    
+    def create_new_schedule(self):
+        try:
+            too_scheduler_result = self.create_too_schedule()
+            
+            # Find resource scheduled by ToO run and don't cancel their schedules
+            # during normal scheduling run
+            too_resources = []
+            if too_scheduler_result: 
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        too_resources.append(too_resource)
+                        
+            normal_scheduler_result = self.create_normal_schedule(too_resources)
+            
+            # Only clear the change state if scheduling is successful and not a dry run
+            if not self.sched_params.dry_run:
+                self.network_interface.clear_schedulable_request_set_changed_state()
+                
+            # Huh?
+            sys.stdout.flush()
+        except EstimateExceededException, eee:
+            # Keep clam and carry on
+            pass
+            
         
         
 class EstimateExceededException(Exception):
