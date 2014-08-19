@@ -104,6 +104,14 @@ def parse_args(argv):
                                 help="Port for POND communication", default=12345)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
                                 help="Hostname for POND communication", default='scheduler.lco.gtn')
+    arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
+                                help="Enable profiling output", default=False)
+    arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
+                                help="Initial estimate for time needed to save a new scheduler reservation", default=0.05)
+    arg_parser.add_argument("--normal_runtime_seconds", type=float, dest='normal_runtime_seconds',
+                                help="Initial estimate for the normal loop runtime", default=360.0)
+    arg_parser.add_argument("--too_runtime_seconds", type=float, dest='too_runtime_seconds',
+                                help="Initial estimate for the ToO loop runtime", default=120.0)
     
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
