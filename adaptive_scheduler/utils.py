@@ -137,7 +137,7 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
     
     if estimated_runtime < actual_runtime:
         # Increase estimated run time
-        new_estimated_runtime += timedelta(seconds=backoff_rate * estimated_runtime.total_seconds())
+        new_estimated_runtime += timedelta(seconds=backoff_rate * actual_runtime.total_seconds())
     else:
         # Scheduler run time was less than or equal to estimate
         difference_from_estimate = estimated_runtime  - actual_runtime

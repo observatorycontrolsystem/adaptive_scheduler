@@ -152,7 +152,7 @@ class TestRuntimeEstimate(object):
         pad_percent = 5.0
         new_estimate = estimate_runtime(estimate, actual, backoff_rate=backoff_rate, pad_percent=pad_percent)
         
-        assert_equal(new_estimate, timedelta(seconds=backoff_rate * estimate.total_seconds()))
+        assert_equal(new_estimate, timedelta(seconds=backoff_rate * actual.total_seconds()))
         
     def test_runtime_estimate_equals_actual(self):
         estimate = timedelta(seconds=300)
