@@ -586,7 +586,7 @@ class SchedulerRunner(object):
     
     def call_scheduler(self, scheduler_input):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
-        self.log.info("Estimated scheduler run time is %d minutes", (scheduler_input.estimated_scheduler_end - scheduler_input.scheduler_now).total_seconds() / 60.0)
+        self.log.info("Estimated scheduler run time is %.2f seconds", (scheduler_input.estimated_scheduler_end - scheduler_input.scheduler_now).total_seconds())
         n_urs, n_rs = n_requests(scheduler_input.user_requests)
         self.summary_events.append("Received %d %s (%d %s) from Request DB" % (pl(n_urs, 'User Request') + pl(n_rs, 'Request')))
         scheduler_result = None
@@ -715,6 +715,7 @@ class SchedulerRunner(object):
                 too_scheduling_end = datetime.utcnow()
                 too_scheduling_timedelta = too_scheduling_end - too_scheduling_start
                 self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
+                self.log.info("ToO scheduling took %.2f seconds" % too_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("ToO Scheduling Summary")
                 
             except EstimateExceededException, eee:
@@ -724,7 +725,7 @@ class SchedulerRunner(object):
                 self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
                 raise eee
             finally:
-                self.log.info("New runtime estimate is %s seconds" % self.estimated_too_run_timedelta.total_seconds())
+                self.log.info("New runtime estimate is %.2f seconds" % self.estimated_too_run_timedelta.total_seconds())
                 self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
@@ -759,11 +760,11 @@ class SchedulerRunner(object):
                 after_apply = datetime.utcnow()
                 if(n_submitted > 0):
                     self.avg_save_time_per_reservation_timedelta = timedelta(seconds=(after_apply - before_apply).total_seconds() / n_submitted)
-                    self.log.info("Avg save time per reservation was %f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
+                    self.log.info("Avg save time per reservation was %.2f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
                 normal_scheduling_end = datetime.utcnow()
                 normal_scheduling_timedelta = normal_scheduling_end - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
-                self.log.info("Normal scheduling took %d seconds" % normal_scheduling_timedelta.total_seconds())
+                self.log.info("Normal scheduling took %.2f seconds" % normal_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
             except EstimateExceededException, eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
@@ -771,7 +772,7 @@ class SchedulerRunner(object):
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 raise eee
             finally:
-                self.log.info("New runtime estimate is %s seconds" % self.estimated_normal_run_timedelta.total_seconds())
+                self.log.info("New runtime estimate is %.2f seconds" % self.estimated_normal_run_timedelta.total_seconds())
                 self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal User Requests! Skipping Normal scheduling cycle")
