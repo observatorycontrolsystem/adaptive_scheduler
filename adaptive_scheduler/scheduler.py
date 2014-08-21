@@ -654,7 +654,7 @@ class SchedulerRunner(object):
         
         estimated_apply_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(scheduler_result)
         estimated_apply_completion = datetime.utcnow() + estimated_apply_timedelta
-        self.log.info("Estimated time to apply scheduler result is %d seconds" % estimated_apply_timedelta.total_seconds())
+        self.log.info("Estimated time to apply scheduler result is %.2f seconds" % estimated_apply_timedelta.total_seconds())
         if estimated_apply_completion > apply_deadline:
             raise EstimateExceededException("Estimated end time %s is after deadline %s" % (str(estimated_apply_completion), str(apply_deadline)), estimated_apply_completion)
         
