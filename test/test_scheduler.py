@@ -950,11 +950,10 @@ class TestSchedulerRunner(object):
         running_user_requests = [running_user_request]
         
         default_cancelation_start_date = start + timedelta(minutes=30)
-        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
         
-        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date)
         
-        expected_cancelation_start_date = default_cancelation_start_date
+        expected_cancelation_start_date = end
         assert_equal(expected_cancelation_start_date, cancelation_start_date)
         
     
@@ -971,9 +970,8 @@ class TestSchedulerRunner(object):
         running_user_requests = [running_user_request]
         
         default_cancelation_start_date = start + timedelta(minutes=30)
-        schedule_denoramlization_date = start + timedelta(minutes=61)
         
-        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date)
         
         expected_cancelation_start_date = end
         assert_equal(expected_cancelation_start_date, cancelation_start_date)
@@ -988,9 +986,8 @@ class TestSchedulerRunner(object):
         running_user_requests = []
          
         default_cancelation_start_date = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
-        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
          
-        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date)
+        cancelation_start_date = self.scheduler_runner._determine_resource_cancelation_start_date(scheduled_reservations, running_user_requests, default_cancelation_start_date)
          
         expected_cancelation_start_date = default_cancelation_start_date
         assert_equal(expected_cancelation_start_date, cancelation_start_date)
@@ -1010,16 +1007,86 @@ class TestSchedulerRunner(object):
         resource_usage_snapshot = ResourceUsageSnapshot(Mock(), [running_user_request], Mock())
         
         default_cancelation_start_date = start + timedelta(minutes=30)
-        schedule_denoramlization_date = default_cancelation_start_date + timedelta(minutes=1)
         default_cancelation_end_date = default_cancelation_start_date + timedelta(days=300)
         
-        cancelation_start_dates = self.scheduler_runner._determine_schedule_cancelation_start_dates(['1m0a.doma.elp','1m0a.doma.lsc'], scheduled_reservations, resource_usage_snapshot, default_cancelation_start_date, default_cancelation_end_date, schedule_denoramlization_date)
+        cancelation_start_dates = self.scheduler_runner._determine_schedule_cancelation_start_dates(['1m0a.doma.elp','1m0a.doma.lsc'], scheduled_reservations, resource_usage_snapshot, default_cancelation_start_date, default_cancelation_end_date)
         
         expected_cancelation_start_dates = {
-                                            '1m0a.doma.elp' : (default_cancelation_start_date, default_cancelation_end_date),
+                                            '1m0a.doma.elp' : (end, default_cancelation_end_date),
                                             '1m0a.doma.lsc' : (default_cancelation_start_date, default_cancelation_end_date)
                                             }
         assert_equal(expected_cancelation_start_dates, cancelation_start_dates)
+
+
+    def test_determine_abort_requests_empty_input(self):
+        semester_start = datetime(2013, 5, 1)
+        to_abort = self.scheduler_runner._determine_abort_requests([],
+                                                      semester_start,
+                                                      None)
+        assert_equal([], to_abort)
+    
+    
+    def test_conflicting_running_requests_aborted(self):
+        ''' Should abort conflicting requests
+        '''
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_user_request = RunningUserRequest(1, running_request)
+        running_user_requests = [running_user_request]
+        
+        semester_start = datetime(2013, 5, 1)
+        running_req_start = (start - semester_start).total_seconds()
+        running_req_length = (end - start).total_seconds()
+        
+        conflicting_reservation_start = running_req_start + running_req_length/2
+        conflicting_reservation = Mock(scheduled_start=conflicting_reservation_start,
+                                       request=(Mock(request_number="123456789")))
+        
+        to_abort = self.scheduler_runner._determine_abort_requests(running_user_requests,
+                                                      semester_start,
+                                                      conflicting_reservation)
+        
+        assert_equal([(running_request, ["Request interrupted to observe request: 123456789"])], to_abort)
+        
+        
+    def test_running_request_cannot_complete_succesfully_aborted(self):
+        ''' Should abort requests with errors
+        '''
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_request.add_error("me love you long time")
+        running_user_request = RunningUserRequest(1, running_request)
+        running_user_requests = [running_user_request]
+        
+        semester_start = datetime(2013, 5, 1)
+        
+        to_abort = self.scheduler_runner._determine_abort_requests(running_user_requests,
+                                                      semester_start,
+                                                      None)
+        
+        assert_equal([(running_request, ["Can not complete successfully: me love you long time"])], to_abort)
+
+
+    def test_scheduler_runner_abort_running_requsets(self):
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_request.add_error("me love you long time")
+        
+        self.scheduler_runner.abort_running_requests([(running_request, ("A good reason", "Another good reason"))])
+        self.network_interface_mock.abort.assert_called_once_with(running_request, "A good reason, Another good reason")
+        
+        
+    def test_scheduler_runner_abort_running_requsets_empty_list(self):
+        start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
+        end =  start + timedelta(minutes=60)
+        running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
+        running_request.add_error("me love you long time")
+        
+        self.scheduler_runner.abort_running_requests([])
+        assert_equal(self.network_interface_mock.abort.call_count, 0)
         
      
     def test_scheduler_runner_all_interfaces_mocked(self):
@@ -1102,18 +1169,33 @@ class TestSchedulerRunner(object):
         assert_equal(1, self.network_interface_mock.save.call_count)
         assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
         
-        
-    def test_call_scheduler_cancels_proper_resources(self):
+    
+    @patch('adaptive_scheduler.scheduler_input.SchedulingInput.user_requests')
+    def test_call_scheduler_cancels_proper_resources(self, mock_prop):
         ''' Only resources scheduled for ToO should be canceled after ToO scheduling run
         and should not be cancelled before saving normal schedule
         '''
         network_model = self.sched_params.get_model_builder().tel_network.telescopes
-        self.mock_input_factory.create_too_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
-        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
+        too_input = SchedulingInput(sched_params=SchedulerParameters(), scheduler_now=datetime.utcnow(),
+                                    estimated_scheduler_end=datetime.utcnow(),
+                                    json_user_request_list=[],
+                                    resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
+                                    available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
+                                    is_too_input=True)
+#         too_input.user_requests = Mock()
+        self.mock_input_factory.create_too_scheduling_input = Mock(return_value = too_input)
+        normal_input = SchedulingInput(sched_params=SchedulerParameters(), scheduler_now=datetime.utcnow(),
+                                    estimated_scheduler_end=datetime.utcnow(),
+                                    json_user_request_list=[],
+                                    resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
+                                    available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
+                                    is_too_input=False)
+#         normal_input.user_requests = Mock()
+        self.mock_input_factory.create_normal_scheduling_input = Mock(return_value=normal_input)
         
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
-        too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock()]})
-        normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]})
+        too_scheduler_result_mock = SchedulerResult(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock(scheduled_start=0)]})
+        normal_scheduler_result_mock = SchedulerResult(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock(scheduled_start=0)], '1m0a.doma.elp':[Mock(scheduled_start=0)]})
         scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input: too_scheduler_result_mock if scheduler_input.is_too_input else normal_scheduler_result_mock)
 
         scheduler_runner._determine_resource_cancelation_start_date = Mock(return_value = Mock())
@@ -1122,6 +1204,10 @@ class TestSchedulerRunner(object):
         
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
         assert_equal(2, self.network_interface_mock.cancel.call_count)
+        
+#         assert_true('1m0a.doma.lsc' in scheduler_runner.call_args)
+#         assert_true('1m0a.doma.lsc' not in self.network_interface_mock.cancel.call_args_list[1][0][0])
+        
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_true('1m0a.doma.lsc' not in self.network_interface_mock.cancel.call_args_list[1][0][0])
         
@@ -1347,6 +1433,6 @@ class TestSchedulerInputProvider(object):
         assert_true(available_resource in input_provider.available_resources)
         assert_true(unavailable_resource not in input_provider.available_resources)
         assert_true(available_resource in mock_network_interface.resource_usage_snapshot.call_args[0][0])
-        assert_true(unavailable_resource not in mock_network_interface.resource_usage_snapshot.call_args[0][0])
+        assert_true(unavailable_resource in mock_network_interface.resource_usage_snapshot.call_args[0][0])
 
         

@@ -274,6 +274,10 @@ class Scheduler(object):
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
         
+        # ToDo: Need to be able to get unavailable resources and reason for their unavailability
+        # to determine how to handle reservations currently scheduled on those resources
+        # Commit schedules for unreachable resources
+        # Cancel schedules for unavailable resources
         user_reqs = scheduler_input.user_requests
         resource_usage_snapshot = scheduler_input.resource_usage_snapshot
         available_resources = scheduler_input.available_resources
@@ -290,7 +294,8 @@ class Scheduler(object):
             user_reqs = self.remove_compounds(user_reqs)
         
         running_requests = resource_usage_snapshot.running_requests_for_resources(available_resources)
-        running_request_numbers = [r.request_number for r in running_requests]
+        # A request should only be filtered from the scheduling input if it has a chance of completing successfully
+        running_request_numbers = [r.request_number for r in running_requests if r.should_continue()]
         schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end, running_request_numbers)
         unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
         unschedulable_r_numbers = self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
@@ -494,11 +499,27 @@ class LCOGTNetworkScheduler(Scheduler):
 
 class SchedulerResult(object):
     
-    def __init__(self):
-        self.schedule = {}
-        self.resource_schedules_to_cancel = []
-        self.unschedulable_user_request_numbers = []
-        self.unschedulable_request_numbers = []
+    def __init__(self, schedule={}, resource_schedules_to_cancel=[],
+                 unschedulable_user_request_numbers=[],
+                 unschedulable_request_numbers=[]):
+        self.schedule = schedule
+        self.resource_schedules_to_cancel = resource_schedules_to_cancel
+        self.unschedulable_user_request_numbers = unschedulable_user_request_numbers
+        self.unschedulable_request_numbers = unschedulable_request_numbers
+        
+    
+    def resources_scheduled(self):
+        return self.schedule.keys()
+    
+    
+    def earliest_reservation(self, resource):
+        earliset = None
+        reservations = list(self.schedule.get(resource, []))
+        if reservations:
+            reservations.sort(cmp=lambda x, y : cmp(x.scheduled_start, y.scheduled_start))
+            earliset = reservations[0]
+        
+        return earliset
         
         
 class SchedulerRunner(object):
@@ -607,41 +628,60 @@ class SchedulerRunner(object):
     
     
     def clear_resource_schedules(self, cancelation_dates_by_resource):
-        n_deleted = self.network_interface.cancel(cancelation_dates_by_resource)
+        n_deleted = self.network_interface.cancel(cancelation_dates_by_resource, "Superceded by new schedule")
         
         return n_deleted
+    
+    def abort_running_requests(self, abort_requests):
+        for rr, reasons in abort_requests:
+            reason = ', '.join(reasons)
+            self.network_interface.abort(rr, reason)
     
     def save_resource_schedules(self, schedule, denormalization_date):
         n_submitted = self.network_interface.save(schedule, denormalization_date, self.sched_params.cameras_file, False)
         
         return n_submitted
     
-    def _determine_resource_cancelation_start_date(self, scheduled_reservations, running_user_requests, default_cancelation_start_date, schedule_denoramlization_date):
-        latest_running_block_end = default_cancelation_start_date
+    def _determine_resource_cancelation_start_date(self, scheduled_reservations, running_user_requests, default_cancelation_start_date):
+        cancelation_start_date = default_cancelation_start_date
         for running_user_request in running_user_requests:
             for running_request in running_user_request.running_requests:
-                if running_request.end > latest_running_block_end:
-                    latest_running_block_end = running_request.end
+                if running_request.end > cancelation_start_date:
+                    cancelation_start_date = running_request.end
         
-        cancelation_start_date = latest_running_block_end
-        for scheduled_reservation in scheduled_reservations:
-            denormalized_start = schedule_denoramlization_date + timedelta(seconds=scheduled_reservation.scheduled_start)
-            if denormalized_start < latest_running_block_end:
-                # If any scheduled request overlaps with a running request, cancel the running request
-                cancelation_start_date = default_cancelation_start_date
-                break
-                
         return cancelation_start_date
     
-    def _determine_schedule_cancelation_start_dates(self, resources_to_cancel, schedule_by_resource, resource_usage_snapshot, default_cancelation_start, default_cancelation_end, schedule_denoramlization_date):
+    def _determine_schedule_cancelation_start_dates(self, resources_to_cancel, schedule_by_resource, resource_usage_snapshot, default_cancelation_start, default_cancelation_end):
         cancelation_dates_by_resource = {}
         for resource in resources_to_cancel:
             scheduled_at_resource = schedule_by_resource.get(resource, [])
-            start = self._determine_resource_cancelation_start_date(scheduled_at_resource, resource_usage_snapshot.user_requests_for_resource(resource), default_cancelation_start, schedule_denoramlization_date)
+            start = self._determine_resource_cancelation_start_date(scheduled_at_resource, resource_usage_snapshot.user_requests_for_resource(resource), default_cancelation_start)
             end = default_cancelation_end
             cancelation_dates_by_resource[resource] = (start, end)
             
         return cancelation_dates_by_resource
+    
+    
+    def _determine_abort_requests(self, running_user_requests, schedule_denoramlization_date, earliest_reservation):
+        abort_requests = []
+        
+        for running_user_request in running_user_requests:
+            abort_reasons = []
+            for running_request in running_user_request.running_requests:
+                # if it can't complete successfully, cancel it
+                if not running_request.should_continue():
+                    abort_reasons.append("Can not complete successfully: " + ",".join(running_request.errors())) 
+                
+                # if it interferes with the new schedule, cancel it
+                if earliest_reservation:
+                    earlist_res_denormalized_start = schedule_denoramlization_date + timedelta(seconds=earliest_reservation.scheduled_start)
+                    if running_request.end > earlist_res_denormalized_start:
+                            abort_reasons.append("Request interrupted to observe request: %s" % earliest_reservation.request.request_number)
+            if abort_reasons:
+                abort_requests.append((running_request, abort_reasons))
+        
+        return abort_requests
+    
     
     def apply_scheduler_result(self, scheduler_result, scheduler_input, resources_to_clear, apply_deadline):
         if self.sched_params.dry_run:
@@ -668,8 +708,19 @@ class SchedulerRunner(object):
             resources_to_clear, scheduler_result.schedule,
             scheduler_input.resource_usage_snapshot,
             scheduler_input.estimated_scheduler_end,
-            semester_end, semester_start)
+            semester_end)
+        
+        # Find running requests that need to be aborted due to conflict with new schedule
+        abort_requests = []
+        for resource in scheduler_result.resources_scheduled():
+            earliest_reservation = scheduler_result.earliest_reservation(resource)
+            to_abort = self._determine_abort_requests(scheduler_input.resource_usage_snapshot.user_requests_for_resource(resource),
+                                                      semester_start,
+                                                      earliest_reservation)
+            abort_requests.extend(to_abort)
+        
         n_deleted = self.clear_resource_schedules(cancelation_dates_by_resource)
+        n_aborted = self.abort_running_requests(abort_requests)
         # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save 
         n_submitted = self.save_resource_schedules(scheduler_result.schedule,
                                                    semester_start)
@@ -700,7 +751,6 @@ class SchedulerRunner(object):
     def create_too_schedule(self):
         too_scheduler_result = SchedulerResult()
         too_scheduling_start = datetime.utcnow()
-        estimated_scheduling_end = too_scheduling_start + self.estimated_too_run_timedelta
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
         
         if scheduler_input.user_requests:
@@ -736,7 +786,6 @@ class SchedulerRunner(object):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
         normal_scheduling_start = datetime.utcnow()
-        estimated_scheduling_end = normal_scheduling_start + self.estimated_normal_run_timedelta
         scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")

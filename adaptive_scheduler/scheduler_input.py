@@ -320,10 +320,14 @@ class SchedulingInputProvider(object):
                 resources.append(resource_name)
                 
         return resources
+    
+    
+    def _all_resources(self):
+        return self.network_model.keys()
 
 
     def _get_resource_usage_snapshot(self):
-        snapshot = self.network_interface.resource_usage_snapshot(self.available_resources, self.scheduler_now, self.estimated_scheduler_end)
+        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), self.scheduler_now, self.estimated_scheduler_end)
         
         return snapshot
 
