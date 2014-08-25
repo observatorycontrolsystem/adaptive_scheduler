@@ -350,7 +350,7 @@ class PondScheduleInterface(object):
             log.info(msg)
     
         block_ids = [b.id for b in all_to_delete]
-        self._cancel_blocks(block_ids)
+        self._cancel_blocks(block_ids, reason)
     
         return len(all_to_delete)
 
