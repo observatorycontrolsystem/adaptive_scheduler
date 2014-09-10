@@ -64,17 +64,18 @@ def kill_handler(signal, frame):
 
 
 def parse_args(argv):
+    defaults = RequestDBSchedulerParameters()
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
 
-    arg_parser.add_argument("-l", "--timelimit", type=float, default=None, dest='timelimit_seconds',
+    arg_parser.add_argument("-l", "--timelimit", type=float, default=defaults.timelimit_seconds, dest='timelimit_seconds',
                             help="The time limit of the scheduler kernel, in seconds; negative implies no limit")
-    arg_parser.add_argument("-i", "--horizon", type=float, default=7, dest='horizon_days',
+    arg_parser.add_argument("-i", "--horizon", type=float, default=defaults.horizon_days, dest='horizon_days',
                             help="The scheduler's horizon, in days")
-    arg_parser.add_argument("-z", "--slicesize", type=int, default=300, dest='slicesize_seconds',
+    arg_parser.add_argument("-z", "--slicesize", type=int, default=defaults.slicesize_seconds, dest='slicesize_seconds',
                             help="The discretization size of the scheduler, in seconds")
-    arg_parser.add_argument("-s", "--sleep", type=int, default=60, dest='sleep_seconds',
+    arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
     arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
                             help="Request DB endpoint URL")
@@ -82,10 +83,10 @@ def parse_args(argv):
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
                             help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
-    arg_parser.add_argument("-t", "--telescopes", type=str, default='telescopes.dat', dest='telescopes_file',
-                            help="Available telescopes file (default=telescopes.dat)")
-    arg_parser.add_argument("-c", "--cameras", type=str, default='camera_mappings.dat', dest='cameras_file',
-                            help="Instrument description file (default=camera_mappings.dat)")
+    arg_parser.add_argument("-t", "--telescopes", type=str, default=defaults.telescopes_file, dest='telescopes_file',
+                            help="Available telescopes file")
+    arg_parser.add_argument("-c", "--cameras", type=str, default=defaults.cameras_file, dest='cameras_file',
+                            help="Instrument description file")
     arg_parser.add_argument("-w", "--noweather", action="store_true", dest='no_weather',
                             help="Disable weather checking")
     arg_parser.add_argument("--nosingles", action="store_true", dest='no_singles',
@@ -96,22 +97,22 @@ def parse_args(argv):
                                 help="Treat Target of Opportunity Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
-    arg_parser.add_argument("-k", "--kernel", type=str, default='gurobi',
+    arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
-    arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=None,
+    arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
-                                help="Port for POND communication", default=12345)
+                                help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
-                                help="Hostname for POND communication", default='scheduler.lco.gtn')
+                                help="Hostname for POND communication", default=defaults.pond_host)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
-                                help="Enable profiling output", default=False)
+                                help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
-                                help="Initial estimate for time needed to save a new scheduler reservation", default=0.05)
+                                help="Initial estimate for time needed to save a new scheduler reservation", default=defaults.avg_reservation_save_time_seconds)
     arg_parser.add_argument("--normal_runtime_seconds", type=float, dest='normal_runtime_seconds',
-                                help="Initial estimate for the normal loop runtime", default=360.0)
+                                help="Initial estimate for the normal loop runtime", default=defaults.normal_runtime_seconds)
     arg_parser.add_argument("--too_runtime_seconds", type=float, dest='too_runtime_seconds',
-                                help="Initial estimate for the ToO loop runtime", default=120.0)
+                                help="Initial estimate for the ToO loop runtime", default=defaults.too_runtime_seconds)
     
     # Handle command line arguments
     args = arg_parser.parse_args(argv)

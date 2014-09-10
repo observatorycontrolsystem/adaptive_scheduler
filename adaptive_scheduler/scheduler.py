@@ -493,10 +493,18 @@ class LCOGTNetworkScheduler(Scheduler):
 
 
 class SchedulerResult(object):
+    '''Aggregates together output of a scheduler run
+    '''
 
     def __init__(self, schedule={}, resource_schedules_to_cancel=[],
                  unschedulable_user_request_numbers=[],
                  unschedulable_request_numbers=[]):
+        '''
+        schedule - Expected to be a dict mapping resource to scheduled reservations
+        resource_schedules_to_cancel - List of resources to cancel schedules on
+        unschedulable_user_request_numbers - Tracking numbers of user requests considered unschedulable
+        unschedulable_request_numbers = Request numbsers of requests considered unschedulable
+        '''
         self.schedule = schedule
         self.resource_schedules_to_cancel = resource_schedules_to_cancel
         self.unschedulable_user_request_numbers = unschedulable_user_request_numbers
