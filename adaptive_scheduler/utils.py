@@ -133,6 +133,12 @@ def timeit(method):
 
 
 def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
+    '''Estimate the next scheduler runtime given a previous estimate and actual.
+    If actual > estimate, new estimate = actual * backoff_rate
+    If actual <= estimate, new estimate = min(actual + pad_percent*(actual), estimate - (estimate - actual)/backoff_rate)
+    backoff_rate - Factor to adjust expected runtime by. 
+    pad_percent - Minimum percent that a new estimate will always exceed previoius actual 
+    '''
     new_estimated_runtime = timedelta(seconds=0)
     
     if estimated_runtime < actual_runtime:

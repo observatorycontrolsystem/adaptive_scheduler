@@ -1112,9 +1112,15 @@ class TestSchedulerRunner(object):
         self.mock_input_factory.create_normal_scheduling_input = Mock(return_value=Mock(estimated_scheduler_end=datetime.utcnow()))
         
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
-        too_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc'], schedule={'1m0a.doma.lsc':[Mock()]})
-        normal_scheduler_result_mock = Mock(resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'], schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]})
-        scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input: too_scheduler_result_mock if scheduler_input.is_too_input else normal_scheduler_result_mock)
+        too_scheduler_result = SchedulerResult(
+                                resource_schedules_to_cancel=['1m0a.doma.lsc'],
+                                schedule={'1m0a.doma.lsc':[Mock()]}
+                                )
+        normal_scheduler_result = SchedulerResult(
+                                    resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'],
+                                    schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]}
+                                )
+        scheduler_runner.call_scheduler = Mock(side_effect = lambda scheduler_input: too_scheduler_result if scheduler_input.is_too_input else normal_scheduler_result)
 
         scheduler_runner._determine_resource_cancelation_start_date = Mock(return_value = Mock())
         scheduler_runner.create_new_schedule()

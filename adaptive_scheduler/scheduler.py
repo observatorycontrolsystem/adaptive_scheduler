@@ -493,14 +493,24 @@ class LCOGTNetworkScheduler(Scheduler):
 
 
 class SchedulerResult(object):
-    
-    def __init__(self):
-        self.schedule = {}
-        self.resource_schedules_to_cancel = []
-        self.unschedulable_user_request_numbers = []
-        self.unschedulable_request_numbers = []
+
+    def __init__(self, schedule={}, resource_schedules_to_cancel=[],
+                 unschedulable_user_request_numbers=[],
+                 unschedulable_request_numbers=[]):
+        self.schedule = schedule
+        self.resource_schedules_to_cancel = resource_schedules_to_cancel
+        self.unschedulable_user_request_numbers = unschedulable_user_request_numbers
+        self.unschedulable_request_numbers = unschedulable_request_numbers
+
+
+    def count_reservations(self):
+        reservation_cnt = 0
+        for resource, reservations in self.schedule.items():
+            reservation_cnt += len(reservations)
         
-        
+        return reservation_cnt
+
+
 class SchedulerRunner(object):
     
     def __init__(self, sched_params, scheduler, network_interface, network_model, input_factory):
@@ -652,7 +662,7 @@ class SchedulerRunner(object):
             self.log.warn("Empty scheduler result. Schedule will not be saved.")
             return 0
         
-        estimated_apply_timedelta = self.avg_save_time_per_reservation_timedelta * self._count_reservations(scheduler_result)
+        estimated_apply_timedelta = self.avg_save_time_per_reservation_timedelta * scheduler_result.count_reservations()
         estimated_apply_completion = datetime.utcnow() + estimated_apply_timedelta
         self.log.info("Estimated time to apply scheduler result is %.2f seconds" % estimated_apply_timedelta.total_seconds())
         if estimated_apply_completion > apply_deadline:
@@ -689,13 +699,6 @@ class SchedulerRunner(object):
         self.log.info("Scheduling complete.")
         self.summary_events = []
     
-    
-    def _count_reservations(self, scheduler_result):
-        reservation_cnt = 0
-        for resource, reservations in scheduler_result.schedule.items():
-            reservation_cnt += len(reservations)
-            
-        return reservation_cnt
     
     def create_too_schedule(self):
         too_scheduler_result = SchedulerResult()

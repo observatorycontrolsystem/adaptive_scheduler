@@ -257,7 +257,9 @@ class PondScheduleInterface(object):
     @timeit
     def _get_intervals_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         '''
-            return a map of telescopes to intervals of given tracking number
+            Return a map of telescope name to intervals covering all intervals
+            currently scheduled for user requests in the supplied set of 
+            tracking numbers.
         '''
         telescope_interval = {}
         blocks_by_telescope_for_tracking_numbers = self._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
@@ -275,7 +277,8 @@ class PondScheduleInterface(object):
     @timeit
     def _get_too_intervals_by_telescope(self, tels, ends_after, starts_before):
         '''
-            return a map of telescopes to intervals of given tracking number
+            Return a map of telescope name to intervals for all currently
+            schedule ToO intervals.
         '''
         telescope_interval = {}
         too_blocks_by_telescope = self._get_too_blocks_by_telescope(tels, ends_after, starts_before)
