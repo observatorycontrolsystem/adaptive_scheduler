@@ -581,7 +581,13 @@ class SchedulerRunner(object):
             
             # Always run the scheduler on the first run
             if self.scheduler_rerun_required() or first_run:
-                self.create_new_schedule()
+                try:
+                    self.create_new_schedule()
+                except EstimateExceededException, eee:
+                    # Estimated run time was exceeded so exception was raised
+                    # to short circuit to exit.  Just try again.  Run time
+                    # estimate should have been updated.
+                    pass
                 
             if self.sched_params.run_once:
                 self.run_flag = False
@@ -791,29 +797,24 @@ class SchedulerRunner(object):
         return scheduler_result
     
     def create_new_schedule(self):
-        try:
-            too_scheduler_result = self.create_too_schedule()
+        too_scheduler_result = self.create_too_schedule()
+        
+        # Find resource scheduled by ToO run and don't cancel their schedules
+        # during normal scheduling run
+        too_resources = []
+        if too_scheduler_result: 
+            for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                if reservation_list:
+                    too_resources.append(too_resource)
+           
+        normal_scheduler_result = self.create_normal_schedule(too_resources)
+        
+        # Only clear the change state if scheduling is successful and not a dry run
+        if not self.sched_params.dry_run:
+            self.network_interface.clear_schedulable_request_set_changed_state()
             
-            # Find resource scheduled by ToO run and don't cancel their schedules
-            # during normal scheduling run
-            too_resources = []
-            if too_scheduler_result: 
-                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                    if reservation_list:
-                        too_resources.append(too_resource)
-                        
-            normal_scheduler_result = self.create_normal_schedule(too_resources)
-            
-            # Only clear the change state if scheduling is successful and not a dry run
-            if not self.sched_params.dry_run:
-                self.network_interface.clear_schedulable_request_set_changed_state()
-                
-            # Huh?
-            sys.stdout.flush()
-        except EstimateExceededException, eee:
-            # Keep clam and carry on
-            pass
-            
+        # Huh?
+        sys.stdout.flush()
         
         
 class EstimateExceededException(Exception):
