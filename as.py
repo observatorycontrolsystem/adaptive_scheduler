@@ -64,7 +64,7 @@ def kill_handler(signal, frame):
 
 
 def parse_args(argv):
-    defaults = RequestDBSchedulerParameters()
+    defaults = RequestDBSchedulerParameters(None)
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
