@@ -19,17 +19,27 @@ DEFAULT_ENGINE = create_engine(DEFAULT_URL)
 class ConnectionError(Exception):
     pass
 
-def get_datum(datum, instance=None, engine=None):
+def get_datum(datum, instance=None, engine=None, persistence_model=None):
     ''' Get data from telemetry database. '''
 
     try:
         engine  = engine or DEFAULT_ENGINE
-        results = _query_db(datum, instance, engine)
-        return [_convert_datum(datum) for datum in results]
+        results = _query_db(datum, instance, engine, persistence_model)
+        datums = [_convert_datum(datum) for datum in results]
+        datum_map = {}
+        
+        # Guard against multiple datums for same instance name
+        for datum in datums:
+            hash_key = hash(datum.instance + datum.site + datum.observatory + datum.telescope)
+            hash_val = datum_map.get(hash_key, datum)
+            if datum.timestamp_measured >= hash_val.timestamp_measured:
+                datum_map[hash_key] = datum
+        
+        return datum_map.values()
     except Exception as e:
         raise ConnectionError(e)
 
-def _query_db(datum, instance, engine):
+def _query_db(datum, instance, engine, persistence_model=None):
     ''' Retrieve datum from database.
 
         This query uses a table populated from the SCRAPEVALUE table at each site.
@@ -40,9 +50,10 @@ def _query_db(datum, instance, engine):
             """
     if instance:
         query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"
-
+    if persistence_model:
+        query += "and P.ADDRESS_PERSISTENCEMODEL='{persistence_model}'"
     connection   = engine.connect()
-    query_string = query.format(datum=datum, instance=instance)
+    query_string = query.format(datum=datum, instance=instance, persistence_model=persistence_model)
     results      = connection.execute(query_string).fetchall()
     connection.close()
     return results
