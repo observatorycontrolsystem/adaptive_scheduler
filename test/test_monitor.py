@@ -122,7 +122,8 @@ class NotOkToOpenMonitorTest(unittest.TestCase):
                     instance             = '1',
                     timestamp_changed    = datetime(2013,04,26,0,0,0),
                     timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = value)
+                    value                 = value,
+                    persistence_model    = 'STATUS')
 
 
 class ScheduleTimestampMonitorTest(unittest.TestCase):
@@ -169,7 +170,8 @@ class ScheduleTimestampMonitorTest(unittest.TestCase):
                     instance             = '1m0a.doma',
                     timestamp_changed    = datetime(2013,04,26,0,0,0),
                     timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = dt_value)
+                    value                = dt_value,
+                    persistence_model    = 'STATUS')
 
 
 class SequencerEnableMonitorTest(unittest.TestCase):
@@ -212,4 +214,5 @@ class SequencerEnableMonitorTest(unittest.TestCase):
                      instance             = '1',
                      timestamp_changed    = datetime(2013,04,26,0,0,0),
                      timestamp_measured   = datetime(2013,04,26,0,0,0),
-                     value                = value)
+                     value                = value,
+                     persistence_model    = 'STATUS')

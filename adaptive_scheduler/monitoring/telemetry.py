@@ -20,22 +20,15 @@ class ConnectionError(Exception):
     pass
 
 def get_datum(datum, instance=None, engine=None, persistence_model=None):
-    ''' Get data from telemetry database. '''
+    ''' Get data from telemetry database, ordered by timestamp ascending (i.e.
+        newest value is last). '''
 
     try:
         engine  = engine or DEFAULT_ENGINE
         results = _query_db(datum, instance, engine, persistence_model)
         datums = [_convert_datum(datum) for datum in results]
-        datum_map = {}
-        
-        # Guard against multiple datums for same instance name
-        for datum in datums:
-            hash_key = hash(datum.instance + datum.site + datum.observatory + datum.telescope)
-            hash_val = datum_map.get(hash_key, datum)
-            if datum.timestamp_measured >= hash_val.timestamp_measured:
-                datum_map[hash_key] = datum
-        
-        return datum_map.values()
+        return datums
+
     except Exception as e:
         raise ConnectionError(e)
 
@@ -52,6 +45,8 @@ def _query_db(datum, instance, engine, persistence_model=None):
         query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"
     if persistence_model:
         query += "and P.ADDRESS_PERSISTENCEMODEL='{persistence_model}'"
+
+    query += "order by SV.TIMESTAMP_"
     connection   = engine.connect()
     query_string = query.format(datum=datum, instance=instance, persistence_model=persistence_model)
     results      = connection.execute(query_string).fetchall()
@@ -73,6 +68,7 @@ def _timestamp(value):
 
 NULL_CONVERSION = lambda x: x
 MAPPING = {
+             'ADDRESS_PERSISTENCEMODEL':('persistence_model',NULL_CONVERSION),
              'ADDRESS_DATUMINSTANCE':('instance'          ,NULL_CONVERSION),
              'ADDRESS_SITE'         :('site'              ,NULL_CONVERSION),
              'ADDRESS_OBSERVATORY'  :('observatory'       ,NULL_CONVERSION),
