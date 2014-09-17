@@ -39,12 +39,18 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
                                    slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
 
+    # A stub to get the RA/dec by request ID
+    # (REQUIRED FOR AIRMASS OPTIMIZATION)
     def get_target_coords_by_reqID(self, reqID):
         return 0.0, 0.0
 
+    # A stub to get the lat/lon by resource
+    # (REQUIRED FOR AIRMASS OPTIMIZATION)
     def get_earth_coords_by_resource(self, resource):
         return 0.0, 0.0
 
+    # A stub to translate winidx to UTC date/time
+    # (REQUIRED FOR AIRMASS OPTIMIZATION)
     def get_utc_by_winidx(self, winidx):
         reqID = 0
         reservation = get_reservation_by_ID(reqID)
@@ -56,7 +62,8 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         return self.possible_starts[winidx]
 
         return 0.0
-
+	
+    # A stub to optimize requests by airmass
     def weight_by_airmass(self):
         return
 
@@ -151,10 +158,12 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
                 match = requestLocations.select(reqid,'*','*','*','*')
                 nscheduled = quicksum(isScheduled for reqid,winidx,priority,resource,isScheduled in match)
                 m.addConstr(nscheduled <= 1,'one_per_reqid_constraint_' + str(reqid))
-
-        # Objective: Maximize the merit functions of all scheduled requests (eq 1)
-        # i.e., do the most science on the LCOGT network
-        m.setObjective(quicksum([priority*isScheduled for req,winidx,priority,resource,isScheduled in requestLocations]))
+	
+	# Objective: Maximize the merit functions of all scheduled requests (eq 1);
+	objective = quicksum([isScheduled*(priority + 0.1/(winidx+1.0)) for req,winidx,priority,resource,isScheduled in requestLocations])
+	
+	# set the objective, and maximize it
+	m.setObjective(objective)
         m.modelSense = GRB.MAXIMIZE
 
         # impose a time limit on the solve

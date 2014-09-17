@@ -19,17 +19,20 @@ DEFAULT_ENGINE = create_engine(DEFAULT_URL)
 class ConnectionError(Exception):
     pass
 
-def get_datum(datum, instance=None, engine=None):
-    ''' Get data from telemetry database. '''
+def get_datum(datum, instance=None, engine=None, persistence_model=None):
+    ''' Get data from telemetry database, ordered by timestamp ascending (i.e.
+        newest value is last). '''
 
     try:
         engine  = engine or DEFAULT_ENGINE
-        results = _query_db(datum, instance, engine)
-        return [_convert_datum(datum) for datum in results]
+        results = _query_db(datum, instance, engine, persistence_model)
+        datums = [_convert_datum(datum) for datum in results]
+        return datums
+
     except Exception as e:
         raise ConnectionError(e)
 
-def _query_db(datum, instance, engine):
+def _query_db(datum, instance, engine, persistence_model=None):
     ''' Retrieve datum from database.
 
         This query uses a table populated from the SCRAPEVALUE table at each site.
@@ -40,9 +43,12 @@ def _query_db(datum, instance, engine):
             """
     if instance:
         query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"
+    if persistence_model:
+        query += "and P.ADDRESS_PERSISTENCEMODEL='{persistence_model}'"
 
+    query += "order by SV.TIMESTAMP_"
     connection   = engine.connect()
-    query_string = query.format(datum=datum, instance=instance)
+    query_string = query.format(datum=datum, instance=instance, persistence_model=persistence_model)
     results      = connection.execute(query_string).fetchall()
     connection.close()
     return results
@@ -62,6 +68,7 @@ def _timestamp(value):
 
 NULL_CONVERSION = lambda x: x
 MAPPING = {
+             'ADDRESS_PERSISTENCEMODEL':('persistence_model',NULL_CONVERSION),
              'ADDRESS_DATUMINSTANCE':('instance'          ,NULL_CONVERSION),
              'ADDRESS_SITE'         :('site'              ,NULL_CONVERSION),
              'ADDRESS_OBSERVATORY'  :('observatory'       ,NULL_CONVERSION),
