@@ -16,7 +16,7 @@ class SchedulerParameters(object):
 
     def __init__(self, dry_run=False, run_once=False,
                  telescopes_file='telescopes.dat',
-                 cameras_file='camera_mappings', no_weather=False,
+                 cameras_file='camera_mappings.dat', no_weather=False,
                  no_singles=False, no_compounds=False, no_too=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
