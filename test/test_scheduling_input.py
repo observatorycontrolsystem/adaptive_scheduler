@@ -28,14 +28,14 @@ class TestSchedulingInputProvider(object):
         assert_equal(None, input_provider.resource_usage_snapshot)
         
     
-    def test_input_exludes_resources_with_events(self):
+    def test_input_does_not_exlude_resources_with_events(self):
         self.network_model['1m0a.doma.elp'] = Telescope()
         self.network_model['1m0a.doma.lsc'] = Telescope()
         self.network_model['1m0a.doma.lsc'].events.append('event')
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=True)
         input_provider.refresh()
         assert_equal(['1m0a.doma.elp'], input_provider.available_resources)
-        assert_equal(['1m0a.doma.elp'], self.network_interface.resource_usage_snapshot.call_args[0][0])
+        assert_equal(['1m0a.doma.elp', '1m0a.doma.lsc'], self.network_interface.resource_usage_snapshot.call_args[0][0])
         
         
     def test_input_scheduler_now_when_not_provided_by_parameter(self):

@@ -121,6 +121,8 @@ class PondScheduleInterface(object):
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
                 telescope = block.telescope + '.' +  block.observatory + '.' + block.site
                 running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
+                if block.any_molecules_failed():
+                    running_request.add_error("Block has failed molecules")
                 running_ur.add_running_request(running_request)
             
         return running_urs
@@ -131,17 +133,27 @@ class PondScheduleInterface(object):
         return self.too_intervals_by_telescope
     
     
-    def cancel(self, cancelation_dates_by_resource):
+    def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         ''' 
         n_deleted = 0
         if cancelation_dates_by_resource:
             try:
-                n_deleted = self._cancel_schedule(cancelation_dates_by_resource)
+                n_deleted = self._cancel_schedule(cancelation_dates_by_resource, reason)
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
             
         return n_deleted
+    
+    def abort(self, pond_running_request, reason):
+        ''' Abort a running request
+        ''' 
+        try:
+            block_ids = [pond_running_request.block_id]
+            self._cancel_blocks(block_ids, reason, delete=False)
+        except PondFacadeException, pfe:
+            raise ScheduleException(pfe, "Unable to abort POND block")
+    
             
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
@@ -323,7 +335,7 @@ class PondScheduleInterface(object):
     
     
     @timeit
-    def _cancel_schedule(self, cancelation_dates_by_resource):
+    def _cancel_schedule(self, cancelation_dates_by_resource, reason):
         all_to_delete = []
         for full_tel_name, (start, end) in cancelation_dates_by_resource.iteritems():
             tel, obs, site = full_tel_name.split('.')
@@ -340,20 +352,19 @@ class PondScheduleInterface(object):
             msg = "Cancelled " + msg
             log.info(msg)
     
-    
-        self._cancel_blocks(all_to_delete)
+        block_ids = [b.id for b in all_to_delete]
+        self._cancel_blocks(block_ids, reason)
     
         return len(all_to_delete)
 
 
-    def _cancel_blocks(self, to_delete):
-        ids = [b.id for b in to_delete]
+    def _cancel_blocks(self, block_ids, reason, delete=True):
         try:
-            PondBlock.cancel_blocks(ids, reason="Superceded by new schedule", delete=True, port=self.port, host=self.host)
+            PondBlock.cancel_blocks(block_ids, reason=reason, delete=delete, port=self.port, host=self.host)
         except BlockCancelException as e:
             log.error(e)
     
-        return len(to_delete)
+        return len(block_ids)
     
     
     def _get_network_running_blocks(self, tels, ends_after, starts_before):

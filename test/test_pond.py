@@ -659,8 +659,8 @@ class TestPondInteractions(object):
         to_delete = [FakeBlock(id=id) for id in ids]
 
         pond_interface = PondScheduleInterface()
-        pond_interface._cancel_blocks(to_delete)
-        func_mock.assert_called_once_with(ids, reason=reason, delete=True, port=None, host=None)
+        pond_interface._cancel_blocks(to_delete, reason)
+        func_mock.assert_called_once_with(to_delete, reason=reason, delete=True, port=None, host=None)
 
 
     @patch('adaptive_scheduler.pond.PondScheduleInterface._get_deletable_blocks')
@@ -668,15 +668,15 @@ class TestPondInteractions(object):
     def test_cancel_schedule(self, func_mock1, func_mock2):
         start_end_by_resource = {'1m0a.doma.lsc' : (self.start, self.end)}
 
-        delete_list = [1, 2, 3]
+        delete_list = [Mock(id=1), Mock(id=2), Mock(id=3)]
 
         func_mock2.return_value = delete_list
         
         pond_interface = PondScheduleInterface()
-        n_deleted = pond_interface._cancel_schedule(start_end_by_resource)
+        n_deleted = pond_interface._cancel_schedule(start_end_by_resource, 'A good reason')
 
         func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel)
-        func_mock1.assert_called_with(delete_list)
+        func_mock1.assert_called_with([1,2,3], 'A good reason')
         assert_equal(n_deleted, len(delete_list))
 
 

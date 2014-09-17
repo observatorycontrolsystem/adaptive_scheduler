@@ -34,6 +34,19 @@ class RunningRequest(object):
         self.request_number = request_number
         self.start = start
         self.end = end
+        self._errors = []
+        
+    
+    def add_error(self, err_str):
+        self._errors.append(err_str)
+        
+    
+    def errors(self):
+        return list(self._errors)
+    
+    
+    def should_continue(self):
+        return len(self.errors()) == 0
         
     def __str__(self):
         return 'Request Number: %s at telescope %s, start: %s, end: %s' % (self.request_number, self.resource, self.start, self.end)
@@ -131,11 +144,14 @@ class NetworkInterface(object):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
     
-    def cancel(self, cancelation_dates_by_resource):
+    def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
-        return self.network_schedule_interface.cancel(cancelation_dates_by_resource)
+        return self.network_schedule_interface.cancel(cancelation_dates_by_resource, reason)
+    
+    def abort(self, running_request, reason):
+        return self.network_schedule_interface.abort(running_request, reason)
             
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
@@ -154,7 +170,6 @@ class NetworkInterface(object):
         '''
         return self.network_state_interface.has_changed()
     
-    # TODO: Remove too_tracking_numbers, the scheduler should be able to remember what is scheduled during last run
     def resource_usage_snapshot(self, resources, snapshot_start, snapshot_end):
         now = datetime.utcnow()
         self.network_schedule_interface.fetch_data(resources, snapshot_start, snapshot_end)
@@ -204,6 +219,11 @@ class CachedInputNetworkInterface(object):
         Return the number of deleted requests
         '''
         return 0
+    
+    def abort(self, running_request, reasons):
+        ''' Abort a running request"
+        '''
+        pass
             
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
