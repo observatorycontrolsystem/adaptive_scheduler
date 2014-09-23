@@ -596,6 +596,7 @@ class SchedulerRunner(object):
         while self.run_flag:
             self.run_once()
             self.first_run = False
+            time.sleep(self.sched_params.sleep_seconds)
 
 
     @timeit
@@ -619,7 +620,6 @@ class SchedulerRunner(object):
             self.run_flag = False
         else:
             self.log.info("Sleeping for %d seconds", self.sched_params.sleep_seconds)
-            time.sleep(self.sched_params.sleep_seconds)
 
 
     def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
