@@ -762,12 +762,12 @@ class SchedulerRunner(object):
         self.log.info("Scheduling complete.")
         self.summary_events = []
     
-    @timeit
+    
     def create_too_schedule(self):
         too_scheduler_result = SchedulerResult()
+        too_scheduling_start = datetime.utcnow()
         scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
         
-        too_scheduling_start = datetime.utcnow()
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
             too_scheduler_result = self.call_scheduler(scheduler_input)
@@ -797,13 +797,11 @@ class SchedulerRunner(object):
     
         return too_scheduler_result
     
-    @timeit
     def create_normal_schedule(self, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
-        scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
-        
         normal_scheduling_start = datetime.utcnow()
+        scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
             
