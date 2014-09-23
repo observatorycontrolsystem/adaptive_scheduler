@@ -1,6 +1,7 @@
 from adaptive_scheduler.model2           import ModelBuilder, RequestError
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from schedutils.semester_service         import get_semester_block
+from adaptive_scheduler.utils            import timeit
 
 import os
 import logging
@@ -87,7 +88,7 @@ class SchedulingInputFactory(object):
         
         return scheduler_input
 
-
+    @timeit
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
@@ -96,6 +97,7 @@ class SchedulingInputFactory(object):
         return self._create_scheduling_input(self.input_provider, True, output_path)
 
 
+    @timeit
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)

@@ -575,6 +575,7 @@ class SchedulerRunner(object):
         return network_has_changed or request_set_changed
     
     
+    @timeit
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
         for telescope_name, telescope in self.network_model.iteritems():
@@ -762,14 +763,13 @@ class SchedulerRunner(object):
         self.log.info("Scheduling complete.")
         self.summary_events = []
     
-    @timeit
-    def create_too_schedule(self):
+    
+    def create_too_schedule(self, scheduler_input):
         too_scheduler_result = SchedulerResult()
-        scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
-        
-        too_scheduling_start = datetime.utcnow()
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
+            too_scheduling_start = datetime.utcnow()
+            
             too_scheduler_result = self.call_scheduler(scheduler_input)
             try:
                 deadline = too_scheduling_start + self.estimated_too_run_timedelta
@@ -797,15 +797,12 @@ class SchedulerRunner(object):
     
         return too_scheduler_result
     
-    @timeit
-    def create_normal_schedule(self, dont_cancel_resources):
+    def create_normal_schedule(self, scheduler_input, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
-        scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
-        
-        normal_scheduling_start = datetime.utcnow()
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
+            normal_scheduling_start = datetime.utcnow()
             
             if self.sched_params.profiling_enabled:
                 import cProfile
@@ -845,8 +842,11 @@ class SchedulerRunner(object):
             
         return scheduler_result
     
+    
+    @timeit
     def create_new_schedule(self):
-        too_scheduler_result = self.create_too_schedule()
+        too_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
+        too_scheduler_result = self.create_too_schedule(too_input)
         
         # Find resource scheduled by ToO run and don't cancel their schedules
         # during normal scheduling run
@@ -855,8 +855,9 @@ class SchedulerRunner(object):
             for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
                 if reservation_list:
                     too_resources.append(too_resource)
-           
-        normal_scheduler_result = self.create_normal_schedule(too_resources)
+        
+        normal_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
+        normal_scheduler_result = self.create_normal_schedule(normal_input, too_resources)
         
         # Only clear the change state if scheduling is successful and not a dry run
         if not self.sched_params.dry_run:
