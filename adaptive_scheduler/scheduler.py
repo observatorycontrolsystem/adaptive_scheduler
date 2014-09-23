@@ -554,9 +554,10 @@ class SchedulerRunner(object):
         self.estimated_too_run_timedelta = timedelta(seconds=sched_params.too_runtime_seconds)
         self.estimated_normal_run_timedelta = timedelta(seconds=sched_params.normal_runtime_seconds)
         self.avg_save_time_per_reservation_timedelta = timedelta(seconds=sched_params.avg_reservation_save_time_seconds)
-        
-    
-    
+        self.first_run = True
+
+
+
     def scheduler_rerun_required(self):
         ''' Return True if scheduler should be run now
         '''
@@ -592,29 +593,33 @@ class SchedulerRunner(object):
     
     
     def run(self):
-        first_run = True
         while self.run_flag:
-            if self.sched_params.no_weather:
-                self.log.info("Weather monitoring disabled on the command line")
-            else:
-                self.update_network_model()
+            self.run_once()
+            self.first_run = False
+    
+    
+    @timeit
+    def run_once(self):
+        if self.sched_params.no_weather:
+            self.log.info("Weather monitoring disabled on the command line")
+        else:
+            self.update_network_model()
+        
+        # Always run the scheduler on the first run
+        if self.scheduler_rerun_required() or self.first_run:
+            try:
+                self.create_new_schedule()
+            except EstimateExceededException, eee:
+                # Estimated run time was exceeded so exception was raised
+                # to short circuit to exit.  Just try again.  Run time
+                # estimate should have been updated.
+                pass
             
-            # Always run the scheduler on the first run
-            if self.scheduler_rerun_required() or first_run:
-                try:
-                    self.create_new_schedule()
-                except EstimateExceededException, eee:
-                    # Estimated run time was exceeded so exception was raised
-                    # to short circuit to exit.  Just try again.  Run time
-                    # estimate should have been updated.
-                    pass
-                
-            if self.sched_params.run_once:
-                self.run_flag = False
-            else:
-                self.log.info("Sleeping for %d seconds", self.sched_params.sleep_seconds)
-                time.sleep(self.sched_params.sleep_seconds)
-            first_run = False
+        if self.sched_params.run_once:
+            self.run_flag = False
+        else:
+            self.log.info("Sleeping for %d seconds", self.sched_params.sleep_seconds)
+            time.sleep(self.sched_params.sleep_seconds)
             
             
     def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
@@ -764,6 +769,7 @@ class SchedulerRunner(object):
         self.summary_events = []
     
     
+    @timeit
     def create_too_schedule(self, scheduler_input):
         too_scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
@@ -797,6 +803,8 @@ class SchedulerRunner(object):
     
         return too_scheduler_result
     
+    
+    @timeit
     def create_normal_schedule(self, scheduler_input, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
