@@ -309,7 +309,8 @@ class PondScheduleInterface(object):
         # Only retrieve blocks which have not been cancelled
         args = dict(start=start, end=end, site=site,
                                  observatory=obs, telescope=tel,
-                                 canceled_blocks=False, use_master_db=True,
+                                 canceled_blocks=False, aborted_blocks=False, 
+                                 use_master_db=True,
                                  port=self.port, host=self.host)
         if too_blocks:
             args['too_blocks'] = too_blocks
