@@ -13,7 +13,9 @@ July 2012
 from __future__ import division
 
 from rise_set.sky_coordinates                 import RightAscension, Declination
-from rise_set.astrometry                      import make_ra_dec_target, make_moving_object_target
+from rise_set.astrometry                      import (make_ra_dec_target,
+                                                      make_minor_planet_target,
+                                                      make_comet_target)
 from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
@@ -179,9 +181,15 @@ class NonSiderealTarget(Target):
 
 
     def in_rise_set_format(self):
-        target_dict = make_moving_object_target(self.scheme, self.epochofel, self.orbinc,
-                                                self.longascnode, self.argofperih,
-                                                self.meandist, self.eccentricity, self.meananom)
+        if self.scheme.lower() == 'mpc_comet':
+            target_dict = make_comet_target(self.scheme, self.epochofel, self.epochofperih,
+                                            self.orbinc, self.longascnode, self.argofperih,
+                                            self.perihdist, self.eccentricity)
+
+        else:
+            target_dict = make_minor_planet_target(self.scheme, self.epochofel, self.orbinc,
+                                                    self.longascnode, self.argofperih,
+                                                    self.meandist, self.eccentricity, self.meananom)
 
         return target_dict
 
