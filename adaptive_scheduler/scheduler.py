@@ -155,7 +155,11 @@ class Scheduler(object):
         optimal_combination_value = -1
         optimal_combinations = []
 
-        for x in itertools.permutations(large_list, len(small_list)):
+        permutations = []
+        for i in range(len(small_list)):
+            permutations.extend(itertools.permutations(large_list, i + 1))
+            
+        for x in permutations:
             combinations = zip_combinations(x)
             value = 0
             invalid_combination = False

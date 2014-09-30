@@ -138,7 +138,7 @@ class TestSchduler(object):
         assert_equal(expected, combined)
         
     def test_optimal_schedule(self):
-        telescope_request_dict = {
+        tel_ur_value_dict = {
                                   ('tel1', 1) : 6,
                                   ('tel1', 2) : 7,
                                   ('tel2', 1) : 8,
@@ -150,15 +150,49 @@ class TestSchduler(object):
         
         mock_kernel_class = Mock()
         scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
-        combinations = scheduler.compute_optimal_combination(telescope_request_dict, tracking_numbers, telescopes)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
 
         expected_combinations = [('tel1', 1), ('tel2', 2)]
 
         assert_equal(combinations, expected_combinations)
+        
+        
+    def test_optimal_schedule_one_of_two_urs_possible(self):
+        tel_ur_value_dict = {
+                                  ('tel1', 1) : 6,
+                                  ('tel2', 1) : 8,
+                                  }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
+
+        expected_combinations = [('tel1', 1)]
+
+        assert_equal(combinations, expected_combinations)
+        
+    
+    def test_optimal_schedule_zero_of_two_urs_possible(self):
+        tel_ur_value_dict = {
+                            }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
+
+        expected_combinations = []
+
+        assert_equal(combinations, expected_combinations)
 
 
-    def test_optimal_schedule_more_telescopes(self):
-        telescope_request_dict = {
+    def test_optimal_schedule_more_telescopes_than_urs(self):
+        tel_ur_value_dict = {
                                   ('tel1', 1) : 6,
                                   ('tel1', 2) : 7,
                                   ('tel2', 1) : 8,
@@ -172,9 +206,52 @@ class TestSchduler(object):
         
         mock_kernel_class = Mock()
         scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
-        combinations = scheduler.compute_optimal_combination(telescope_request_dict, tracking_numbers, telescopes)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
 
         expected_combinations = [('tel2', 1), ('tel3', 2)]
+
+        assert_equal(combinations, expected_combinations)
+        
+        
+    def test_optimal_schedule_more_telescopes_than_urs_not_all_telescopes_possible(self):
+        tel_ur_value_dict = {
+                                  ('tel1', 1) : 6,
+                                  ('tel1', 2) : 7,
+                                  ('tel2', 1) : 8,
+                                  ('tel2', 2) : 10,
+                                  }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2', 'tel3']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
+
+        expected_combinations = [('tel1', 1), ('tel2', 2)]
+
+        assert_equal(combinations, expected_combinations)
+        
+    
+    #TODO: Not sure if this case really needs to work.  If scheduler can only put in a single
+    #ToO for a resource at a time, that seems OK, but make sure it handles the case where the
+    #earlier ToO has a lower value than the non competing later ToO.  In that case, both should
+    #get scheduled, but I suspect that the current implementation will only schedule the later
+    #more valuable one.
+    def test_optimal_schedule_two_urs_possible_only_on_same_telescope(self):
+        tel_ur_value_dict = {
+                                  ('tel1', 1) : 6,
+                                  ('tel1', 2) : 8,
+                                  }
+
+        tracking_numbers = [1, 2];
+        telescopes = ['tel1', 'tel2']
+        
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
+
+        expected_combinations = [('tel1', 1), ('tel1', 2)]
 
         assert_equal(combinations, expected_combinations)
         
