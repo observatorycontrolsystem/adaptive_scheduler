@@ -9,6 +9,7 @@ from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.intervals import Intervals
 from reqdb.requests import Request
+from nose.tools import nottest
 # import helpers
 
 from mock import Mock, patch
@@ -238,21 +239,22 @@ class TestSchduler(object):
     #earlier ToO has a lower value than the non competing later ToO.  In that case, both should
     #get scheduled, but I suspect that the current implementation will only schedule the later
     #more valuable one.
+    @nottest
     def test_optimal_schedule_two_urs_possible_only_on_same_telescope(self):
         tel_ur_value_dict = {
                                   ('tel1', 1) : 6,
                                   ('tel1', 2) : 8,
                                   }
-
+ 
         tracking_numbers = [1, 2];
         telescopes = ['tel1', 'tel2']
-        
+         
         mock_kernel_class = Mock()
         scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
         combinations = scheduler.compute_optimal_combination(tel_ur_value_dict, tracking_numbers, telescopes)
-
+ 
         expected_combinations = [('tel1', 1), ('tel1', 2)]
-
+ 
         assert_equal(combinations, expected_combinations)
         
         
