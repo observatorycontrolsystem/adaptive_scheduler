@@ -312,17 +312,21 @@ class Scheduler(object):
         resources_to_schedule = list(available_resources)
         resource_schedules_to_cancel = []
 
-        # Pre-empt running blocks
-        if preemption_enabled:
-            resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, user_reqs, resources_to_schedule, resource_usage_snapshot, all_ur_priorities)
-            # Need a copy because the original is modified inside the loop
-            copy_of_resources_to_schedule = list(resources_to_schedule)
-            for resource in copy_of_resources_to_schedule:
-                if not resource in resource_schedules_to_cancel:
-                    self.log.info("Removing %s from schedulable resources.  Not needed for ToO." % resource)
-                    resources_to_schedule.remove(resource)
-        else:
-            resource_schedules_to_cancel = available_resources
+# Optimization of ToO output for least impact doesn't work as planned.  See https://issues.lcogt.net/issues/7851
+#         # Pre-empt running blocks
+#         if preemption_enabled:
+#             resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, user_reqs, resources_to_schedule, resource_usage_snapshot, all_ur_priorities)
+#             # Need a copy because the original is modified inside the loop
+#             copy_of_resources_to_schedule = list(resources_to_schedule)
+#             for resource in copy_of_resources_to_schedule:
+#                 if not resource in resource_schedules_to_cancel:
+#                     self.log.info("Removing %s from schedulable resources.  Not needed for ToO." % resource)
+#                     resources_to_schedule.remove(resource)
+#         else:
+#             resource_schedules_to_cancel = available_resources
+
+        # Replacement for commented block above.
+        resource_schedules_to_cancel = available_resources
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled)
@@ -332,7 +336,7 @@ class Scheduler(object):
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
-        scheduler_result.resource_schedules_to_cancel = resource_schedules_to_cancel
+        scheduler_result.resource_schedules_to_cancel = list(resource_schedules_to_cancel)
         scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
         scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 

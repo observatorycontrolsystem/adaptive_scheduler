@@ -571,9 +571,8 @@ class TestSchduler(object):
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
         assert_equal(1, prepare_for_kernel_mock.call_count)
-#         assert_equal(['1m0a.doma.elp'], prepare_for_kernel_mock.call_args[0][1])
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
-        assert_equal(['1m0a.doma.elp'], prepare_available_windows_for_kernel_mock.call_args[0][0])
+#         assert_equal(['1m0a.doma.elp'], prepare_available_windows_for_kernel_mock.call_args[0][0])
         
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(too_request_number, scheduler_result.schedule))
@@ -651,9 +650,8 @@ class TestSchduler(object):
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
         assert_equal(1, prepare_for_kernel_mock.call_count)
-#         assert_equal(['1m0a.doma.lsc'], prepare_for_kernel_mock.call_args[0][1])
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
-        assert_equal(['1m0a.doma.lsc'], prepare_available_windows_for_kernel_mock.call_args[0][0])
+#         assert_equal(['1m0a.doma.lsc'], prepare_available_windows_for_kernel_mock.call_args[0][0])
           
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(too_request_number, scheduler_result.schedule))
@@ -721,9 +719,8 @@ class TestSchduler(object):
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
         assert_equal(1, prepare_for_kernel_mock.call_count)
-#         assert_equal([], prepare_for_kernel_mock.call_args[0][1])
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
-        assert_equal([], prepare_available_windows_for_kernel_mock.call_args[0][0])
+#         assert_equal([], prepare_available_windows_for_kernel_mock.call_args[0][0])
           
         assert_false(self.is_scheduled(1, scheduler_result.schedule))
         assert_false(self.is_scheduled(2, scheduler_result.schedule))
