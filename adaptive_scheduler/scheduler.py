@@ -155,6 +155,8 @@ class Scheduler(object):
         optimal_combination_value = -1
         optimal_combinations = []
 
+        # Create all possible permutations of of the large list of length <= the length of the small list
+        # Handles the cases where not all ToO UR's are possible due to a resource being unavailable
         permutations = []
         for i in range(len(small_list)):
             permutations.extend(itertools.permutations(large_list, i + 1))
