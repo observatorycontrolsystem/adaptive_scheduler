@@ -310,10 +310,6 @@ class Scheduler(object):
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
         self.after_window_filters(window_adjusted_urs)
 
-        # By default, cancel on all resources
-        resources_to_schedule = list(available_resources)
-        resource_schedules_to_cancel = []
-
 # Optimization of ToO output for least impact doesn't work as planned.  See https://issues.lcogt.net/issues/7851
 #         # Pre-empt running blocks
 #         if preemption_enabled:
@@ -327,8 +323,8 @@ class Scheduler(object):
 #         else:
 #             resource_schedules_to_cancel = available_resources
 
-        # Replacement for commented block above.
-        resource_schedules_to_cancel = available_resources
+        # By default, schedule on all resources
+        resources_to_schedule = list(available_resources)
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled)
@@ -338,7 +334,7 @@ class Scheduler(object):
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
-        scheduler_result.resource_schedules_to_cancel = list(resource_schedules_to_cancel)
+        scheduler_result.resource_schedules_to_cancel = list(available_resources)
         scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
         scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 
@@ -353,7 +349,7 @@ class Scheduler(object):
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
             if(preemption_enabled):
-                for resource in resource_schedules_to_cancel:
+                for resource in available_resources:
                     if scheduler_result.schedule.get(resource, []) == []:
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
 
