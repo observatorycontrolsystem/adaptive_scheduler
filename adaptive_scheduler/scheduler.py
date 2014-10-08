@@ -544,6 +544,15 @@ class SchedulerResult(object):
         return earliest
 
 
+    def scheduled_request_numbers(self):
+        request_numbers = []
+        for resource, reservations in self.schedule.items():
+            request_numbers_for_resource = [r.request.request_number for r in reservations]
+            request_numbers.extend(request_numbers_for_resource)
+            
+        return request_numbers
+
+
 class SchedulerRunner(object):
 
     def __init__(self, sched_params, scheduler, network_interface, network_model, input_factory):
@@ -652,6 +661,10 @@ class SchedulerRunner(object):
         return scheduler_result
 
 
+    def set_requests_to_pending(self, request_numbers):
+        self.network_interface.set_requests_to_pending(request_numbers)
+
+
     def set_requests_to_unscheduleable(self, request_numbers):
         self.network_interface.set_requests_to_unschedulable(request_numbers)
 
@@ -733,6 +746,7 @@ class SchedulerRunner(object):
 
         semester_start, semester_end = \
                 get_semester_block(dt=scheduler_input.estimated_scheduler_end)
+        self.set_requests_to_pending(scheduler_result.scheduled_request_numbers())
         self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
         self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
         # TODO: make sure this cancels anything currently running in the ToO case
