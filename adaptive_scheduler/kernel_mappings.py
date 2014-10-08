@@ -433,6 +433,7 @@ def construct_global_availability(available_resources, semester_start, network_s
        get a final global availability for each resource.
     '''
     for resource_name in available_resources:
+        # Mask out any intervals blocked in network snapshot.  Currently used to block out current ToO intervals as uninterruptable
         excluded_interval = network_snapshot.blocked_intervals(resource_name)
         norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
         resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_excluded_interval)
