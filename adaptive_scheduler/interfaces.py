@@ -78,33 +78,26 @@ class ResourceUsageSnapshot(object):
         return self.running_user_requests_by_resource.get(resource, [])
 
 
-    def _running_intervals(self, resource, too_only):
+    def _running_intervals(self, resource):
         timepoint_list = []
         running_urs = self.running_user_requests_by_resource.get(resource, [])
         for running_ur in running_urs:
-            if not too_only or running_ur.is_too():
-                for running_r in running_ur.running_requests:
-                    # Only consider the interval running if the request should continue running 
-                    if running_r.should_continue():
-                        timepoint_list.append(Timepoint(running_r.start, 'start'))
-                        timepoint_list.append(Timepoint(running_r.end, 'end'))
+            for running_r in running_ur.running_requests:
+                # Only consider the interval running if the request should continue running 
+                if running_r.should_continue():
+                    timepoint_list.append(Timepoint(running_r.start, 'start'))
+                    timepoint_list.append(Timepoint(running_r.end, 'end'))
         intervals = Intervals(timepoint_list)
         
         return intervals
 
 
-    def too_running_intervals(self, resource):
-        return self._running_intervals(resource, too_only=True)
-
-
     def blocked_intervals(self, resource):
-        blocked_intervals = self.too_running_intervals(resource).add(self.extra_blocked_intervals.get(resource, Intervals([])))
-        
-        return blocked_intervals
+        return self.extra_blocked_intervals.get(resource, Intervals([]))
 
 
     def running_intervals(self, resource):
-        return self._running_intervals(resource, too_only=False)
+        return self._running_intervals(resource)
 
 
     def running_requests_for_resources(self, resources):
