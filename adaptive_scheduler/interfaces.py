@@ -193,7 +193,7 @@ class NetworkInterface(object):
         
         return ResourceUsageSnapshot(now,
                               self._running_user_requests_by_tracking_number().values(),
-                              self._too_user_request_intervals_by_telescope())
+                              {})
         
 
 
