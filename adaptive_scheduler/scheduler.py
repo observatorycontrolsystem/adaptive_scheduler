@@ -799,12 +799,19 @@ class SchedulerRunner(object):
             self.log.info("Start ToO Scheduling")
             too_scheduling_start = datetime.utcnow()
 
+            
             too_scheduler_result = self.call_scheduler(scheduler_input)
+            # Find resource scheduled by ToO run and cancel their schedules
+            too_resources = []
+            if too_scheduler_result:
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        too_resources.append(too_resource)
             try:
                 deadline = too_scheduling_start + self.estimated_too_run_timedelta
                 self.apply_scheduler_result(too_scheduler_result,
                                                 scheduler_input,
-                                                too_scheduler_result.schedule.keys(),
+                                                too_resources,
                                                 deadline)
                 too_scheduling_end = datetime.utcnow()
                 too_scheduling_timedelta = too_scheduling_end - too_scheduling_start
