@@ -286,6 +286,7 @@ class Scheduler(object):
             masked_timepoints_for_resource = [r.timepoints() for r in blocking_running_requests]
             masked_timepoints_for_resource = reduce(lambda x, y: x+y, masked_timepoints_for_resource, [])
             resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
+            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).timepoints)
             
         return resource_interval_mask 
 
