@@ -150,13 +150,7 @@ class NetworkInterface(object):
         start and end date
         '''
         return self.user_request_interface.get_all_user_requests(start, end)            
-
-
-    def set_requests_to_pending(self, pending_r_numbers):
-        '''Update the state of all the pending Requests in the DB in one go.'''
-        return self.user_request_interface.set_requests_to_pending(pending_r_numbers)
-
-
+                
     def set_requests_to_unschedulable(self, unschedulable_r_numbers):
         '''Update the state of all the unschedulable Requests in the DB in one go.'''
         return self.user_request_interface.set_requests_to_unschedulable(unschedulable_r_numbers)
@@ -227,10 +221,6 @@ class CachedInputNetworkInterface(object):
         '''
         return self.json_user_request_list            
                 
-    def set_requests_to_pending(self, pending_r_numbers):
-        '''Update the state of all the pending Requests in the DB in one go.'''
-        pass
-
     def set_requests_to_unschedulable(self, unschedulable_r_numbers):
         '''Update the state of all the unschedulable Requests in the DB in one go.'''
         pass

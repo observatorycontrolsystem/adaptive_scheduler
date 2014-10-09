@@ -121,21 +121,7 @@ class RequestDBInterface(object):
         
         return json_user_requests
                 
-
-
-    def set_requests_to_pending(self, pending_r_numbers):
-        '''Update the state of all the pending Requests in the DB in one go.'''
-        try:
-            self.requestdb_client.set_request_state('PENDING', pending_r_numbers)
-        except ConnectionError as e:
-            self.log.error("Problem setting Request states to PENDING: %s" % str(e))
-        except RequestDBError as e:
-            msg = "Internal RequestDB error when setting PENDING Request states: %s" % str(e)
-            self.log.error(msg)
-    
-        return
-
-
+                
     def set_requests_to_unschedulable(self, unschedulable_r_numbers):
         '''Update the state of all the unschedulable Requests in the DB in one go.'''
         try:
