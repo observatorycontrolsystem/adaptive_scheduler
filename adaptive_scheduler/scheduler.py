@@ -225,7 +225,7 @@ class Scheduler(object):
         return []
 
 
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
@@ -271,6 +271,23 @@ class Scheduler(object):
         windowsless_r_numbers = drop_empty_requests(user_requests)
         unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
         return unschedulable_r_numbers
+
+
+    def create_resource_mask(self, available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled):
+        resource_interval_mask = {}
+        for resource_name in available_resources:
+            running_user_requests = resource_usage_snapshot.user_requests_for_resource(resource_name)
+            # Limit to only ToO running user request when preemption is enabled
+            if preemption_enabled:
+                running_user_requests = [ur for ur in running_user_requests if ur.tracking_number in too_tracking_numbers]
+                
+            blocking_running_requests = reduce(lambda x, y: x+y, [ur.running_requests for ur in running_user_requests], [])
+            blocking_running_requests = [r for r in blocking_running_requests if r.should_continue()]
+            masked_timepoints_for_resource = [r.timepoints() for r in blocking_running_requests]
+            masked_timepoints_for_resource = reduce(lambda x, y: x+y, masked_timepoints_for_resource, [])
+            resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
+            
+        return resource_interval_mask 
 
 
     # TODO: refactor into smaller chunks
@@ -325,9 +342,10 @@ class Scheduler(object):
 
         # By default, schedule on all resources
         resources_to_schedule = list(available_resources)
+        resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot, scheduler_input.too_tracking_numbers, preemption_enabled)
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
-        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled)
+        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
 
         print_compound_reservations(compound_reservations)
 
@@ -447,16 +465,16 @@ class LCOGTNetworkScheduler(Scheduler):
         return all_compound_reservations
 
 
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         # Translate when telescopes are available into kernel speak
         resource_windows = construct_resource_windows(self.visibility_cache, semester_start, available_resources)
-
+        
         # Intersect and mask out time where Blocks are currently running
-        global_windows = construct_global_availability(available_resources, semester_start,
-                                                       resource_usage_snapshot, resource_windows, preemption_enabled)
+        global_windows = construct_global_availability(resource_interval_mask, semester_start,
+                                                       resource_windows)
 
         return global_windows
 

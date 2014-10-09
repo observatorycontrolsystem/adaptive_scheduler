@@ -47,7 +47,16 @@ class RunningRequest(object):
     
     def should_continue(self):
         return len(self.errors()) == 0
+
+
+    def timepoints(self):
+        timepoint_list = []
+        timepoint_list.append(Timepoint(self.start, 'start'))
+        timepoint_list.append(Timepoint(self.end, 'end'))
         
+        return timepoint_list
+
+
     def __str__(self):
         return 'Request Number: %s at telescope %s, start: %s, end: %s' % (self.request_number, self.resource, self.start, self.end)
     

@@ -66,6 +66,7 @@ class TestSchduler(object):
         intervals_mock.timepoints = []
         network_snapshot_mock.blocked_intervals = Mock(return_value=intervals_mock)
         network_snapshot_mock.running_requests_for_resources = Mock(return_value=[])
+        network_snapshot_mock.user_requests_for_resource = Mock(return_value=[])
         network_model = sched_params.get_model_builder().tel_network.telescopes.keys()
         estimated_scheduler_end = datetime.utcnow()
 
@@ -343,6 +344,134 @@ class TestSchduler(object):
         assert_equal(expected_resources_to_schedule, resources_to_schedule)
 
 
+    def test_create_resource_mask_no_running_requests(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        running_user_requests = []
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        too_tracking_numbers = []
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=False)
+        
+        assert_equal(resource_mask['1m0a.doma.bpl'], Intervals([]))
+
+
+    def test_create_resource_mask_running_too(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        
+        start = datetime(2014, 10, 4, 2, 43, 0)
+        end = datetime(2014, 10, 4, 2, 53, 0)
+        tracking_number = 1
+        running_r1 = RunningRequest('1m0a.doma.bpl', tracking_number, start, end)
+        running_ur1 = RunningUserRequest(tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        
+        too_tracking_numbers = [tracking_number]
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=False)
+        assert_equal(resource_mask['1m0a.doma.bpl'], self.build_intervals([(start, end)]))
+
+
+    def test_create_resource_mask_running_too_failed(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        
+        start = datetime(2014, 10, 4, 2, 43, 0)
+        end = datetime(2014, 10, 4, 2, 53, 0)
+        tracking_number = 1
+        running_r1 = RunningRequest('1m0a.doma.bpl', tracking_number, start, end)
+        running_r1.add_error("An error")
+        running_ur1 = RunningUserRequest(tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        
+        too_tracking_numbers = [tracking_number]
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=False)
+        assert_equal(resource_mask['1m0a.doma.bpl'], Intervals([]))
+
+
+    def test_create_resource_mask_running_request_preemption_disabled(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        
+        start = datetime(2014, 10, 4, 2, 43, 0)
+        end = datetime(2014, 10, 4, 2, 53, 0)
+        tracking_number = 1
+        running_r1 = RunningRequest('1m0a.doma.bpl', tracking_number, start, end)
+        running_ur1 = RunningUserRequest(tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        
+        too_tracking_numbers = []
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=False)
+        assert_equal(resource_mask['1m0a.doma.bpl'], self.build_intervals([(start, end)]))
+        
+        
+    def test_create_resource_mask_running_request_failed_preemption_disabled(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        
+        start = datetime(2014, 10, 4, 2, 43, 0)
+        end = datetime(2014, 10, 4, 2, 53, 0)
+        tracking_number = 1
+        running_r1 = RunningRequest('1m0a.doma.bpl', tracking_number, start, end)
+        running_r1.add_error("An error")
+        running_ur1 = RunningUserRequest(tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        
+        too_tracking_numbers = []
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=False)
+        assert_equal(resource_mask['1m0a.doma.bpl'], Intervals([]))
+
+
+    def test_create_resource_mask_running_request_preemption_enabled(self):
+        mock_kernel_class = Mock()
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        
+        available_resources = ['1m0a.doma.bpl']
+        
+        start = datetime(2014, 10, 4, 2, 43, 0)
+        end = datetime(2014, 10, 4, 2, 53, 0)
+        tracking_number = 1
+        running_r1 = RunningRequest('1m0a.doma.bpl', tracking_number, start, end)
+        running_ur1 = RunningUserRequest(tracking_number, running_r1)
+        running_user_requests = [running_ur1]
+        extra_block_intervals = {}
+        timestamp = datetime.utcnow()
+        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
+        
+        too_tracking_numbers = []
+        
+        resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled=True)
+        assert_equal(resource_mask['1m0a.doma.bpl'], Intervals([]))
+
+
     def prepare_for_kernel_side_effect_factory(self, normailze_to_date):
 
         def side_effect(user_requests, estimated_scheduler_end):
@@ -352,7 +481,7 @@ class TestSchduler(object):
 
     def prepare_available_windows_for_kernel_side_effect_factory(self, available_intervals):
 
-        def side_effect(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
+        def side_effect(resources_to_schedule, resource_interval_mask, estimated_scheduler_end):
             return {r:i for r, i in available_intervals.items() if r in resources_to_schedule}
 
         return side_effect
@@ -387,7 +516,7 @@ class TestSchduler(object):
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
         normal_user_requests = [normal_single_ur]
-        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], [])
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {})
 
         # Start scheduler run
         mock_scheduler_input = Mock(user_requests=normal_user_requests,
@@ -490,7 +619,7 @@ class TestSchduler(object):
         too_user_requests = [too_single_ur]
 
         # Start scheduler run
-        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], [])
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {})
 
         mock_scheduler_input = Mock(user_requests=too_user_requests,
                             too_user_requests=too_user_requests,
@@ -556,19 +685,21 @@ class TestSchduler(object):
         running_user_request = RunningUserRequest(normal_tracking_number, running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
                                                         [running_user_request],
-                                                        [])
+                                                        {})
 
-        # Start scheduler run
-        mock_scheduler_input = Mock(user_requests=too_user_requests,
-                            too_user_requests=too_user_requests,
-                            normal_user_requests=normal_user_requests,
-                            user_request_priorities=normal_user_requests_priority_by_tracking_number,
-                            available_resources=self.network_model,
-                            estimated_scheduler_end=scheduler_run_end,
-                            resource_usage_snapshot=resource_usage_snapshot,
+        # Setup input
+        scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
+                            scheduler_run_end,
+                            [], 
+                            resource_usage_snapshot,
+                            self.network_model,
                             is_too_input=True)
+        scheduler_input._scheduler_model_too_user_requests = too_user_requests
+        scheduler_input._scheduler_model_normal_user_requests = normal_user_requests
+        
+        # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -635,19 +766,21 @@ class TestSchduler(object):
         high_priority_running_user_request = RunningUserRequest(high_priority_normal_tracking_number, high_priority_running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
                                                         [low_priority_running_user_request, high_priority_running_user_request],
-                                                        [])
+                                                        {})
 
-        # Start scheduler run
-        mock_scheduler_input = Mock(user_requests=too_user_requests,
-                            too_user_requests=too_user_requests,
-                            normal_user_requests=normal_user_requests,
-                            user_request_priorities=normal_user_requests_priority_by_tracking_number,
-                            available_resources=self.network_model,
-                            estimated_scheduler_end=scheduler_run_end,
-                            resource_usage_snapshot=resource_usage_snapshot,
+        # Setup input
+        scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
+                            scheduler_run_end,
+                            [], 
+                            resource_usage_snapshot,
+                            self.network_model,
                             is_too_input=True)
+        scheduler_input._scheduler_model_too_user_requests = too_user_requests
+        scheduler_input._scheduler_model_normal_user_requests = normal_user_requests
+        
+        # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -707,16 +840,21 @@ class TestSchduler(object):
         low_priority_running_user_request = RunningUserRequest(old_low_prioirty_too_tracking_number, low_priority_running_request)
         high_priority_running_user_request = RunningUserRequest(old_high_priority_too_tracking_number, high_priority_running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
-                                                        [low_priority_running_user_request, high_priority_running_user_request], [])
+                                                        [low_priority_running_user_request, high_priority_running_user_request], {})
 
+        # Setup input
+        scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
+                            scheduler_run_end,
+                            [], 
+                            resource_usage_snapshot,
+                            self.network_model,
+                            is_too_input=True)
+        scheduler_input._scheduler_model_too_user_requests = too_user_requests
+        scheduler_input._scheduler_model_normal_user_requests = []
+        
         # Start scheduler run
-        mock_scheduler_input = Mock(user_requests=too_user_requests,
-                                    available_resources=self.network_model,
-                                    estimated_scheduler_end=scheduler_run_end,
-                                    resource_usage_snapshot=resource_usage_snapshot,
-                                    is_too_input=True)
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -757,7 +895,7 @@ class TestSchduler(object):
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
         too_user_requests = [too_single_ur]
-        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], [])
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {})
 
         # Start scheduler run
         mock_scheduler_input = Mock(user_requests=too_user_requests,
@@ -865,7 +1003,7 @@ class TestSchduler(object):
         return compound_reservation_mock
 
 
-    def build_intervals(self, start_end_tuples, normalize_to):
+    def build_intervals(self, start_end_tuples, normalize_to=None):
         timepoints = []
         for start, end in start_end_tuples:
             start_timepoint = Timepoint(time=start, type='start')
@@ -873,8 +1011,9 @@ class TestSchduler(object):
             timepoints.append(start_timepoint)
             timepoints.append(end_timepoint)
 
-        epoch_timepoints = Intervals(timepoints)
-        intervals = normalise_dt_intervals(epoch_timepoints, normalize_to)
+        intervals = Intervals(timepoints)
+        if normalize_to:
+            intervals = normalise_dt_intervals(intervals, normalize_to)
         return intervals
 
 

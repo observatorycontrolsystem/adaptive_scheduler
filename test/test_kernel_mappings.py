@@ -456,16 +456,15 @@ class TestKernelMappings(object):
         # Resource is unavailable from 4-5
         dt2 = datetime(2013, 3, 22, 4)
         dt3 = datetime(2013, 3, 22, 5)
-        now = dt2
-        running_at_tel = Intervals([Timepoint(dt2, 'start'), Timepoint(dt3, 'end')])
-        network_snapshot_mock = Mock()
-        network_snapshot_mock.blocked_intervals = Mock(return_value=Intervals([]))
-        network_snapshot_mock.running_intervals = Mock(return_value=running_at_tel)
+        masked_inervals = {
+                           '1m0a.doma.bpl' : Intervals([Timepoint(dt2, 'start'),
+                                                        Timepoint(dt3, 'end')])
+                           }
 
         # Expected available intervals after masking are
         # 3-4, 5-7
-        received = construct_global_availability(self.tels, sem_start, network_snapshot_mock,
-                                                 resource_windows, False)
+        received = construct_global_availability(masked_inervals, sem_start,
+                                                 resource_windows)
         received_int = received[tel_name]
         assert_equal(len(received_int.timepoints), 4)
         r0 = normalised_epoch_to_datetime(received_int.timepoints[0].time,
