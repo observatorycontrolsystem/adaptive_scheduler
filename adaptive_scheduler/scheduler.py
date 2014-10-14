@@ -280,11 +280,12 @@ class Scheduler(object):
             # Limit to only ToO running user request when preemption is enabled
             if preemption_enabled:
                 running_user_requests = [ur for ur in running_user_requests if ur.tracking_number in too_tracking_numbers]
-                
-            blocking_running_requests = reduce(lambda x, y: x+y, [ur.running_requests for ur in running_user_requests], [])
-            blocking_running_requests = [r for r in blocking_running_requests if r.should_continue()]
-            masked_timepoints_for_resource = [r.timepoints() for r in blocking_running_requests]
-            masked_timepoints_for_resource = reduce(lambda x, y: x+y, masked_timepoints_for_resource, [])
+            
+            masked_timepoints_for_resource = []
+            for ur in running_user_requests:
+                for r in ur.running_requests:
+                    if r.should_continue():
+                        masked_timepoints_for_resource.extend(r.timepoints())
             resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
             resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).timepoints)
             
