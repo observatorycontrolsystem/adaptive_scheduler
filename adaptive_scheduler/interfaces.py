@@ -47,7 +47,16 @@ class RunningRequest(object):
     
     def should_continue(self):
         return len(self.errors()) == 0
+
+
+    def timepoints(self):
+        timepoint_list = []
+        timepoint_list.append(Timepoint(self.start, 'start'))
+        timepoint_list.append(Timepoint(self.end, 'end'))
         
+        return timepoint_list
+
+
     def __str__(self):
         return 'Request Number: %s at telescope %s, start: %s, end: %s' % (self.request_number, self.resource, self.start, self.end)
     
@@ -76,22 +85,30 @@ class ResourceUsageSnapshot(object):
     
     def user_requests_for_resource(self, resource):
         return self.running_user_requests_by_resource.get(resource, [])
-    
-    def blocked_intervals(self, resource):
-        return self.extra_blocked_intervals.get(resource, Intervals([]))
-    
-    def running_intervals(self, resource):
+
+
+    def _running_intervals(self, resource):
         timepoint_list = []
         running_urs = self.running_user_requests_by_resource.get(resource, [])
         for running_ur in running_urs:
             for running_r in running_ur.running_requests:
-                timepoint_list.append(Timepoint(running_r.start, 'start'))
-                timepoint_list.append(Timepoint(running_r.end, 'end'))
+                # Only consider the interval running if the request should continue running 
+                if running_r.should_continue():
+                    timepoint_list.append(Timepoint(running_r.start, 'start'))
+                    timepoint_list.append(Timepoint(running_r.end, 'end'))
         intervals = Intervals(timepoint_list)
         
         return intervals
-    
-    
+
+
+    def blocked_intervals(self, resource):
+        return self.extra_blocked_intervals.get(resource, Intervals([]))
+
+
+    def running_intervals(self, resource):
+        return self._running_intervals(resource)
+
+
     def running_requests_for_resources(self, resources):
         '''Get the set of running requests for the named resource'''
         running_requests = []
@@ -176,7 +193,7 @@ class NetworkInterface(object):
         
         return ResourceUsageSnapshot(now,
                               self._running_user_requests_by_tracking_number().values(),
-                              self._too_user_request_intervals_by_telescope())
+                              {})
         
 
 

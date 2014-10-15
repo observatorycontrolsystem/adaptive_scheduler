@@ -427,18 +427,15 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     return visibility_from
 
 
-def construct_global_availability(available_resources, semester_start, network_snapshot, resource_windows, preemption_enabled):
-    '''Use the exclude_intervals to make unavailable portions of each resource where an
+def construct_global_availability(resource_interval_mask, semester_start, resource_windows):
+    '''Use the interval mask to make unavailable portions of each resource where an
        observation is running/too request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
+       resource_intervals_mask is expected to be a dict like:
+       { 'resource_name' : Intervals() }
     '''
-    for resource_name in available_resources:
-        excluded_interval = network_snapshot.blocked_intervals(resource_name)
-        norm_excluded_interval = normalise_dt_intervals(excluded_interval, semester_start)
-        resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_excluded_interval)
-        if not preemption_enabled:
-            running_interval = network_snapshot.running_intervals(resource_name)
-            norm_running_interval = normalise_dt_intervals(running_interval, semester_start)
-            resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_running_interval)
+    for resource_name, masked_intervals in resource_interval_mask.items():
+        norm_masked_interval = normalise_dt_intervals(masked_intervals, semester_start)
+        resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_masked_interval)
 
     return resource_windows

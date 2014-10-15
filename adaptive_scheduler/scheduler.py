@@ -225,7 +225,7 @@ class Scheduler(object):
         return []
 
 
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
@@ -273,6 +273,25 @@ class Scheduler(object):
         return unschedulable_r_numbers
 
 
+    def create_resource_mask(self, available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled):
+        resource_interval_mask = {}
+        for resource_name in available_resources:
+            running_user_requests = resource_usage_snapshot.user_requests_for_resource(resource_name)
+            # Limit to only ToO running user request when preemption is enabled
+            if preemption_enabled:
+                running_user_requests = [ur for ur in running_user_requests if ur.tracking_number in too_tracking_numbers]
+            
+            masked_timepoints_for_resource = []
+            for ur in running_user_requests:
+                for r in ur.running_requests:
+                    if r.should_continue():
+                        masked_timepoints_for_resource.extend(r.timepoints())
+            resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
+            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).timepoints)
+            
+        return resource_interval_mask 
+
+
     # TODO: refactor into smaller chunks
     @timeit
     def run_scheduler(self, scheduler_input, preemption_enabled=False):
@@ -310,10 +329,6 @@ class Scheduler(object):
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
         self.after_window_filters(window_adjusted_urs)
 
-        # By default, cancel on all resources
-        resources_to_schedule = list(available_resources)
-        resource_schedules_to_cancel = []
-
 # Optimization of ToO output for least impact doesn't work as planned.  See https://issues.lcogt.net/issues/7851
 #         # Pre-empt running blocks
 #         if preemption_enabled:
@@ -327,18 +342,19 @@ class Scheduler(object):
 #         else:
 #             resource_schedules_to_cancel = available_resources
 
-        # Replacement for commented block above.
-        resource_schedules_to_cancel = available_resources
+        # By default, schedule on all resources
+        resources_to_schedule = list(available_resources)
+        resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot, scheduler_input.too_tracking_numbers, preemption_enabled)
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
-        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled)
+        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
 
         print_compound_reservations(compound_reservations)
 
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
-        scheduler_result.resource_schedules_to_cancel = list(resource_schedules_to_cancel)
+        scheduler_result.resource_schedules_to_cancel = list(available_resources)
         scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
         scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 
@@ -353,7 +369,7 @@ class Scheduler(object):
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
             if(preemption_enabled):
-                for resource in resource_schedules_to_cancel:
+                for resource in available_resources:
                     if scheduler_result.schedule.get(resource, []) == []:
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
 
@@ -451,16 +467,16 @@ class LCOGTNetworkScheduler(Scheduler):
         return all_compound_reservations
 
 
-    def prepare_available_windows_for_kernel(self, available_resources, resource_usage_snapshot, estimated_scheduler_end, preemption_enabled):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         semester_start, semester_end = get_semester_block(estimated_scheduler_end)
         # Translate when telescopes are available into kernel speak
         resource_windows = construct_resource_windows(self.visibility_cache, semester_start, available_resources)
-
+        
         # Intersect and mask out time where Blocks are currently running
-        global_windows = construct_global_availability(available_resources, semester_start,
-                                                       resource_usage_snapshot, resource_windows, preemption_enabled)
+        global_windows = construct_global_availability(resource_interval_mask, semester_start,
+                                                       resource_windows)
 
         return global_windows
 
@@ -785,12 +801,19 @@ class SchedulerRunner(object):
             self.log.info("Start ToO Scheduling")
             too_scheduling_start = datetime.utcnow()
 
+            
             too_scheduler_result = self.call_scheduler(scheduler_input)
+            # Find resource scheduled by ToO run and cancel their schedules
+            too_resources = []
+            if too_scheduler_result:
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        too_resources.append(too_resource)
             try:
                 deadline = too_scheduling_start + self.estimated_too_run_timedelta
                 self.apply_scheduler_result(too_scheduler_result,
                                                 scheduler_input,
-                                                too_scheduler_result.schedule.keys(),
+                                                too_resources,
                                                 deadline)
                 too_scheduling_end = datetime.utcnow()
                 too_scheduling_timedelta = too_scheduling_end - too_scheduling_start

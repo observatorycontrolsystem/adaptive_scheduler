@@ -82,6 +82,7 @@ class PondScheduleInterface(object):
         #Fetch the data
         self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
+        # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
         self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
 
     
@@ -306,7 +307,7 @@ class PondScheduleInterface(object):
 
     #@retry_or_reraise(max_tries=6, delay=10)
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
-        # Only retrieve blocks which have not been cancelled
+        # Only retrieve blocks which have not been cancelled or aborted
         args = dict(start=start, end=end, site=site,
                                  observatory=obs, telescope=tel,
                                  canceled_blocks=False, aborted_blocks=False, 
