@@ -172,6 +172,16 @@ class TestKernelMappings(object):
         assert_equal(received.type, 'single')
 
 
+    def test_filter_for_kernel_applies_horizon_to_singles(self):
+        #TODO: In progress
+        request           = self.make_constrained_request()
+        operator          = 'single'
+        compound_request  = self.make_compound_request(requests, operator)
+        received_crs = filter_for_kernel(crs, visibility_from,
+                                         semester_start,
+                                         semester_end,
+                                         scheduling_horizon)
+
 
     def test_make_dark_up_kernel_intervals(self):
         window_dict = {

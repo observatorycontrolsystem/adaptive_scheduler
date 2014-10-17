@@ -36,14 +36,14 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
                                           epoch_to_datetime, timeit )
 from adaptive_scheduler.printing import print_req_summary, plural_str as pl
-from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type
+from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
                                                 drop_empty_requests,
                                                 log_windows)
-from adaptive_scheduler.memoize import Memoize
-from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.memoize     import Memoize
+from adaptive_scheduler.log         import UserRequestLogger
 from adaptive_scheduler.event_utils import report_visibility_outcome
 
 import math
@@ -231,30 +231,37 @@ def filter_for_kernel(crs, visibility_from, semester_start, semester_end, schedu
        want to set the UNSCHEDULABLE flag for these Requests. This is because the
        step is network-dependent; if the network subsequently changes (e.g. a
        telescope becomes available), then the Request may then be schedulable.'''
-    singles, compounds = differentiate_by_type('single', crs)
-    log.info("Identified %s" % pl(len(singles), 'single'))
-    log.info("Identified %s" % pl(len(compounds), 'compound'))
+
+    crs_by_type = filter_compounds_by_type(crs)
+    log.info("Identified %s" % pl(len(crs_by_type['single']), 'single'))
+    log.info("Identified %s" % pl(len(crs_by_type['many']), 'many'))
+    log.info("Identified %s" % pl(len(crs_by_type['and']), 'and'))
+    log.info("Identified %s" % pl(len(crs_by_type['oneof']), 'oneof'))
+
 
     # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single'")
-    singles = truncate_upper_crossing_windows(singles, horizon=scheduling_horizon)
-    singles = filter_out_future_windows(singles, horizon=scheduling_horizon)
+    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s days)" % scheduling_horizon)
+    horizon_limited_crs = crs_by_type['single'] + crs_by_type['many']
+    horizon_limited_crs = truncate_upper_crossing_windows(horizon_limited_crs, horizon=scheduling_horizon)
+    horizon_limited_crs = filter_out_future_windows(horizon_limited_crs, horizon=scheduling_horizon)
     #TODO: Add the duration filter here?
     # Clean up Requests without any windows
-    singles = filter_on_type(singles, [])
-    log.info("After filtering, %d singles remain" % len(singles))
+    horizon_limited_crs = filter_on_type(horizon_limited_crs)
+    log.info("After filtering, %d horizon-limited crs remain" % len(horizon_limited_crs))
 
 
-    # Compounds (and/oneof/many) are not constrained to the short-term scheduling horizon
+    # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
     # TODO: Remove this block after review
-    log.info("Filtering compound URs of type 'and', 'oneof' or 'many'")
-    compounds = truncate_upper_crossing_windows(compounds)
-    compounds = filter_out_future_windows(compounds)
-    # Clean up Requests without any windows
-    compounds = filter_on_type(compounds, [])
-    log.info("After filtering, %d compounds remain" % len(compounds))
+    log.info("Filtering compound URs of type 'and' and 'oneof', not constrained by scheduling horizon")
+    unlimited_crs = crs_by_type['and'] + crs_by_type['oneof']
+    unlimited_crs = truncate_upper_crossing_windows(unlimited_crs)
+    unlimited_crs = filter_out_future_windows(unlimited_crs)
 
-    crs = singles + compounds
+    # Clean up Requests without any windows
+    unlimited_crs = filter_on_type(unlimited_crs)
+    log.info("After filtering, %d unlimited URs remain" % len(unlimited_crs))
+
+    crs = horizon_limited_crs + unlimited_crs
     log.info("After filtering all singles and compounds, %d URs remain" % len(crs))
 
 
