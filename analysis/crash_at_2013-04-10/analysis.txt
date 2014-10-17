@@ -1,0 +1,24 @@
+1) Crash was due to POND Rpc error
+protobuf.socketrpc.error.RpcError: [u'Block end must be in the future']
+
+2) Caused by overlong scheduler run
+
+3) Analysis of scheduler scaling:
+grep 'TIMER: main\|Got .* from Request DB' adaptive_scheduler.err
+
+Gets alternate lines like this:
+
+2013-04-10 00:17:50.983   DEBUG:           utils: TIMER: main (adaptive_scheduler.orchestrator): 283.14 sec
+2013-04-10 00:19:27.215    INFO:              as: Got 218 User Requests from Request DB
+
+
+4) Get and plot data:
+grep 'TIMER: main\|Got .* from Request DB' adaptive_scheduler.err > logged_timings.dat
+python extract_scaling.py logged_timings.dat > sched_scaling.dat
+python graph_scaling.py sched_scaling.dat
+
+5)
+First date was 2013-04-05 17:17:12.697
+Last date was  2013-04-10 00:17:50.983
+
+So roughly 5 minutes to run, after 5 days
