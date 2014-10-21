@@ -183,7 +183,6 @@ class TestKernelMappings(object):
 
 
     def test_filter_on_scheduling_horizon_applies_horizon_to_singles(self):
-        #TODO: In progress
         start             = datetime(2011, 11, 1, 6, 0, 0)
         end               = datetime(2011, 12, 1, 6, 0, 0)
         request           = self.make_constrained_request(start=start, end=end)
@@ -208,7 +207,6 @@ class TestKernelMappings(object):
 
 
     def test_filter_on_scheduling_horizon_applies_horizon_to_manys(self):
-            #TODO: In progress
             start             = datetime(2011, 11, 1, 6, 0, 0)
             end               = datetime(2011, 12, 1, 6, 0, 0)
             request1          = self.make_constrained_request(start=start, end=end)
@@ -238,7 +236,6 @@ class TestKernelMappings(object):
 
 
     def test_filter_on_scheduling_horizon_no_horizon_applied_to_oneof(self):
-            #TODO: In progress
             start             = datetime(2011, 11, 1, 6, 0, 0)
             end               = datetime(2011, 12, 1, 6, 0, 0)
             request1          = self.make_constrained_request(start=start, end=end)
@@ -268,7 +265,6 @@ class TestKernelMappings(object):
 
 
     def test_filter_on_scheduling_horizon_no_horizon_applied_to_and(self):
-            #TODO: In progress
             start             = datetime(2011, 11, 1, 6, 0, 0)
             end               = datetime(2011, 12, 1, 6, 0, 0)
             request1          = self.make_constrained_request(start=start, end=end)

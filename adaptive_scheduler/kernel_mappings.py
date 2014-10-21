@@ -241,6 +241,8 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     #TODO: Add the duration filter here?
     # Clean up Requests without any windows
     horizon_limited_urs = filter_on_type(horizon_limited_urs)
+    # Many's may have children with no windows that should be removed from consideration
+    removed_requests = drop_empty_requests(horizon_limited_urs)
     log.info("After filtering, %d horizon-limited urs remain" % len(horizon_limited_urs))
     
     # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
@@ -250,11 +252,17 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     unlimited_urs = truncate_upper_crossing_windows(unlimited_urs)
     unlimited_urs = filter_out_future_windows(unlimited_urs)
     
+    # TODO: it's possible that one-ofs and ands may have these windowless 
+    # children at this point from requests that crossed the semester boundry
+    # might need to drop empty requests before filtering on type   
+    
     # Clean up Requests without any windows
     unlimited_urs = filter_on_type(unlimited_urs)
     log.info("After filtering, %d unlimited URs remain" % len(unlimited_urs))
     
-    return horizon_limited_urs + unlimited_urs
+    remaining_urs = horizon_limited_urs + unlimited_urs
+     
+    return remaining_urs
 
 
 @timeit
@@ -275,6 +283,7 @@ def filter_for_kernel(user_requests, visibility_from, semester_start, semester_e
 
     # Clean up now impossible Requests
     urs = filter_on_duration(urs)
+    # TODO: Do we need to drop empty requests here before carrying on?
     urs = filter_on_type(urs, [])
 
     return urs
@@ -326,13 +335,18 @@ def intervals_to_windows(req, intersections_for_resource):
     windows = Windows()
     for resource_name, intervals in intersections_for_resource.iteritems():
         windows_for_resource = req.windows.windows_for_resource[resource_name]
-        resource = windows_for_resource[0].resource
+        # TODO: This needs cleanup
+        # It's possible there are no windows for this resource so we can't
+        # assume that we will be able to get a handle on the resource from the
+        # first window.
+        if(len(windows_for_resource) > 0):
+            resource = windows_for_resource[0].resource
 
-        while intervals.timepoints:
-            tp1 = intervals.timepoints.pop(0)
-            tp2 = intervals.timepoints.pop(0)
-            w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
-            windows.append(w)
+            while intervals.timepoints:
+                tp1 = intervals.timepoints.pop(0)
+                tp2 = intervals.timepoints.pop(0)
+                w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
+                windows.append(w)
 
     return windows
 
