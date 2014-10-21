@@ -267,7 +267,7 @@ def filter_for_kernel(user_requests, visibility_from, semester_start, semester_e
        want to set the UNSCHEDULABLE flag for these Requests. This is because the
        step is network-dependent; if the network subsequently changes (e.g. a
        telescope becomes available), then the Request may then be schedulable.'''
-    
+    # trim windows to scheduling horizon, expiry, or end of semester and filter
     urs = filter_on_scheduling_horizon(user_requests, scheduling_horizon)
 
     # Filter on rise_set/airmass
