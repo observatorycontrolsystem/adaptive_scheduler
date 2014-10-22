@@ -4,7 +4,7 @@ from __future__ import division
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
-                                       CompoundRequest,
+                                       CompoundRequest, UserRequest,
                                        Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
@@ -15,7 +15,8 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 rise_set_to_kernel_intervals,
                                                 make_dark_up_kernel_intervals,
                                                 construct_global_availability,
-                                                normalise_dt_intervals)
+                                                normalise_dt_intervals,
+                                                filter_on_scheduling_horizon)
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.memoize import Memoize
@@ -69,11 +70,13 @@ class TestKernelMappings(object):
                                                )
 
 
-    def make_constrained_request(self, airmass=None):
+    def make_constrained_request(self, airmass=None,
+                                 start=datetime(2011, 11, 1, 6, 0, 0),
+                                 end=datetime(2011, 11, 2, 6, 0, 0)):
         # A one day user supplied window
         window_dict = {
-                        'start' : datetime(2011, 11, 1, 6, 0, 0),
-                        'end'   : datetime(2011, 11, 2, 6, 0, 0)
+                        'start' : start,
+                        'end'   : end
                       }
         resource_name = '1m0a.doma.bpl'
         resource      = self.tels[resource_name]
@@ -102,6 +105,13 @@ class TestKernelMappings(object):
                             )
 
         return cr
+
+
+    def make_user_request(self, requests, operator='single'):
+        ur = UserRequest(operator, requests, 'Test Proposal',
+                         datetime(2012, 1, 1), '1', 'test group id')
+        
+        return ur
 
 
     def make_intersection_dict(self):
@@ -171,6 +181,116 @@ class TestKernelMappings(object):
         assert_equal(len(received.reservation_list), 1)
         assert_equal(received.type, 'single')
 
+
+    def test_filter_on_scheduling_horizon_applies_horizon_to_singles(self):
+        start             = datetime(2011, 11, 1, 6, 0, 0)
+        end               = datetime(2011, 12, 1, 6, 0, 0)
+        request           = self.make_constrained_request(start=start, end=end)
+        operator          = 'single'
+        requests          = [request]
+        user_request      = self.make_user_request(requests, operator)
+        user_requests     = [user_request]
+        scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
+        filtered_urs = filter_on_scheduling_horizon(user_requests,
+                                                    scheduling_horizon)
+        
+        expected_window_start = start
+        expected_window_end = scheduling_horizon
+        
+        assert_equal(1, len(filtered_urs))
+        output_ur = filtered_urs[0]
+        assert_equal(1, len(output_ur.requests))
+        bpl_1m0a_doma_windows = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+        assert_equal(1, len(bpl_1m0a_doma_windows))
+        assert_equal(bpl_1m0a_doma_windows[0].start, expected_window_start)
+        assert_equal(bpl_1m0a_doma_windows[0].end, expected_window_end)
+
+
+    def test_filter_on_scheduling_horizon_applies_horizon_to_manys(self):
+            start             = datetime(2011, 11, 1, 6, 0, 0)
+            end               = datetime(2011, 12, 1, 6, 0, 0)
+            request1          = self.make_constrained_request(start=start, end=end)
+            request2          = self.make_constrained_request(start=start, end=end)
+            operator          = 'many'
+            requests          = [request1, request2]
+            user_request      = self.make_user_request(requests, operator)
+            user_requests     = [user_request]
+            scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
+            filtered_urs = filter_on_scheduling_horizon(user_requests,
+                                                        scheduling_horizon)
+            
+            expected_window_start = start
+            expected_window_end = scheduling_horizon
+            
+            assert_equal(1, len(filtered_urs))
+            output_ur = filtered_urs[0]
+            assert_equal(2, len(output_ur.requests))
+            bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            assert_equal(1, len(bpl_1m0a_doma_windows1))
+            assert_equal(1, len(bpl_1m0a_doma_windows2))
+            assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
+            assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
+
+
+    def test_filter_on_scheduling_horizon_no_horizon_applied_to_oneof(self):
+            start             = datetime(2011, 11, 1, 6, 0, 0)
+            end               = datetime(2011, 12, 1, 6, 0, 0)
+            request1          = self.make_constrained_request(start=start, end=end)
+            request2          = self.make_constrained_request(start=start, end=end)
+            operator          = 'oneof'
+            requests          = [request1, request2]
+            user_request      = self.make_user_request(requests, operator)
+            user_requests     = [user_request]
+            scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
+            filtered_urs = filter_on_scheduling_horizon(user_requests,
+                                                        scheduling_horizon)
+            
+            expected_window_start = start
+            expected_window_end = end
+            
+            assert_equal(1, len(filtered_urs))
+            output_ur = filtered_urs[0]
+            assert_equal(2, len(output_ur.requests))
+            bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            assert_equal(1, len(bpl_1m0a_doma_windows1))
+            assert_equal(1, len(bpl_1m0a_doma_windows2))
+            assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
+            assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
+
+
+    def test_filter_on_scheduling_horizon_no_horizon_applied_to_and(self):
+            start             = datetime(2011, 11, 1, 6, 0, 0)
+            end               = datetime(2011, 12, 1, 6, 0, 0)
+            request1          = self.make_constrained_request(start=start, end=end)
+            request2          = self.make_constrained_request(start=start, end=end)
+            operator          = 'and'
+            requests          = [request1, request2]
+            user_request      = self.make_user_request(requests, operator)
+            user_requests     = [user_request]
+            scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
+            filtered_urs = filter_on_scheduling_horizon(user_requests,
+                                                        scheduling_horizon)
+            
+            expected_window_start = start
+            expected_window_end = end
+            
+            assert_equal(1, len(filtered_urs))
+            output_ur = filtered_urs[0]
+            assert_equal(2, len(output_ur.requests))
+            bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
+            assert_equal(1, len(bpl_1m0a_doma_windows1))
+            assert_equal(1, len(bpl_1m0a_doma_windows2))
+            assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
+            assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
+            assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
 
 
     def test_make_dark_up_kernel_intervals(self):

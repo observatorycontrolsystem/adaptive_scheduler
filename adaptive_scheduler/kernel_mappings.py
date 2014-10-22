@@ -36,14 +36,14 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
                                           epoch_to_datetime, timeit )
 from adaptive_scheduler.printing import print_req_summary, plural_str as pl
-from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type
+from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
                                                 drop_empty_requests,
                                                 log_windows)
-from adaptive_scheduler.memoize import Memoize
-from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.memoize     import Memoize
+from adaptive_scheduler.log         import UserRequestLogger
 from adaptive_scheduler.event_utils import report_visibility_outcome
 
 import math
@@ -222,7 +222,51 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
-def filter_for_kernel(crs, visibility_from, semester_start, semester_end, scheduling_horizon):
+def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
+    '''Filter out windows in user requests that extend beyond the scheduling
+       horizon for types (single, many)
+    '''
+    urs_by_type = filter_compounds_by_type(user_requests)
+    log.info("Identified %s" % pl(len(urs_by_type['single']), 'single'))
+    log.info("Identified %s" % pl(len(urs_by_type['many']), 'many'))
+    log.info("Identified %s" % pl(len(urs_by_type['and']), 'and'))
+    log.info("Identified %s" % pl(len(urs_by_type['oneof']), 'oneof'))
+
+
+    # Filter windows that are beyond the short-term scheduling horizon
+    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s days)" % scheduling_horizon)
+    horizon_limited_urs = urs_by_type['single'] + urs_by_type['many']
+    horizon_limited_urs = truncate_upper_crossing_windows(horizon_limited_urs, horizon=scheduling_horizon)
+    horizon_limited_urs = filter_out_future_windows(horizon_limited_urs, horizon=scheduling_horizon)
+    #TODO: Add the duration filter here?
+    # Clean up Requests without any windows
+    horizon_limited_urs = filter_on_type(horizon_limited_urs)
+    # Many's may have children with no windows that should be removed from consideration
+    removed_requests = drop_empty_requests(horizon_limited_urs)
+    log.info("After filtering, %d horizon-limited urs remain" % len(horizon_limited_urs))
+    
+    # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
+    # TODO: Remove this block after review
+    log.info("Filtering compound URs of type 'and' and 'oneof', not constrained by scheduling horizon")
+    unlimited_urs = urs_by_type['and'] + urs_by_type['oneof']
+    unlimited_urs = truncate_upper_crossing_windows(unlimited_urs)
+    unlimited_urs = filter_out_future_windows(unlimited_urs)
+    
+    # TODO: it's possible that one-ofs and ands may have these windowless 
+    # children at this point from requests that crossed the semester boundry
+    # might need to drop empty requests before filtering on type   
+    
+    # Clean up Requests without any windows
+    unlimited_urs = filter_on_type(unlimited_urs)
+    log.info("After filtering, %d unlimited URs remain" % len(unlimited_urs))
+    
+    remaining_urs = horizon_limited_urs + unlimited_urs
+     
+    return remaining_urs
+
+
+@timeit
+def filter_for_kernel(user_requests, visibility_from, semester_start, semester_end, scheduling_horizon):
     '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any URs that are now too
        small to hold their duration after this consideration, so they are not passed
@@ -231,41 +275,18 @@ def filter_for_kernel(crs, visibility_from, semester_start, semester_end, schedu
        want to set the UNSCHEDULABLE flag for these Requests. This is because the
        step is network-dependent; if the network subsequently changes (e.g. a
        telescope becomes available), then the Request may then be schedulable.'''
-    singles, compounds = differentiate_by_type('single', crs)
-    log.info("Identified %s" % pl(len(singles), 'single'))
-    log.info("Identified %s" % pl(len(compounds), 'compound'))
-
-    # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single'")
-    singles = truncate_upper_crossing_windows(singles, horizon=scheduling_horizon)
-    singles = filter_out_future_windows(singles, horizon=scheduling_horizon)
-    #TODO: Add the duration filter here?
-    # Clean up Requests without any windows
-    singles = filter_on_type(singles, [])
-    log.info("After filtering, %d singles remain" % len(singles))
-
-
-    # Compounds (and/oneof/many) are not constrained to the short-term scheduling horizon
-    # TODO: Remove this block after review
-    log.info("Filtering compound URs of type 'and', 'oneof' or 'many'")
-    compounds = truncate_upper_crossing_windows(compounds)
-    compounds = filter_out_future_windows(compounds)
-    # Clean up Requests without any windows
-    compounds = filter_on_type(compounds, [])
-    log.info("After filtering, %d compounds remain" % len(compounds))
-
-    crs = singles + compounds
-    log.info("After filtering all singles and compounds, %d URs remain" % len(crs))
-
+    # trim windows to scheduling horizon, expiry, or end of semester and filter
+    urs = filter_on_scheduling_horizon(user_requests, scheduling_horizon)
 
     # Filter on rise_set/airmass
-    crs = filter_on_visibility(crs, visibility_from)
+    urs = filter_on_visibility(urs, visibility_from)
 
     # Clean up now impossible Requests
-    crs = filter_on_duration(crs)
-    crs = filter_on_type(crs, [])
+    urs = filter_on_duration(urs)
+    # TODO: Do we need to drop empty requests here before carrying on?
+    urs = filter_on_type(urs, [])
 
-    return crs
+    return urs
 
 
 def list_available_tels(visibility_from):
@@ -314,13 +335,18 @@ def intervals_to_windows(req, intersections_for_resource):
     windows = Windows()
     for resource_name, intervals in intersections_for_resource.iteritems():
         windows_for_resource = req.windows.windows_for_resource[resource_name]
-        resource = windows_for_resource[0].resource
+        # TODO: This needs cleanup
+        # It's possible there are no windows for this resource so we can't
+        # assume that we will be able to get a handle on the resource from the
+        # first window.
+        if(len(windows_for_resource) > 0):
+            resource = windows_for_resource[0].resource
 
-        while intervals.timepoints:
-            tp1 = intervals.timepoints.pop(0)
-            tp2 = intervals.timepoints.pop(0)
-            w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
-            windows.append(w)
+            while intervals.timepoints:
+                tp1 = intervals.timepoints.pop(0)
+                tp2 = intervals.timepoints.pop(0)
+                w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
+                windows.append(w)
 
     return windows
 
