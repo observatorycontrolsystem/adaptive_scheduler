@@ -115,14 +115,18 @@ class SchedulingInputUtils(object):
 
     def json_urs_to_scheduler_model_urs(self, json_user_request_list):
         scheduler_model_urs = []
+        invalid_json_user_requests = []
+        invalid_json_requests = []
         for json_ur in json_user_request_list:
             try:
-                scheduler_model_ur = self.model_builder.build_user_request(json_ur)
+                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur)
                 scheduler_model_urs.append(scheduler_model_ur)
+                invalid_json_requests.extend(invalid_children)
             except RequestError as e:
                 self.log.warn(e)
+                invalid_json_user_requests.append(json_ur)
 
-        return scheduler_model_urs
+        return scheduler_model_urs, invalid_json_user_requests, invalid_json_requests
 
 
     def sort_scheduler_models_urs_by_type(self, scheduler_model_user_requests):
@@ -167,10 +171,14 @@ class SchedulingInput(object):
 
         self._scheduler_model_too_user_requests = None
         self._scheduler_model_normal_user_requests = None
+        self._invalid_user_requests = []
+        self._invalid_requests = []
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
-        scheduler_model_urs = self.utils.json_urs_to_scheduler_model_urs(self.json_user_request_list)
+        scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(self.json_user_request_list)
+        self._invalid_user_requests = invalid_user_requests
+        self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
         self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
         self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
@@ -212,6 +220,16 @@ class SchedulingInput(object):
     @property
     def too_tracking_numbers(self):
         return self.utils.too_tracking_numbers(self.too_user_requests)
+
+
+    @property
+    def invalid_request_numbers(self):
+        return [r.request_number for r in self._invalid_requests]
+
+
+    @property
+    def invalid_tracking_numbers(self):
+        return [ur.tracking_number for ur in self._invalid_user_requests]
 
 
     def write_input_to_file(self, filename):

@@ -355,8 +355,8 @@ class Scheduler(object):
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
-        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
+        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers + scheduler_input.invalid_tracking_numbers
+        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers + scheduler_input.invalid_request_numbers
 
         if compound_reservations:
             # Instantiate and run the scheduler

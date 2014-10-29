@@ -1,6 +1,7 @@
-from adaptive_scheduler.scheduler_input import SchedulingInputProvider, SchedulerParameters, SchedulingInputFactory
+from adaptive_scheduler.scheduler_input import SchedulingInputProvider, SchedulerParameters, SchedulingInputFactory,\
+    SchedulingInputUtils
 from adaptive_scheduler.interfaces import ResourceUsageSnapshot
-from adaptive_scheduler.model2 import Telescope
+from adaptive_scheduler.model2 import Telescope, RequestError
 
 from mock import Mock
 from nose.tools import assert_equal, assert_almost_equal, assert_not_equal, assert_true, assert_false
@@ -160,5 +161,30 @@ class TestSchedulingInputFactory(object):
         factory.create_normal_scheduling_input(output_path=None)
         assert_equal(1, input_provider.set_normal_mode.call_count)
         assert_equal(0, input_provider.set_normal_run_time.call_count)
+
+
+class TestSchedulingInputUtils(object):
+    
+    def test_json_urs_to_scheduler_model_urs_returns_invalid_requests(self):
+        mock_model_builder = Mock()
+        mock_ur = Mock()
+        mock_model_builder.build_user_request = Mock(return_value=(mock_ur, { 'request_number' : '1' }))
         
+        utils = SchedulingInputUtils(mock_model_builder)
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs(['dummy1', 'dummy2'])
+        assert_equal(2, len(model_urs))
+        assert_equal([], invalid_urs)
+        assert_equal(2, len(invalid_rs))
+        
+        
+    def test_json_urs_to_scheduler_model_urs_returns_invalid_user_requests(self):
+        mock_model_builder = Mock()
+        mock_model_builder.build_user_request = Mock(side_effect=RequestError)
+        
+        utils = SchedulingInputUtils(mock_model_builder)
+#         import ipdb; ipdb.set_trace();
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs(['dummy1', 'dummy2'])
+        assert_equal(0, len(model_urs))
+        assert_equal(2, len(invalid_urs))
+        assert_equal(0, len(invalid_rs))
         
