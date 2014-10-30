@@ -1076,3 +1076,55 @@ class TestModelBuilder(object):
                    }
 
         request = self.mb.build_request(req_dict)
+
+    def test_build_user_request_returns_invalid_user_requests(self):
+        bad_req_dict = {
+                     'target' : {
+                                  'type' : 'POTATOES',
+                                },
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : '2',
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+        
+        good_req_dict = {
+                     'target'         : self.target,
+                     'molecules' : [
+                                     {
+                                       'instrument_name' : 'SciCam',
+                                       'type'            : 'expose',
+                                       'filter'          : 'B',
+                                     },
+                                   ],
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'request_number' : '3',
+                     'state'          : self.state,
+                     'observation_type' : 'NORMAL',
+                   }
+
+        cr_dict = {
+                   'proposal' : {
+                                 'proposal_id' : 'INDECENT',
+                                 'user_id' : 'demi.moore',
+                                 'tag_id' : 'BAD_MOVIES',
+                                 'observer_name' : 'me',
+                                 'priority' : '10'
+                                },
+                   'expires' : '2014-10-29 12:12:12',
+                   'group_id' : '',
+                   'tracking_number' : '1',
+                   'operator' : 'many',
+                   'requests' : [bad_req_dict, good_req_dict]
+                   }
+        
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        
+        assert_equal(1, len(user_request_model.requests))
+        assert_equal(1, len(invalid_requests))
+        assert_equal(bad_req_dict, invalid_requests[0])

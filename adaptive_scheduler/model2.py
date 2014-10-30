@@ -537,18 +537,22 @@ class UserRequest(CompoundRequest, DefaultMixin):
         self.group_id        = group_id
 
 
-    def emit_user_feedback(self, msg, tag, timestamp=None):
+    @staticmethod
+    def emit_user_request_feedback(tracking_number, msg, tag, timestamp=None):
         if not timestamp:
             timestamp = datetime.utcnow()
 
         originator = 'scheduler'
 
         event = UserFeedbackLogger.create_event(timestamp, originator, msg,
-                                                tag, self.tracking_number)
+                                                tag, tracking_number)
 
         event_bus.fire_event(event)
 
         return
+
+    def emit_user_feedback(self, msg, tag, timestamp=None):
+        UserRequest.emit_user_request_feedback(self.tracking_number, msg, tag, timestamp)
 
 
     def scheduling_horizon(self, now):
@@ -650,13 +654,21 @@ class ModelBuilder(object):
         operator = cr_dict['operator']
         requests, invalid_requests  = self.build_requests(cr_dict['requests'])
         if invalid_requests:
-            log.warn("Found %s", pl(len(invalid_requests), 'invalid Request'))
+            msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
+            log.warn(msg)
+            for invalid_request, error_msg in invalid_requests:
+                tag = "InvalidRequest"
+                UserRequest.emit_user_request_feedback(tracking_number, error_msg, tag)
             if operator.lower() == 'and':
                 msg = "Invalid request found within 'AND' UR %s making UR invalid" % tracking_number
+                tag = "InvalidUserRequest"
+                UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
                 raise RequestError(msg)
 
         if not requests:
             msg = "No valid Requests for UR %s" % tracking_number
+            tag = "InvalidUserRequest"
+            UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
             raise RequestError(msg)
 
         proposal  = Proposal(cr_dict['proposal'])
@@ -671,10 +683,26 @@ class ModelBuilder(object):
                                     group_id        = cr_dict['group_id']
                                   )
 
-        return user_request
+        # Return only the invalid request and not the error message
+        invalid_requests = [ir[0] for ir in invalid_requests]
+        return user_request, invalid_requests
 
 
     def build_requests(self, req_dicts):
+        '''Returns tuple where first element is the list of validated request
+        models and the second is a list of invalid request dicts  paired with
+        validation errors 
+            ([validated_request_model1,
+              valicated_request_model2,
+              ...
+             ],
+             [
+                (invalid_request_dict1, 'validation error'),
+                (invalid_request_dict2, 'validation error'),
+                ...
+             ]
+            )
+        '''
         requests         = []
         invalid_requests = []
         for req_dict in req_dicts:
@@ -683,7 +711,7 @@ class ModelBuilder(object):
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
-                invalid_requests.append(req_dict)
+                invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests
 
