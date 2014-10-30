@@ -89,18 +89,32 @@ class SchedulingInputFactory(object):
         return scheduler_input
 
     @timeit
-    def create_too_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
+    def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
+                                    output_path='/data/adaptive_scheduler/input_states/',
+                                    network_state_timestamp=None):
+        if network_state_timestamp is None:
+            network_state_timestamp = datetime.utcnow()
+        
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
+        
+        self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_too_mode()
 
         return self._create_scheduling_input(self.input_provider, True, output_path)
 
 
     @timeit
-    def create_normal_scheduling_input(self, estimated_scheduling_seconds=None, output_path='/data/adaptive_scheduler/input_states/'):
+    def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
+                                       output_path='/data/adaptive_scheduler/input_states/',
+                                       network_state_timestamp=None):
+        if network_state_timestamp is None:
+            network_state_timestamp = datetime.utcnow()
+            
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
+            
+        self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
 
         return self._create_scheduling_input(self.input_provider, False, output_path)
@@ -258,6 +272,7 @@ class SchedulingInputProvider(object):
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
+        self.last_known_state_timestamp = None
 
 
     def refresh(self):
@@ -285,6 +300,10 @@ class SchedulingInputProvider(object):
     def set_normal_mode(self):
         self.is_too_input = False
         self.refresh()
+
+
+    def set_last_known_state(self, timestamp):
+        self.last_known_state_timestamp = timestamp
 
 
     def _get_scheduler_now(self):
@@ -329,7 +348,8 @@ class SchedulingInputProvider(object):
 
 
     def _get_resource_usage_snapshot(self):
-        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), self.scheduler_now, self.estimated_scheduler_end)
+        snapshot_start = self.last_known_state_timestamp if self.last_known_state_timestamp else self.scheduler_now
+        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self.estimated_scheduler_end)
 
         return snapshot
 

@@ -80,6 +80,15 @@ class TestSchedulingInputProvider(object):
         assert_almost_equal(self.sched_params.normal_run_time, (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(), delta=5, msg='Snapshot end should be refresh time + Normal scheduling run time')
         
         
+    def test_normal_input_resource_usage_snapshot_start(self):
+        input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=False)
+        last_known_state = datetime(2014, 10, 29, 5, 47, 0)
+        input_provider.set_last_known_state(last_known_state)
+        input_provider.refresh()
+        
+        assert_almost_equal(last_known_state, self.network_interface.resource_usage_snapshot.call_args[0][1], msg='Snapshot start should be last known state')
+        
+        
     def test_set_too_mode(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=False)
         test_now = datetime.utcnow()
