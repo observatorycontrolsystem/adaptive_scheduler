@@ -272,7 +272,7 @@ class SchedulingInputProvider(object):
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
-        self.last_know_state_timestamp = None
+        self.last_known_state_timestamp = None
 
 
     def refresh(self):
@@ -303,7 +303,7 @@ class SchedulingInputProvider(object):
 
 
     def set_last_known_state(self, timestamp):
-        self.last_know_state_timestamp = timestamp
+        self.last_known_state_timestamp = timestamp
 
 
     def _get_scheduler_now(self):
@@ -348,7 +348,7 @@ class SchedulingInputProvider(object):
 
 
     def _get_resource_usage_snapshot(self):
-        snapshot_start = self.last_know_state_timestamp if self.last_know_state_timestamp else self.scheduler_now
+        snapshot_start = self.last_known_state_timestamp if self.last_known_state_timestamp else self.scheduler_now
         snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self.estimated_scheduler_end)
 
         return snapshot

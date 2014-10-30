@@ -86,7 +86,7 @@ class TestSchedulingInputProvider(object):
         input_provider.set_last_known_state(last_known_state)
         input_provider.refresh()
         
-        assert_almost_equal(last_known_state, self.network_interface.resource_usage_snapshot.call_args[0][1], msg='Snapshot start should be last know state')
+        assert_almost_equal(last_known_state, self.network_interface.resource_usage_snapshot.call_args[0][1], msg='Snapshot start should be last known state')
         
         
     def test_set_too_mode(self):
