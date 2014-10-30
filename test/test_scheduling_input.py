@@ -182,7 +182,6 @@ class TestSchedulingInputUtils(object):
         mock_model_builder.build_user_request = Mock(side_effect=RequestError)
         
         utils = SchedulingInputUtils(mock_model_builder)
-#         import ipdb; ipdb.set_trace();
         model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs(['dummy1', 'dummy2'])
         assert_equal(0, len(model_urs))
         assert_equal(2, len(invalid_urs))
