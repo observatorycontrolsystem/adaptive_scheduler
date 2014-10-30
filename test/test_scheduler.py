@@ -1420,7 +1420,7 @@ class TestSchedulerRunner(object):
         scheduler_runner.call_scheduler = Mock(side_effect=lambda scheduler_input: too_scheduler_result if scheduler_input.is_too_input else normal_scheduler_result)
 
         scheduler_runner._determine_resource_cancelation_start_date = Mock(return_value=Mock())
-        scheduler_runner.create_new_schedule()
+        scheduler_runner.create_new_schedule(datetime.utcnow())
 
 
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
@@ -1541,7 +1541,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                            self.input_factory)
         expected_too_run_time_arg = scheduler_runner.estimated_too_run_timedelta
         expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
-        scheduler_runner.create_new_schedule()
+        scheduler_runner.create_new_schedule(datetime.utcnow())
 
         assert_equal(1, self.input_factory.create_too_scheduling_input.call_count)
         assert_equal(expected_too_run_time_arg.total_seconds(),
@@ -1568,7 +1568,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                            self.input_factory)
         expected_too_run_time_arg = scheduler_runner.estimated_too_run_timedelta
         expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
-        scheduler_runner.create_new_schedule()
+        scheduler_runner.create_new_schedule(datetime.utcnow())
 
         assert_equal(1, self.input_factory.create_too_scheduling_input.call_count)
         assert_equal(expected_too_run_time_arg.total_seconds(),
