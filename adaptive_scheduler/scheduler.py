@@ -637,9 +637,10 @@ class SchedulerRunner(object):
             self.update_network_model()
 
         # Always run the scheduler on the first run
+        scheduler_run_start = datetime.utcnow()
         if self.scheduler_rerun_required() or self.first_run:
             try:
-                self.create_new_schedule()
+                self.create_new_schedule(scheduler_run_start)
             except EstimateExceededException, eee:
                 # Estimated run time was exceeded so exception was raised
                 # to short circuit to exit.  Just try again.  Run time
@@ -884,8 +885,9 @@ class SchedulerRunner(object):
 
 
     @timeit
-    def create_new_schedule(self):
-        too_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds())
+    def create_new_schedule(self, network_state_timestamp):
+        too_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds(),
+                                                                   network_state_timestamp=network_state_timestamp)
         too_scheduler_result = self.create_too_schedule(too_input)
 
         # Find resource scheduled by ToO run and don't cancel their schedules
@@ -896,7 +898,8 @@ class SchedulerRunner(object):
                 if reservation_list:
                     too_resources.append(too_resource)
 
-        normal_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds())
+        normal_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
+                                                                         network_state_timestamp=network_state_timestamp)
         normal_scheduler_result = self.create_normal_schedule(normal_input, too_resources)
 
         # Only clear the change state if scheduling is successful and not a dry run
