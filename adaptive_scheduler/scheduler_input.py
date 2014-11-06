@@ -238,7 +238,7 @@ class SchedulingInput(object):
 
     @property
     def invalid_request_numbers(self):
-        return [r.request_number for r in self._invalid_requests]
+        return [r['request_number'] for r in self._invalid_requests]
 
 
     @property
