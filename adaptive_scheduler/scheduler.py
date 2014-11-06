@@ -355,9 +355,27 @@ class Scheduler(object):
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers + scheduler_input.invalid_tracking_numbers
-        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers + scheduler_input.invalid_request_numbers
+        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
+        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 
+        # Include any invalid user requests in the unschedulable list
+        invalid_tracking_numbers = []
+        invalid_json_user_requests = scheduler_input.invalid_user_requests
+        for json_ur in invalid_json_user_requests:
+            if json_ur.has_key('tracking_number'):
+                if json_ur.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
+                    invalid_tracking_numbers.append(json_ur['tracking_number'])
+        scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
+        
+        # Include any invalid requests in the unschedulable list
+        invalid_request_numbers = []
+        invalid_requests = scheduler_input.invalid_requests
+        for json_r in invalid_requests:
+            if json_r.has_key('request_number'):
+                if json_r.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
+                    invalid_request_numbers.append(json_r['request_number'])
+        scheduler_result.unschedulable_request_numbers += invalid_request_numbers
+        
         if compound_reservations:
             # Instantiate and run the scheduler
             contractual_obligations = []

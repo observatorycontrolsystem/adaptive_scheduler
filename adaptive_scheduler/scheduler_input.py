@@ -237,13 +237,13 @@ class SchedulingInput(object):
 
 
     @property
-    def invalid_request_numbers(self):
-        return [r['request_number'] for r in self._invalid_requests]
+    def invalid_requests(self):
+        return self._invalid_requests
 
 
     @property
-    def invalid_tracking_numbers(self):
-        return [ur['tracking_number'] for ur in self._invalid_user_requests]
+    def invalid_user_requests(self):
+        return self._invalid_user_requests
 
 
     def write_input_to_file(self, filename):

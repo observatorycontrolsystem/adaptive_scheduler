@@ -498,8 +498,8 @@ class TestSchduler(object):
                             resource_usage_snapshot=resource_usage_snapshot,
                             is_too_input=False,
                             )
-        mock_scheduler_input.invalid_tracking_numbers = ['123456789']
-        mock_scheduler_input.invalid_request_numbers = []
+        mock_scheduler_input.invalid_user_requests = [dict(tracking_number='123456789', state='PENDING')]
+        mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=False)
         
@@ -518,13 +518,33 @@ class TestSchduler(object):
                             resource_usage_snapshot=resource_usage_snapshot,
                             is_too_input=False,
                             )
-        mock_scheduler_input.invalid_tracking_numbers = []
-        mock_scheduler_input.invalid_request_numbers = ['123456789']
+        mock_scheduler_input.invalid_user_requests = []
+        mock_scheduler_input.invalid_requests = [dict(request_number='123456789', state='PENDING')]
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=False)
         
         assert_equal([], scheduler_result.unschedulable_user_request_numbers)
         assert_equal(['123456789'], scheduler_result.unschedulable_request_numbers)
+
+
+    def test_invalid_unschedulable_request_not_included_in_unschedulable_list(self):
+        resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {})
+        mock_scheduler_input = Mock(user_requests=[],
+                            too_user_requests=[],
+                            normal_user_requests=[],
+                            user_request_priorities={1 : 10},
+                            available_resources=self.network_model,
+                            estimated_scheduler_end=datetime.utcnow(),
+                            resource_usage_snapshot=resource_usage_snapshot,
+                            is_too_input=False,
+                            )
+        mock_scheduler_input.invalid_user_requests = []
+        mock_scheduler_input.invalid_requests = [dict(request_number='123456789', state='UNSCHEDULABLE')]
+        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=False)
+        
+        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -568,8 +588,8 @@ class TestSchduler(object):
                             resource_usage_snapshot=resource_usage_snapshot,
                             is_too_input=True,
                             )
-        mock_scheduler_input.invalid_tracking_numbers = []
-        mock_scheduler_input.invalid_request_numbers = []
+        mock_scheduler_input.invalid_user_requests = []
+        mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=False)
 
@@ -672,8 +692,8 @@ class TestSchduler(object):
                             estimated_scheduler_end=scheduler_run_end,
                             resource_usage_snapshot=resource_usage_snapshot,
                             is_too_input=True)
-        mock_scheduler_input.invalid_tracking_numbers = []
-        mock_scheduler_input.invalid_request_numbers = []
+        mock_scheduler_input.invalid_user_requests = []
+        mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=True)
 
@@ -951,8 +971,8 @@ class TestSchduler(object):
                             estimated_scheduler_end=scheduler_run_end,
                             resource_usage_snapshot=resource_usage_snapshot,
                             is_too_input=True)
-        mock_scheduler_input.invalid_tracking_numbers = []
-        mock_scheduler_input.invalid_request_numbers = []
+        mock_scheduler_input.invalid_user_requests = []
+        mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, preemption_enabled=True)
 
