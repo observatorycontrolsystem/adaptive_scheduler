@@ -18,7 +18,8 @@ reqdbclient
 schedutils
 
 # Only needed for unit tests of old versions of the kernel
-openopt==0.45
+#openopt==0.4.5
+openopt
 munkres==1.0.5.4
 
 # 2) Testing/debugging dependencies
