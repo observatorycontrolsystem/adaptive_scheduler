@@ -233,7 +233,7 @@ class SchedulingInput(object):
 
     @property
     def too_tracking_numbers(self):
-        return self.utils.too_tracking_numbers(self.too_user_requests)
+        return [ur.tracking_number for ur in self.too_user_requests] 
 
 
     @property
@@ -385,6 +385,7 @@ class FileBasedSchedulingInputProvider(object):
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
+        self.last_known_state_timestamp = None
 
         self.refresh()
 
@@ -395,6 +396,10 @@ class FileBasedSchedulingInputProvider(object):
 
 
     def set_normal_run_time(self, seconds):
+        # Do nothing, we want to use whatever came from the input file
+        pass
+    
+    def set_last_known_state(self, timestamp):
         # Do nothing, we want to use whatever came from the input file
         pass
 
