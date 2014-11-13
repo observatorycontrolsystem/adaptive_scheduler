@@ -1,3 +1,5 @@
+
+--extra-index-url=http://buildsba/python/
 --extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/thirdparty/
 --extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/
 
@@ -11,7 +13,6 @@ cvxopt==1.1.6
 lcogtpond>=0.3.3
 pyslalib
 rise_set
-lcogt
 lcogt-dateutils
 reqdbclient
 schedutils

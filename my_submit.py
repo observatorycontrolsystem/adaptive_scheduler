@@ -82,8 +82,8 @@ from any site, it will not be scheduled!
 '''
 # You may specify windows by start/end...
 window1 = {
-            'start'    : '2014-05-01 20:30:00',  # Time is UTC
-            'end'      : '2014-05-03 20:30:00',
+            'start'    : '2014-11-01 20:30:00',  # Time is UTC
+            'end'      : '2014-12-03 20:30:00',
           }
 
 # ...or with a duration
@@ -97,7 +97,7 @@ molecule = {
              # Required fields
              'exposure_time'   : 600,            # Exposure time, in secs
              'exposure_count'  : 2,              # The number of consecutive exposures
-             'spectra_slit'    : 'slit_6.0as',            # The generic filter name
+             'spectra_slit'    : 'FLOYDS_SLIT_DEFAULT',            # The generic filter name
              # Optional fields. Defaults are as below.
              'type'            : 'SPECTRUM',       # The type of the molecule
              'ag_mode'         : 'Optional',
