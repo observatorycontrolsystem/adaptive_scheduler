@@ -1,5 +1,5 @@
 
-#--extra-index-url=http://buildsba/python/
+--extra-index-url=http://buildsba/python/
 --extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/thirdparty/
 --extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/
 
