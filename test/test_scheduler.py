@@ -73,7 +73,7 @@ class TestSchduler(object):
         kernel_class_mock = Mock()
         scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
         scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime, normal_user_requests, network_snapshot_mock, network_model, False)
-        estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
+        estimated_scheduler_end = datetime.utcnow() + estimated_scheduler_runtime
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=False)
 
         assert_equal({}, scheduler_result.schedule)
