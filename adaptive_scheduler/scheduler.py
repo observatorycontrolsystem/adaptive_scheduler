@@ -775,8 +775,7 @@ class SchedulerRunner(object):
         self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
         self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
         # TODO: make sure this cancels anything currently running in the ToO case
-        cancelation_dates_by_resource = \
-        self._determine_schedule_cancelation_start_dates(
+        cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(
             resources_to_clear, scheduler_result.schedule,
             scheduler_input.resource_usage_snapshot,
             apply_deadline,
