@@ -73,7 +73,7 @@ class SchedulingInputFactory(object):
     def _create_scheduling_input(self, input_provider, is_too_input, output_path=None):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
-                        input_provider.estimated_scheduler_end,
+                        input_provider.estimated_scheduler_runtime(),
                         input_provider.json_user_request_list,
                         input_provider.resource_usage_snapshot,
                         input_provider.available_resources,
@@ -173,10 +173,10 @@ class SchedulingInputUtils(object):
 
 class SchedulingInput(object):
 
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_end, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
-        self.estimated_scheduler_end = estimated_scheduler_end
+        self.estimated_scheduler_runtime = estimated_scheduler_runtime
         self.json_user_request_list = json_user_request_list
         self.resource_usage_snapshot = resource_usage_snapshot
         self.available_resources = available_resources
@@ -250,7 +250,7 @@ class SchedulingInput(object):
         output = {
                   'sched_params' : self.sched_params,
                   'scheduler_now' : self.scheduler_now,
-                  'estimated_scheduler_end' : self.estimated_scheduler_end,
+                  'estimated_scheduler_runtime' : self.estimated_scheduler_runtime,
                   'json_user_request_list' : self.json_user_request_list,
                   'resource_usage_snapshot' : self.resource_usage_snapshot,
                   'available_resources' : self.available_resources,
@@ -281,12 +281,11 @@ class SchedulingInputProvider(object):
         self.is_too_input = is_too_input
         self.utils = SchedulingInputUtils(sched_params.get_model_builder())
 
-        self._estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
-        self._estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
+        self.estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
+        self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
 
         # TODO: Hide these behind read only properties
         self.scheduler_now = None
-        self.estimated_scheduler_end = None
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
@@ -296,18 +295,17 @@ class SchedulingInputProvider(object):
     def refresh(self):
         # The order of these is important
         self.scheduler_now = self._get_scheduler_now()
-        self.estimated_scheduler_end = self._get_estimated_scheduler_end()
         self.json_user_request_list = self._get_json_user_request_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
 
 
     def set_too_run_time(self, seconds):
-        self._estimated_too_run_time = timedelta(seconds=seconds)
+        self.estimated_too_run_time = timedelta(seconds=seconds)
 
 
     def set_normal_run_time(self, seconds):
-        self._estimated_normal_run_time = timedelta(seconds=seconds)
+        self.estimated_normal_run_time = timedelta(seconds=seconds)
 
 
     def set_too_mode(self):
@@ -322,6 +320,13 @@ class SchedulingInputProvider(object):
 
     def set_last_known_state(self, timestamp):
         self.last_known_state_timestamp = timestamp
+
+
+    def estimated_scheduler_runtime(self):
+        if self.is_too_input:
+            return self.estimated_too_run_time
+        else:
+            return self.estimated_normal_run_time
 
 
     def _get_scheduler_now(self):
@@ -340,13 +345,13 @@ class SchedulingInputProvider(object):
 
     def _get_estimated_scheduler_end(self):
         if self.is_too_input:
-            return self.scheduler_now + self._estimated_too_run_time
+            return self.scheduler_now + self.estimated_too_run_time
         else:
-            return self.scheduler_now + self._estimated_normal_run_time
+            return self.scheduler_now + self.estimated_normal_run_time
 
 
     def _get_json_user_request_list(self):
-        semester_start, semester_end = get_semester_block(dt=self.estimated_scheduler_end)
+        semester_start, semester_end = get_semester_block(dt=self._get_estimated_scheduler_end())
         ur_list = self.network_interface.get_all_user_requests(semester_start, semester_end)
 
         return ur_list
@@ -367,7 +372,7 @@ class SchedulingInputProvider(object):
 
     def _get_resource_usage_snapshot(self):
         snapshot_start = self.last_known_state_timestamp if self.last_known_state_timestamp else self.scheduler_now
-        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self.estimated_scheduler_end)
+        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self._get_estimated_scheduler_end())
 
         return snapshot
 
@@ -381,7 +386,7 @@ class FileBasedSchedulingInputProvider(object):
 
         self.sched_params = None
         self.scheduler_now = None
-        self.estimated_scheduler_end = None
+        self._estimated_scheduler_runtime = None
         self.json_user_request_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
@@ -402,6 +407,9 @@ class FileBasedSchedulingInputProvider(object):
     def set_last_known_state(self, timestamp):
         # Do nothing, we want to use whatever came from the input file
         pass
+    
+    def estimated_scheduler_runtime(self):
+        return self._estimated_scheduler_runtime
 
 
     def refresh(self):
@@ -414,7 +422,7 @@ class FileBasedSchedulingInputProvider(object):
 
         self.sched_params = pickle_input['sched_params']
         self.scheduler_now = pickle_input['scheduler_now']
-        self.estimated_scheduler_end = pickle_input['estimated_scheduler_end']
+        self._estimated_scheduler_runtime = pickle_input['estimated_scheduler_runtime']
         self.json_user_request_list = pickle_input['json_user_request_list']
         self.available_resources = pickle_input['available_resources']
         self.resource_usage_snapshot = pickle_input['resource_usage_snapshot']
