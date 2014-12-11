@@ -678,7 +678,8 @@ class SchedulerRunner(object):
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
-        self.log.info("Estimated scheduler run time is %.2f seconds", (scheduler_input.estimated_scheduler_end - scheduler_input.scheduler_now).total_seconds())
+        self.log.info("Estimated scheduler run time is %.2f seconds", scheduler_input.estimated_scheduler_runtime.total_seconds())
+        self.log.info("Estimated scheduler end %s", estimated_scheduler_end)
         n_urs, n_rs = n_requests(scheduler_input.user_requests)
         self.summary_events.append("Received %d %s (%d %s) from Request DB" % (pl(n_urs, 'User Request') + pl(n_rs, 'Request')))
         scheduler_result = None
