@@ -20,10 +20,10 @@ class TestSchedulingInputProvider(object):
     
     def test_constructor(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=True)
-        assert_equal(self.sched_params.too_run_time, input_provider._estimated_too_run_time.total_seconds())
-        assert_equal(self.sched_params.normal_run_time, input_provider._estimated_normal_run_time.total_seconds())
+        assert_equal(self.sched_params.too_run_time, input_provider.estimated_too_run_time.total_seconds())
+        assert_equal(self.sched_params.normal_run_time, input_provider.estimated_normal_run_time.total_seconds())
         assert_equal(None, input_provider.scheduler_now)
-        assert_equal(None, input_provider.estimated_scheduler_end)
+        assert_equal(input_provider.estimated_too_run_time, input_provider.estimated_scheduler_runtime())
         assert_equal(None, input_provider.json_user_request_list)
         assert_equal(None, input_provider.available_resources)
         assert_equal(None, input_provider.resource_usage_snapshot)
@@ -61,7 +61,7 @@ class TestSchedulingInputProvider(object):
         input_provider.refresh()
         
         assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.too_run_time, (input_provider.estimated_scheduler_end - input_provider.scheduler_now).total_seconds())
+        assert_equal(self.sched_params.too_run_time, input_provider.estimated_scheduler_runtime().total_seconds())
         assert_equal(1, self.network_interface.get_all_user_requests.call_count)
         assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
         assert_almost_equal(0, (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(), delta=5, msg='Snapshot start should be refresh time')
@@ -74,7 +74,7 @@ class TestSchedulingInputProvider(object):
         input_provider.refresh()
         
         assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.normal_run_time, (input_provider.estimated_scheduler_end - input_provider.scheduler_now).total_seconds())
+        assert_equal(self.sched_params.normal_run_time, input_provider.estimated_scheduler_runtime().total_seconds())
         assert_equal(1, self.network_interface.get_all_user_requests.call_count)
         assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
         assert_almost_equal(0, (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(), delta=5, msg='Snapshot start should be refresh time')
@@ -96,7 +96,7 @@ class TestSchedulingInputProvider(object):
         input_provider.set_too_mode()
         assert_equal(True, input_provider.is_too_input)        
         assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.too_run_time, (input_provider.estimated_scheduler_end - input_provider.scheduler_now).total_seconds())
+        assert_equal(self.sched_params.too_run_time, input_provider.estimated_scheduler_runtime().total_seconds())
         assert_equal(1, self.network_interface.get_all_user_requests.call_count)
         assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
         assert_almost_equal(0, (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(), delta=5, msg='Snapshot start should be refresh time')
@@ -109,7 +109,7 @@ class TestSchedulingInputProvider(object):
         input_provider.set_normal_mode()
         assert_equal(False, input_provider.is_too_input)
         assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.normal_run_time, (input_provider.estimated_scheduler_end - input_provider.scheduler_now).total_seconds())
+        assert_equal(self.sched_params.normal_run_time, input_provider.estimated_scheduler_runtime().total_seconds())
         assert_equal(1, self.network_interface.get_all_user_requests.call_count)
         assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
         assert_almost_equal(0, (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(), delta=5, msg='Snapshot start should be refresh time')
@@ -118,14 +118,14 @@ class TestSchedulingInputProvider(object):
         
     def test_set_too_run_time(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=False)
-        current_estimate = input_provider._estimated_too_run_time
+        current_estimate = input_provider.estimated_too_run_time
         new_estimate_timedelta = current_estimate + timedelta(seconds=100)
         input_provider.set_too_run_time(new_estimate_timedelta.total_seconds())
         
         
     def test_set_normal_run_time(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=False)
-        current_estimate = input_provider._estimated_normal_run_time
+        current_estimate = input_provider.estimated_normal_run_time
         new_estimate_timedelta = current_estimate + timedelta(seconds=100)
         input_provider.set_normal_run_time(new_estimate_timedelta.total_seconds())
         
