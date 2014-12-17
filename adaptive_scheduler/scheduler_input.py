@@ -345,9 +345,11 @@ class SchedulingInputProvider(object):
 
     def _get_estimated_scheduler_end(self):
         if self.is_too_input:
-            return self.scheduler_now + self.estimated_too_run_time
+            # TODO: Might Add a pad to account for time between not and when scheduling actually starts
+            return datetime.utcnow() + self.estimated_too_run_time  
         else:
-            return self.scheduler_now + self.estimated_normal_run_time
+            # TODO: Might Add a pad to account for time between not and when scheduling actually starts
+            return datetime.utcnow() + self.estimated_normal_run_time
 
 
     def _get_json_user_request_list(self):
