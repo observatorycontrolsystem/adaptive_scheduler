@@ -9,25 +9,28 @@ February 2015
 
 import tempfile
 import os
+import sys
 
-archive_script = './scripts/archive_logs.py'
+if __name__ == '__main__':
 
-my_log_dir     = tempfile.mkdtemp()
-my_archive_dir = tempfile.mkdtemp(dir=my_log_dir)
+    archive_script = './scripts/archive_logs.py'
 
-# Create some sample log files to archive
-log_files = ('1.dat', '2.dat')
+    my_log_dir     = tempfile.mkdtemp()
+    my_archive_dir = tempfile.mkdtemp(dir=my_log_dir)
 
-for lf in log_files:
-    lf_path = os.path.join(my_log_dir, lf)
+    # Create some sample log files to archive
+    log_files = ('1.dat', '2.dat')
 
-    # Create empty log files
-    open(lf_path, 'a').close()
+    for lf in log_files:
+        lf_path = os.path.join(my_log_dir, lf)
 
-    # TODO: Pass arguments
-    os.system(archive_script)
+        # Create empty log files
+        open(lf_path, 'a').close()
+
+        # TODO: Pass arguments
+        os.system(archive_script)
 
 
 
-# Clean up
-os.remove(my_log_dir)
+    # Clean up
+    os.remove(my_log_dir)
