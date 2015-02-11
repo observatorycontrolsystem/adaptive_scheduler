@@ -133,15 +133,17 @@ class TestPondMoleculeFactory(object):
 
         self.valid_spectrum_mol = self.mol_factory.build(
                                     dict(
-                                        type            = 'spectrum',
-                                        exposure_count  = 1,
-                                        bin_x           = 1,
-                                        bin_y           = 1,
-                                        instrument_name = '2m0-FLOYDS-SciCam',
-                                        exposure_time   = 30,
-                                        priority        = 1,
-                                        spectra_slit    = 'slit_1.6as',
-                                        ag_mode         = 'Optional',
+                                        type                  = 'spectrum',
+                                        exposure_count        = 1,
+                                        bin_x                 = 1,
+                                        bin_y                 = 1,
+                                        instrument_name       = '2m0-FLOYDS-SciCam',
+                                        exposure_time         = 30,
+                                        priority              = 1,
+                                        spectra_slit          = 'slit_1.6as',
+                                        ag_mode               = 'Optional',
+                                        acquire_mode          = 'Brightest',
+                                        acquire_radius_arcsec = 10.2,
                                         )
                                        )
 
@@ -214,6 +216,8 @@ class TestPondMoleculeFactory(object):
 
         assert_equal(type(pond_mol), lcogtpond.molecule.Spectrum)
         assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
+        assert_equal(pond_mol._pb_obj.acquire_mode, 1)
+        assert_equal(pond_mol._pb_obj.acquire_radius_arcsec, 10.2)
 
 
     def test_arc_molecule_builds_ok(self):
@@ -327,6 +331,8 @@ class TestPond(object):
                                                         priority        = 1,
                                                         spectra_slit    = 'slit_1.6as',
                                                         ag_mode         = 'Optional',
+                                                        acquire_mode          = 'Brightest',
+                                                        acquire_radius_arcsec = 10.2,
                                                       )
                                                        )
 

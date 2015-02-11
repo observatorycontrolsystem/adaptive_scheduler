@@ -513,8 +513,8 @@ class PondMoleculeFactory(object):
                             'EXPOSE'    : (self._common, self._imaging, self._targeting),
                             'STANDARD'  : (self._common, self._imaging, self._targeting),
                             'SPECTRUM'  : (self._common, self._spectro, self._targeting),
-                            'ARC'       : (self._common, self._spectro),
-                            'LAMP_FLAT' : (self._common, self._spectro),
+                            'ARC'       : (self._common, self._spectro_calib),
+                            'LAMP_FLAT' : (self._common, self._spectro_calib),
                           }
 
         param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
@@ -583,6 +583,18 @@ class PondMoleculeFactory(object):
                }
 
     def _spectro(self, molecule, pond_pointing=None):
+        acquire_mode_pond_mapping = {
+                                      'WCS'       : 0,
+                                      'BRIGHTEST' : 1,
+                                      'OFF'       : 2,
+                                    }
+        return {
+                 'spectra_slit' : molecule.spectra_slit,
+                 'acquire_mode' : acquire_mode_pond_mapping[molecule.acquire_mode.upper()],
+                 'acquire_radius_arcsec' : molecule.acquire_radius_arcsec,
+               }
+
+    def _spectro_calib(self, molecule, pond_pointing=None):
         return {
                  'spectra_slit' : molecule.spectra_slit,
                }
