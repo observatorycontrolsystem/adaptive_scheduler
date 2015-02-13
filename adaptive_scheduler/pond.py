@@ -588,6 +588,13 @@ class PondMoleculeFactory(object):
                                       'BRIGHTEST' : 1,
                                       'OFF'       : 2,
                                     }
+
+        # Horrible hack to work around weird missing data
+        if not hasattr(molecule, 'acquire_mode'):
+            molecule.acquire_mode = 'WCS'
+        if not hasattr(molecule, 'acquire_radius_arcsec'):
+            molecule.acquire_radius_arcsec = 0.0
+
         return {
                  'spectra_slit' : molecule.spectra_slit,
                  'acquire_mode' : acquire_mode_pond_mapping[molecule.acquire_mode.upper()],
