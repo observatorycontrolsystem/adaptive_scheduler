@@ -252,7 +252,7 @@ class MoleculeFactory(object):
                                                  'priority'),
                                   'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority'),
+                                                 'priority', 'acquire_mode', 'acquire_radius_arcsec'),
                                 }
 
     def build(self, mol_dict):

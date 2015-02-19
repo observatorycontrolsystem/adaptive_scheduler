@@ -491,6 +491,22 @@ class TestPond(object):
         assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
 
 
+    def test_create_pond_block_with_invalid_spectrum_mol(self):
+        invalid_spectrum_molecule = self.valid_spectrum_mol
+        del invalid_spectrum_molecule.acquire_mode
+        del invalid_spectrum_molecule.acquire_radius_arcsec
+
+        self.two_metre_block.add_proposal(self.valid_proposal)
+        self.two_metre_block.add_molecule(invalid_spectrum_molecule)
+        self.two_metre_block.add_target(self.valid_target)
+
+        try:
+            self.two_metre_block.create_pond_block()
+            assert False, 'Expected an exception'
+        except IncompleteBlockError as e:
+            assert_equal(e.message['molecule'], ['acquire_mode', 'acquire_radius_arcsec'])
+
+
     def test_create_pond_block_with_arc_mol(self):
         self.two_metre_block.add_proposal(self.valid_proposal)
         self.two_metre_block.add_molecule(self.valid_arc_mol)
