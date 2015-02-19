@@ -762,16 +762,6 @@ class Block(object):
             else:
                 pond_pointing.rot_angle = 0.0
 
-            # Set default acquire mode if none provided
-            if self.target.acquire_mode:
-                pond_pointing.acquire_mode = self.target.acquire_mode
-            else:
-                if self.molecules[0].type.upper() in ('EXPOSE', 'STANDARD'):
-                    pond_pointing.acquire_mode = 'OFF'
-                else:
-                    pond_pointing.acquire_mode = 'ON'
-
-
 
         # 3) Construct the Observations
         observations = []
