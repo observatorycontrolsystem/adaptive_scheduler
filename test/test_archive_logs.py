@@ -43,8 +43,8 @@ class TestArchiveLogs(object):
 
 
     def teardown(self):
-        #shutil.rmtree(self.my_log_dir)
-        pass
+        shutil.rmtree(self.my_log_dir)
+        #pass
 
 
     def _create_test_files(self, files):
@@ -81,15 +81,15 @@ class TestArchiveLogs(object):
     def test_do_archiving_old_files_archived(self):
         utils.lsdir_mtime_sorted = self._fake_lsdir_mtime_sorted
 
-        args = Configuration(
-                              mtime_days=1,
-                              log_dir=self.my_log_dir,
-                              archive_log_dir=self.my_archive_dir,
-                            )
-
         self._assert_files_exist(self.my_log_dir, ('1.dat', '2.dat'))
         self._assert_files_dont_exist(self.my_archive_dir, ('1.dat.gz', '2.dat.gz'))
-        utils.do_archiving(args)
+        utils.do_archiving(
+                            mtime_days=1,
+                            log_dir=self.my_log_dir,
+                            archive_log_dir=self.my_archive_dir,
+                          )
+
+
         self._assert_files_dont_exist(self.my_log_dir, ('1.dat', '2.dat'))
         self._assert_files_exist(self.my_archive_dir, ('1.dat.gz', '2.dat.gz'))
 
@@ -97,15 +97,14 @@ class TestArchiveLogs(object):
     def test_do_archiving_recent_files_not_archived(self):
         utils.lsdir_mtime_sorted = self._fake_lsdir_mtime_sorted
 
-        args = Configuration(
-                              mtime_days=10,
-                              log_dir=self.my_log_dir,
-                              archive_log_dir=self.my_archive_dir,
-                            )
-
         self._assert_files_exist(self.my_log_dir, ('1.dat', '2.dat'))
         self._assert_files_dont_exist(self.my_archive_dir, ('1.dat.gz', '2.dat.gz'))
-        utils.do_archiving(args, now=datetime(2015,1,3))
+        utils.do_archiving(
+                            mtime_days=10,
+                            log_dir=self.my_log_dir,
+                            archive_log_dir=self.my_archive_dir,
+                            now=datetime(2015,1,3),
+                          )
         self._assert_files_exist(self.my_log_dir, ('1.dat', '2.dat'))
         self._assert_files_dont_exist(self.my_archive_dir, ('1.dat.gz', '2.dat.gz'))
 
@@ -113,15 +112,14 @@ class TestArchiveLogs(object):
     def test_do_archiving_only_some_files_archived(self):
         utils.lsdir_mtime_sorted = self._fake_lsdir_mtime_sorted
 
-        args = Configuration(
-                              mtime_days=1.5,
-                              log_dir=self.my_log_dir,
-                              archive_log_dir=self.my_archive_dir,
-                            )
-
         self._assert_files_exist(self.my_log_dir, ('1.dat', '2.dat'))
         self._assert_files_dont_exist(self.my_archive_dir, ('1.dat.gz', '2.dat.gz'))
-        utils.do_archiving(args, now=datetime(2015,1,3))
+        utils.do_archiving(
+                            mtime_days=1.5,
+                            log_dir=self.my_log_dir,
+                            archive_log_dir=self.my_archive_dir,
+                            now=datetime(2015,1,3),
+                          )
         self._assert_files_exist(self.my_archive_dir, ('1.dat.gz',))
         self._assert_files_exist(self.my_log_dir, ('2.dat',))
         self._assert_files_dont_exist(self.my_log_dir, ('1.dat',))
@@ -130,19 +128,23 @@ class TestArchiveLogs(object):
 
     def test_concatenating_to_existing_archive_file(self):
         utils.lsdir_mtime_sorted = self._fake_lsdir_mtime_sorted
-        args = Configuration(
-                              mtime_days=1.5,
-                              log_dir=self.my_log_dir,
-                              archive_log_dir=self.my_archive_dir,
-                            )
-
-        utils.do_archiving(args, now=datetime(2015,1,3))
+        utils.do_archiving(
+                            mtime_days=1.5,
+                            log_dir=self.my_log_dir,
+                            archive_log_dir=self.my_archive_dir,
+                            now=datetime(2015,1,3),
+                          )
         self._create_test_files(
                                  (
                                   ('1.dat', datetime(2015, 1, 3)),
                                  )
                                )
-        utils.do_archiving(args, now=datetime(2015,1,5))
+        utils.do_archiving(
+                            mtime_days=1.5,
+                            log_dir=self.my_log_dir,
+                            archive_log_dir=self.my_archive_dir,
+                            now=datetime(2015,1,5),
+                          )
         with gzip.open(os.path.join(self.my_archive_dir, '1.dat.gz'), 'r') as gzip_fh:
                 contents = gzip_fh.readlines()
         gzip_n_lines = len(contents)

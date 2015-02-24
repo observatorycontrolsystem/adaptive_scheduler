@@ -39,4 +39,4 @@ def parse_args(argv):
 
 if __name__ == '__main__':
     args = parse_args(sys.argv[1:])
-    do_archiving(args)
+    do_archiving(args.mtime_days, args.log_dir, args.archive_log_dir)

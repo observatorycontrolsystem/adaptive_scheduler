@@ -3,18 +3,18 @@
 '''
 utils.py - Utility functions for miscellaneous scripts
 
-description
+This module contains utility functions used for adaptive scheduler scripting tasks.
+Entry points:
+    * do_archiving(mtime_days, log_dir, archive_log_dir) - Archive scheduler User
+                                                           Request logs
 
 Author: Eric Saunders
 February 2015
 '''
 
 import os
-from shutil   import copyfile
-from datetime import datetime, timedelta
-from zipfile  import ZipFile
-import sys
 import gzip
+from datetime import datetime, timedelta
 
 
 def lsdir_mtime_sorted(search_dir):
@@ -32,76 +32,33 @@ def lsdir_mtime_sorted(search_dir):
     return files
 
 
-def concatenate_files(output_file, *in_files):
-    '''Append the contents of in_files into a single output_file.'''
 
-    # If the caller is concatenating in-place, we have to handle this
-    is_temp = False
-    if output_file in in_files:
-        orig_output_file = output_file
-        output_file = output_file + '.tmp'
-        is_temp = True
-
-    # Build up a concatenated file
-    with open(output_file, 'w') as out_fh:
-        for filename in in_files:
-            with open(filename) as in_fh:
-                for line in in_fh:
-                    out_fh.write(line)
-
-    # Complete the in-place concatenation
-    if is_temp:
-        os.rename(output_file, orig_output_file)
-
-    return
-
-
-def zip_file(source, archived_filename):
-    _gzip_file(source, archived_filename)
-    #_pkzip_file(source, archived_filename)
-
-
-def _pkzip_file(source, archived_filename):
+def zip_file(source, dest):
     ''' Replace the source file with a zipped version of that file.'''
 
-    # Zip files from the current working directory, otherwise you get directories in
-    # your zip archive!
-    temp_moved_filename = os.path.join('.', os.path.basename(source))
-    copyfile(source, temp_moved_filename)
-
-    # Compress the file
-    with ZipFile(archived_filename, 'w') as zipped_file:
-        zipped_file.write(temp_moved_filename)
-    os.remove(temp_moved_filename)
-
-    return
-
-
-def _gzip_file(source, archived_filename):
     with open(source, 'r') as source_fh:
-        with gzip.open(archived_filename, 'w') as archive_fh:
-            archive_fh.writelines(source_fh)
+        with gzip.open(dest, 'w') as dest_fh:
+            dest_fh.writelines(source_fh)
     os.remove(source)
 
     return
 
 
-def append_to_archive(filename, archived_filename, archive_log_dir, full_file_path):
-    _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
-#    _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
 
-def _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path):
-    orig_archive_file = archived_filename
-    tmp_archive_filename  = orig_archive_file + '.tmp'
+def append_to_archive(log_file_path, archive_file_path):
+    '''Unzip archived_filename, concatenate filename to it, and then zip it
+       again.'''
 
-    with gzip.open(archived_filename, 'r') as archive_fh:
+    orig_archive_file    = archive_file_path
+    tmp_archive_filename = orig_archive_file + '.tmp'
+
+    with gzip.open(archive_file_path, 'r') as archive_fh:
         with gzip.open(tmp_archive_filename, 'w') as new_archive_fh:
             new_archive_fh.writelines(archive_fh)
 
-            existing_unzipped_file = full_file_path
+            existing_unzipped_file = log_file_path
             with open(existing_unzipped_file, 'r') as unzipped_fh:
                 new_archive_fh.writelines(unzipped_fh)
-
 
     os.rename(tmp_archive_filename, orig_archive_file)
     os.remove(existing_unzipped_file)
@@ -109,60 +66,46 @@ def _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_f
     return
 
 
-def _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path):
-    '''Unzip archived_filename, concatenate filename to it, and then zip it
-       again.'''
 
-    # Unzip the existing archive...
-    with ZipFile(archived_filename, 'r') as zipped_file:
-        zipped_file.extractall(path=archive_log_dir)
+def compress_old_file(archive_log_dir, log_file_path):
+    '''Compress the selected log file and store in archive_log_dir.'''
 
-    # Concatenate the log file to the existing previously archived file
-    existing_unzipped_file = os.path.join(archive_log_dir, filename)
-    concatenate_files(existing_unzipped_file, existing_unzipped_file, full_file_path)
-
-    # Compress and store the file
-    zip_file(existing_unzipped_file, archived_filename)
-    os.remove(existing_unzipped_file)
-
-    return
-
-
-def compress_old_files(archive_log_dir, filename, full_file_path):
-    archived_filename = os.path.join(archive_log_dir, filename) + '.gz'
+    log_file_name          = os.path.basename(log_file_path)
+    archive_file_path = os.path.join(archive_log_dir, log_file_name) + '.gz'
 
     # If we've never archived this file before (normal expected behaviour)...
-    if not os.path.isfile(archived_filename):
+    if not os.path.isfile(archive_file_path):
         # Compress and store the file
-        zip_file(full_file_path, archived_filename)
+        zip_file(log_file_path, archive_file_path)
 
     # Otherwise, somehow we already have this archived...
     else:
-        append_to_archive(filename, archived_filename,
-                          archive_log_dir, full_file_path)
+        append_to_archive(log_file_path, archive_file_path)
 
     # Remove the original
-    print "Archived: %s -> %s" % (full_file_path, archived_filename)
+    print "Archived: %s -> %s" % (log_file_path, archive_file_path)
 
 
-def do_archiving(args, now=None):
+
+def do_archiving(mtime_days, log_dir, archive_log_dir, now=None):
+    ''' Entry point for archiving scheduler User Request logs.'''
+
     now = now if now else datetime.utcnow()
 
-    TOO_OLD_DT = now - timedelta(days=args.mtime_days)
+    TOO_OLD_DT = now - timedelta(days=mtime_days)
 
     # Get the contents of the log directory, sorted by mtime
-    files = lsdir_mtime_sorted(args.log_dir)
+    files = lsdir_mtime_sorted(log_dir)
 
     # Create archive dir if necessary
-    if not os.path.exists(args.archive_log_dir):
-        os.mkdir(args.archive_log_dir)
+    if not os.path.exists(archive_log_dir):
+        os.mkdir(archive_log_dir)
 
-    for full_file_path, mtime in files:
-        filename = os.path.basename(full_file_path)
+    for log_file_path, mtime in files:
 
         # If the log file is ready for archiving...
         if mtime < TOO_OLD_DT:
-            compress_old_files(args.archive_log_dir, filename, full_file_path)
+            compress_old_file(archive_log_dir, log_file_path)
 
         # Files are sorted by modification time, so no other files will need archiving
         else:
