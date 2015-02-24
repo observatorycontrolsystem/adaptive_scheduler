@@ -14,6 +14,7 @@ from shutil   import copyfile
 from datetime import datetime, timedelta
 from zipfile  import ZipFile
 import sys
+import gzip
 
 
 def lsdir_mtime_sorted(search_dir):
@@ -56,6 +57,11 @@ def concatenate_files(output_file, *in_files):
 
 
 def zip_file(source, archived_filename):
+    _gzip_file(source, archived_filename)
+    #_pkzip_file(source, archived_filename)
+
+
+def _pkzip_file(source, archived_filename):
     ''' Replace the source file with a zipped version of that file.'''
 
     # Zip files from the current working directory, otherwise you get directories in
@@ -71,7 +77,35 @@ def zip_file(source, archived_filename):
     return
 
 
+def _gzip_file(source, archived_filename):
+    with open(source, 'r') as source_fh:
+        with gzip.open(archived_filename, 'w') as archive_fh:
+            archive_fh.writelines(source_fh)
+
+    return
+
+
 def append_to_archive(filename, archived_filename, archive_log_dir, full_file_path):
+    _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
+    _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
+
+def _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path):
+    with open(archived_filename, 'r') as archive_fh:
+        archive_contents = archive_fh.read()
+
+    existing_unzipped_file = os.path.join(archive_log_dir, filename)
+    with open(existing_unzipped_file, 'w') as unzipped_fh:
+        unzipped_fh.write(archive_contents)
+
+    concatenate_files(existing_unzipped_file, existing_unzipped_file, full_file_path)
+    # Compress and store the file
+    zip_file(existing_unzipped_file, archived_filename)
+    os.remove(existing_unzipped_file)
+
+    return
+
+
+def _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path):
     '''Unzip archived_filename, concatenate filename to it, and then zip it
        again.'''
 
