@@ -81,25 +81,29 @@ def _gzip_file(source, archived_filename):
     with open(source, 'r') as source_fh:
         with gzip.open(archived_filename, 'w') as archive_fh:
             archive_fh.writelines(source_fh)
+    os.remove(source)
 
     return
 
 
 def append_to_archive(filename, archived_filename, archive_log_dir, full_file_path):
     _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
-    _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
+#    _append_to_pkzip_archive(filename, archived_filename, archive_log_dir, full_file_path)
 
 def _append_to_gzip_archive(filename, archived_filename, archive_log_dir, full_file_path):
-    with open(archived_filename, 'r') as archive_fh:
-        archive_contents = archive_fh.read()
+    orig_archive_file = archived_filename
+    tmp_archive_filename  = orig_archive_file + '.tmp'
 
-    existing_unzipped_file = os.path.join(archive_log_dir, filename)
-    with open(existing_unzipped_file, 'w') as unzipped_fh:
-        unzipped_fh.write(archive_contents)
+    with gzip.open(archived_filename, 'r') as archive_fh:
+        with gzip.open(tmp_archive_filename, 'w') as new_archive_fh:
+            new_archive_fh.writelines(archive_fh)
 
-    concatenate_files(existing_unzipped_file, existing_unzipped_file, full_file_path)
-    # Compress and store the file
-    zip_file(existing_unzipped_file, archived_filename)
+            existing_unzipped_file = full_file_path
+            with open(existing_unzipped_file, 'r') as unzipped_fh:
+                new_archive_fh.writelines(unzipped_fh)
+
+
+    os.rename(tmp_archive_filename, orig_archive_file)
     os.remove(existing_unzipped_file)
 
     return
@@ -138,7 +142,6 @@ def compress_old_files(archive_log_dir, filename, full_file_path):
                           archive_log_dir, full_file_path)
 
     # Remove the original
-    os.remove(full_file_path)
     print "Archived: %s -> %s" % (full_file_path, archived_filename)
 
 

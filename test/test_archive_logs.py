@@ -9,13 +9,14 @@ February 2015
 
 from __future__ import division
 
-import nose
+from nose.tools import assert_equal
 import mock
 import tempfile
 import os
 import shutil
 from collections import namedtuple
 from datetime import datetime
+import gzip
 
 from adaptive_scheduler.scripts import utils
 
@@ -42,7 +43,8 @@ class TestArchiveLogs(object):
 
 
     def teardown(self):
-        shutil.rmtree(self.my_log_dir)
+        #shutil.rmtree(self.my_log_dir)
+        pass
 
 
     def _create_test_files(self, files):
@@ -55,7 +57,7 @@ class TestArchiveLogs(object):
         for lf_path, _ in self.log_files:
             # Create empty log files
             with open(lf_path, 'a') as lf_fh:
-                lf_fh.write(lf_path + '/n')
+                lf_fh.write(lf_path + '\n')
 
         return
 
@@ -125,3 +127,23 @@ class TestArchiveLogs(object):
         self._assert_files_dont_exist(self.my_log_dir, ('1.dat',))
         self._assert_files_dont_exist(self.my_archive_dir, ('2.dat.gz',))
 
+
+    def test_concatenating_to_existing_archive_file(self):
+        utils.lsdir_mtime_sorted = self._fake_lsdir_mtime_sorted
+        args = Configuration(
+                              mtime_days=1.5,
+                              log_dir=self.my_log_dir,
+                              archive_log_dir=self.my_archive_dir,
+                            )
+
+        utils.do_archiving(args, now=datetime(2015,1,3))
+        self._create_test_files(
+                                 (
+                                  ('1.dat', datetime(2015, 1, 3)),
+                                 )
+                               )
+        utils.do_archiving(args, now=datetime(2015,1,5))
+        with gzip.open(os.path.join(self.my_archive_dir, '1.dat.gz'), 'r') as gzip_fh:
+                contents = gzip_fh.readlines()
+        gzip_n_lines = len(contents)
+        assert_equal(gzip_n_lines, 2)
