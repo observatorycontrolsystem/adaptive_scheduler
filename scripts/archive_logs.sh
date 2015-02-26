@@ -14,4 +14,4 @@ ARCHIVE_LOG_DIR=${SCHEDULER_HOME}/archived_logs
 source ${SCHEDULER_ENV}/bin/activate
 date
 echo "Archiving old UR log files"
-exec python ${SCHEDULER_HOME}/scripts/archive_logs.py -mtime=${MTIME} --log_dir=${UR_LOG_DIR} --archive_log_dir=${ARCHIVE_LOG_DIR}
+exec python ${SCHEDULER_HOME}/scripts/archive_logs.py --mtime=${MTIME} --log_dir=${UR_LOG_DIR} --archive_log_dir=${ARCHIVE_LOG_DIR}
