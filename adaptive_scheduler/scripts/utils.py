@@ -15,6 +15,16 @@ February 2015
 import os
 import gzip
 from datetime import datetime, timedelta
+import shlex
+
+
+
+def script_already_running():
+    script_name = sys.argv[0]
+    output = subprocess.check_output(shlex.split('ps aux'))
+    running_processes = len([line for line in output.split('\n') if script_name in line])
+    return running_processes > 1
+
 
 
 def lsdir_mtime_sorted(search_dir):
