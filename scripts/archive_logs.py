@@ -17,7 +17,7 @@ from zipfile  import ZipFile
 import sys
 
 sys.path.append(os.path.normpath(os.path.dirname(os.path.abspath(__file__)) + '/..'))
-from adaptive_scheduler.scripts.utils import do_archiving
+from adaptive_scheduler.scripts.utils import do_archiving, script_already_running
 
 
 def parse_args(argv):
@@ -38,5 +38,8 @@ def parse_args(argv):
 
 
 if __name__ == '__main__':
+    if script_already_running():
+        print "This script appears to already be running! Aborting myself."
+        sys.exit()
     args = parse_args(sys.argv[1:])
     do_archiving(args.mtime_days, args.log_dir, args.archive_log_dir)
