@@ -110,26 +110,6 @@ class NotOkToOpenMonitorTest(unittest.TestCase):
         expected_time = datetime(2013,04,26) + timedelta(seconds=400)
         eq_(event['1m0a.doma.lsc'].end_time, expected_time)
 
-    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
-    def test_error_if_inconsistent_datum_lists(self,mock_get_datum):
-        ok = self._ok_list()
-        cd = self._count_down_list()
-        fr = self._failure_reason_list()
-        list_of_return_values=[ok,cd,fr]
-        def side_effect():
-            return list_of_return_values.pop()
-
-        mock_get_datum.side_effect = side_effect
-
-        #mock_get_datum('Weather Ok To Open', 1).return_value = self._ok_list()
-        #mock_get_datum('Weather Count Down To Open', 1).return_value = self._count_down_list()
-        #mock_get_datum('Weather Failure Reason', 1).return_value = self._failure_reason_list()
-
-        event   = self.monitor.monitor()
-
-        assert( '1m0a.doma.bpl' in event.keys() )
-        eq_('No update since 2013-04-26T00:00:00', event['1m0a.doma.bpl'].reason)
-
     def _create_events(self,oktoopen,countdown,reason):
         return [[self._create_event(oktoopen),],
                 [self._create_event(countdown),],
@@ -145,90 +125,6 @@ class NotOkToOpenMonitorTest(unittest.TestCase):
                     value                 = value,
                     persistence_model    = 'STATUS')
 
-    def _ok_list(self):
-        return [Datum(site                 = 'bpl',
-                    observatory          = 'bpl',
-                    telescope            = 'bpl',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'false',
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'ogg',
-                    observatory          = 'ogg',
-                    telescope            = 'ogg',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'false',
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'coj',
-                    observatory          = 'coj',
-                    telescope            = 'coj',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'false',
-                    persistence_model    = 'STATUS')]
-
-
-    def _count_down_list(self):
-        return [Datum(site                 = 'bpl',
-                    observatory          = 'bpl',
-                    telescope            = 'bpl',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 900,
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'ogg',
-                    observatory          = 'ogg',
-                    telescope            = 'ogg',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 900,
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'coj',
-                    observatory          = 'coj',
-                    telescope            = 'coj',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 900,
-                    persistence_model    = 'STATUS')]
-
-    def _failure_reason_list(self):
-        return [Datum(site                 = 'bpl',
-                    observatory          = 'bpl',
-                    telescope            = 'bpl',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'It is broke',
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'ogg',
-                    observatory          = 'ogg',
-                    telescope            = 'ogg',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'Unknown',
-                    persistence_model    = 'STATUS'),
-
-                Datum(site                 = 'coj',
-                    observatory          = 'coj',
-                    telescope            = 'coj',
-                    instance             = '1m0a.doma',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                = 'Unknown',
-                    persistence_model    = 'STATUS')]
 
 class ScheduleTimestampMonitorTest(unittest.TestCase):
 
@@ -255,6 +151,7 @@ class ScheduleTimestampMonitorTest(unittest.TestCase):
 
         assert( '1m0a.doma.bpl' in event.keys() )
         eq_('No update since 2013-04-26T00:00:00', event['1m0a.doma.bpl'].reason)
+
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_garbled_timestamp(self, mock_get_datum):
