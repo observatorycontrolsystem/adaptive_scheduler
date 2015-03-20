@@ -153,9 +153,9 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 
 
     def retrieve_data(self):
-        ok_to_open = get_datum('Weather Ok To Open', 1)
-        countdown  = get_datum('Weather Count Down To Open', 1)
-        interlock  = get_datum('Weather Failure Reason', 1)
+        ok_to_open = get_datum('Weather Ok To Open', 1,persistence_model='STATUS')
+        countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
+        interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
 
         # Sort by site
         site_sorter= lambda x: x.site
