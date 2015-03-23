@@ -11,6 +11,7 @@ import ast
 from datetime   import datetime, timedelta
 from contextlib import closing
 import collections
+import sys
 
 from adaptive_scheduler.monitoring           import resources
 from lcogt                                   import dateutil
@@ -151,9 +152,8 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
     def __init__(self):
         super(NotOkToOpenMonitor, self).__init__()
 
-
     def retrieve_data(self):
-        ok_to_open = get_datum('Weather Ok To Open', 1,persistence_model='STATUS')
+        ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
         countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
         interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
 
@@ -162,6 +162,25 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         ok_to_open.sort(key=site_sorter)
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
+
+        ok_sites = ok_to_open.__len__()
+        countdown_sites = countdown.__len__()
+        interlock_sites = interlock.__len__()
+
+        # Check datum lists have same size
+        if (ok_sites != countdown_sites) | (ok_sites != interlock_sites):
+             log.error("Database query returns different number of sites")
+             return []
+
+        # Check that the sites agree for each list
+        for index in range(0,ok_sites-1):
+             ok_site = ok_to_open[index].site
+             countdown_site = countdown[index].site
+             interlock_site = interlock[index].site
+
+             if  (ok_site != countdown_site) | (ok_site != interlock_site):
+                 log.error("Database query returns inconsistent site names")
+                 return []
 
         WeatherInterlock = collections.namedtuple('WeatherInterlock',
                                             ['ok_to_open', 'countdown', 'interlock'])
@@ -238,3 +257,4 @@ class OfflineResourceMonitor(NetworkStateMonitor):
 
     def is_an_event(self, datum):
         return datum['status'].lower() == 'offline'
+
