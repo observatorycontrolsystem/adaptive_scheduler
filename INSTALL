@@ -37,3 +37,24 @@ Additional dependencies
     CENTOS: yum install blas blas-devel lapack lapack-devel
     UBUNTU: sudo apt-get install libblas3gf, libblas-dev, liblapack3gf, liblapack-dev
 
+
+Other dependencies:
+------------------
+Gurobi install
+--------------
+1) Download Gurobi software bundle from gurobi.com
+2) Untar in e.g. /home/eng/gurobi
+3) Set environment variables (see init.d/adaptive_scheduler.sh)
+4) Find license string from Gurobi website, and download, e.g.
+grbgetkey a0fc600f-c2c3-7523-a8c7-55009f194026
+should get perpetual license for scheduler1.lco.gtn
+5) Uninstall Gurobi if already present:
+pip uninstall gurobipy
+6) Install Gurobi Python bindings to virtualenv
+source /lco/env/scheduler/bin/activate
+cd gurobi/gurobi602/linux64/
+python setup.py install
+
+Requirements file
+-----------------
+Other dependencies should be as listed in requirements.pip
