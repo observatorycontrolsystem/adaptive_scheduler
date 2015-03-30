@@ -163,29 +163,22 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
 
-        ok_sites = ok_to_open.__len__()
-        countdown_sites = countdown.__len__()
-        interlock_sites = interlock.__len__()
-
         # Check datum lists have same size
-        if (ok_sites != countdown_sites) | (ok_sites != interlock_sites):
-             log.error("Database query returns different number of sites")
+        if not (len(ok_to_open) == len(countdown) == len(interlock)):
+             log.error('Telemetry query returns different number of sites')
              return []
 
         # Check that the sites agree for each list
-        for index in range(0,ok_sites-1):
-             ok_site = ok_to_open[index].site
-             countdown_site = countdown[index].site
-             interlock_site = interlock[index].site
-
-             if  (ok_site != countdown_site) | (ok_site != interlock_site):
-                 log.error("Database query returns inconsistent site names")
+        site_sorted_data_list = zip(ok_to_open, countdown, interlock)
+        for ok_entry, countdown_entry, interlock_entry in site_sorted_data_list:
+            if not(ok_entry.site == countdown_entry.site == interlock_entry.site):
+                 log.error('Telemetry query returns inconsistent site names')
                  return []
 
         WeatherInterlock = collections.namedtuple('WeatherInterlock',
                                             ['ok_to_open', 'countdown', 'interlock'])
 
-        return [ WeatherInterlock(*datum) for datum in zip(ok_to_open, countdown, interlock) ]
+        return [ WeatherInterlock(*datum) for datum in site_sorted_data_list ]
 
 
     def create_event(self, datum):
@@ -257,4 +250,3 @@ class OfflineResourceMonitor(NetworkStateMonitor):
 
     def is_an_event(self, datum):
         return datum['status'].lower() == 'offline'
-
