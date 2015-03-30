@@ -11,7 +11,6 @@ import ast
 from datetime   import datetime, timedelta
 from contextlib import closing
 import collections
-import sys
 
 from adaptive_scheduler.monitoring           import resources
 from lcogt                                   import dateutil
