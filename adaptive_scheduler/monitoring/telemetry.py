@@ -39,7 +39,7 @@ def _query_db(datum, instance, engine, persistence_model=None):
     '''
     query = """SELECT * from PROPERTY as P
                join SCRAPEVALUE as SV on P.IDENTIFIER=SV.IDENTIFIER
-               where P.ADDRESS_DATUM='{datum}'
+               where P.ADDRESS_DATUM='{datum}' and P.ADDRESS_SITE!='tst'
             """
     if instance:
         query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"

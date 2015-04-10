@@ -21,10 +21,10 @@ def _get_db_path(db_file='harvest.sqlite'):
 engine = create_engine('sqlite:////%s' % _get_db_path())
 
 def test_reading_all_datums():
-    eq_(len(get_datum('Weather Ok To Open',engine=engine)), 24)
+    eq_(len(get_datum('Weather Ok To Open',engine=engine)), 21)
 
 def test_reading_selected_datum_instances():
-    eq_(len(get_datum('Weather Ok To Open', 1, engine=engine)), 8)
+    eq_(len(get_datum('Weather Ok To Open', 1, engine=engine)), 7)
 
 def test_datum_keys():
     datum = get_datum('Weather Ok To Open', 1, engine=engine)[0]
