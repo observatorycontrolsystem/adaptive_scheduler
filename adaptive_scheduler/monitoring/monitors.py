@@ -151,11 +151,10 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
     def __init__(self):
         super(NotOkToOpenMonitor, self).__init__()
 
-
     def retrieve_data(self):
-        ok_to_open = get_datum('Weather Ok To Open', 1)
-        countdown  = get_datum('Weather Count Down To Open', 1)
-        interlock  = get_datum('Weather Failure Reason', 1)
+        ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
+        countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
+        interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
 
         # Sort by site
         site_sorter= lambda x: x.site
@@ -163,10 +162,22 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
 
+        # Check datum lists have same size
+        if not (len(ok_to_open) == len(countdown) == len(interlock)):
+             log.error('Telemetry query returns different number of sites')
+             return []
+
+        # Check that the sites agree for each list
+        site_sorted_data_list = zip(ok_to_open, countdown, interlock)
+        for ok_entry, countdown_entry, interlock_entry in site_sorted_data_list:
+            if not(ok_entry.site == countdown_entry.site == interlock_entry.site):
+                 log.error('Telemetry query returns inconsistent site names')
+                 return []
+
         WeatherInterlock = collections.namedtuple('WeatherInterlock',
                                             ['ok_to_open', 'countdown', 'interlock'])
 
-        return [ WeatherInterlock(*datum) for datum in zip(ok_to_open, countdown, interlock) ]
+        return [ WeatherInterlock(*datum) for datum in site_sorted_data_list ]
 
 
     def create_event(self, datum):

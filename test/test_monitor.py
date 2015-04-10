@@ -38,7 +38,6 @@ class OfflineResourceMonitorTest(unittest.TestCase):
         resource_string = """[ { 'name':'0m8a.doma.sqa', 'status':'%s' } ]"""
         return StringIO(resource_string % (state))
 
-
 class NotOkToOpenMonitorTest(unittest.TestCase):
 
     def setUp(self):
@@ -110,21 +109,86 @@ class NotOkToOpenMonitorTest(unittest.TestCase):
         expected_time = datetime(2013,04,26) + timedelta(seconds=400)
         eq_(event['1m0a.doma.lsc'].end_time, expected_time)
 
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_no_events_if_inconsistent_size_data_lists(self, mock_get_datum):
+        mock_get_datum.side_effect = _mocked_get_datum_inconsistent_sizes
+
+        event = self.monitor.monitor()
+
+        eq_(0, len(event))
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_no_events_if_inconsistent_sites_in_data_lists(self, mock_get_datum):
+        mock_get_datum.side_effect = _mocked_get_datum_inconsistent_sites
+
+        event = self.monitor.monitor()
+
+        eq_(0, len(event))
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_event_if_consistent_sites_in_data_lists(self, mock_get_datum):
+        mock_get_datum.side_effect = _mocked_get_datum_consistent
+
+        event = self.monitor.monitor()
+
+        eq_('NOT OK TO OPEN', event.get('1m0a.doma.elp').type)
+
+
     def _create_events(self,oktoopen,countdown,reason):
-        return [[self._create_event(oktoopen),],
-                [self._create_event(countdown),],
-                [self._create_event(reason),],]
+        return [[_create_event(self, oktoopen),],
+                [_create_event(self, countdown),],
+                [_create_event(self, reason),],]
 
-    def _create_event(self,value):
-        return Datum(site                = 'lsc',
-                    observatory          = 'lsc',
-                    telescope            = 'lsc',
-                    instance             = '1',
-                    timestamp_changed    = datetime(2013,04,26,0,0,0),
-                    timestamp_measured   = datetime(2013,04,26,0,0,0),
-                    value                 = value,
-                    persistence_model    = 'STATUS')
 
+
+def _create_event(self, value, site='lsc'):
+    return Datum(site               = site,
+                 observatory        = site,
+                 telescope          = site,
+                 instance           = '1',
+                 timestamp_changed  = datetime(2013,04,26,0,0,0),
+                 timestamp_measured = datetime(2013,04,26,0,0,0),
+                 value              = value,
+                 persistence_model  = 'STATUS')
+
+def _mocked_get_datum_inconsistent_sizes(datum, instance=None, engine=None, persistence_model=None):
+    if datum == 'Weather Ok To Open':
+        return [_create_event(object, 'true',  site='lsc'),
+                _create_event(object, 'false', site='elp')]
+
+    elif datum =='Weather Count Down To Open':
+        return [_create_event(object,True, site='lsc')]
+
+    else: # Reason
+        return [_create_event(object, 'None', site='lsc'),
+                _create_event(object, 'None', site='elp')]
+
+def _mocked_get_datum_inconsistent_sites(datum, instance=None, engine=None, persistence_model=None):
+    if datum == 'Weather Ok To Open':
+        return [_create_event(object, 'true',  site='lsc'),
+                _create_event(object, 'false', site='elp')]
+
+    elif datum =='Weather Count Down To Open':
+        return [_create_event(object, '10', site='lsc'),
+                _create_event(object, '10', site='coj')]
+
+    else: # Reason
+        return [_create_event(object, 'None', site='lsc'),
+                _create_event(object, 'None', site='elp')]
+
+def _mocked_get_datum_consistent(datum, instance=None, engine=None, persistence_model=None):
+    if datum == 'Weather Ok To Open':
+        return [_create_event(object,'true', site='lsc'),
+                _create_event(object,'false',site='elp')]
+
+    elif datum =='Weather Count Down To Open':
+        return [_create_event(object, '10', site='lsc'),
+                _create_event(object, '10', site='elp')]
+
+    else: # Reason
+        return [_create_event(object, 'None', site='elp'),
+                _create_event(object, 'None', site='lsc')]
 
 class ScheduleTimestampMonitorTest(unittest.TestCase):
 
