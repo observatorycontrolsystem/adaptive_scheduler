@@ -7,7 +7,7 @@
 SCHEDULER_ENV=/lco/env/scheduler
 SCHEDULER_HOME=/lco/adaptive_scheduler
 
-MTIME=1
+MTIME=60
 UR_LOG_DIR=${SCHEDULER_HOME}/logs
 ARCHIVE_LOG_DIR=${SCHEDULER_HOME}/archived_logs
 
