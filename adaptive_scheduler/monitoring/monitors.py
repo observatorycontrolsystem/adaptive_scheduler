@@ -264,37 +264,38 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         return datum_name.lower().replace(' ', '_')
 
     def is_an_event(self, datum):
-        return datum.interlocked.value.lower() == 'true'
+        result = False
+        if 'enclosure_interlocked' in datum:
+            result = datum['enclosure_interlocked'].value.lower() == 'true'
+        return result
 
     def retrieve_data(self):
         datum_names = "Enclosure Interlocked", "Enclosure Interlocked Reason"
 
         sorted_by_observatory = sorted(self._flatten_data(datum_names), key=self._sort_by_site_and_observatory)
 
-        EnclosureInterlock = collections.namedtuple("EnclosureInterlock", ['interlocked', 'reason'])
-
-        enclosure_interlock_data = []
-        for key, value in itertools.groupby(sorted_by_observatory, key=self._sort_by_site_and_observatory):
-            interlock_data = dict(value)
-
-            interlocked = interlock_data['enclosure_interlocked']
-            reason      = interlock_data['enclosure_interlocked_reason']
-            interlock_datum = EnclosureInterlock(interlocked=interlocked, reason=reason)
-
-            enclosure_interlock_data.append(interlock_datum)
-
-        return enclosure_interlock_data
+        return [dict(value) for key, value
+                in itertools.groupby(sorted_by_observatory, key=self._sort_by_site_and_observatory)]
 
     def create_event(self, datum):
-        event = Event(type='ENCLOSURE INTERLOCK',
-                      reason=datum.reason.value,
-                      start_time=datum.interlocked.timestamp_changed,
-                      end_time=None)
+
+        start_time = datetime.utcnow()
+        if 'enclosure_interlocked' in datum:
+            start_time = datum['enclosure_interlocked'].timestamp_changed
+
+        reason = 'No Reason Found'
+        if 'enclosure_interlocked_reason' in datum:
+            reason = datum['enclosure_interlocked_reason'].value
+
+        event = Event(type       = 'ENCLOSURE INTERLOCK',
+                      reason     = reason,
+                      start_time = start_time,
+                      end_time   = None)
 
         return event
 
     def create_resource(self, datum):
-        interlocked = datum.interlocked
+        interlocked = datum['enclosure_interlocked']
         site        = interlocked.site
         observatory = interlocked.observatory
 

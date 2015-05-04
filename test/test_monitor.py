@@ -312,6 +312,18 @@ class EnclosureInterlockMonitorTest(unittest.TestCase):
 
         assert_false(events)
 
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_mismatching_reason_returns_stock_answer(self, mock_get_datum):
+        interlocks = [('lsc', 'doma', 'True'), ]
+        reasons = [('xxx', 'xxx', ''), ]
+        results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
+
+        mock_get_datum.side_effect = results
+
+        events = self.monitor.monitor()
+
+        assert_equals(events['1m0a.doma.lsc'].reason, "No Reason Found")
+
     def _create_event(self, site, observatory, value):
         return Datum(site                 = site,
                      observatory          = observatory,
