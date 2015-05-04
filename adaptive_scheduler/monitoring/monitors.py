@@ -11,6 +11,7 @@ import ast
 from datetime   import datetime, timedelta
 from contextlib import closing
 import collections
+import itertools
 
 from adaptive_scheduler.monitoring           import resources
 from lcogt                                   import dateutil
@@ -249,3 +250,59 @@ class OfflineResourceMonitor(NetworkStateMonitor):
 
     def is_an_event(self, datum):
         return datum['status'].lower() == 'offline'
+
+
+class EnclosureInterlockMonitor(NetworkStateMonitor):
+
+    @staticmethod
+    def _sort_by_site_and_observatory(datum_tuple):
+        datum_name, datum = datum_tuple
+        return datum.site, datum.observatory
+
+    @staticmethod
+    def _datum_name_to_key(datum_name):
+        return datum_name.lower().replace(' ', '_')
+
+    def is_an_event(self, datum):
+        return datum.interlocked.value.lower() == 'true'
+
+    def retrieve_data(self):
+        datum_names = "Enclosure Interlocked", "Enclosure Interlocked Reason"
+
+        sorted_by_observatory = sorted(self._flatten_data(datum_names), key=self._sort_by_site_and_observatory)
+
+        EnclosureInterlock = collections.namedtuple("EnclosureInterlock", ['interlocked', 'reason'])
+
+        enclosure_interlock_data = []
+        for key, value in itertools.groupby(sorted_by_observatory, key=self._sort_by_site_and_observatory):
+            interlock_data = dict(value)
+
+            interlocked = interlock_data['enclosure_interlocked']
+            reason      = interlock_data['enclosure_interlocked_reason']
+            interlock_datum = EnclosureInterlock(interlocked=interlocked, reason=reason)
+
+            enclosure_interlock_data.append(interlock_datum)
+
+        return enclosure_interlock_data
+
+    def create_event(self, datum):
+        event = Event(type='ENCLOSURE INTERLOCK',
+                      reason=datum.reason.value,
+                      start_time=datum.interlocked.timestamp_changed,
+                      end_time=None)
+
+        return event
+
+    def create_resource(self, datum):
+        interlocked = datum.interlocked
+        site        = interlocked.site
+        observatory = interlocked.observatory
+
+        return resources.get_observatory_resources(site, observatory)
+
+    def _flatten_data(self, datum_names):
+        for datum_name in datum_names:
+            for datum in get_datum(datum_name, "1", persistence_model="Status"):
+                yield self._datum_name_to_key(datum_name), datum
+
+        return
