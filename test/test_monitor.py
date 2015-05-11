@@ -10,7 +10,6 @@ May 2013
 from nose.tools import eq_, assert_false, assert_true, assert_equals
 from datetime import datetime, timedelta
 import mock
-import unittest
 from StringIO import StringIO
 
 from adaptive_scheduler.monitoring.telemetry import Datum
@@ -21,7 +20,7 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     EnclosureInterlockMonitor)
 
 
-class OfflineResourceMonitorTest(unittest.TestCase):
+class TestOfflineResourceMonitor(object):
 
     def test_telescope_is_offline(self):
         monitor = OfflineResourceMonitor(self._create_resource('offline'))
@@ -39,7 +38,7 @@ class OfflineResourceMonitorTest(unittest.TestCase):
         resource_string = """[ { 'name':'0m8a.doma.sqa', 'status':'%s' } ]"""
         return StringIO(resource_string % (state))
 
-class NotOkToOpenMonitorTest(unittest.TestCase):
+class TestNotOkToOpenMonitor(object):
 
     def setUp(self):
         self.monitor = NotOkToOpenMonitor()
@@ -191,7 +190,7 @@ def _mocked_get_datum_consistent(datum, instance=None, engine=None, persistence_
         return [_create_event(object, 'None', site='elp'),
                 _create_event(object, 'None', site='lsc')]
 
-class ScheduleTimestampMonitorTest(unittest.TestCase):
+class TestScheduleTimestampMonitor(object):
 
     def setUp(self):
         self.monitor = ScheduleTimestampMonitor()
@@ -239,7 +238,7 @@ class ScheduleTimestampMonitorTest(unittest.TestCase):
                     persistence_model    = 'STATUS')
 
 
-class SequencerEnableMonitorTest(unittest.TestCase):
+class TestSequencerEnableMonitor(object):
 
     def setUp(self):
         self.monitor = SequencerEnableMonitor()
@@ -283,7 +282,7 @@ class SequencerEnableMonitorTest(unittest.TestCase):
                      persistence_model    = 'STATUS')
 
 
-class EnclosureInterlockMonitorTest(unittest.TestCase):
+class TestEnclosureInterlockMonitor(object):
 
     def setUp(self):
         self.monitor = EnclosureInterlockMonitor()
