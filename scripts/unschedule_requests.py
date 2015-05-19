@@ -3,7 +3,13 @@
 '''
 unschedule_requests.py - Safely make a set of requests ignored by the scheduler
 
-description
+This script is useful for when a user accidently dumps many requests into the
+Request DB, and wants them removed. It marks the offending child requests and
+their corresponding parents as UNSCHEDULABLE, which prevents them being passed
+to the scheduler.
+
+Note that actually deleting requests from the RequestDB is somewhat dangerous and
+should not normally be done.
 
 Author: Eric Saunders
 May 2015
@@ -23,6 +29,8 @@ def get_user_requests(requestdb_url, start, end):
     return urs
 
 def filter_urs_by_proposal_id(urs, target_proposal_id):
+
+    # Useful for sanity-checking/debugging
     ur_counter = defaultdict(int)
 
     filtered_urs = []
@@ -43,8 +51,6 @@ if __name__ == '__main__':
 
     start = datetime(2015, 5, 10, 15)
     end   = datetime(2015, 5, 21, 15)
-#    start = '2015-05-18 20:00:00'
-#    end   = '2015-05-20 20:00:00'
 
     urs = get_user_requests(requestdb_url, start, end)
     target_urs, ur_counter = filter_urs_by_proposal_id(urs, target_proposal_id)
