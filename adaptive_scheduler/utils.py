@@ -136,11 +136,11 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
     '''Estimate the next scheduler runtime given a previous estimate and actual.
     If actual > estimate, new estimate = actual * backoff_rate
     If actual <= estimate, new estimate = min(actual + pad_percent*(actual), estimate - (estimate - actual)/backoff_rate)
-    backoff_rate - Factor to adjust expected runtime by. 
+    backoff_rate - Factor to adjust expected runtime by.
     pad_percent - Minimum percent that a new estimate will always exceed previous actual
     '''
-    new_estimated_runtime = timedelta(seconds=50)
-    
+    new_estimated_runtime = timedelta(seconds=0)
+
     if estimated_runtime < actual_runtime:
         # Increase estimated run time
         new_estimated_runtime += timedelta(seconds=backoff_rate * actual_runtime.total_seconds())
@@ -152,5 +152,5 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
         minimum_runtime = timedelta(seconds=(1.0 + pad_percent/100.0) * actual_runtime.total_seconds())
         new_estimated_runtime += max(estimated_runtime - delta_for_next_run,
                                      minimum_runtime)
-    
+
     return new_estimated_runtime
