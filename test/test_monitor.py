@@ -7,20 +7,20 @@ Author: Martin Norbury
 May 2013
 '''
 
-from nose.tools import eq_, assert_false, assert_true
+from nose.tools import eq_, assert_false, assert_true, assert_equals
 from datetime import datetime, timedelta
 import mock
-import unittest
 from StringIO import StringIO
 
 from adaptive_scheduler.monitoring.telemetry import Datum
 from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     NotOkToOpenMonitor,
                                                     OfflineResourceMonitor,
-                                                    SequencerEnableMonitor)
+                                                    SequencerEnableMonitor,
+                                                    EnclosureInterlockMonitor)
 
 
-class OfflineResourceMonitorTest(unittest.TestCase):
+class TestOfflineResourceMonitor(object):
 
     def test_telescope_is_offline(self):
         monitor = OfflineResourceMonitor(self._create_resource('offline'))
@@ -38,7 +38,7 @@ class OfflineResourceMonitorTest(unittest.TestCase):
         resource_string = """[ { 'name':'0m8a.doma.sqa', 'status':'%s' } ]"""
         return StringIO(resource_string % (state))
 
-class NotOkToOpenMonitorTest(unittest.TestCase):
+class TestNotOkToOpenMonitor(object):
 
     def setUp(self):
         self.monitor = NotOkToOpenMonitor()
@@ -190,7 +190,7 @@ def _mocked_get_datum_consistent(datum, instance=None, engine=None, persistence_
         return [_create_event(object, 'None', site='elp'),
                 _create_event(object, 'None', site='lsc')]
 
-class ScheduleTimestampMonitorTest(unittest.TestCase):
+class TestScheduleTimestampMonitor(object):
 
     def setUp(self):
         self.monitor = ScheduleTimestampMonitor()
@@ -238,7 +238,7 @@ class ScheduleTimestampMonitorTest(unittest.TestCase):
                     persistence_model    = 'STATUS')
 
 
-class SequencerEnableMonitorTest(unittest.TestCase):
+class TestSequencerEnableMonitor(object):
 
     def setUp(self):
         self.monitor = SequencerEnableMonitor()
@@ -278,5 +278,57 @@ class SequencerEnableMonitorTest(unittest.TestCase):
                      instance             = '1',
                      timestamp_changed    = datetime(2013,04,26,0,0,0),
                      timestamp_measured   = datetime(2013,04,26,0,0,0),
+                     value                = value,
+                     persistence_model    = 'STATUS')
+
+
+class TestEnclosureInterlockMonitor(object):
+
+    def setUp(self):
+        self.monitor = EnclosureInterlockMonitor()
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_event_when_enclosure_is_interlocked(self, mock_get_datum):
+        interlocks = [('lsc', 'doma', 'True'), ('lsc', 'domb', 'True'), ('lsc', 'domc', 'True')]
+        reasons = [('lsc', 'doma', 'WEATHER'), ('lsc', 'domb', 'POWER'), ('lsc', 'domc', 'FLAPPING')]
+        results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
+
+        mock_get_datum.side_effect = results
+
+        events = self.monitor.monitor()
+
+        assert_equals(set(events.keys()), set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']))
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_no_event_when_enclosure_is_not_interlocked(self, mock_get_datum):
+        interlocks = [('lsc', 'doma', 'False'), ('lsc', 'domb', 'False'), ('lsc', 'domc', 'False')]
+        reasons = [('lsc', 'doma', ''), ('lsc', 'domb', ''), ('lsc', 'domc', '')]
+        results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
+
+        mock_get_datum.side_effect = results
+
+        events = self.monitor.monitor()
+
+        assert_false(events)
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_mismatching_reason_returns_stock_answer(self, mock_get_datum):
+        interlocks = [('lsc', 'doma', 'True'), ]
+        reasons = [('xxx', 'xxx', ''), ]
+        results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
+
+        mock_get_datum.side_effect = results
+
+        events = self.monitor.monitor()
+
+        assert_equals(events['1m0a.doma.lsc'].reason, "No Reason Found")
+
+    def _create_event(self, site, observatory, value):
+        return Datum(site                 = site,
+                     observatory          = observatory,
+                     telescope            = observatory,
+                     instance             = '1',
+                     timestamp_changed    = datetime(2013, 04, 26, 0, 0, 0),
+                     timestamp_measured   = datetime(2013, 04, 26, 0, 0, 0),
                      value                = value,
                      persistence_model    = 'STATUS')

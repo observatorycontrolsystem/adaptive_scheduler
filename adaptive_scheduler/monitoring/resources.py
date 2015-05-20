@@ -11,11 +11,20 @@ LOGGER = logging.getLogger(__name__)
 
 import ast
 
+
 def get_site_resources(site):
     ''' Return a list of site resources by name. '''
     return [resource['name']
             for resource in _resources()
             if site in resource['name']]
+
+
+def get_observatory_resources(site, observatory):
+    ''' Return a list of observatory resources by name. '''
+    return [resource['name']
+            for resource in _resources()
+            if '.'.join([observatory, site]) in resource['name']]
+
 
 def _resources(filename='telescopes.dat'):
     ''' Read resources from file. '''
