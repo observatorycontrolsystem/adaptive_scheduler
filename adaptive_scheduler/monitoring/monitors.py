@@ -264,9 +264,13 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         return datum_name.lower().replace(' ', '_')
 
     def is_an_event(self, datum):
-        result = False
+        result = True
+        if datum['enclosure_interlocked'].value.lower() == 'true':
+            if not datum['enclosure_interlocked_reason'].value:
+                return result
+
         if 'enclosure_interlocked_reason' in datum:
-            result = any([x in datum['enclosure_interlocked_reason'] for x in ('enclosure_flapping', 'power')])
+            result = any([x in datum['enclosure_interlocked_reason'].value.lower() for x in ('enclosure_flapping', 'power')])
         return result
 
     def retrieve_data(self):
@@ -284,7 +288,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
             start_time = datum['enclosure_interlocked'].timestamp_changed
 
         reason = 'No Reason Found'
-        if 'enclosure_interlocked_reason' in datum:
+        if 'enclosure_interlocked_reason' in datum and datum['enclosure_interlocked_reason'].value:
             reason = datum['enclosure_interlocked_reason'].value
 
         event = Event(type       = 'ENCLOSURE INTERLOCK',

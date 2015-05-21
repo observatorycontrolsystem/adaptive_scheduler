@@ -289,15 +289,19 @@ class TestEnclosureInterlockMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_when_enclosure_is_interlocked(self, mock_get_datum):
-        interlocks = [('lsc', 'doma', 'True'), ('lsc', 'domb', 'True'), ('lsc', 'domc', 'True')]
-        reasons = [('lsc', 'doma', 'WEATHER'), ('lsc', 'domb', 'POWER'), ('lsc', 'domc', 'FLAPPING')]
+        interlocks = [('lsc', 'doma', 'True'), ('lsc', 'domb', 'True'),
+                      ('lsc', 'domc', 'True'), ('elp', 'doma', 'True')]
+        reasons = [('lsc', 'doma', 'WEATHER'),
+                   ('lsc', 'domb', 'POWER'),
+                   ('lsc', 'domc', 'ENCLOSURE_FLAPPING'),
+                   ('elp', 'doma', 'WEATHER, ENCLOSURE_FLAPPING')]
         results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
 
         mock_get_datum.side_effect = results
 
         events = self.monitor.monitor()
 
-        assert_equals(set(events.keys()), set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']))
+        assert_equals(set(events.keys()), set(['1m0a.domb.lsc', '1m0a.domc.lsc', '1m0a.doma.elp']))
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_when_enclosure_is_not_interlocked(self, mock_get_datum):
@@ -314,7 +318,7 @@ class TestEnclosureInterlockMonitor(object):
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_mismatching_reason_returns_stock_answer(self, mock_get_datum):
         interlocks = [('lsc', 'doma', 'True'), ]
-        reasons = [('xxx', 'xxx', ''), ]
+        reasons = [('lsc', 'doma', ''), ]
         results = [[self._create_event(*y) for y in x] for x in [interlocks, reasons]]
 
         mock_get_datum.side_effect = results
