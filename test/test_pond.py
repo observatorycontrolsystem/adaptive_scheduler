@@ -255,7 +255,7 @@ class TestPond(object):
         # Metadata missing proposal and tag parameters
         self.proposal = Proposal(observer_name='Eric Saunders')
 
-        self.mapping = create_camera_mapping('camera_mappings.dat')
+        self.mapping = create_camera_mapping('test/camera_mappings.dat')
 
         self.mol_factory = MoleculeFactory()
         # Molecule missing a binning parameter (which is required)
