@@ -265,8 +265,8 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
 
     def is_an_event(self, datum):
         result = False
-        if 'enclosure_interlocked' in datum:
-            result = datum['enclosure_interlocked'].value.lower() == 'true'
+        if 'enclosure_interlocked_reason' in datum:
+            result = any([x in datum['enclosure_interlocked_reason'] for x in ('enclosure_flapping', 'power')])
         return result
 
     def retrieve_data(self):
