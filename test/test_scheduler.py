@@ -17,7 +17,7 @@ from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
 
 from datetime import datetime, timedelta
 
-class TestSchduler(object):
+class TestScheduler(object):
 
     def __init__(self):
         self.scheduler_run_date = "2013-05-22 00:00:00"
@@ -723,7 +723,7 @@ class TestSchduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_avoidable_confilct(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_avoidable_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
         '''Should schedule a single too request on open telescope when available
         '''
         # Build mock user requests
@@ -799,7 +799,7 @@ class TestSchduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_unavoidable_confilct(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_unavoidable_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
         '''Should cancel lowest priority normal running user request and schedule ToO
         '''
         # Build mock user requests
@@ -882,7 +882,7 @@ class TestSchduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_unavoidable_too_confilct(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+    def test_run_scheduler_too_mode_with_schedulable_too_single_ur_with_unavoidable_too_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
         '''Should not be scheduled and should not cancel running ToOs
         '''
         # Build mock user requests
@@ -1370,7 +1370,7 @@ class TestSchedulerRunner(object):
         assert_equal([(running_request, ["Can not complete successfully: me love you long time"])], to_abort)
 
 
-    def test_scheduler_runner_abort_running_requsets(self):
+    def test_scheduler_runner_abort_running_requests(self):
         start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
         end = start + timedelta(minutes=60)
         running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
@@ -1380,7 +1380,7 @@ class TestSchedulerRunner(object):
         self.network_interface_mock.abort.assert_called_once_with(running_request, "A good reason, Another good reason")
 
 
-    def test_scheduler_runner_abort_running_requsets_empty_list(self):
+    def test_scheduler_runner_abort_running_requests_empty_list(self):
         start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')
         end = start + timedelta(minutes=60)
         running_request = RunningRequest('1m0a.doma.elp', 1, start, end)
