@@ -524,7 +524,7 @@ class TestModelBuilder(object):
         self.request_number = '0000000002'
         self.state          = 'PENDING'
 
-        self.mb = ModelBuilder('telescopes.dat', 'camera_mappings.dat')
+        self.mb = ModelBuilder('telescopes.dat', 'test/camera_mappings.dat')
 
     def test_build_request_sinistro_resolves_to_lsc_subnetwork(self):
         req_dict = {
