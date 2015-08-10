@@ -11,6 +11,7 @@ import calendar
 from datetime import datetime, timedelta
 import time
 import logging
+import potsdb
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
@@ -21,6 +22,11 @@ fh.setFormatter(formatter)
 
 log.addHandler(fh)
 
+# opentsdb connection stuff
+tsdb_client = potsdb.Client('jnation-kubuntu', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
+
+def send_tsdb_metric(metric_name, value, **kwargs):
+    tsdb_client.send(metric_name, value, software='adaptive_scheduler', **kwargs)
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
@@ -130,7 +136,6 @@ def timeit(method):
         return result
 
     return timed
-
 
 def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
     '''Estimate the next scheduler runtime given a previous estimate and actual.

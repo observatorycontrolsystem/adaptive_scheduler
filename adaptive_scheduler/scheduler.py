@@ -15,7 +15,7 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, send_tsdb_metric
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
                                          summarise_urs, log_full_ur, log_windows)
@@ -295,6 +295,11 @@ class Scheduler(object):
     # TODO: refactor into smaller chunks
     @timeit
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
+        start = time.time()
+        if preemption_enabled:
+            metric_prefix = 'too'
+        else:
+            metric_prefix = 'normal'
 
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
@@ -381,7 +386,11 @@ class Scheduler(object):
 
             self.log.info("Starting scheduling kernel")
             kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
+            start_kernel = time.time()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
+            end_kernel = time.time()
+            send_tsdb_metric('{}_kernel_runtime'.format(metric_prefix), end_kernel-start_kernel)
+
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
@@ -398,6 +407,9 @@ class Scheduler(object):
             self.log.info("Nothing to schedule! Skipping kernel call...")
             scheduler_result.resource_schedules_to_cancel = {}
 
+
+        end = time.time()
+        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), end-start)
 
         return scheduler_result
 

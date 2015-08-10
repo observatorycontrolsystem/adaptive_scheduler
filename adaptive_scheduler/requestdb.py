@@ -1,7 +1,8 @@
-from adaptive_scheduler.utils import timeit
+from adaptive_scheduler.utils import timeit, send_tsdb_metric
+import time
 from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestDBError
 from adaptive_scheduler.printing         import pluralise as pl
-from adaptive_scheduler.utils            import timeit
+from adaptive_scheduler.utils            import timeit, send_tsdb_metric
 from adaptive_scheduler.request_parser   import TreeCollapser
 from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
 
@@ -35,6 +36,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.warn("Error retrieving dirty flag from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
     
         #TODO: HACK to handle not a real error returned from Request DB
         if self._request_db_dirty_flag_is_invalid(dirty_response):
@@ -61,6 +63,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.critical("Error clearing dirty flag on DB: %s", e)
             self.log.critical("Aborting current scheduling loop.")
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
     
         return False
     
@@ -68,15 +71,20 @@ class RequestDBInterface(object):
     def _get_requests(self, start, end):
         # Try and get the requests
         try:
+            start = time.time()
             requests = get_requests_from_db(self.requestdb_client.url, 'dummy arg',
                                             start, end)
+            end = time.time()
+            send_tsdb_metric('get_requests_from_db_runtime', end-start)
+            send_tsdb_metric('get_requests_from_db_num_requests', *pl(len(requests)))
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
     
         except ConnectionError as e:
             self.log.warn("Error retrieving Requests from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-        
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+
         return []
     
     
@@ -128,9 +136,12 @@ class RequestDBInterface(object):
             self.requestdb_client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
             self.log.error(msg)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2)
+
     
         return
     
@@ -141,10 +152,12 @@ class RequestDBInterface(object):
             self.requestdb_client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
             self.log.error(msg)
-    
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2)
+
         return
 
 
