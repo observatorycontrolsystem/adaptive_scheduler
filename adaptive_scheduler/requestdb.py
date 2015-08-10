@@ -76,7 +76,7 @@ class RequestDBInterface(object):
                                             start, end)
             end_time = time.time()
             send_tsdb_metric('get_requests_from_db_runtime', end_time-start_time)
-            send_tsdb_metric('get_requests_from_db_num_requests', *pl(len(requests)))
+            send_tsdb_metric('get_requests_from_db_num_requests', len(requests))
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
     
