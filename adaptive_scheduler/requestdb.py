@@ -6,6 +6,7 @@ from adaptive_scheduler.utils            import timeit, send_tsdb_metric
 from adaptive_scheduler.request_parser   import TreeCollapser
 from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
 
+from datetime import datetime
 import json
 import logging
 
@@ -71,11 +72,11 @@ class RequestDBInterface(object):
     def _get_requests(self, start, end):
         # Try and get the requests
         try:
-            start_time = time.time()
+            start_time = datetime.now()
             requests = get_requests_from_db(self.requestdb_client.url, 'dummy arg',
                                             start, end)
-            end_time = time.time()
-            send_tsdb_metric('get_requests_from_db_runtime', end_time-start_time)
+            end_time = datetime.now()
+            send_tsdb_metric('get_requests_from_db_runtime', (end_time-start_time).total_seconds() * 1000.0)
             send_tsdb_metric('get_requests_from_db_num_requests', len(requests))
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
