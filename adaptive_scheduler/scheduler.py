@@ -389,7 +389,7 @@ class Scheduler(object):
             start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             end_kernel = datetime.utcnow()
-            send_tsdb_metric('{}_kernel_runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0, self, methodName='run_scheduler')
+            send_tsdb_metric('{}_kernel_runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
 
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
@@ -409,7 +409,7 @@ class Scheduler(object):
 
 
         end = datetime.utcnow()
-        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, self, methodName='run_scheduler')
+        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
 
         return scheduler_result
 
