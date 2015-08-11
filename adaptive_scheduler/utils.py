@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import time
 import logging
 import potsdb
+import socket
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
@@ -24,9 +25,10 @@ log.addHandler(fh)
 
 # opentsdb connection stuff
 tsdb_client = potsdb.Client('jnation-kubuntu', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
+hostname = socket.gethostname()
 
-def send_tsdb_metric(metric_name, value, **kwargs):
-    tsdb_client.send(metric_name, value, software='adaptive_scheduler', **kwargs)
+def send_tsdb_metric(metric_name, value, originator, **kwargs):
+    tsdb_client.send(metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''

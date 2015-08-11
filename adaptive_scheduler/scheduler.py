@@ -295,7 +295,7 @@ class Scheduler(object):
     # TODO: refactor into smaller chunks
     @timeit
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
-        start = datetime.now()
+        start = datetime.utcnow()
         if preemption_enabled:
             metric_prefix = 'too'
         else:
@@ -386,10 +386,10 @@ class Scheduler(object):
 
             self.log.info("Starting scheduling kernel")
             kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
-            start_kernel = datetime.now()
+            start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
-            end_kernel = datetime.now()
-            send_tsdb_metric('{}_kernel_runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0)
+            end_kernel = datetime.utcnow()
+            send_tsdb_metric('{}_kernel_runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0, self, methodName='run_scheduler')
 
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
@@ -408,8 +408,8 @@ class Scheduler(object):
             scheduler_result.resource_schedules_to_cancel = {}
 
 
-        end = datetime.now()
-        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0)
+        end = datetime.utcnow()
+        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, methodName='run_scheduler')
 
         return scheduler_result
 

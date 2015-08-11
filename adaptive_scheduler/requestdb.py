@@ -72,12 +72,12 @@ class RequestDBInterface(object):
     def _get_requests(self, start, end):
         # Try and get the requests
         try:
-            start_time = datetime.now()
+            start_time = datetime.utcnow()
             requests = get_requests_from_db(self.requestdb_client.url, 'dummy arg',
                                             start, end)
-            end_time = datetime.now()
-            send_tsdb_metric('get_requests_from_db_runtime', (end_time-start_time).total_seconds() * 1000.0)
-            send_tsdb_metric('get_requests_from_db_num_requests', len(requests))
+            end_time = datetime.utcnow()
+            send_tsdb_metric('get_requests_from_db_runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName='_get_requests')
+            send_tsdb_metric('get_requests_from_db_num_requests', len(requests), self, methodName='_get_requests')
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
     
