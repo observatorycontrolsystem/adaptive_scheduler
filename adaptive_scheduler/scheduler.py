@@ -409,7 +409,7 @@ class Scheduler(object):
 
 
         end = datetime.utcnow()
-        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, methodName='run_scheduler')
+        send_tsdb_metric('{}_scheduling_runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, self, methodName='run_scheduler')
 
         return scheduler_result
 
