@@ -37,7 +37,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.warn("Error retrieving dirty flag from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1, self, methodName='is_dirty')
     
         #TODO: HACK to handle not a real error returned from Request DB
         if self._request_db_dirty_flag_is_invalid(dirty_response):
@@ -64,7 +64,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.critical("Error clearing dirty flag on DB: %s", e)
             self.log.critical("Aborting current scheduling loop.")
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1, self, methodName='clear_dirty_flag')
     
         return False
     
@@ -84,7 +84,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.warn("Error retrieving Requests from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1, self, methodName='_get_requests')
 
         return []
     
@@ -137,11 +137,11 @@ class RequestDBInterface(object):
             self.requestdb_client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1, self, methodName='set_requests_to_unschedulable')
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
             self.log.error(msg)
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2, self, methodName='set_requests_to_unschedulable')
 
     
         return
@@ -153,11 +153,11 @@ class RequestDBInterface(object):
             self.requestdb_client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 1, self, methodName='set_user_requests_to_unschedulable')
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
             self.log.error(msg)
-            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2)
+            send_tsdb_metric('adaptive_scheduler.requestdb_connection_status', 2, self, methodName='set_user_requests_to_unschedulable')
 
         return
 
