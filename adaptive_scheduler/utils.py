@@ -24,7 +24,7 @@ fh.setFormatter(formatter)
 log.addHandler(fh)
 
 # opentsdb connection stuff
-tsdb_client = potsdb.Client('jnation-kubuntu', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
+tsdb_client = potsdb.Client('jnation-kubuntu', port=8070, qsize=1000, host_tag=True, mps=100, check_host=True)
 hostname = socket.gethostname()
 
 def send_tsdb_metric(metric_name, value, originator, **kwargs):
