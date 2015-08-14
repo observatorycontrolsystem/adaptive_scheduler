@@ -48,7 +48,7 @@ from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, S
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
-import logging
+import logging, sys
 from datetime import datetime
 from adaptive_scheduler.utils            import send_tsdb_metric
 from adaptive_scheduler.kernel.intervals import Intervals
