@@ -14,6 +14,7 @@ lcogt-dateutils
 reqdbclient
 schedutils
 potsdb
+bosun_indexer
 
 # Only needed for unit tests of old versions of the kernel
 #openopt==0.4.5
