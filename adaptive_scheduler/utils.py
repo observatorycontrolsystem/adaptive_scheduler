@@ -31,8 +31,9 @@ hostname = socket.gethostname()
 bosun_indexer_client = indexer.Client('jnation-kubuntu', port=8070, qsize=200, host_tag=True, mps=1, check_host=True)
 
 def send_tsdb_metric(metric_name, value, originator, **kwargs):
-    tsdb_client.send('adaptive_scheduler.{}'.format(metric_name), value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
-    bosun_indexer_client.index(metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
+    full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
+    tsdb_client.send(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
+    bosun_indexer_client.index(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
