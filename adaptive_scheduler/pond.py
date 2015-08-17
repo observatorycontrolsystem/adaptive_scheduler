@@ -147,8 +147,8 @@ class PondScheduleInterface(object):
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
         end_time = datetime.utcnow()
-        send_tsdb_metric('cancel_requests_in_pond_runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-        send_tsdb_metric('cancel_requests_in_pond_num_requests', n_deleted, self, methodName=sys._getframe().f_code.co_name)
+        send_tsdb_metric('pond.cancel_requests.runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
+        send_tsdb_metric('pond.cancel_requests.num_requests', n_deleted, self, methodName=sys._getframe().f_code.co_name)
 
         return n_deleted
     
@@ -170,8 +170,8 @@ class PondScheduleInterface(object):
         n_submitted = self._send_schedule_to_pond(schedule, semester_start,
                                             camera_mappings, dry_run)
         end_time = datetime.utcnow()
-        send_tsdb_metric('save_requests_to_pond_runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-        send_tsdb_metric('save_requests_to_pond_num_requests', n_submitted, self, methodName=sys._getframe().f_code.co_name)
+        send_tsdb_metric('pond.save_requests.runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
+        send_tsdb_metric('pond.save_requests.num_requests', n_submitted, self, methodName=sys._getframe().f_code.co_name)
         
         return n_submitted
     
