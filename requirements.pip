@@ -1,4 +1,5 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
+--allow-all-external
 
 # 1) Core required dependencies
 distribute==0.7.3
@@ -14,6 +15,7 @@ lcogt-dateutils
 reqdbclient
 schedutils
 potsdb
+requests
 bosun_indexer
 
 # Only needed for unit tests of old versions of the kernel

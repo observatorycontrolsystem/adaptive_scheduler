@@ -13,7 +13,7 @@ import time
 import logging
 import potsdb
 import socket
-import bosun_indexer
+from bosun_indexer import indexer
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
@@ -28,7 +28,7 @@ log.addHandler(fh)
 tsdb_client = potsdb.Client('jnation-kubuntu', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
 hostname = socket.gethostname()
 #bosun_indexer stuff
-bosun_indexer_client = bosun_indexer.Client('jnation-kubuntu', port=8070, qsize=200, host_tag=True, mps=1, check_host=True)
+bosun_indexer_client = indexer.Client('jnation-kubuntu', port=8070, qsize=200, host_tag=True, mps=1, check_host=True)
 
 def send_tsdb_metric(metric_name, value, originator, **kwargs):
     tsdb_client.send(metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
