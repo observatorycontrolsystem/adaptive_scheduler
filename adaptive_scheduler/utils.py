@@ -27,13 +27,13 @@ log.addHandler(fh)
 # opentsdb connection stuff
 tsdb_client = potsdb.Client('jnation-kubuntu', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
 hostname = socket.gethostname()
-#bosun_indexer stuff
 bosun_indexer_client = indexer.Client('jnation-kubuntu', port=8070, qsize=200, host_tag=True, mps=1, check_host=True)
 
 def send_tsdb_metric(metric_name, value, originator, **kwargs):
     full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
-    tsdb_client.send(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
+    sent_line = tsdb_client.send(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
     bosun_indexer_client.index(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
+    log.info('sent opentsdb metric: {}'.arg(sent_line))
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
