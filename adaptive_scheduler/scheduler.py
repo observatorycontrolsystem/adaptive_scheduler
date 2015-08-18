@@ -384,13 +384,15 @@ class Scheduler(object):
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            self.log.info("Starting scheduling kernel")
+            self.log.info("Starting scheduling kernel !!!!")
             kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
             start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             end_kernel = datetime.utcnow()
-            send_tsdb_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-
+            send_tsdb_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
+                             self, methodName=sys._getframe().f_code.co_name)
+            self.log.info('{}_kernel.runtime'.format(metric_prefix))
+            self.log.info("Finished scheduling kernel !!!!!")
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
@@ -409,7 +411,8 @@ class Scheduler(object):
 
 
         end = datetime.utcnow()
-        send_tsdb_metric('{}_scheduling.runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
+        send_tsdb_metric('{}_scheduling.runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0,
+                         self, methodName=sys._getframe().f_code.co_name)
 
         return scheduler_result
 
