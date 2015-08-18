@@ -33,7 +33,7 @@ def send_tsdb_metric(metric_name, value, originator, **kwargs):
     full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
     sent_line = tsdb_client.send(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
     bosun_indexer_client.index(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
-    log.info('sent opentsdb metric: {}'.arg(sent_line))
+    log.info('sent opentsdb metric: {}'.format(sent_line))
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
