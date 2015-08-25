@@ -16,7 +16,7 @@ reqdbclient
 schedutils
 potsdb
 requests
-bosun_indexer
+opentsdb_http_client
 
 # Only needed for unit tests of old versions of the kernel
 #openopt==0.4.5
