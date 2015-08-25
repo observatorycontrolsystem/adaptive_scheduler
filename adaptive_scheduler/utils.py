@@ -27,7 +27,7 @@ log.addHandler(fh)
 # opentsdb connection stuff
 tsdb_client = potsdb.Client('opentsdb.lco.gtn', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
 hostname = socket.gethostname()
-bosun_indexer_client = http_client.BosunIndexerClient('alerts.lco.gtn', port=8070, qsize=200, host_tag=True, mps=1, check_host=True)
+bosun_indexer_client = http_client.BosunIndexerClient('alerts.lco.gtn', qsize=200, host_tag=True, mps=10, check_host=True)
 
 def send_tsdb_metric(metric_name, value, originator, **kwargs):
     full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
