@@ -391,8 +391,6 @@ class Scheduler(object):
             end_kernel = datetime.utcnow()
             send_tsdb_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
                              self, methodName=sys._getframe().f_code.co_name)
-            self.log.info('{}_kernel.runtime'.format(metric_prefix))
-            self.log.info("Finished scheduling kernel !!!!!")
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
