@@ -151,6 +151,7 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 
     def __init__(self):
         super(NotOkToOpenMonitor, self).__init__()
+        self._overriden_observatories = []
 
     def retrieve_data(self):
         ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
