@@ -151,7 +151,7 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 
     def __init__(self):
         super(NotOkToOpenMonitor, self).__init__()
-        self._overriden_observatories = []
+        self._overridden_observatories = []
 
     def retrieve_data(self):
         ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
@@ -165,8 +165,8 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
 
-        self._overriden_observatories = ['%s.%s' % (x.observatory, x.site)
-                                         for x in overridden if x.value in ('true', 'True')]
+        self._overridden_observatories = ['%s.%s' % (x.observatory.lower(), x.site.lower())
+                                         for x in overridden if x.value.lower() == 'true']
 
         # Check datum lists have same size
         if not (len(ok_to_open) == len(countdown) == len(interlock)):
@@ -229,7 +229,7 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         :param resource: Telescope resource e.g. 1m0a.doma.lsc
         :return: True if telescope resource is in an observatory that has it weather overridden.
         '''
-        return any([observatory for observatory in self._overriden_observatories if observatory in resource])
+        return any([observatory for observatory in self._overridden_observatories if observatory in resource])
 
 
 
