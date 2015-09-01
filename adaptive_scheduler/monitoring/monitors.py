@@ -156,12 +156,16 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
         countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
         interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
+        overridden = get_datum('Enclosure Weather Override Active', 1, persistence_model='STATUS')
 
         # Sort by site
         site_sorter= lambda x: x.site
         ok_to_open.sort(key=site_sorter)
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
+
+        self._overriden_observatories = ['%s.%s' % (x.observatory, x.site)
+                                         for x in overridden if x.value in ('true', 'True')]
 
         # Check datum lists have same size
         if not (len(ok_to_open) == len(countdown) == len(interlock)):
@@ -203,7 +207,14 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 
 
     def create_resource(self, datum):
-        return resources.get_site_resources(datum.ok_to_open.site)
+        '''
+        Create resource list from datum.
+
+        :param datum: Datum used to generate resource list.
+        :return: Create a list of resources with the current event. Exclude any resource that is currently overridden.
+        '''
+        site_resources = resources.get_site_resources(datum.ok_to_open.site)
+        return [resource for resource in site_resources if not self._is_resource_overridden(resource)]
 
 
     def is_an_event(self, datum):
@@ -211,6 +222,13 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         unable_to_open = ok_to_open.value.lower() == 'false'
         night          = interlock.value.lower() != 'Sun Up'.lower()
         return unable_to_open and night
+
+    def _is_resource_overridden(self, resource):
+        '''
+        :param resource: Telescope resource e.g. 1m0a.doma.lsc
+        :return: True if telescope resource is in an observatory that has it weather overridden.
+        '''
+        return any([observatory for observatory in self._overriden_observatories if observatory in resource])
 
 
 
