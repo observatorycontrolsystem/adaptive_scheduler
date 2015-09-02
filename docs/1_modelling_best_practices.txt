@@ -1,4 +1,4 @@
-# Notes from Gurobi training event 09/09/15
+# Notes from Gurobi training event 02/09/15
 # Eric Saunders
 
 1) Model framework
