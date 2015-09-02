@@ -50,7 +50,7 @@ from lcogtpond.schedule                import Schedule
 # Set up and configure a module scope logger
 import logging, sys
 from datetime import datetime
-from adaptive_scheduler.utils            import send_tsdb_metric
+from adaptive_scheduler.utils            import send_tsdb_metric, metric_timer
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 log = logging.getLogger(__name__)
@@ -135,21 +135,16 @@ class PondScheduleInterface(object):
         '''
         return self.too_intervals_by_telescope
     
-    
+    @metric_timer('pond.cancel_requests', num_requests=lambda x: x)
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         ''' 
         n_deleted = 0
-        start_time = datetime.utcnow()
         if cancelation_dates_by_resource:
             try:
                 n_deleted = self._cancel_schedule(cancelation_dates_by_resource, reason)
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
-        end_time = datetime.utcnow()
-        send_tsdb_metric('pond.cancel_requests.runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-        send_tsdb_metric('pond.cancel_requests.num_requests', n_deleted, self, methodName=sys._getframe().f_code.co_name)
-
         return n_deleted
     
     def abort(self, pond_running_request, reason):
@@ -161,18 +156,13 @@ class PondScheduleInterface(object):
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to abort POND block")
     
-            
+    @metric_timer('pond.save_requests', num_requests=lambda x: x)
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
         '''
         # Convert the kernel schedule into POND blocks, and send them to the POND
-        start_time = datetime.utcnow()
         n_submitted = self._send_schedule_to_pond(schedule, semester_start,
                                             camera_mappings, dry_run)
-        end_time = datetime.utcnow()
-        send_tsdb_metric('pond.save_requests.runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-        send_tsdb_metric('pond.save_requests.num_requests', n_submitted, self, methodName=sys._getframe().f_code.co_name)
-        
         return n_submitted
     
     

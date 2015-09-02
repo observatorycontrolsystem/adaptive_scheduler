@@ -13,7 +13,9 @@ import time
 import logging
 import potsdb
 import socket
+import numbers
 from opentsdb_http_client import http_client
+from functools import wraps
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
@@ -29,10 +31,44 @@ tsdb_client = potsdb.Client('opentsdb.lco.gtn', port=4242, qsize=1000, host_tag=
 hostname = socket.gethostname()
 bosun_indexer_client = http_client.BosunIndexerClient('alerts.lco.gtn', qsize=200, host_tag=True, mps=10, check_host=True)
 
-def send_tsdb_metric(metric_name, value, originator, **kwargs):
+def send_tsdb_metric(metric_name, value, **kwargs):
     full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
-    sent_line = tsdb_client.send(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
-    bosun_indexer_client.index(full_metric_name, value, className=originator.__class__.__name__, moduleName=originator.__class__.__module__,  software='adaptive_scheduler', host=hostname, **kwargs)
+    sent_line = tsdb_client.send(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
+    bosun_indexer_client.index(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
+
+# This decorator takes in an optional parameter for the metric name, and then any number of key/value arguments
+# of the format key = metric type, value = function mapping from return value to numeric metric. This can be used
+# to specify any number of additional metrics to be saved off from the return data of the function being wrapped.
+def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
+    def metric_timer_decorator(method):
+        @wraps(method)
+        def wrapper(*args, **kwargs):
+            start_time = datetime.utcnow()
+            result = method(*args, **kwargs)
+            end_time = datetime.utcnow()
+
+            if not metric_name:
+                combined_metric_name = '{}'.format(method.__name__)
+            if 'preemption_enabled' in kwargs:
+                if kwargs['preemption_enabled']:
+                    combined_metric_name = 'too_{}'.format(combined_metric_name)
+                else:
+                    combined_metric_name = 'normal_{}'.format(combined_metric_name)
+            if not metric_name:
+                combined_metric_name = '{}.{}'.format(method.im_class, combined_metric_name)
+
+            send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=method.im_class, module_name=method.__module__, method_name=method.__name__)
+
+            for metric_type, retval_mapping_function in metric_type_to_retval_mapping_function.iteritems():
+                if hasattr(retval_mapping_function, '__call__'):
+                    mapped_value = retval_mapping_function(result)
+                    if isinstance(mapped_value, numbers.Number):
+                        send_tsdb_metric('{}.{}'.format(combined_metric_name, metric_type), mapped_value, class_name=method.im_class, module_name=method.__module__, method_name=method.__name__)
+
+            return result
+        return wrapper
+    return metric_timer_decorator
+
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
@@ -142,6 +178,7 @@ def timeit(method):
         return result
 
     return timed
+
 
 def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
     '''Estimate the next scheduler runtime given a previous estimate and actual.

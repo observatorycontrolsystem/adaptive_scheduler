@@ -15,7 +15,7 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, send_tsdb_metric
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, send_tsdb_metric, metric_timer
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
                                          summarise_urs, log_full_ur, log_windows)
@@ -294,8 +294,8 @@ class Scheduler(object):
 
     # TODO: refactor into smaller chunks
     @timeit
+    @metric_timer('scheduling')
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
-        start = datetime.utcnow()
         if preemption_enabled:
             metric_prefix = 'too'
         else:
@@ -390,7 +390,7 @@ class Scheduler(object):
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             end_kernel = datetime.utcnow()
             send_tsdb_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
-                             self, methodName=sys._getframe().f_code.co_name)
+                             class_name=self.__class__.__name__, module_name=self.__class__.__module__, methodName=sys._getframe().f_code.co_name)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
@@ -406,11 +406,6 @@ class Scheduler(object):
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")
             scheduler_result.resource_schedules_to_cancel = {}
-
-
-        end = datetime.utcnow()
-        send_tsdb_metric('{}_scheduling.runtime'.format(metric_prefix), (end-start).total_seconds() * 1000.0,
-                         self, methodName=sys._getframe().f_code.co_name)
 
         return scheduler_result
 

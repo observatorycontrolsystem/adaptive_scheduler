@@ -1,4 +1,4 @@
-from adaptive_scheduler.utils import timeit, send_tsdb_metric
+from adaptive_scheduler.utils import timeit, send_tsdb_metric, metric_timer
 from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestDBError
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.utils            import timeit, send_tsdb_metric
@@ -37,7 +37,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.warn("Error retrieving dirty flag from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            send_tsdb_metric('requestdb.connection_status', 1, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 1, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
     
         #TODO: HACK to handle not a real error returned from Request DB
         if self._request_db_dirty_flag_is_invalid(dirty_response):
@@ -64,7 +64,7 @@ class RequestDBInterface(object):
         except ConnectionError as e:
             self.log.critical("Error clearing dirty flag on DB: %s", e)
             self.log.critical("Aborting current scheduling loop.")
-            send_tsdb_metric('requestdb.connection_status', 1, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 1, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
     
         return False
     
@@ -72,19 +72,15 @@ class RequestDBInterface(object):
     def _get_requests(self, start, end):
         # Try and get the requests
         try:
-            start_time = datetime.utcnow()
             requests = get_requests_from_db(self.requestdb_client.url, 'dummy arg',
                                             start, end)
-            end_time = datetime.utcnow()
-            send_tsdb_metric('requestdb.get_requests.runtime', (end_time-start_time).total_seconds() * 1000.0, self, methodName=sys._getframe().f_code.co_name)
-            send_tsdb_metric('requestdb.get_requests.num_requests', len(requests), self, methodName=sys._getframe().f_code.co_name)
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
     
         except ConnectionError as e:
             self.log.warn("Error retrieving Requests from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            send_tsdb_metric('requestdb.connection_status', 1, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 1, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
 
         return []
     
@@ -137,11 +133,11 @@ class RequestDBInterface(object):
             self.requestdb_client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
-            send_tsdb_metric('requestdb.connection_status', 1, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 1, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
             self.log.error(msg)
-            send_tsdb_metric('requestdb.connection_status', 2, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 2, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
 
     
         return
@@ -153,16 +149,16 @@ class RequestDBInterface(object):
             self.requestdb_client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
-            send_tsdb_metric('requestdb.connection_status', 1, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 1, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
             self.log.error(msg)
-            send_tsdb_metric('requestdb.connection_status', 2, self, methodName=sys._getframe().f_code.co_name)
+            send_tsdb_metric('requestdb.connection_status', 2, class_name=self.__class__.__name__, module_name=self.__class__.__module__, method_name=sys._getframe().f_code.co_name)
 
         return
 
-
 @timeit
+@metric_timer('requestdb.get_requests', num_requests=lamba x: len(x))
 def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     format = '%Y-%m-%d %H:%M:%S'
 
