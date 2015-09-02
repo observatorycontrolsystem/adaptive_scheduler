@@ -1,0 +1,196 @@
+# Notes from Gurobi training event 09/09/15
+# Eric Saunders
+
+Runtime issues
+    Code fails to run
+    Unexpected results
+    Slow performance
+
+
+
+
+
+1) Code fails to run
+    Seg fault, no log or progress, no solution, error messages
+
+    Top causes:
+        Bad code
+            No exception catching
+            No solution status checks
+
+        License key issue
+
+        Data errors
+
+        Lack of RAM
+
+        Hardware failure
+
+        ...
+
+        Gurobi bug
+
+    Diagnosis
+        What exactly is failing?
+        What do you do to make it fail?
+        Can you reproduce reliably, or only randomly?
+        Where in the code does it fail?
+            Model creation
+            Solving
+            Callbacks
+            Retrieving solution values
+
+
+    Try model independently from the code
+        Use MPS files, not LP files
+        Run in gurobi_cl
+        Can you recreate behaviour?
+
+    Record full statem, and use this to test
+        Non-default parameters
+        MIP start values
+        Initial LP basis
+
+
+2) Unexpected results
+    Modelling errors
+    Unexpected data
+    Numerical issues
+
+
+    Review model statistics
+        Does model match your expectations for size, coefficients?
+            m.printStats()
+            Also printed in the log
+
+    Use LP file to verify model by eye
+        Try commenting out some constraints to produce smaller files to inspect
+
+    Test a known solution
+        MIP optimality
+            Store in MIP start file, search for improvements
+
+        Feasibility
+            Try a working model
+
+    Infeasibility detection
+        Use IIS (during model development)
+            Finds minimal set of constraints in conflict
+            Attributes indicate what cannot be satisfied
+
+        FeasRelax
+            Finds a solution with minimum constraint violation
+            Retrieve added artificial slack variables to find violations
+            Useful in production if you absolutely need a solution
+
+
+3) Slow performance
+    Causes
+        Memory
+        Numerical issues
+        Unrealistic tolerance
+        Just a large or difficult model
+
+
+    What cases cause the slow performance?
+    Try parameter tuning tool
+    Read performance guidelines
+        Website - reference manual
+                - whole chapter on discrete and continuous models
+    Send test models to Gurobi
+
+
+    Model intialisation and solution retrieval
+        Test MPS file in stand-alone tool - might show problem in your usage
+
+    Solve times
+        Presolve
+        Solving (initial LP)
+
+    grbtune - Parameter tuning tool
+        Two modes
+            Fastest time to optimality
+            Smallest MIP gap in a fixed amount of time
+
+
+    4) Performance guidelines by category
+
+    General issues
+        Model initialisation
+            Use iterators effective for your API
+            Take advantage of OO interfaces (e.g. lazy updates)
+                Typical usage is
+                    Add all variables
+                    Call update() ONCE
+                    Add constraints
+                    optimize() calls update itself
+
+            gurobipy helper methods
+                e.g. quicksum() - much faster sum()
+
+            Use profiler to see inefficient usages
+
+
+    Presolve
+        Tradeoff - time up front with hope of model simplification
+        Use Presolve parameter to adjust
+            Might reduce if model is small or simple
+            Increase if it helps
+            Compare timings between presolve and main solve
+        Fine-grained control
+            PrePasses, Aggregate, AggFill
+        Also tradeoff between being explicit in model, vs presolve helping you
+        (but taking time). Depends on the situation
+        Presolve can exacerbate numeric issues
+
+
+    Numerical issues
+        Wide range of model coefficients can ruin performance
+            Can affect continuous or integer models
+
+
+    Memory
+        Must have enough!
+        Use top etc. to check
+
+
+    Can change choice of solvers
+        But you probably don't want to do that
+        Concurrent is fastest on average, but slower on any specific model
+            But one of the specific algorithms will be faster
+            Concurrent will be more stable to input changes
+
+
+    Continuous parameters
+        NormAdjust (simplex pricing norm variants)
+        Crossover (barrier)
+        CrossoverBasis (barrier) - slightly more expensive, but might help
+        with numerical issues
+
+
+    Integer optimisation
+        Why is your MIP difficult?
+            If relaxations are the bottleneck, try continuous approaches
+            (since relaxations are solved with LP)
+            Try different methods for root and nodes
+
+        See slides for great examples of MIP log
+
+        Try adjusting MIPFocus
+            MIPFocus=1    focus on finding feasible solutions
+            MIPFocus=2    focus on proving optimality
+
+        Change MIP strategies
+            ImproveStartTime = 3600    switch to improving after this time
+            Essentially prioritises how to spend the available time
+
+        Might want to adjust termination criteria
+            e.g. if log shows much time spent in final stages of solve
+            Model data often have estimation errors
+            Default MIPGap (0.01%) is industry standard, but may be overkill
+            for your application
+
+
+    Don't overtune
+        Only change a few parameters, which make a big difference
+        Always test on multiple input

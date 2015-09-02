@@ -1,0 +1,46 @@
+# Notes from Gurobi training event 09/09/15
+# Eric Saunders
+
+What's in Gurobi?
+    Automatic presolve
+        - for both LP and MIP
+
+    Algorithms for continuous optimization
+        - Simplex
+        - Barrier (interior point)
+
+    Algorithms for discrete optimization
+        - branch-and-bound
+
+
+
+Presolve
+    Goal is to reduce problem size
+        Remove redundant constraints
+        Substition to remove unnecessary variables
+
+
+
+Simplex is numerically very stable
+Barrier is highly parallelisable
+Concurrent optimisation in Gurobi
+    Run both simplex and barrier concurrently
+    Solution reported by first one to finish
+    Use multiple CPU cores - best mix of speed and robustness
+
+
+
+To solve an LP to optimality, must satisfy KKT (Karush-Kuhn-Tucker) conditions
+    - if satisfied this is a proof of optimality
+
+    Primal simplex and Dual simplex maintain different two out of three
+    conditions, then tries to resolve the third
+
+    Barrier doesn't maintain anything
+
+
+Warm start
+    Simplex can be 1000x faster with correct warm start
+    Barrier can be 0.3x faster with correct warm start
+    Warm start is crucial for MIP
+
