@@ -821,6 +821,7 @@ class SchedulerRunner(object):
 
 
     @timeit
+    @metric_timer('create_too_schedule', num_reservations=lambda x: x.count_reservations())
     def create_too_schedule(self, scheduler_input):
         too_scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
@@ -857,11 +858,11 @@ class SchedulerRunner(object):
                 self.log.info("End ToO Scheduling")
         else:
             self.log.warn("Received no ToO User Requests! Skipping ToO scheduling cycle")
-
         return too_scheduler_result
 
 
     @timeit
+    @metric_timer('create_normal_schedule', num_reservations=lambda x: x.count_reservations())
     def create_normal_schedule(self, scheduler_input, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
