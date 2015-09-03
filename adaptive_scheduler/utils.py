@@ -47,14 +47,17 @@ def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
             result = method(*args, **kwargs)
             end_time = datetime.utcnow()
 
+            set_class = False
+            combined_metric_name = metric_name
             if not metric_name:
+                set_class = True
                 combined_metric_name = '{}'.format(method.__name__)
             if 'preemption_enabled' in kwargs:
                 if kwargs['preemption_enabled']:
                     combined_metric_name = 'too_{}'.format(combined_metric_name)
                 else:
                     combined_metric_name = 'normal_{}'.format(combined_metric_name)
-            if not metric_name:
+            if set_class:
                 combined_metric_name = '{}.{}'.format(method.im_class, combined_metric_name)
 
             send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=method.im_class, module_name=method.__module__, method_name=method.__name__)
