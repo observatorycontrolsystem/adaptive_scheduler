@@ -87,7 +87,7 @@ class PondScheduleInterface(object):
         # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
         self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
 
-    
+    @metric_timer('pond.get_running_blocks', num_blocks=lambda x: len(x))
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
         try:
             running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
@@ -109,7 +109,8 @@ class PondScheduleInterface(object):
         # End of logging block
         
         return running_blocks 
-    
+
+    @metric_timer('pond.get_too_intervals')
     def _fetch_too_intervals(self, telescopes, end_after, start_before):
         too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
         
@@ -847,7 +848,7 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
 
     return block
 
-
+@metric_timer('pond.get_network_running_interavls')
 def get_network_running_intervals(running_blocks_by_telescope):
     running_at_tel = {}
 

@@ -628,6 +628,7 @@ class SchedulerRunner(object):
 
 
     @timeit
+    @metric_timer('update_network_model')
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
         for telescope_name, telescope in self.network_model.iteritems():
