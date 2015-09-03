@@ -45,7 +45,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_we_are_okay_to_open(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('true','0','')
+        mock_get_datum.side_effect = self._create_events('true', '0', '', 'false')
 
         event = self.monitor.monitor()
 
@@ -53,15 +53,23 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_if_we_are_not_okay_to_open(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','0','')
+        mock_get_datum.side_effect = self._create_events('false', '0', '', 'false')
 
         event = self.monitor.monitor()
 
         assert_true(event)
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_no_event_if_enclosure_is_overridden(self,mock_get_datum):
+        mock_get_datum.side_effect = self._create_events('false', '0', '', 'true')
+
+        event = self.monitor.monitor()
+
+        assert_false('1m0a.doma.lsc' in event)
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_expands_to_all_resource_on_site(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','0','')
+        mock_get_datum.side_effect = self._create_events('false', '0', '', 'false')
 
         event = self.monitor.monitor()
 
@@ -70,7 +78,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_gives_reason(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','0','Dew Point')
+        mock_get_datum.side_effect = self._create_events('false', '0', 'Dew Point', 'false')
 
         event = self.monitor.monitor()
 
@@ -78,7 +86,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_sun_up(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','0','Sun Up')
+        mock_get_datum.side_effect = self._create_events('false', '0', 'Sun Up', 'false')
 
         event = self.monitor.monitor()
 
@@ -86,7 +94,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_sun_up_lowercase(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','0','sun up')
+        mock_get_datum.side_effect = self._create_events('false', '0', 'sun up', 'false')
 
         event = self.monitor.monitor()
 
@@ -94,7 +102,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_ok_to_open_flag_uppercase(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('FaLsE','0','dew')
+        mock_get_datum.side_effect = self._create_events('FaLsE', '0', 'dew', 'false')
 
         event = self.monitor.monitor()
 
@@ -102,7 +110,7 @@ class TestNotOkToOpenMonitor(object):
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_end_time_includes_countdown(self,mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('false','400','Dew')
+        mock_get_datum.side_effect = self._create_events('false', '400', 'Dew', 'false')
 
         event = self.monitor.monitor()
 
@@ -135,17 +143,20 @@ class TestNotOkToOpenMonitor(object):
         eq_('NOT OK TO OPEN', event.get('1m0a.doma.elp').type)
 
 
-    def _create_events(self,oktoopen,countdown,reason):
+    def _create_events(self, oktoopen, countdown, reason, override):
         return [[_create_event(self, oktoopen),],
                 [_create_event(self, countdown),],
-                [_create_event(self, reason),],]
+                [_create_event(self, reason),],
+                [_create_event(self, override, observatory='doma'),],]
 
 
 
-def _create_event(self, value, site='lsc'):
+def _create_event(self, value, site='lsc', observatory=None, telescope=None):
+    observatory = observatory if observatory else site
+    telescope = telescope if telescope else observatory
     return Datum(site               = site,
-                 observatory        = site,
-                 telescope          = site,
+                 observatory        = observatory,
+                 telescope          = telescope,
                  instance           = '1',
                  timestamp_changed  = datetime(2013,04,26,0,0,0),
                  timestamp_measured = datetime(2013,04,26,0,0,0),

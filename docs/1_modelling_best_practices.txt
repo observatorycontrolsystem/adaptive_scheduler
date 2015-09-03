@@ -1,0 +1,128 @@
+# Notes from Gurobi training event 02/09/15
+# Eric Saunders
+
+1) Model framework
+
+Decision variables
+Constraints (i.e. rules)
+    Linear: Ax = b
+    Bound: i< x < u, x > 0
+    Integrality: e.g. boolean constraints, discrete amounts
+    Cone: some x_i lie within second order cones
+    Convex quadratic: non-linear, e.g. representing risk in financial models
+    Special ordered set: combinatorial constraints
+
+
+Objective function
+    Choose the best solution that supports the rule
+    Can be complex quadratic
+
+
+Presolve (is your friend)
+    Reduces problem size
+    Tightens formulations
+    Very effective - always finds obvious reductions
+    But can't find reductions not implied by the model
+    User has a better understanding of underlying problem
+
+
+2) What makes a model difficult?
+    Size
+        Size is not the only indicator of problem difficulty, but in general
+        bigger is harder
+
+        Reducing model size is an art - what can be approximated?
+            Example: Could relax integrality constraints for the far future
+                     in a rolling horizon problem
+
+        Some constraints can be made "lazy"
+            Only pull them in when the model is violated
+            Might weaken bounds, but could make problem much easier
+
+        Gurobi is parallel by default - needs more memory
+
+        Could offload to cloud if not frequent, but many clients
+
+
+    Frequency
+        One solve may lead to another, gets expensive
+
+        Improve solve times via warm starts
+            Automatic - modify model in memory
+
+            Manual
+                - Just add/modify a few constraints
+                - Reuse previous solution
+
+    Model modification
+        Easy to adjust model and resolve
+        Saves a lot of time
+
+    Integer variables
+        Which general integers (>1) are necessary?
+        Can some variables be approximated?
+            e.g. building cars, might need integers, but toothbrushes - 1.5
+                 is close enough
+
+    Quadratic expressions
+        Much more complex than linear - require barrier method
+        Essential for certain applications: financial risk
+        But also examples where it's logical, but don't do it
+            e.g. x=0, y=0 should not be modeled as xy=0
+
+
+3) Numerical issues in models
+        Billions of numerical calculations can accumulate numerical errors
+        Too large a range of coefficients
+            Increases matrix condition numbera -> increases error
+        Rounding coefficients e.g. don't represent 1/3 as 0.33333
+
+        Big-M coefficients - arbitrarily large values for e.g. penalty functions
+            - be careful - can make numerics bad
+
+        Matrix coefficient range in logs shows range limits
+            - keep within 6 orders of magnitude
+
+
+        Do NOT use feasibility tolerances to address numerical issues!
+            - it can screw your solution
+
+        Numerical issues in objective function
+            - example: 100000x + 5000y + 0.001z
+                - change units of x
+                - handle x separately in constraints
+
+
+4) Programming pitfalls
+        Huge cause of support questions!
+        Always check the solution status
+            if m.Status == GRB.OPTIMAL
+            if m.SolCount >0:
+        Always catch exceptions
+            try:
+                m.optimize()
+            except GurobiError as e:
+
+
+5) Model debugging
+        Naming variables and constraints
+            Use meaningful names
+            Don't reuse names
+        Model files
+            MPS - machine readable, full precision, order preserved
+                - good for testing
+            LP  - easy to read and understand
+                - may truncate some digits
+                - order not preserved
+                - best for debugging
+
+            MPS files allow export from other solvers too
+
+
+        Command line tool: gurobi_cl
+            Use for exploratory testing
+
+        Run the tuning tool
+            Trivially parallelisable
+            Provide representative sample of models to tune against
+            Parallelisation free for the tool

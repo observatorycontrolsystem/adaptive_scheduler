@@ -1,0 +1,143 @@
+# Notes from Gurobi training event 02/09/15
+# Eric Saunders
+
+1) Background info
+    Advanced models often use indicator variables (i.e. booleans)
+    Non-convex models are hard
+    Special ordered sets
+        - Type 1: At most one variable in set may be non-zero
+        - Type 2: An ordered set where
+                    - at most 2 variables may be non-zero
+
+
+2) Range constraints
+
+
+3) Special functions: absolute value, piecewise linear, min/max
+    How do you minimise an absolute value (which is non-linear?)
+
+    min(abs(x)) -> min z
+                   z = x_p + x_n
+                   x = x_p - x_n
+
+    max(abs(x)) -> max z
+                   z = x_p + x_n
+                   x = x_p - x_n
+                   x_p <= My                # M = arbitrary large number
+                   x_n <= M(1-y)
+                   y in the set (0, 1)
+
+                   potential numeric instabilities, so keep M small
+
+
+    Or use SOS-1 constraint to prevent both x_p and x_n positive
+
+    max(abs(x)) -> max z
+                   z = x_p + x_n
+                   x = x_p - x_n
+                   x_p, x_n in the set SOS-1
+
+                   handled in the branch and bound, not linear solver 
+
+
+    Piecewise linear
+        Genearlisation of absolute value functions
+        Useful for approximating non-linear models
+
+        Convex case: easy - function represented by LP
+        Non-convex: more challenging - use MIP or SOS-2 constraints
+
+        Piecewise linear API in 6.0
+            Specify function breakpoints
+            x must be non-decreasing (repeat x value for a jump)
+            model.setPWLObj()
+
+    Min/max
+        Easy to minimise the largest value (minimax) or maximise the
+        smallest value (maximin)
+
+        Much more challenging is non-convex: minimise the smallest value
+        (minimin), or maximax
+            Use indicator variables and a big-M value
+            (see slides for examples)
+
+
+4) Logical conditions on binary variables
+    And: x_1 = 1 and x_2 = 1
+        x_1 + x_2 = 2
+
+    Or: x_1 = 1 or x_2 = 1
+        x_1 + x_2 >= 1
+
+    Exclusive or (not both):
+        x_1 + x_2 = 1
+
+    At least / at most / counting
+        sum(x_i) >= 3
+
+    If/then
+        if x_1 = 1 then x_2 = 1
+        x_1 <= x_2
+
+
+    Logical conditions: variable result
+        And: y = (x1=1 and x2=2)
+
+            y <= x1
+            y <= x2
+            y >= x1 + x2 - 1
+
+        Similar formulations for or, xor (see slides)
+
+
+5) Logical conditions on constraints
+    Add indicator variables for each constraint
+
+    And: Trivial, constraints are always combined with "and" operator
+    Or (disjunction):
+        - introduce binary variable for each constraint
+        - use big-M variable (M(1-y)) to switch on/off
+
+    Or with equalities:
+        - add a free slack variable to each constraint
+        - use indicator variable to designate whether slack is zero
+
+    At least:
+        - generalisess "or" constraint
+        - use indicator for satisfied constraints
+
+    What about if-then?
+        - LP doesn't support strict inequalities (>, <)
+        - if, not operators should not be used
+
+
+6) Semi-continuous variables
+    Special kind of "or"
+        x = 0 or 40 <= x <= 100         # This is semi-continuous
+
+    Common in manufacturing, inventory, power generation etc.
+
+    Can do this yourself with explicit indicator variable:
+        40y <= x <= 100y, y in set (0,1)
+
+        Good performance but need explicit upper bound on semi-continuous
+        variable
+
+    Or Gurobi can handle
+        necessary if upper bound is large or non-existent
+
+
+7) Selecting big-M values
+    Want big-M as tight (small) as possible
+    E.g. x1 + x2 <= 10 + My, if x1, x2 <=100 then M=190
+
+    Presolve will do its best to tighten big-M values
+
+    Tight, constraint-specific big-M values are better than one giant
+    big-M that is large enough for all constraints
+        - too large leads to poor performance and numerical problems
+        - pick constraint-specific big-M values
+
+
+Recommended reading:
+Model building in mathematical programming (5th ed) - H.P. Williams

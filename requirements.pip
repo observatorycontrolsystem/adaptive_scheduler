@@ -18,6 +18,7 @@ potsdb
 requests
 opentsdb_http_client
 opentsdb_python_metrics
+lcogt-logging
 
 # Only needed for unit tests of old versions of the kernel
 #openopt==0.4.5
