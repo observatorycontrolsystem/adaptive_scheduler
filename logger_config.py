@@ -5,6 +5,7 @@
 
 import logging
 from adaptive_scheduler.log import UserRequestHandler, UserRequestLogger
+from lcogt_logging import LCOGTFormatter
 
 log = logging.getLogger('adaptive_scheduler')
 log.setLevel(logging.INFO)
@@ -13,8 +14,8 @@ log.propagate=False
 sh = logging.StreamHandler()
 sh.setLevel(logging.DEBUG)
 
-formatter = logging.Formatter(fmt='%(asctime)s.%(msecs).03d %(levelname)7s: %(module)15s: %(message)s',
-                              datefmt='%Y-%m-%d %H:%M:%S')
+formatter = LCOGTFormatter()
+
 sh.setFormatter(formatter)
 log.addHandler(sh)
 
