@@ -16,6 +16,8 @@ import socket
 import numbers
 import inspect
 from opentsdb_http_client import http_client
+from opentsdb_python_metrics import metric_wrappers
+from opentsdb_python_metrics.metric_wrappers import metric_timer, send_tsdb_metric
 from functools import wraps
 
 log = logging.getLogger(__name__)
@@ -27,56 +29,68 @@ fh.setFormatter(formatter)
 
 log.addHandler(fh)
 
-# opentsdb connection stuff
-tsdb_client = potsdb.Client('opentsdb.lco.gtn', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
-hostname = socket.gethostname()
-bosun_indexer_client = http_client.BosunIndexerClient('alerts.lco.gtn', qsize=200, host_tag=True, mps=10, check_host=True)
+metric_wrappers.project_name = 'adaptive_scheduler'
 
-def send_tsdb_metric(metric_name, value, **kwargs):
-    full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
-    sent_line = tsdb_client.send(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
-    bosun_indexer_client.index(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
+def modify_metric_name(metric_name, method, *args, **kwargs):
+    if 'preemption_enabled' in kwargs:
+        if kwargs['preemption_enabled']:
+            return 'too_{}'.format(metric_name)
+        else:
+            return 'normal_{}'.format(metric_name)
+    return metric_name
 
-# This decorator takes in an optional parameter for the metric name, and then any number of key/value arguments
-# of the format key = metric type, value = function mapping from return value to numeric metric. This can be used
-# to specify any number of additional metrics to be saved off from the return data of the function being wrapped.
-def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
-    def metric_timer_decorator(method):
-        @wraps(method)
-        def wrapper(*args, **kwargs):
-            start_time = datetime.utcnow()
-            result = method(*args, **kwargs)
-            end_time = datetime.utcnow()
-
-            if inspect.ismethod(method):
-                class_n = method.__self__.__class__.__name__
-            else:
-                class_n = method.__name__
-
-            set_class = False
-            combined_metric_name = metric_name
-            if not metric_name:
-                set_class = True
-                combined_metric_name = '{}'.format(method.__name__)
-            if 'preemption_enabled' in kwargs:
-                if kwargs['preemption_enabled']:
-                    combined_metric_name = 'too_{}'.format(combined_metric_name)
-                else:
-                    combined_metric_name = 'normal_{}'.format(combined_metric_name)
-            if set_class:
-                combined_metric_name = '{}.{}'.format(class_n, combined_metric_name)
-
-            send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
-
-            for metric_type, retval_mapping_function in metric_type_to_retval_mapping_function.iteritems():
-                if hasattr(retval_mapping_function, '__call__'):
-                    mapped_value = retval_mapping_function(result)
-                    if isinstance(mapped_value, numbers.Number):
-                        send_tsdb_metric('{}.{}'.format(combined_metric_name, metric_type), mapped_value, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
-
-            return result
-        return wrapper
-    return metric_timer_decorator
+metric_wrappers.metric_name_modifier = modify_metric_name
+#
+# # opentsdb connection stuff
+# tsdb_client = potsdb.Client('opentsdb.lco.gtn', port=4242, qsize=1000, host_tag=True, mps=100, check_host=True)
+# hostname = socket.gethostname()
+# bosun_indexer_client = http_client.BosunIndexerClient('alerts.lco.gtn', qsize=200, host_tag=True, mps=10, check_host=True)
+#
+# def send_tsdb_metric(metric_name, value, **kwargs):
+#     full_metric_name = 'adaptive_scheduler.{}'.format(metric_name)
+#     sent_line = tsdb_client.send(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
+#     bosun_indexer_client.index(full_metric_name, value, software='adaptive_scheduler', host=hostname, **kwargs)
+#
+# # This decorator takes in an optional parameter for the metric name, and then any number of key/value arguments
+# # of the format key = metric type, value = function mapping from return value to numeric metric. This can be used
+# # to specify any number of additional metrics to be saved off from the return data of the function being wrapped.
+# def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
+#     def metric_timer_decorator(method):
+#         @wraps(method)
+#         def wrapper(*args, **kwargs):
+#             start_time = datetime.utcnow()
+#             result = method(*args, **kwargs)
+#             end_time = datetime.utcnow()
+#
+#             if inspect.ismethod(method):
+#                 class_n = method.__self__.__class__.__name__
+#             else:
+#                 class_n = method.__name__
+#
+#             set_class = False
+#             combined_metric_name = metric_name
+#             if not metric_name:
+#                 set_class = True
+#                 combined_metric_name = '{}'.format(method.__name__)
+#             if 'preemption_enabled' in kwargs:
+#                 if kwargs['preemption_enabled']:
+#                     combined_metric_name = 'too_{}'.format(combined_metric_name)
+#                 else:
+#                     combined_metric_name = 'normal_{}'.format(combined_metric_name)
+#             if set_class:
+#                 combined_metric_name = '{}.{}'.format(class_n, combined_metric_name)
+#
+#             send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
+#
+#             for metric_type, retval_mapping_function in metric_type_to_retval_mapping_function.iteritems():
+#                 if hasattr(retval_mapping_function, '__call__'):
+#                     mapped_value = retval_mapping_function(result)
+#                     if isinstance(mapped_value, numbers.Number):
+#                         send_tsdb_metric('{}.{}'.format(combined_metric_name, metric_type), mapped_value, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
+#
+#             return result
+#         return wrapper
+#     return metric_timer_decorator
 
 
 def increment_dict_by_value(dictionary, key, value):

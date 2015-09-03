@@ -17,6 +17,7 @@ schedutils
 potsdb
 requests
 opentsdb_http_client
+opentsdb_python_metrics
 
 # Only needed for unit tests of old versions of the kernel
 #openopt==0.4.5
