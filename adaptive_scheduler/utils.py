@@ -14,6 +14,7 @@ import logging
 import potsdb
 import socket
 import numbers
+import inspect
 from opentsdb_http_client import http_client
 from functools import wraps
 
@@ -47,6 +48,11 @@ def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
             result = method(*args, **kwargs)
             end_time = datetime.utcnow()
 
+            if inspect.ismethod(method):
+                class_n = method.__self__.__class__.__name__
+            else:
+                class_n = method.__name__
+
             set_class = False
             combined_metric_name = metric_name
             if not metric_name:
@@ -58,15 +64,15 @@ def metric_timer(metric_name=None, **metric_type_to_retval_mapping_function):
                 else:
                     combined_metric_name = 'normal_{}'.format(combined_metric_name)
             if set_class:
-                combined_metric_name = '{}.{}'.format(method.im_class, combined_metric_name)
+                combined_metric_name = '{}.{}'.format(class_n, combined_metric_name)
 
-            send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=method.im_class, module_name=method.__module__, method_name=method.__name__)
+            send_tsdb_metric('{}.runtime'.format(combined_metric_name), (end_time-start_time).total_seconds() * 1000.0, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
 
             for metric_type, retval_mapping_function in metric_type_to_retval_mapping_function.iteritems():
                 if hasattr(retval_mapping_function, '__call__'):
                     mapped_value = retval_mapping_function(result)
                     if isinstance(mapped_value, numbers.Number):
-                        send_tsdb_metric('{}.{}'.format(combined_metric_name, metric_type), mapped_value, class_name=method.im_class, module_name=method.__module__, method_name=method.__name__)
+                        send_tsdb_metric('{}.{}'.format(combined_metric_name, metric_type), mapped_value, class_name=class_n, module_name=method.__module__, method_name=method.__name__)
 
             return result
         return wrapper
