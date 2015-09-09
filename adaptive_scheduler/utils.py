@@ -156,7 +156,8 @@ def timeit(method):
     return timed
 
 
-def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
+@metric_timer('estimate_runtime', value=lambda x: x)
+def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0, preemption_enabled=False):
     '''Estimate the next scheduler runtime given a previous estimate and actual.
     If actual > estimate, new estimate = actual * backoff_rate
     If actual <= estimate, new estimate = min(actual + pad_percent*(actual), estimate - (estimate - actual)/backoff_rate)

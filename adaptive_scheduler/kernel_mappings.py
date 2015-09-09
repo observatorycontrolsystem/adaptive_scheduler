@@ -228,14 +228,13 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
        horizon for types (single, many)
     '''
     urs_by_type = filter_compounds_by_type(user_requests)
-    log.info("Identified %s" % pl(len(urs_by_type['single']), 'single'))
-    log.info("Identified %s" % pl(len(urs_by_type['many']), 'many'))
-    log.info("Identified %s" % pl(len(urs_by_type['and']), 'and'))
-    log.info("Identified %s" % pl(len(urs_by_type['oneof']), 'oneof'))
-
+    log.info("Identified %s, %s, %s, %s" % (pl(len(urs_by_type['single']), 'single'),
+                                            pl(len(urs_by_type['many']), 'many'),
+                                            pl(len(urs_by_type['and']), 'and'),
+                                            pl(len(urs_by_type['oneof']), 'oneof')))
 
     # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s days)" % scheduling_horizon)
+    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
     horizon_limited_urs = urs_by_type['single'] + urs_by_type['many']
     horizon_limited_urs = truncate_upper_crossing_windows(horizon_limited_urs, horizon=scheduling_horizon)
     horizon_limited_urs = filter_out_future_windows(horizon_limited_urs, horizon=scheduling_horizon)
@@ -254,7 +253,7 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     unlimited_urs = filter_out_future_windows(unlimited_urs)
     
     # TODO: it's possible that one-ofs and ands may have these windowless 
-    # children at this point from requests that crossed the semester boundry
+    # children at this point from requests that crossed the semester boundary
     # might need to drop empty requests before filtering on type   
     
     # Clean up Requests without any windows

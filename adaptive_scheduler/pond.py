@@ -98,7 +98,6 @@ class PondScheduleInterface(object):
         all_running_blocks = []
         for blocks in running_blocks.values():
             all_running_blocks += blocks
-        self.log.info("%d %s in the running list", *pl(len(all_running_blocks), 'POND Block'))
         for block in all_running_blocks:
             msg = "UR %s has a running block (id=%d, finishing at %s)" % (
                                                          block.tracking_num_set()[0],
