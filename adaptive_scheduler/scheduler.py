@@ -384,7 +384,6 @@ class Scheduler(object):
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            self.log.info("Starting scheduling kernel !!!!")
             kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
             start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
@@ -398,8 +397,6 @@ class Scheduler(object):
                 for resource in available_resources:
                     if scheduler_result.schedule.get(resource, []) == []:
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
-
-            self.log.info("Completed scheduling kernel")
 
             # Do post scheduling stuff
             self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)

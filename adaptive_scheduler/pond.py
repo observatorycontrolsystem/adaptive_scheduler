@@ -166,7 +166,7 @@ class PondScheduleInterface(object):
                                             camera_mappings, dry_run)
         return n_submitted
     
-    
+    # Already timed by the save method
     @timeit
     def _send_schedule_to_pond(self, schedule, semester_start, camera_mappings_file, dry_run=False):
         '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
@@ -267,7 +267,7 @@ class PondScheduleInterface(object):
             
         return telescope_blocks
     
-    
+    # This method is only called in test code, so no need to collect metrics from it
     @timeit
     def _get_intervals_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         '''
@@ -287,7 +287,7 @@ class PondScheduleInterface(object):
     
         return telescope_interval
 
-
+    # Already timed by the fetch_too_intervals method
     @timeit
     def _get_too_intervals_by_telescope(self, tels, ends_after, starts_before):
         '''
@@ -336,7 +336,7 @@ class PondScheduleInterface(object):
     
         return scheduler_placed_blocks
     
-    
+    # This does not need a metric because it is called by the public cancel method which is timed
     @timeit
     def _cancel_schedule(self, cancelation_dates_by_resource, reason):
         all_to_delete = []

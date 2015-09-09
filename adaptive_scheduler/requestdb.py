@@ -30,6 +30,7 @@ class RequestDBInterface(object):
     
     
     @timeit
+    @metric_timer('requestdb.is_dirty')
     def is_dirty(self):
         dirty_response = dict(dirty=False)
         try:
