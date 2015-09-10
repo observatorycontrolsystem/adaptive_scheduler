@@ -295,7 +295,7 @@ class Scheduler(object):
 
     # TODO: refactor into smaller chunks
     @timeit
-    @metric_timer('scheduling')
+    @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
         if preemption_enabled:
             metric_prefix = 'too'
@@ -347,12 +347,16 @@ class Scheduler(object):
 #         else:
 #             resource_schedules_to_cancel = available_resources
 
+        start_prepare = datetime.utcnow()
         # By default, schedule on all resources
         resources_to_schedule = list(available_resources)
         resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot, scheduler_input.too_tracking_numbers, preemption_enabled)
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
+        end_prepare = datetime.utcnow()
+        send_tsdb_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0,
+                             class_name=self.__class__.__name__, module_name=self.__class__.__module__, methodName=sys._getframe().f_code.co_name)
 
         print_compound_reservations(compound_reservations)
 
