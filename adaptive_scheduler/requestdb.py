@@ -37,7 +37,7 @@ class RequestDBInterface(object, SendMetricMixin):
         except ConnectionError as e:
             self.log.warn("Error retrieving dirty flag from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            self.send_metric('requestdb.connection_status', 1, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 1)
     
         #TODO: HACK to handle not a real error returned from Request DB
         if self._request_db_dirty_flag_is_invalid(dirty_response):
@@ -64,7 +64,7 @@ class RequestDBInterface(object, SendMetricMixin):
         except ConnectionError as e:
             self.log.critical("Error clearing dirty flag on DB: %s", e)
             self.log.critical("Aborting current scheduling loop.")
-            self.send_metric('requestdb.connection_status', 1, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 1)
     
         return False
     
@@ -80,7 +80,7 @@ class RequestDBInterface(object, SendMetricMixin):
         except ConnectionError as e:
             self.log.warn("Error retrieving Requests from DB: %s", e)
             self.log.warn("Skipping this scheduling cycle")
-            self.send_metric('requestdb.connection_status', 1, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 1)
 
         return []
     
@@ -133,11 +133,11 @@ class RequestDBInterface(object, SendMetricMixin):
             self.requestdb_client.set_request_state('UNSCHEDULABLE', unschedulable_r_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting Request states to UNSCHEDULABLE: %s" % str(e))
-            self.send_metric('requestdb.connection_status', 1, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 1)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE Request states: %s" % str(e)
             self.log.error(msg)
-            self.send_metric('requestdb.connection_status', 2, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 2)
 
     
         return
@@ -149,11 +149,11 @@ class RequestDBInterface(object, SendMetricMixin):
             self.requestdb_client.set_user_request_state('UNSCHEDULABLE', unschedulable_ur_numbers)
         except ConnectionError as e:
             self.log.error("Problem setting User Request states to UNSCHEDULABLE: %s" % str(e))
-            self.send_metric('requestdb.connection_status', 1, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 1)
         except RequestDBError as e:
             msg = "Internal RequestDB error when setting UNSCHEDULABLE User Request states: %s" % str(e)
             self.log.error(msg)
-            self.send_metric('requestdb.connection_status', 2, method_name=sys._getframe().f_code.co_name)
+            self.send_metric('requestdb.connection_status', 2)
 
         return
 

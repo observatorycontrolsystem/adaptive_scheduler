@@ -352,8 +352,7 @@ class Scheduler(object, SendMetricMixin):
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
         end_prepare = datetime.utcnow()
-        self.send_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0,
-                         methodName=sys._getframe().f_code.co_name)
+        self.send_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0)
 
         print_compound_reservations(compound_reservations)
 
@@ -390,8 +389,7 @@ class Scheduler(object, SendMetricMixin):
             start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             end_kernel = datetime.utcnow()
-            self.send_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
-                             methodName=sys._getframe().f_code.co_name)
+            self.send_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
