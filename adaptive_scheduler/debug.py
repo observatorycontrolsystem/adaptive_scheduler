@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 '''
-orchestrator.py - Top-level entry-point to the scheduler
-
-This module provides main(), the top-level running function of the scheduler. It may
-be called standalone for single-thread testing purposes, or embedded in a threaded
-environoment for persistent execution.
+debug.py - Provides a set of debug functions that aren't used anywhere in the production code but could be included
+        if needed.
 
 Author: Eric Saunders
 August 2012

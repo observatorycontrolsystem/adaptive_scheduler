@@ -15,7 +15,7 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, send_tsdb_metric, metric_timer
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin, metric_timer
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
@@ -35,7 +35,7 @@ from adaptive_scheduler.request_filters import (filter_urs,
                                                 set_now)
 
 
-class Scheduler(object):
+class Scheduler(object, SendMetricMixin):
 
     def __init__(self, kernel_class, sched_params, event_bus):
         self.kernel_class = kernel_class
@@ -352,8 +352,8 @@ class Scheduler(object):
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
         end_prepare = datetime.utcnow()
-        send_tsdb_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0,
-                             class_name=self.__class__.__name__, module_name=self.__class__.__module__, methodName=sys._getframe().f_code.co_name)
+        self.send_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0,
+                              methodName=sys._getframe().f_code.co_name)
 
         print_compound_reservations(compound_reservations)
 
@@ -390,8 +390,8 @@ class Scheduler(object):
             start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
             end_kernel = datetime.utcnow()
-            send_tsdb_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
-                             class_name=self.__class__.__name__, module_name=self.__class__.__module__, methodName=sys._getframe().f_code.co_name)
+            self.send_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0,
+                             methodName=sys._getframe().f_code.co_name)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled

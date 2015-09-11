@@ -50,7 +50,7 @@ from lcogtpond.schedule                import Schedule
 # Set up and configure a module scope logger
 import logging, sys
 from datetime import datetime
-from adaptive_scheduler.utils            import send_tsdb_metric, metric_timer
+from adaptive_scheduler.utils            import metric_timer
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 log = logging.getLogger(__name__)

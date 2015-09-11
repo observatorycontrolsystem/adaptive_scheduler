@@ -12,8 +12,8 @@ from datetime import datetime, timedelta
 import time
 import logging
 from opentsdb_python_metrics import metric_wrappers
-from opentsdb_python_metrics.metric_wrappers import metric_timer, send_tsdb_metric
-
+from opentsdb_python_metrics.metric_wrappers import metric_timer
+from opentsdb_python_metrics.metric_wrappers import SendMetricMixin
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
