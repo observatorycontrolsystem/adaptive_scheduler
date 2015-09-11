@@ -297,10 +297,7 @@ class Scheduler(object):
     @timeit
     @metric_timer('scheduling', num_requests=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
-        if preemption_enabled:
-            metric_prefix = 'too'
-        else:
-            metric_prefix = 'normal'
+        metric_prefix = 'too' if preemption_enabled else 'normal'
 
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
