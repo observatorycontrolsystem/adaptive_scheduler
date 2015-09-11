@@ -48,6 +48,7 @@ class UserRequestHandler(MultiFileHandler):
     def emit(self, record):
         if hasattr(record, 'tracking_number'):
             record.file_id = os.path.join(self.logdir, record.tracking_number + '.log')
+            record.tags = {'tracking_number': record.tracking_number}  # For JSON tags
         MultiFileHandler.emit(self, record)
 
 
