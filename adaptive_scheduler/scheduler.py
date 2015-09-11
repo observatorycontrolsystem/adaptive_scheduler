@@ -353,7 +353,7 @@ class Scheduler(object, SendMetricMixin):
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
         end_prepare = datetime.utcnow()
         self.send_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0,
-                              methodName=sys._getframe().f_code.co_name)
+                         methodName=sys._getframe().f_code.co_name)
 
         print_compound_reservations(compound_reservations)
 
