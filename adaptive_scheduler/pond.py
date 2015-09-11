@@ -135,7 +135,7 @@ class PondScheduleInterface(object):
         '''
         return self.too_intervals_by_telescope
     
-    @metric_timer('pond.cancel_requests', num_requests=lambda x: x)
+    @metric_timer('pond.cancel_requests', num_requests=lambda x: x, rate=lambda x: x)
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         ''' 
@@ -156,7 +156,7 @@ class PondScheduleInterface(object):
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to abort POND block")
     
-    @metric_timer('pond.save_requests', num_requests=lambda x: x)
+    @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
         '''

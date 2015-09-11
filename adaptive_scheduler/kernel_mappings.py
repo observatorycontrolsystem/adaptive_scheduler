@@ -222,7 +222,7 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
-@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x))
+@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x), rate=lambda x: len(x))
 def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
@@ -266,7 +266,7 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
 
 
 @timeit
-@metric_timer('filter_for_kernel', num_requests=lambda x: len(x))
+@metric_timer('filter_for_kernel', num_requests=lambda x: len(x), rate=lambda x: len(x))
 def filter_for_kernel(user_requests, visibility_from, semester_start, semester_end, scheduling_horizon):
     '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any URs that are now too

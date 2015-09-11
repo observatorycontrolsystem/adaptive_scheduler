@@ -295,7 +295,7 @@ class Scheduler(object):
 
     # TODO: refactor into smaller chunks
     @timeit
-    @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
+    @metric_timer('scheduling', num_requests=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
         if preemption_enabled:
             metric_prefix = 'too'
@@ -813,7 +813,7 @@ class SchedulerRunner(object):
 
 
     @timeit
-    @metric_timer('create_too_schedule', num_reservations=lambda x: x.count_reservations())
+    @metric_timer('create_too_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def create_too_schedule(self, scheduler_input):
         too_scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
@@ -854,7 +854,7 @@ class SchedulerRunner(object):
 
 
     @timeit
-    @metric_timer('create_normal_schedule', num_reservations=lambda x: x.count_reservations())
+    @metric_timer('create_normal_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def create_normal_schedule(self, scheduler_input, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()

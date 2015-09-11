@@ -159,7 +159,7 @@ class RequestDBInterface(object):
         return
 
 @timeit
-@metric_timer('requestdb.get_requests', num_requests=lambda x: len(x))
+@metric_timer('requestdb.get_requests', num_requests=lambda x: len(x), rate=lambda x: len(x))
 def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     format = '%Y-%m-%d %H:%M:%S'
 
