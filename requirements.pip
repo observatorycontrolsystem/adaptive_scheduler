@@ -1,7 +1,5 @@
-
---extra-index-url=http://buildsba/python/
---extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/thirdparty/
---extra-index-url=http://versionsba.lco.gtn/svn/telsoft/Lco/PyPi/
+--extra-index-url=http://buildsba.lco.gtn/python/
+--allow-all-external
 
 # 1) Core required dependencies
 distribute==0.7.3
@@ -16,6 +14,10 @@ rise_set
 lcogt-dateutils
 reqdbclient
 schedutils
+potsdb
+requests
+opentsdb_http_client
+opentsdb_python_metrics
 lcogt-logging
 
 # Only needed for unit tests of old versions of the kernel

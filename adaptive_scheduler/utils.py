@@ -11,6 +11,9 @@ import calendar
 from datetime import datetime, timedelta
 import time
 import logging
+from opentsdb_python_metrics import metric_wrappers
+from opentsdb_python_metrics.metric_wrappers import metric_timer
+from opentsdb_python_metrics.metric_wrappers import SendMetricMixin
 
 log = logging.getLogger(__name__)
 fh  = logging.FileHandler('timings.dat')
@@ -21,6 +24,27 @@ fh.setFormatter(formatter)
 
 log.addHandler(fh)
 
+# Setting the project name in the opentsdb_python_metrics library
+metric_wrappers.project_name = 'adaptive_scheduler'
+
+def modify_metric_name(metric_name, method, *args, **kwargs):
+    '''
+    Defining a function to map metric name to a new name given the method and args
+    :param metric_name:
+    :param method:
+    :param args:
+    :param kwargs:
+    :return:
+    '''
+    if 'preemption_enabled' in kwargs:
+        if kwargs['preemption_enabled']:
+            return 'too_{}'.format(metric_name)
+        else:
+            return 'normal_{}'.format(metric_name)
+    return metric_name
+
+# Replacing the base metric name function with the modified one
+metric_wrappers.metric_name_modifier = modify_metric_name
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
@@ -132,7 +156,8 @@ def timeit(method):
     return timed
 
 
-def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
+@metric_timer('estimate_runtime', value=lambda x: x.total_seconds()*1000.0)
+def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0, preemption_enabled=False):
     '''Estimate the next scheduler runtime given a previous estimate and actual.
     If actual > estimate, new estimate = actual * backoff_rate
     If actual <= estimate, new estimate = min(actual + pad_percent*(actual), estimate - (estimate - actual)/backoff_rate)

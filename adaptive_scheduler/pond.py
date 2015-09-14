@@ -48,7 +48,9 @@ from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, S
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
-import logging
+import logging, sys
+from datetime import datetime
+from adaptive_scheduler.utils            import metric_timer
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 log = logging.getLogger(__name__)
@@ -85,7 +87,7 @@ class PondScheduleInterface(object):
         # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
         self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
 
-    
+    @metric_timer('pond.get_running_blocks', num_blocks=lambda x: len(x))
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
         try:
             running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
@@ -96,7 +98,6 @@ class PondScheduleInterface(object):
         all_running_blocks = []
         for blocks in running_blocks.values():
             all_running_blocks += blocks
-        self.log.info("%d %s in the running list", *pl(len(all_running_blocks), 'POND Block'))
         for block in all_running_blocks:
             msg = "UR %s has a running block (id=%d, finishing at %s)" % (
                                                          block.tracking_num_set()[0],
@@ -107,7 +108,8 @@ class PondScheduleInterface(object):
         # End of logging block
         
         return running_blocks 
-    
+
+    @metric_timer('pond.get_too_intervals')
     def _fetch_too_intervals(self, telescopes, end_after, start_before):
         too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
         
@@ -133,7 +135,7 @@ class PondScheduleInterface(object):
         '''
         return self.too_intervals_by_telescope
     
-    
+    @metric_timer('pond.cancel_requests', num_requests=lambda x: x, rate=lambda x: x)
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         ''' 
@@ -143,7 +145,6 @@ class PondScheduleInterface(object):
                 n_deleted = self._cancel_schedule(cancelation_dates_by_resource, reason)
             except PondFacadeException, pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
-            
         return n_deleted
     
     def abort(self, pond_running_request, reason):
@@ -155,17 +156,16 @@ class PondScheduleInterface(object):
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to abort POND block")
     
-            
+    @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, camera_mappings, dry_run=False):
         ''' Save the provided observing schedule
         '''
         # Convert the kernel schedule into POND blocks, and send them to the POND
         n_submitted = self._send_schedule_to_pond(schedule, semester_start,
                                             camera_mappings, dry_run)
-        
         return n_submitted
     
-    
+    # Already timed by the save method
     @timeit
     def _send_schedule_to_pond(self, schedule, semester_start, camera_mappings_file, dry_run=False):
         '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
@@ -266,7 +266,7 @@ class PondScheduleInterface(object):
             
         return telescope_blocks
     
-    
+    # This method is only called in test code, so no need to collect metrics from it
     @timeit
     def _get_intervals_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         '''
@@ -286,7 +286,7 @@ class PondScheduleInterface(object):
     
         return telescope_interval
 
-
+    # Already timed by the fetch_too_intervals method
     @timeit
     def _get_too_intervals_by_telescope(self, tels, ends_after, starts_before):
         '''
@@ -335,7 +335,7 @@ class PondScheduleInterface(object):
     
         return scheduler_placed_blocks
     
-    
+    # This does not need a metric because it is called by the public cancel method which is timed
     @timeit
     def _cancel_schedule(self, cancelation_dates_by_resource, reason):
         all_to_delete = []
@@ -847,7 +847,7 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
 
     return block
 
-
+@metric_timer('pond.get_network_running_interavls')
 def get_network_running_intervals(running_blocks_by_telescope):
     running_at_tel = {}
 

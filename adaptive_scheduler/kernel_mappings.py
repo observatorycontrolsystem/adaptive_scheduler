@@ -34,7 +34,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
-                                          epoch_to_datetime, timeit )
+                                          epoch_to_datetime, timeit, metric_timer )
 from adaptive_scheduler.printing import print_req_summary, plural_str as pl
 from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
@@ -222,19 +222,19 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
+@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x), rate=lambda x: len(x))
 def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
     '''
     urs_by_type = filter_compounds_by_type(user_requests)
-    log.info("Identified %s" % pl(len(urs_by_type['single']), 'single'))
-    log.info("Identified %s" % pl(len(urs_by_type['many']), 'many'))
-    log.info("Identified %s" % pl(len(urs_by_type['and']), 'and'))
-    log.info("Identified %s" % pl(len(urs_by_type['oneof']), 'oneof'))
-
+    log.info("Identified %s, %s, %s, %s" % (pl(len(urs_by_type['single']), 'single'),
+                                            pl(len(urs_by_type['many']), 'many'),
+                                            pl(len(urs_by_type['and']), 'and'),
+                                            pl(len(urs_by_type['oneof']), 'oneof')))
 
     # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s days)" % scheduling_horizon)
+    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
     horizon_limited_urs = urs_by_type['single'] + urs_by_type['many']
     horizon_limited_urs = truncate_upper_crossing_windows(horizon_limited_urs, horizon=scheduling_horizon)
     horizon_limited_urs = filter_out_future_windows(horizon_limited_urs, horizon=scheduling_horizon)
@@ -253,7 +253,7 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     unlimited_urs = filter_out_future_windows(unlimited_urs)
     
     # TODO: it's possible that one-ofs and ands may have these windowless 
-    # children at this point from requests that crossed the semester boundry
+    # children at this point from requests that crossed the semester boundary
     # might need to drop empty requests before filtering on type   
     
     # Clean up Requests without any windows
@@ -266,6 +266,7 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
 
 
 @timeit
+@metric_timer('filter_for_kernel', num_requests=lambda x: len(x), rate=lambda x: len(x))
 def filter_for_kernel(user_requests, visibility_from, semester_start, semester_end, scheduling_horizon):
     '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any URs that are now too
@@ -352,6 +353,7 @@ def intervals_to_windows(req, intersections_for_resource):
 
 
 @timeit
+@metric_timer('make_compound_reservations', num_requests=lambda x: len(x))
 def make_compound_reservations(compound_requests, visibility_from, semester_start):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
