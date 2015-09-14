@@ -642,6 +642,7 @@ class SchedulerRunner(object):
 
 
     @timeit
+    @metric_timer('total_scheduling_cycle')
     def run_once(self):
         if self.sched_params.no_weather:
             self.log.info("Weather monitoring disabled on the command line")
