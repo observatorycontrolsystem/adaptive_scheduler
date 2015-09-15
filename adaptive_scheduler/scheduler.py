@@ -15,7 +15,8 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin, metric_timer
+from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin, \
+    metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
@@ -295,7 +296,7 @@ class Scheduler(object, SendMetricMixin):
 
     # TODO: refactor into smaller chunks
     @timeit
-    @metric_timer('scheduling', num_requests=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
         metric_prefix = 'too' if preemption_enabled else 'normal'
 
@@ -344,15 +345,12 @@ class Scheduler(object, SendMetricMixin):
 #         else:
 #             resource_schedules_to_cancel = available_resources
 
-        start_prepare = datetime.utcnow()
         # By default, schedule on all resources
         resources_to_schedule = list(available_resources)
         resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot, scheduler_input.too_tracking_numbers, preemption_enabled)
 
         compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
-        end_prepare = datetime.utcnow()
-        self.send_metric('prepare_{}_requests.runtime'.format(metric_prefix), (end_prepare-start_prepare).total_seconds() * 1000.0)
 
         print_compound_reservations(compound_reservations)
 
@@ -386,10 +384,7 @@ class Scheduler(object, SendMetricMixin):
             contractual_obligations = []
 
             kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
-            start_kernel = datetime.utcnow()
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
-            end_kernel = datetime.utcnow()
-            self.send_metric('{}_kernel.runtime'.format(metric_prefix), (end_kernel-start_kernel).total_seconds() * 1000.0)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where user_requests were canceled
@@ -439,7 +434,7 @@ class LCOGTNetworkScheduler(Scheduler):
             log_full_ur(ur, estimated_scheduler_end)
             log_windows(ur, log_msg="Initial windows:")
 
-
+    @metric_timer('apply_unschedulable_filters', num_requests=lambda x, y: len(x))
     def apply_unschedulable_filters(self, user_reqs, estimated_scheduler_end, running_request_numbers):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
@@ -453,7 +448,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return schedulable_urs, unschedulable_urs
 
-
+    @metric_timer('apply_window_filters', num_requests=lambda x: len(x))
     def apply_window_filters(self, user_reqs, estimated_scheduler_end):
         ''' Returns the set of URs with windows adjusted to include only URs with windows
         suitable for scheduling
@@ -466,7 +461,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return filtered_window_user_reqs
 
-
+    @metric_timer('prepare_for_kernel')
     def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
@@ -481,7 +476,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return all_compound_reservations
 
-
+    @metric_timer('prepare_available_windows_for_kernel')
     def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
         ''' Construct the set of resource windows available for use in scheduling
         '''
@@ -809,7 +804,7 @@ class SchedulerRunner(object):
 
 
     @timeit
-    @metric_timer('create_too_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def create_too_schedule(self, scheduler_input):
         too_scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
@@ -831,14 +826,14 @@ class SchedulerRunner(object):
                                                 deadline)
                 too_scheduling_end = datetime.utcnow()
                 too_scheduling_timedelta = too_scheduling_end - too_scheduling_start
-                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta, preemption_enabled=True)
+                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self.log.info("ToO scheduling took %.2f seconds" % too_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("ToO Scheduling Summary")
 
             except EstimateExceededException, eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                 too_scheduling_timedelta = eee.new_estimate - too_scheduling_start
-                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta, preemption_enabled=True)
+                self.estimated_too_run_timedelta = estimate_runtime(self.estimated_too_run_timedelta, too_scheduling_timedelta)
                 self.log.warn("Skipping normal scheduling loop to try ToO scheduling again with new runtime estimate")
                 raise eee
             finally:
@@ -850,7 +845,7 @@ class SchedulerRunner(object):
 
 
     @timeit
-    @metric_timer('create_normal_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def create_normal_schedule(self, scheduler_input, dont_cancel_resources):
         # Run the scheduling loop, if there are any User Requests
         scheduler_result = SchedulerResult()
@@ -880,13 +875,13 @@ class SchedulerRunner(object):
                     self.log.info("Avg save time per reservation was %.2f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
                 normal_scheduling_end = datetime.utcnow()
                 normal_scheduling_timedelta = normal_scheduling_end - normal_scheduling_start
-                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta, preemption_enabled=False)
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 self.log.info("Normal scheduling took %.2f seconds" % normal_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
             except EstimateExceededException, eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                 normal_scheduling_timedelta = eee.new_estimate - normal_scheduling_start
-                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta, preemption_enabled=False)
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 raise eee
             finally:
                 self.log.info("New runtime estimate is %.2f seconds" % self.estimated_normal_run_timedelta.total_seconds())
@@ -899,10 +894,11 @@ class SchedulerRunner(object):
 
     @timeit
     def create_new_schedule(self, network_state_timestamp):
+        set_schedule_type(TOO_SCHEDULE_TYPE)
         too_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds(),
                                                                    network_state_timestamp=network_state_timestamp)
         too_scheduler_result = self.create_too_schedule(too_input)
-
+        set_schedule_type(None)
         # Find resource scheduled by ToO run and don't cancel their schedules
         # during normal scheduling run
         too_resources = []
@@ -910,11 +906,11 @@ class SchedulerRunner(object):
             for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
                 if reservation_list:
                     too_resources.append(too_resource)
-
+        set_schedule_type(NORMAL_SCHEDULE_TYPE)
         normal_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
                                                                          network_state_timestamp=network_state_timestamp)
         normal_scheduler_result = self.create_normal_schedule(normal_input, too_resources)
-
+        set_schedule_type(None)
         # Only clear the change state if scheduling is successful and not a dry run
         if not self.sched_params.dry_run:
             self.network_interface.clear_schedulable_request_set_changed_state()

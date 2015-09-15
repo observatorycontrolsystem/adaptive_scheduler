@@ -89,7 +89,7 @@ class SchedulingInputFactory(object):
         return scheduler_input
 
     @timeit
-    @metric_timer('create_too_scheduling_input')
+    @metric_timer('create_scheduling_input')
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
                                     output_path='/data/adaptive_scheduler/input_states/',
                                     network_state_timestamp=None):
@@ -106,7 +106,7 @@ class SchedulingInputFactory(object):
 
 
     @timeit
-    @metric_timer('create_normal_scheduling_input')
+    @metric_timer('create_scheduling_input')
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
                                        network_state_timestamp=None):
