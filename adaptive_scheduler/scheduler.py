@@ -15,22 +15,22 @@ from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.utils            import timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin, \
-    metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE
+from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
+                                            metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE)
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
-from adaptive_scheduler.printing import (print_schedule, print_compound_reservations,
+from adaptive_scheduler.printing         import (print_schedule, print_compound_reservations,
                                          summarise_urs, log_full_ur, log_windows)
-from adaptive_scheduler.model2   import (filter_out_compounds,
+from adaptive_scheduler.model2           import (filter_out_compounds,
                                          differentiate_by_type, n_requests,
                                          RequestError)
-from adaptive_scheduler.kernel_mappings import (construct_visibilities,
+from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
                                                  make_many_type_compound_reservations,
                                                  filter_for_kernel,
                                                  construct_global_availability)
-from adaptive_scheduler.request_filters import (filter_urs,
+from adaptive_scheduler.request_filters  import (filter_urs,
                                                 drop_empty_requests,
                                                 find_unschedulable_ur_numbers,
                                                 set_now)

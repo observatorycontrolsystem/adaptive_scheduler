@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-test_orchestrator.py - Tests for the orchestrator module.
+test_report_outcome.py - Tests for the event_utils module report_scheduling_outcome.
 
 description
 
@@ -9,14 +9,14 @@ Author: Eric Saunders
 August 2013
 '''
 
-from adaptive_scheduler.orchestrator import report_scheduling_outcome
+from adaptive_scheduler.event_utils import report_scheduling_outcome
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
 from nose.tools import assert_equal
 from mock import Mock
 
 
-class TestOrchestrator(object):
+class TestReportOutcome(object):
 
     def setup(self):
         pass
