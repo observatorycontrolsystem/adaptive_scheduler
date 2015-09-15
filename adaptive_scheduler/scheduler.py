@@ -434,7 +434,7 @@ class LCOGTNetworkScheduler(Scheduler):
             log_full_ur(ur, estimated_scheduler_end)
             log_windows(ur, log_msg="Initial windows:")
 
-    @metric_timer('apply_unschedulable_filters', num_requests=lambda x, y: len(x))
+    @metric_timer('apply_unschedulable_filters')
     def apply_unschedulable_filters(self, user_reqs, estimated_scheduler_end, running_request_numbers):
         ''' Returns tuple of (schedulable, unschedulable) user requests where UR's
         in the unschedulable list will never be possible
