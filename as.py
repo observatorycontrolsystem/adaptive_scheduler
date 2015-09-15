@@ -101,6 +101,8 @@ def parse_args(argv):
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
+    arg_parser.add_argument("--no-pickle", action="store_true", dest='no_pickle',
+                                help="Disable storing pickled files of scheduling run input")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
