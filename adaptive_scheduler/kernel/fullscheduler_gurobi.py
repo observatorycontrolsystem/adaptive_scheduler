@@ -19,7 +19,7 @@ from reservation_v3 import *
 #from contracts_v2 import *
 import copy
 from slicedipscheduler_v2 import SlicedIPScheduler_v2
-from adaptive_scheduler.utils import timeit
+from adaptive_scheduler.utils import timeit, metric_timer
 
 from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
 from gurobipy import Model, tuplelist, GRB, quicksum
@@ -28,7 +28,7 @@ class Result(object):
     pass
 
 class FullScheduler_gurobi(SlicedIPScheduler_v2):
-
+    @metric_timer('kernel.init')
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
@@ -88,6 +88,7 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
             request[2] = request[2] + weight
 
     @timeit
+    @metric_timer('kernel.scheduling')
     def schedule_all(self, timelimit=None):
 
         if not self.reservation_list:

@@ -21,7 +21,7 @@ class SchedulerParameters(object):
                  no_singles=False, no_compounds=False, no_too=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
-                 kernel='gurobi', input_file_name=None,
+                 kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  profiling_enabled=False, avg_reservation_save_time_seconds=0.05,
@@ -41,6 +41,7 @@ class SchedulerParameters(object):
         self.simulate_now = simulate_now
         self.kernel = kernel
         self.input_file_name = input_file_name
+        self.pickle = pickle
         self.too_run_time = too_run_time
         self.normal_run_time = normal_run_time
         self.pond_port = pond_port
@@ -78,7 +79,7 @@ class SchedulingInputFactory(object):
                         input_provider.resource_usage_snapshot,
                         input_provider.available_resources,
                         is_too_input)
-        if output_path:
+        if output_path and input_provider.sched_params.pickle:
             file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
             filename = os.path.join(output_path, 'normal_scheduling_input_%s.pickle')
             if is_too_input:
@@ -89,7 +90,7 @@ class SchedulingInputFactory(object):
         return scheduler_input
 
     @timeit
-    @metric_timer('create_too_scheduling_input')
+    @metric_timer('create_scheduling_input')
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
                                     output_path='/data/adaptive_scheduler/input_states/',
                                     network_state_timestamp=None):
@@ -106,7 +107,7 @@ class SchedulingInputFactory(object):
 
 
     @timeit
-    @metric_timer('create_normal_scheduling_input')
+    @metric_timer('create_scheduling_input')
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
                                        network_state_timestamp=None):

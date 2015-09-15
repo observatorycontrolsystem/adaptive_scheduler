@@ -13,6 +13,8 @@ import time
 import logging
 from opentsdb_python_metrics import metric_wrappers
 from opentsdb_python_metrics.metric_wrappers import metric_timer
+from opentsdb_python_metrics.metric_wrappers import metric_wrapper
+
 from opentsdb_python_metrics.metric_wrappers import SendMetricMixin
 
 log = logging.getLogger(__name__)
@@ -27,24 +29,24 @@ log.addHandler(fh)
 # Setting the project name in the opentsdb_python_metrics library
 metric_wrappers.project_name = 'adaptive_scheduler'
 
-def modify_metric_name(metric_name, method, *args, **kwargs):
+# Constants used to denote whether we are in a normal or ToO loop currently
+NORMAL_SCHEDULE_TYPE = 'normal'
+TOO_SCHEDULE_TYPE = 'too'
+
+
+def set_schedule_type(schedule_type):
     '''
-    Defining a function to map metric name to a new name given the method and args
-    :param metric_name:
-    :param method:
-    :param args:
-    :param kwargs:
+        Function takes in a schedule type and adjusts the global tags used in saving metrics accordingly
+    :param schedule_type:
     :return:
     '''
-    if 'preemption_enabled' in kwargs:
-        if kwargs['preemption_enabled']:
-            return 'too_{}'.format(metric_name)
-        else:
-            return 'normal_{}'.format(metric_name)
-    return metric_name
+    if schedule_type is NORMAL_SCHEDULE_TYPE:
+        metric_wrappers.global_tags = {'schedule_type':'normal'}
+    elif schedule_type is TOO_SCHEDULE_TYPE:
+        metric_wrappers.global_tags = {'schedule_type':'too'}
+    else:
+        metric_wrappers.global_tags = None
 
-# Replacing the base metric name function with the modified one
-metric_wrappers.metric_name_modifier = modify_metric_name
 
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
@@ -156,8 +158,8 @@ def timeit(method):
     return timed
 
 
-@metric_timer('estimate_runtime', value=lambda x: x.total_seconds()*1000.0)
-def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0, preemption_enabled=False):
+@metric_wrapper('estimate_runtime', value=lambda x: x.total_seconds()*1000.0)
+def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
     '''Estimate the next scheduler runtime given a previous estimate and actual.
     If actual > estimate, new estimate = actual * backoff_rate
     If actual <= estimate, new estimate = min(actual + pad_percent*(actual), estimate - (estimate - actual)/backoff_rate)
