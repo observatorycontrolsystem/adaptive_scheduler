@@ -364,8 +364,7 @@ class Scheduler(object, SendMetricMixin):
         invalid_json_user_requests = scheduler_input.invalid_user_requests
         for json_ur in invalid_json_user_requests:
             if json_ur.has_key('tracking_number'):
-                if json_ur.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
-                    invalid_tracking_numbers.append(json_ur['tracking_number'])
+                invalid_tracking_numbers.append(json_ur['tracking_number'])
         scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
         
         # Include any invalid requests in the unschedulable list

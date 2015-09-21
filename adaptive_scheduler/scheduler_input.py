@@ -143,7 +143,8 @@ class SchedulingInputUtils(object, SendMetricMixin):
                 self.log.warn(e)
                 invalid_json_user_requests.append(json_ur)
 
-        self.send_metric('invalid_requests.num_requests', len(invalid_json_user_requests))
+        self.send_metric('invalid_child_requests.num_requests', len(invalid_json_requests))
+        self.send_metric('invalid_user_requests.num_requests', len(invalid_json_user_requests))
 
         return scheduler_model_urs, invalid_json_user_requests, invalid_json_requests
 

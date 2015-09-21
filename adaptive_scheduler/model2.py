@@ -356,12 +356,12 @@ class Request(DefaultMixin):
 
         self.inst_factory = InstrumentFactory()
 
-        self.target         = target
-        self.molecules      = molecules
-        self.windows        = windows
-        self.constraints    = constraints
-        self.request_number = request_number
-        self.state          = state
+        self.target            = target
+        self.molecules         = molecules
+        self.windows           = windows
+        self.constraints       = constraints
+        self.request_number    = request_number
+        self.state             = state
         self.observation_type  = observation_type
 
         self.set_instrument(instrument_type)
@@ -652,7 +652,7 @@ class ModelBuilder(object):
     def build_user_request(self, cr_dict):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
-        requests, invalid_requests  = self.build_requests(cr_dict['requests'])
+        requests, invalid_requests  = self.build_requests(cr_dict)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
@@ -688,7 +688,7 @@ class ModelBuilder(object):
         return user_request, invalid_requests
 
 
-    def build_requests(self, req_dicts):
+    def build_requests(self, cr_dict):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors 
@@ -705,12 +705,38 @@ class ModelBuilder(object):
         '''
         requests         = []
         invalid_requests = []
-        for req_dict in req_dicts:
+        for req_dict in cr_dict['requests']:
             try:
                 req = self.build_request(req_dict)
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
+                prop_id = None
+                user_id = None
+                telescope_class = None
+                inst_type = None
+                if cr_dict.has_key('proposal'):
+                    prop_id = cr_dict.get('proposal').get('proposal_id')
+                    user_id = cr_dict.get('proposal').get('user_id')
+                if req_dict.has_key('location'):
+                    telescope_class = req_dict.get('location').get('telescope_class')
+                if req_dict.has_key('molecules') and len(req_dict['molecules']) > 0:
+                    filters = set()
+                    inst_types = set()
+                    for molecule in req_dict['molecules']:
+                        if molecule.has_key('filter'):
+                            filters.add(molecule['filter'])
+                            inst_types.add(molecule['instrument_name'])
+                    inst_type = '(' + ', '.join(inst_types) + ')'
+                    filter_list = '(' + ', '.join(filters) + ')'
+                log.warn('Invalid Request: prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
+                    prop_id,
+                    user_id,
+                    cr_dict.get('tracking_number'),
+                    req_dict.get('request_number'),
+                    telescope_class,
+                    inst_type,
+                    filter_list))
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests
