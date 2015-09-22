@@ -77,6 +77,35 @@ def filter_compounds_by_type(crs):
     return crs_by_type
 
 
+def generate_request_description(user_request_json, request_json):
+    prop_id = None
+    user_id = None
+    telescope_class = None
+    inst_type = None
+    if 'proposal' in user_request_json:
+        prop_id = user_request_json.get('proposal').get('proposal_id')
+        user_id = user_request_json.get('proposal').get('user_id')
+    if 'location' in request_json:
+        telescope_class = request_json.get('location').get('telescope_class')
+    if 'molecules' in request_json and len(request_json['molecules']) > 0:
+        filters = set()
+        inst_types = set()
+        for molecule in request_json['molecules']:
+            if 'filter' in molecule:
+                filters.add(molecule['filter'])
+                inst_types.add(molecule['instrument_name'])
+        inst_type = '(' + ', '.join(inst_types) + ')'
+        filter_list = '(' + ', '.join(filters) + ')'
+    return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
+                    prop_id,
+                    user_id,
+                    user_request_json.get('tracking_number'),
+                    request_json.get('request_number'),
+                    telescope_class,
+                    inst_type,
+                    filter_list)
+
+
 def differentiate_by_type(cr_type, crs):
     '''Given an operator type and a list of CompoundRequests, split the list into two
        lists, the chosen type, and the remainder.
@@ -356,12 +385,12 @@ class Request(DefaultMixin):
 
         self.inst_factory = InstrumentFactory()
 
-        self.target         = target
-        self.molecules      = molecules
-        self.windows        = windows
-        self.constraints    = constraints
-        self.request_number = request_number
-        self.state          = state
+        self.target            = target
+        self.molecules         = molecules
+        self.windows           = windows
+        self.constraints       = constraints
+        self.request_number    = request_number
+        self.state             = state
         self.observation_type  = observation_type
 
         self.set_instrument(instrument_type)
@@ -652,7 +681,7 @@ class ModelBuilder(object):
     def build_user_request(self, cr_dict):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
-        requests, invalid_requests  = self.build_requests(cr_dict['requests'])
+        requests, invalid_requests  = self.build_requests(cr_dict)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
@@ -688,7 +717,7 @@ class ModelBuilder(object):
         return user_request, invalid_requests
 
 
-    def build_requests(self, req_dicts):
+    def build_requests(self, cr_dict):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors 
@@ -705,12 +734,13 @@ class ModelBuilder(object):
         '''
         requests         = []
         invalid_requests = []
-        for req_dict in req_dicts:
+        for req_dict in cr_dict['requests']:
             try:
                 req = self.build_request(req_dict)
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
+                log.warn('Invalid Request: {}'.format(generate_request_description(cr_dict, req_dict)))
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests

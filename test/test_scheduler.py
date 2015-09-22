@@ -500,7 +500,7 @@ class TestScheduler(object):
                             is_too_input=False,
                             estimated_scheduler_runtime=timedelta(seconds=300)
                             )
-        mock_scheduler_input.invalid_user_requests = [dict(tracking_number='123456789', state='PENDING')]
+        mock_scheduler_input.invalid_user_requests = [dict(tracking_number='123456789')]
         mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)

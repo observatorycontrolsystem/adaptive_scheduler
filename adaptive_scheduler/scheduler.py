@@ -298,8 +298,6 @@ class Scheduler(object, SendMetricMixin):
     @timeit
     @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
-        metric_prefix = 'too' if preemption_enabled else 'normal'
-
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
 
@@ -366,8 +364,7 @@ class Scheduler(object, SendMetricMixin):
         invalid_json_user_requests = scheduler_input.invalid_user_requests
         for json_ur in invalid_json_user_requests:
             if json_ur.has_key('tracking_number'):
-                if json_ur.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
-                    invalid_tracking_numbers.append(json_ur['tracking_number'])
+                invalid_tracking_numbers.append(json_ur['tracking_number'])
         scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
         
         # Include any invalid requests in the unschedulable list

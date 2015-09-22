@@ -1,7 +1,7 @@
 from adaptive_scheduler.model2           import ModelBuilder, RequestError
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from schedutils.semester_service         import get_semester_block
-from adaptive_scheduler.utils            import timeit, metric_timer
+from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin
 
 import os
 import logging
@@ -123,7 +123,7 @@ class SchedulingInputFactory(object):
         return self._create_scheduling_input(self.input_provider, False, output_path)
 
 
-class SchedulingInputUtils(object):
+class SchedulingInputUtils(object, SendMetricMixin):
 
     def __init__(self, model_builder):
         self.model_builder = model_builder
@@ -142,6 +142,9 @@ class SchedulingInputUtils(object):
             except RequestError as e:
                 self.log.warn(e)
                 invalid_json_user_requests.append(json_ur)
+
+        self.send_metric('invalid_child_requests.num_requests', len(invalid_json_requests))
+        self.send_metric('invalid_user_requests.num_requests', len(invalid_json_user_requests))
 
         return scheduler_model_urs, invalid_json_user_requests, invalid_json_requests
 
