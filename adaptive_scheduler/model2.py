@@ -77,6 +77,35 @@ def filter_compounds_by_type(crs):
     return crs_by_type
 
 
+def generate_request_description(user_request_json, request_json):
+    prop_id = None
+    user_id = None
+    telescope_class = None
+    inst_type = None
+    if 'proposal' in user_request_json:
+        prop_id = user_request_json.get('proposal').get('proposal_id')
+        user_id = user_request_json.get('proposal').get('user_id')
+    if 'location' in request_json:
+        telescope_class = request_json.get('location').get('telescope_class')
+    if 'molecules' in request_json and len(request_json['molecules']) > 0:
+        filters = set()
+        inst_types = set()
+        for molecule in request_json['molecules']:
+            if 'filter' in molecule:
+                filters.add(molecule['filter'])
+                inst_types.add(molecule['instrument_name'])
+        inst_type = '(' + ', '.join(inst_types) + ')'
+        filter_list = '(' + ', '.join(filters) + ')'
+    return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
+                    prop_id,
+                    user_id,
+                    user_request_json.get('tracking_number'),
+                    request_json.get('request_number'),
+                    telescope_class,
+                    inst_type,
+                    filter_list)
+
+
 def differentiate_by_type(cr_type, crs):
     '''Given an operator type and a list of CompoundRequests, split the list into two
        lists, the chosen type, and the remainder.
@@ -711,32 +740,7 @@ class ModelBuilder(object):
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
-                prop_id = None
-                user_id = None
-                telescope_class = None
-                inst_type = None
-                if cr_dict.has_key('proposal'):
-                    prop_id = cr_dict.get('proposal').get('proposal_id')
-                    user_id = cr_dict.get('proposal').get('user_id')
-                if req_dict.has_key('location'):
-                    telescope_class = req_dict.get('location').get('telescope_class')
-                if req_dict.has_key('molecules') and len(req_dict['molecules']) > 0:
-                    filters = set()
-                    inst_types = set()
-                    for molecule in req_dict['molecules']:
-                        if molecule.has_key('filter'):
-                            filters.add(molecule['filter'])
-                            inst_types.add(molecule['instrument_name'])
-                    inst_type = '(' + ', '.join(inst_types) + ')'
-                    filter_list = '(' + ', '.join(filters) + ')'
-                log.warn('Invalid Request: prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
-                    prop_id,
-                    user_id,
-                    cr_dict.get('tracking_number'),
-                    req_dict.get('request_number'),
-                    telescope_class,
-                    inst_type,
-                    filter_list))
+                log.warn('Invalid Request: {}'.format(generate_request_description(cr_dict, req_dict)))
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests
