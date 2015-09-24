@@ -728,7 +728,10 @@ class Block(object):
             # 2a) Construct the Pointing Coordinate
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
-                                     dec=self.target.dec.in_degrees()
+                                     dec=self.target.dec.in_degrees(),
+                                     pro_mot_ra=self.target.proper_motion_ra,
+                                     pro_mot_dec=self.target.proper_motion_dec,
+                                     parallax=self.target.parallax
                                    )
             # 2b) Construct the Pointing
             pond_pointing = pointing.sidereal(
