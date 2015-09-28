@@ -726,8 +726,6 @@ class Block(object):
 
         if isinstance(self.target, SiderealTarget):
             # 2a) Construct the Pointing Coordinate
-            if hasattr(self.target, 'proper_motion_ra'):
-
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
                                      dec=self.target.dec.in_degrees(),
