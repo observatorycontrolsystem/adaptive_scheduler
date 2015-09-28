@@ -726,12 +726,15 @@ class Block(object):
 
         if isinstance(self.target, SiderealTarget):
             # 2a) Construct the Pointing Coordinate
+            if hasattr(self.target, 'proper_motion_ra'):
+
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
                                      dec=self.target.dec.in_degrees(),
-                                     pro_mot_ra=self.target.proper_motion_ra,
-                                     pro_mot_dec=self.target.proper_motion_dec,
-                                     parallax=self.target.parallax
+                                     pro_mot_ra=getattr(self.target, 'proper_motion_ra', 0.0),
+                                     pro_mot_dec=getattr(self.target, 'proper_motion_dec', 0.0),
+                                     parallax=getattr(self.target, 'parallax', 0.0),
+                                     epoch=getattr(self.target, 'epoch', 2000.0)
                                    )
             # 2b) Construct the Pointing
             pond_pointing = pointing.sidereal(
