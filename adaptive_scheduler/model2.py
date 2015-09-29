@@ -91,11 +91,12 @@ def generate_request_description(user_request_json, request_json):
         filters = set()
         inst_types = set()
         for molecule in request_json['molecules']:
-            if 'filter' in molecule:
+            if 'filter' in molecule and molecule['filter']:
                 filters.add(molecule['filter'])
+            if 'instrument_name' in molecule and molecule['instrument_name']:
                 inst_types.add(molecule['instrument_name'])
-        inst_type = '(' + ', '.join(inst_types) + ')'
-        filter_list = '(' + ', '.join(filters) + ')'
+        inst_type = '(' + ', '.join(inst_types) + ')' if len(inst_types) > 0 else ''
+        filter_list = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
     return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
