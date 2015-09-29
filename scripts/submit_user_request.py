@@ -61,9 +61,9 @@ target = {
            'ra'                : 88.629,      # In decimal degrees
            'dec'               : +59.96,      # In decimal degrees
            # Optional fields. Defaults are as below.
-           'proper_motion_ra'  : 10.8,             # In arcsecs/yr
-           'proper_motion_dec' : 13.2,             # In arcsecs/yr
-           'parallax'          : 2.2,             # In arcsecs
+           'proper_motion_ra'  : 10.8,             # In milli arcsecs/yr
+           'proper_motion_dec' : 13.2,             # In milli arcsecs/yr
+           'parallax'          : 2.2,             # In milli arcsecs
            'epoch'             : 2000,          # Not needed unless proper motion is also specified
          }
 

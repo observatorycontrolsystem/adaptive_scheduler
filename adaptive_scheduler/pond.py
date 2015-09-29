@@ -25,6 +25,8 @@ It maps objects across domains from 1) -> 2) (described below).
 Author: Eric Saunders
 February 2012
 '''
+from __future__ import division
+
 import time
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
@@ -729,8 +731,8 @@ class Block(object):
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
                                      dec=self.target.dec.in_degrees(),
-                                     pro_mot_ra=getattr(self.target, 'proper_motion_ra', 0.0),
-                                     pro_mot_dec=getattr(self.target, 'proper_motion_dec', 0.0),
+                                     pro_mot_ra=getattr(self.target, 'proper_motion_ra', 0.0) / 1000.0,
+                                     pro_mot_dec=getattr(self.target, 'proper_motion_dec', 0.0) / 1000.0,
                                      parallax=getattr(self.target, 'parallax', 0.0),
                                      epoch=getattr(self.target, 'epoch', 2000.0)
                                    )

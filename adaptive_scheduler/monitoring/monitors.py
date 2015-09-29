@@ -31,7 +31,6 @@ class NetworkStateMonitor(object):
 
     def __init__(self, telescopes_file='telescopes.dat'):
         self.telescopes_file = telescopes_file
-        pass
 
     def monitor(self):
         ''' Monitor for changes. '''
@@ -73,8 +72,8 @@ class NetworkStateMonitor(object):
 class SequencerEnableMonitor(NetworkStateMonitor):
     ''' Monitor the sequencer enable state. '''
 
-    def __init__(self):
-        super(SequencerEnableMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(SequencerEnableMonitor, self).__init__(telescopes_file=telescopes_file)
         self.reason = None
 
 
@@ -106,8 +105,8 @@ class SequencerEnableMonitor(NetworkStateMonitor):
 class ScheduleTimestampMonitor(NetworkStateMonitor):
     ''' Monitor the scheduler last update timestamp. '''
 
-    def __init__(self):
-        super(ScheduleTimestampMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(ScheduleTimestampMonitor, self).__init__(telescopes_file=telescopes_file)
         self.reason = None
 
 
@@ -237,16 +236,14 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 class OfflineResourceMonitor(NetworkStateMonitor):
     ''' Monitor resource ONLINE/OFFLINE state. '''
 
-    def __init__(self, filename='telescopes.dat'):
-        super(OfflineResourceMonitor, self).__init__()
-        self._filename = filename
-
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(OfflineResourceMonitor, self).__init__(telescopes_file=telescopes_file)
 
     def retrieve_data(self):
         try:
-            resource_file = open(self._filename)
+            resource_file = open(self.telescopes_file)
         except TypeError:
-            resource_file = closing(self._filename)
+            resource_file = closing(self.telescopes_file)
 
         with resource_file as filep:
             raw_data = filep.read()

@@ -96,7 +96,7 @@ def generate_request_description(user_request_json, request_json):
             if 'instrument_name' in molecule and molecule['instrument_name']:
                 inst_types.add(molecule['instrument_name'])
         inst_type = '(' + ', '.join(inst_types) + ')' if len(inst_types) > 0 else ''
-        filter_list = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
+        filter_string = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
     return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
@@ -104,7 +104,7 @@ def generate_request_description(user_request_json, request_json):
                     request_json.get('request_number'),
                     telescope_class,
                     inst_type,
-                    filter_list)
+                    filter_string)
 
 
 def differentiate_by_type(cr_type, crs):
