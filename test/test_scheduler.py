@@ -1167,7 +1167,8 @@ class TestSchedulerRunner(object):
 
     def setup(self):
         self.mock_kernel_class = Mock()
-        self.sched_params = SchedulerParameters(run_once=True)
+        self.sched_params = SchedulerParameters(run_once=True, cameras_file='test/camera_mappings.dat',
+                                                telescopes_file='test/telescopes.dat')
         self.mock_event_bus = Mock()
         self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
 

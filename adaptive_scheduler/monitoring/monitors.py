@@ -29,8 +29,8 @@ class NetworkStateMonitor(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self):
-        pass
+    def __init__(self, telescopes_file='telescopes.dat'):
+        self.telescopes_file = telescopes_file
 
     def monitor(self):
         ''' Monitor for changes. '''
@@ -72,8 +72,8 @@ class NetworkStateMonitor(object):
 class SequencerEnableMonitor(NetworkStateMonitor):
     ''' Monitor the sequencer enable state. '''
 
-    def __init__(self):
-        super(SequencerEnableMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(SequencerEnableMonitor, self).__init__(telescopes_file=telescopes_file)
         self.reason = None
 
 
@@ -105,8 +105,8 @@ class SequencerEnableMonitor(NetworkStateMonitor):
 class ScheduleTimestampMonitor(NetworkStateMonitor):
     ''' Monitor the scheduler last update timestamp. '''
 
-    def __init__(self):
-        super(ScheduleTimestampMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(ScheduleTimestampMonitor, self).__init__(telescopes_file=telescopes_file)
         self.reason = None
 
 
@@ -149,8 +149,8 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 class NotOkToOpenMonitor(NetworkStateMonitor):
     ''' Monitor the OK_TO_OPEN flag. '''
 
-    def __init__(self):
-        super(NotOkToOpenMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(NotOkToOpenMonitor, self).__init__(telescopes_file=telescopes_file)
         self._overridden_observatories = []
 
     def retrieve_data(self):
@@ -214,7 +214,7 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         :param datum: Datum used to generate resource list.
         :return: Create a list of resources with the current event. Exclude any resource that is currently overridden.
         '''
-        site_resources = resources.get_site_resources(datum.ok_to_open.site)
+        site_resources = resources.get_site_resources(datum.ok_to_open.site, self.telescopes_file)
         return [resource for resource in site_resources if not self._is_resource_overridden(resource)]
 
 
@@ -236,16 +236,14 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 class OfflineResourceMonitor(NetworkStateMonitor):
     ''' Monitor resource ONLINE/OFFLINE state. '''
 
-    def __init__(self, filename='telescopes.dat'):
-        super(OfflineResourceMonitor, self).__init__()
-        self._filename = filename
-
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(OfflineResourceMonitor, self).__init__(telescopes_file=telescopes_file)
 
     def retrieve_data(self):
         try:
-            resource_file = open(self._filename)
+            resource_file = open(self.telescopes_file)
         except TypeError:
-            resource_file = closing(self._filename)
+            resource_file = closing(self.telescopes_file)
 
         with resource_file as filep:
             raw_data = filep.read()
@@ -322,7 +320,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         site        = interlocked.site
         observatory = interlocked.observatory
 
-        return resources.get_observatory_resources(site, observatory)
+        return resources.get_observatory_resources(site, observatory, self.telescopes_file)
 
     def _flatten_data(self, datum_names):
         for datum_name in datum_names:

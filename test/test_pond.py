@@ -290,6 +290,22 @@ class TestPond(object):
                                     acquire_mode  = 'OPTIONAL',
                                   )
 
+        self.valid_target_with_prop_motion = SiderealTarget(
+                                    name  = 'deneb',
+                                    type  = 'sidereal',
+                                    #ra  = '20 41 25.91',
+                                    #dec = '+45 16 49.22',
+                                    ra  = 310.35795833333333,
+                                    dec = 45.280338888888885,
+                                    rot_mode  = 'SKY',
+                                    rot_angle = 0.0,
+                                    acquire_mode  = 'OPTIONAL',
+                                    proper_motion_ra = -798.71,
+                                    proper_motion_dec = 10337.77,
+                                    epoch = 2000.0,
+                                    parallax = 549.30
+                                  )
+
         self.valid_expose_mol = self.mol_factory.build(
                                                       dict(
                                                         type            = 'expose',
@@ -458,6 +474,22 @@ class TestPond(object):
         assert_equal(pond_mol.pointing.roll, 310.35795833333333)
         assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
 
+    def test_create_pond_block_with_proper_motion(self):
+        self.one_metre_block.add_proposal(self.valid_proposal)
+        self.one_metre_block.add_molecule(self.valid_expose_mol)
+        self.one_metre_block.add_target(self.valid_target_with_prop_motion)
+
+        received = self.one_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        assert_equal(len(received.molecules), 1)
+        assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
+        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.ag_name, 'ef02')
+        assert_equal(pond_mol.pointing.parallax, 549.30)
+        assert_equal(pond_mol.pointing.pro_mot_ra, -798.71)
+        assert_equal(pond_mol.pointing.pro_mot_dec, 10337.77)
+        assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):
         self.one_metre_block.add_proposal(self.valid_proposal)

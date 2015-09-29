@@ -41,7 +41,7 @@ class TestOfflineResourceMonitor(object):
 class TestNotOkToOpenMonitor(object):
 
     def setUp(self):
-        self.monitor = NotOkToOpenMonitor()
+        self.monitor = NotOkToOpenMonitor(telescopes_file='test/telescopes.dat')
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_we_are_okay_to_open(self,mock_get_datum):
@@ -296,7 +296,7 @@ class TestSequencerEnableMonitor(object):
 class TestEnclosureInterlockMonitor(object):
 
     def setUp(self):
-        self.monitor = EnclosureInterlockMonitor()
+        self.monitor = EnclosureInterlockMonitor(telescopes_file='test/telescopes.dat')
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_when_enclosure_is_interlocked(self, mock_get_datum):
