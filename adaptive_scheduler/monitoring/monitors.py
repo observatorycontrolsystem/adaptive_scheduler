@@ -29,7 +29,8 @@ class NetworkStateMonitor(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self):
+    def __init__(self, telescopes_file='telescopes.dat'):
+        self.telescopes_file = telescopes_file
         pass
 
     def monitor(self):
@@ -149,8 +150,8 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 class NotOkToOpenMonitor(NetworkStateMonitor):
     ''' Monitor the OK_TO_OPEN flag. '''
 
-    def __init__(self):
-        super(NotOkToOpenMonitor, self).__init__()
+    def __init__(self, telescopes_file='telescopes.dat'):
+        super(NotOkToOpenMonitor, self).__init__(telescopes_file=telescopes_file)
         self._overridden_observatories = []
 
     def retrieve_data(self):
@@ -214,7 +215,7 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         :param datum: Datum used to generate resource list.
         :return: Create a list of resources with the current event. Exclude any resource that is currently overridden.
         '''
-        site_resources = resources.get_site_resources(datum.ok_to_open.site)
+        site_resources = resources.get_site_resources(datum.ok_to_open.site, self.telescopes_file)
         return [resource for resource in site_resources if not self._is_resource_overridden(resource)]
 
 
@@ -322,7 +323,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         site        = interlocked.site
         observatory = interlocked.observatory
 
-        return resources.get_observatory_resources(site, observatory)
+        return resources.get_observatory_resources(site, observatory, self.telescopes_file)
 
     def _flatten_data(self, datum_names):
         for datum_name in datum_names:
