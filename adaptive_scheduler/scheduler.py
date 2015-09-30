@@ -888,32 +888,43 @@ class SchedulerRunner(object):
 
         return scheduler_result
 
-
     @timeit
     def create_new_schedule(self, network_state_timestamp):
-        set_schedule_type(TOO_SCHEDULE_TYPE)
-        too_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds(),
-                                                                   network_state_timestamp=network_state_timestamp)
-        too_scheduler_result = self.create_too_schedule(too_input)
-        set_schedule_type(None)
-        # Find resource scheduled by ToO run and don't cancel their schedules
-        # during normal scheduling run
-        too_resources = []
-        if too_scheduler_result:
-            for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                if reservation_list:
-                    too_resources.append(too_resource)
-        set_schedule_type(NORMAL_SCHEDULE_TYPE)
-        normal_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
-                                                                         network_state_timestamp=network_state_timestamp)
-        normal_scheduler_result = self.create_normal_schedule(normal_input, too_resources)
-        set_schedule_type(None)
-        # Only clear the change state if scheduling is successful and not a dry run
-        if not self.sched_params.dry_run:
-            self.network_interface.clear_schedulable_request_set_changed_state()
-
+        try:
+            too_scheduler_result = self.scheduling_cycle(TOO_SCHEDULE_TYPE, network_state_timestamp)
+            # Find resource scheduled by ToO run and don't cancel their schedules
+            # during normal scheduling run
+            too_resources = []
+            if too_scheduler_result:
+                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
+                    if reservation_list:
+                        too_resources.append(too_resource)
+            self.scheduling_cycle(NORMAL_SCHEDULE_TYPE, network_state_timestamp, too_resources)
+            # Only clear the change state if scheduling is successful and not a dry run
+            if not self.sched_params.dry_run:
+                self.network_interface.clear_schedulable_request_set_changed_state()
+        except TypeError, e:
+            self.log.warn("{}, Skipping rest of scheduling run.".format(str(e)))
+        finally:
+            set_schedule_type(None)
         # Huh?
         sys.stdout.flush()
+
+    @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    def scheduling_cycle(self, schedule_type, network_state_timestamp, too_resources=None):
+        set_schedule_type(schedule_type)
+        if schedule_type == NORMAL_SCHEDULE_TYPE:
+            scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
+                                                                     network_state_timestamp=network_state_timestamp)
+            result = self.create_normal_schedule(scheduler_input, too_resources)
+        elif schedule_type == TOO_SCHEDULE_TYPE:
+            scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds(),
+                                                                   network_state_timestamp=network_state_timestamp)
+            result = self.create_too_schedule(scheduler_input)
+        else:
+            raise TypeError("Invalid schedule_type: {}".format(schedule_type))
+        set_schedule_type(None)
+        return result
 
 
 class EstimateExceededException(Exception):
