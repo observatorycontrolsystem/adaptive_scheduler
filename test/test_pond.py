@@ -487,8 +487,8 @@ class TestPond(object):
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_equal(pond_mol.pointing.parallax, 549.30)
-        assert_equal(pond_mol.pointing.pro_mot_ra, -798.71)
-        assert_equal(pond_mol.pointing.pro_mot_dec, 10337.77)
+        assert_equal(pond_mol.pointing.pro_mot_ra, -0.79871)
+        assert_equal(pond_mol.pointing.pro_mot_dec, 10.33777)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):
