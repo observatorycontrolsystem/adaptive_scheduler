@@ -907,7 +907,7 @@ class SchedulerRunner(object):
             # Only clear the change state if scheduling is successful and not a dry run
             if not self.sched_params.dry_run:
                 self.network_interface.clear_schedulable_request_set_changed_state()
-        except TypeError, e:
+        except InvalidSchedulingTypeException, e:
             self.log.warn("{}, Skipping rest of scheduling run.".format(str(e)))
         finally:
             set_schedule_type(None)
@@ -925,7 +925,7 @@ class SchedulerRunner(object):
                                                                    network_state_timestamp=network_state_timestamp)
             result = self.create_too_schedule(scheduler_input)
         else:
-            raise TypeError("Invalid schedule_type: {}".format(schedule_type))
+            raise InvalidSchedulingTypeException("Invalid schedule_type: {}".format(schedule_type))
         return result
 
 
@@ -934,3 +934,7 @@ class EstimateExceededException(Exception):
     def __init__(self, msg, new_estimate):
         Exception.__init__(self, msg)
         self.new_estimate = new_estimate
+
+
+class InvalidSchedulingTypeException(Exception):
+    pass
