@@ -63,6 +63,11 @@ def merge_dicts(*args):
        are dropped (i.e. we assume unique keys).'''
     return {k:v for d in args for k, v in d.items()}
 
+def num_total_requests(list_of_user_requests):
+    total_requests = 0
+    for ur in list_of_user_requests:
+        total_requests += ur.n_requests()
+    return total_requests
 
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to
