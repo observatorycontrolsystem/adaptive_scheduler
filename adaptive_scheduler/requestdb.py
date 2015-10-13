@@ -1,4 +1,4 @@
-from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin
+from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin, num_total_requests
 from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestDBError
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.request_parser   import TreeCollapser
@@ -158,7 +158,7 @@ class RequestDBInterface(object, SendMetricMixin):
         return
 
 @timeit
-@metric_timer('requestdb.get_requests', num_requests=lambda x: len(x), rate=lambda x: len(x))
+@metric_timer('requestdb.get_requests', num_requests=lambda x: num_total_requests(x), rate=lambda x: num_total_requests(x))
 def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     format = '%Y-%m-%d %H:%M:%S'
 

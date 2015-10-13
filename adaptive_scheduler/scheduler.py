@@ -458,7 +458,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return filtered_window_user_reqs
 
-    @metric_timer('prepare_for_kernel')
+    @metric_timer('prepare_for_kernel', num_requests=lambda x: len(x))
     def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
