@@ -1,4 +1,4 @@
-from adaptive_scheduler.model2           import ModelBuilder, RequestError
+from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from schedutils.semester_service         import get_semester_block
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin
@@ -90,7 +90,7 @@ class SchedulingInputFactory(object):
         return scheduler_input
 
     @timeit
-    @metric_timer('create_scheduling_input')
+    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.user_requests if x.user_requests else []))
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
                                     output_path='/data/adaptive_scheduler/input_states/',
                                     network_state_timestamp=None):
@@ -107,7 +107,7 @@ class SchedulingInputFactory(object):
 
 
     @timeit
-    @metric_timer('create_scheduling_input')
+    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.user_requests if x.user_requests else []))
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
                                        network_state_timestamp=None):

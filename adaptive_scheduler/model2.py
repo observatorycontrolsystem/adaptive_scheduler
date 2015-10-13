@@ -43,10 +43,12 @@ event_bus = get_eventbus()
 
 def n_requests(user_reqs):
     n_urs  = len(user_reqs)
-    n_rs   = sum([ur.n_requests() for ur in user_reqs])
+    n_rs   = n_base_requests(user_reqs)
 
     return n_urs, n_rs
 
+def n_base_requests(user_reqs):
+    return sum([ur.n_requests() for ur in user_reqs])
 
 def filter_out_compounds(user_reqs):
     '''Given a list of UserRequests, return a list containing only UserRequests of
