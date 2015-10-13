@@ -34,7 +34,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
-                                          epoch_to_datetime, timeit, metric_timer, num_total_requests )
+                                          epoch_to_datetime, timeit, metric_timer )
 from adaptive_scheduler.printing import print_req_summary, plural_str as pl
 from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
@@ -222,7 +222,7 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
-@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: num_total_requests(x))
+@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x))
 def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
