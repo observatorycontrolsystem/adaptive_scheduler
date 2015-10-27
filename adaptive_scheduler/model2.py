@@ -285,6 +285,21 @@ class MoleculeFactory(object):
                                   'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'spectra_slit', 'exposure_time',
                                                  'priority', 'acquire_mode', 'acquire_radius_arcsec'),
+                                  'BIAS'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'exposure_time',
+                                                 'priority'),
+                                  'DARK'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'exposure_time',
+                                                 'priority'),
+                                  'SKY_FLAT'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'AUTO_FOCUS' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
                                 }
 
     def build(self, mol_dict):

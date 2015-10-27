@@ -46,7 +46,7 @@ from schedutils.camera_mapping         import create_camera_mapping
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum
+from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum, Dark, Bias, SkyFlat, ZeroPointing, AutoFocus
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
@@ -504,6 +504,11 @@ class PondMoleculeFactory(object):
                                   'ARC'       : Arc,
                                   'LAMP_FLAT' : LampFlat,
                                   'SPECTRUM'  : Spectrum,
+                                  'BIAS'      : Bias,
+                                  'DARK'      : Dark,
+                                  'SKY_FLAT'  : SkyFlat,
+                                  'AUTO_FOCUS' : AutoFocus,
+                                  'ZERO_POINTING' : ZeroPointing,
                                 }
 
 
@@ -517,6 +522,11 @@ class PondMoleculeFactory(object):
                             'SPECTRUM'  : (self._common, self._spectro, self._targeting),
                             'ARC'       : (self._common, self._spectro_calib),
                             'LAMP_FLAT' : (self._common, self._spectro_calib),
+                            'BIAS'      : (self._no_time_common,),
+                            'DARK'      : (self._common,),
+                            'SKY_FLAT'  : (self._no_time_common, self._imaging),
+                            'ZERO_POINTING' : (self._common, self._imaging, self._targeting),
+                            'AUTO_FOCUS' : (self._common, self._imaging, self._targeting),
                           }
 
         param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
@@ -565,6 +575,22 @@ class PondMoleculeFactory(object):
                  'priority'     : molecule.priority,
                }
 
+    def _no_time_common(self, molecule, pond_pointing=None):
+        return {
+                 # Meta data
+                 'tracking_num' : self.tracking_number,
+                 'request_num'  : self.request_number,
+                 'tag'          : self.proposal.tag_id,
+                 'user'         : self.proposal.observer_name,
+                 'proposal'     : self.proposal.proposal_id,
+                 'group'        : self.group_id,
+                 # Observation details
+                 'exp_cnt'      : molecule.exposure_count,
+                 'bin'          : molecule.bin_x,
+                 'inst_name'    : molecule.instrument_name,
+                 'priority'     : molecule.priority,
+               }
+
     def _imaging(self, molecule, pond_pointing=None):
         return {
                  'filters' : molecule.filter,
@@ -583,6 +609,7 @@ class PondMoleculeFactory(object):
                  'ag_name'  : getattr(molecule, 'ag_name', None) or '',
                  'ag_mode'  : ag_mode_pond_mapping[molecule.ag_mode.upper()],
                }
+
 
     def _spectro(self, molecule, pond_pointing=None):
         acquire_mode_pond_mapping = {
@@ -769,7 +796,7 @@ class Block(object):
 
         for i, molecule in enumerate(self.molecules):
             filter_or_slit = 'Unknown'
-            if molecule.type.upper() in ('EXPOSE', 'STANDARD'):
+            if molecule.type.upper() in ('EXPOSE', 'STANDARD', 'AUTO_FOCUS', 'ZERO_POINTING', 'BIAS', 'DARK', 'SKY_FLAT'):
                 filter_or_slit = molecule.filter
             else:
                 filter_or_slit = molecule.spectra_slit
