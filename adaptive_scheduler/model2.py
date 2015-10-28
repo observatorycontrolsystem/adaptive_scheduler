@@ -806,10 +806,15 @@ class ModelBuilder(object):
                 filters.append(molecule.filter.lower())
             elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
                 filters.append(molecule.spectra_slit.lower())
-            else:
+            # bias or dark molecules don't need filter or spectra_slit
+            elif not hasattr(molecule, 'type') or not (molecule.type.lower() in 'bias'
+                or molecule.type.lower() in 'dark'):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        valid_instruments = mapping.find_by_filter(filters, instrument_info)
+        if len(filters) > 0:
+            valid_instruments = mapping.find_by_filter(filters, instrument_info)
+        else:
+            valid_instruments = mapping.find_by_camera_type(instrument_name)
 
         # Determine the resource subnetwork satisfying the camera and location requirements
         telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])
