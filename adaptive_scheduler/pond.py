@@ -46,7 +46,8 @@ from schedutils.camera_mapping         import create_camera_mapping
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import Expose, Standard, Arc, LampFlat, Spectrum, Dark, Bias, SkyFlat, ZeroPointing, AutoFocus
+from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark,
+                                               Bias, SkyFlat, ZeroPointing, AutoFocus)
 from lcogtpond.schedule                import Schedule
 
 # Set up and configure a module scope logger
@@ -559,21 +560,9 @@ class PondMoleculeFactory(object):
 
 
     def _common(self, molecule, pond_pointing=None):
-        return {
-                 # Meta data
-                 'tracking_num' : self.tracking_number,
-                 'request_num'  : self.request_number,
-                 'tag'          : self.proposal.tag_id,
-                 'user'         : self.proposal.observer_name,
-                 'proposal'     : self.proposal.proposal_id,
-                 'group'        : self.group_id,
-                 # Observation details
-                 'exp_cnt'      : molecule.exposure_count,
-                 'exp_time'     : molecule.exposure_time,
-                 'bin'          : molecule.bin_x,
-                 'inst_name'    : molecule.instrument_name,
-                 'priority'     : molecule.priority,
-               }
+        fields = self._no_time_common(molecule, pond_pointing)
+        fields['exp_time'] = molecule.exposure_time
+        return fields
 
     def _no_time_common(self, molecule, pond_pointing=None):
         return {

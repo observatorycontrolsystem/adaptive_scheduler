@@ -807,11 +807,11 @@ class ModelBuilder(object):
             elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
                 filters.append(molecule.spectra_slit.lower())
             # bias or dark molecules don't need filter or spectra_slit
-            elif not hasattr(molecule, 'type') or not (molecule.type.lower() in 'bias'
-                or molecule.type.lower() in 'dark'):
+            elif not hasattr(molecule, 'type') or not (molecule.type.lower() == 'bias'
+                or molecule.type.lower() == 'dark'):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        if len(filters) > 0:
+        if filters:
             valid_instruments = mapping.find_by_filter(filters, instrument_info)
         else:
             valid_instruments = mapping.find_by_camera_type(instrument_name)
