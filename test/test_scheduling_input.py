@@ -3,7 +3,7 @@ from adaptive_scheduler.scheduler_input import SchedulingInputProvider, Schedule
 from adaptive_scheduler.interfaces import ResourceUsageSnapshot
 from adaptive_scheduler.model2 import Telescope, RequestError
 
-from mock import Mock
+from mock import Mock, patch
 from nose.tools import assert_equal, assert_almost_equal, assert_not_equal, assert_true, assert_false
 
 from datetime import datetime, timedelta
@@ -131,7 +131,14 @@ class TestSchedulingInputProvider(object):
         
         
 class TestSchedulingInputFactory(object):
-    
+
+    def setUp(self):
+        self.input = Mock()
+        self.input.too_user_requests = []
+        self.input.normal_user_requests = []
+        self.input.user_requests = []
+        self.create_input_mock = Mock(return_value=self.input)
+
     def test_constructor(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
@@ -140,36 +147,39 @@ class TestSchedulingInputFactory(object):
         
     def test_create_too_scheduling(self):
         input_provider = Mock()
-        factory = SchedulingInputFactory(input_provider)
-        factory.create_too_scheduling_input(100, output_path=None)
-        assert_equal(1, input_provider.set_too_mode.call_count)
-        assert_equal(1, input_provider.set_too_run_time.call_count)
-        assert_equal(100, input_provider.set_too_run_time.call_args[0][0])
+        with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
+            factory = SchedulingInputFactory(input_provider)
+            factory.create_too_scheduling_input(100, output_path=None)
+            assert_equal(1, input_provider.set_too_mode.call_count)
+            assert_equal(1, input_provider.set_too_run_time.call_count)
+            assert_equal(100, input_provider.set_too_run_time.call_args[0][0])
         
-    
     def test_create_too_scheduling_no_estimate_provided(self):
         input_provider = Mock()
-        factory = SchedulingInputFactory(input_provider)
-        factory.create_too_scheduling_input(output_path=None)
-        assert_equal(1, input_provider.set_too_mode.call_count)
-        assert_equal(0, input_provider.set_too_run_time.call_count)
+        with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
+            factory = SchedulingInputFactory(input_provider)
+            factory.create_too_scheduling_input(output_path=None)
+            assert_equal(1, input_provider.set_too_mode.call_count)
+            assert_equal(0, input_provider.set_too_run_time.call_count)
         
         
     def test_create_normal_scheduling(self):
         input_provider = Mock()
-        factory = SchedulingInputFactory(input_provider)
-        factory.create_normal_scheduling_input(600, output_path=None)
-        assert_equal(1, input_provider.set_normal_mode.call_count)
-        assert_equal(1, input_provider.set_normal_run_time.call_count)
-        assert_equal(600, input_provider.set_normal_run_time.call_args[0][0])
+        with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
+            factory = SchedulingInputFactory(input_provider)
+            factory.create_normal_scheduling_input(600, output_path=None)
+            assert_equal(1, input_provider.set_normal_mode.call_count)
+            assert_equal(1, input_provider.set_normal_run_time.call_count)
+            assert_equal(600, input_provider.set_normal_run_time.call_args[0][0])
         
         
     def test_create_normal_scheduling_no_estimate_provided(self):
         input_provider = Mock()
-        factory = SchedulingInputFactory(input_provider)
-        factory.create_normal_scheduling_input(output_path=None)
-        assert_equal(1, input_provider.set_normal_mode.call_count)
-        assert_equal(0, input_provider.set_normal_run_time.call_count)
+        with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
+            factory = SchedulingInputFactory(input_provider)
+            factory.create_normal_scheduling_input(output_path=None)
+            assert_equal(1, input_provider.set_normal_mode.call_count)
+            assert_equal(0, input_provider.set_normal_run_time.call_count)
 
 
 class TestSchedulingInputUtils(object):

@@ -285,6 +285,21 @@ class MoleculeFactory(object):
                                   'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'spectra_slit', 'exposure_time',
                                                  'priority', 'acquire_mode', 'acquire_radius_arcsec'),
+                                  'BIAS'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'exposure_time',
+                                                 'priority'),
+                                  'DARK'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'exposure_time',
+                                                 'priority'),
+                                  'SKY_FLAT'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'AUTO_FOCUS' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
+                                  'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'filter', 'exposure_time',
+                                                 'priority'),
                                 }
 
     def build(self, mol_dict):
@@ -791,10 +806,15 @@ class ModelBuilder(object):
                 filters.append(molecule.filter.lower())
             elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
                 filters.append(molecule.spectra_slit.lower())
-            else:
+            # bias or dark molecules don't need filter or spectra_slit
+            elif not hasattr(molecule, 'type') or not (molecule.type.lower() == 'bias'
+                or molecule.type.lower() == 'dark'):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        valid_instruments = mapping.find_by_filter(filters, instrument_info)
+        if filters:
+            valid_instruments = mapping.find_by_filter(filters, instrument_info)
+        else:
+            valid_instruments = mapping.find_by_camera_type(instrument_name)
 
         # Determine the resource subnetwork satisfying the camera and location requirements
         telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])

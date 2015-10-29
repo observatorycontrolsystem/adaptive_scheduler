@@ -131,6 +131,78 @@ class TestPondMoleculeFactory(object):
                                         )
                                        )
 
+        self.valid_auto_focus_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'auto_focus',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = 'kb76',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        filter          = 'B',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+
+        self.valid_zero_pointing_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'zero_pointing',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = 'kb76',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        filter          = 'B',
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+
+        self.valid_bias_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'bias',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = 'kb76',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+
+        self.valid_dark_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'dark',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = 'kb76',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        ag_mode         = 'Optional',
+                                        )
+                                       )
+
+
+        self.valid_sky_flat_mol = self.mol_factory.build(
+                                    dict(
+                                        type            = 'sky_flat',
+                                        exposure_count  = 1,
+                                        bin_x           = 1,
+                                        bin_y           = 1,
+                                        instrument_name = 'kb76',
+                                        exposure_time   = 30,
+                                        priority        = 1,
+                                        filter          = 'B',
+                                        )
+                                       )
+
+
         self.valid_spectrum_mol = self.mol_factory.build(
                                     dict(
                                         type                  = 'spectrum',
@@ -202,6 +274,79 @@ class TestPondMoleculeFactory(object):
 
         assert_equal(type(pond_mol), lcogtpond.molecule.Standard)
         assert_equal(pond_mol.filters, 'B')
+
+
+    def test_auto_focus_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_auto_focus_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.AutoFocus)
+        assert_equal(pond_mol.filters, 'B')
+        assert_equal(pond_mol.inst_name, 'kb76')
+
+
+    def test_zero_pointing_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_zero_pointing_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.ZeroPointing)
+        assert_equal(pond_mol.filters, 'B')
+        assert_equal(pond_mol.inst_name, 'kb76')
+
+
+    def test_sky_flat_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_sky_flat_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.SkyFlat)
+        assert_equal(pond_mol.filters, 'B')
+        assert_equal(pond_mol.inst_name, 'kb76')
+
+
+    def test_bias_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_bias_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Bias)
+        assert_equal(pond_mol.inst_name, 'kb76')
+
+
+    def test_dark_molecule_builds_ok(self):
+        mf = PondMoleculeFactory(
+                              tracking_number = '0000000001',
+                              request_number  = '0000000002',
+                              proposal        = self.proposal,
+                              group_id        = 'potatoes'
+                            )
+
+        pond_mol = mf.build(self.valid_dark_mol, self.pond_pointing)
+
+        assert_equal(type(pond_mol), lcogtpond.molecule.Dark)
+        assert_equal(pond_mol.inst_name, 'kb76')
 
 
     def test_spectrum_molecule_builds_ok(self):
