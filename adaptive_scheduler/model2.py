@@ -17,7 +17,7 @@ from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_minor_planet_target,
                                                       make_comet_target)
 from rise_set.rates                           import ProperMotion
-from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location
+from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
@@ -33,7 +33,6 @@ from datetime    import datetime
 import ast
 import logging
 import random
-from math import cos, pi
 
 log = logging.getLogger(__name__)
 
@@ -194,10 +193,8 @@ class SiderealTarget(Target):
     def in_rise_set_format(self):
         if hasattr(self, 'proper_motion_ra') and hasattr(self, 'proper_motion_dec'):
             # if we have proper_motion, then convert the units of proper motion to arcsec/year
-            prop_mot_dec = getattr(self, 'proper_motion_dec') / 1000.0
-            prop_mot_ra  = getattr(self, 'proper_motion_ra') / 1000.0
-            # then remove the cos(d) term from the ra
-            prop_mot_ra = (prop_mot_ra / cos((prop_mot_dec * pi) / 648000.0))
+            prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self, 'proper_motion_ra'),
+                                                              getattr(self, 'proper_motion_dec'))
             # then set the target_dict with the target with proper motion
             target_dict = make_ra_dec_target(self.ra, self.dec,
                 ra_proper_motion=ProperMotion(RightAscension(degrees=prop_mot_ra, units='arc'), time='year'),
