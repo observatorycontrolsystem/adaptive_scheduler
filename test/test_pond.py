@@ -629,7 +629,7 @@ class TestPond(object):
         pond_mol = received.molecules[0]
 
         prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.valid_target_with_prop_motion, 'proper_motion_ra'),
-                                                          getattr(self.valid_target_with_prop_motion, 'proper_motion_dec')
+                                                          getattr(self.valid_target_with_prop_motion, 'proper_motion_dec'))
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
         assert_equal(pond_mol.inst_name, 'kb70')
