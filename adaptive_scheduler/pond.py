@@ -28,6 +28,7 @@ February 2012
 from __future__ import division
 
 import time
+from math import pi, cos
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
                                                NullTarget)
@@ -743,12 +744,22 @@ class Block(object):
         pond_block = PondBlock.build(**block_build_args)
 
         if isinstance(self.target, SiderealTarget):
+            # check if there is proper motion or not
+            if hasattr(self.target, 'proper_motion_ra') and hasattr(self.target, 'proper_motion_dec'):
+                # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
+                prop_mot_dec = getattr(self.target, 'proper_motion_dec') / 1000.0
+                prop_mot_ra = getattr(self.target, 'proper_motion_ra') / 1000.0
+                prop_mot_ra = (prop_mot_ra / cos((prop_mot_dec * pi) / 648000.0)) / 15.0
+            else:
+                prop_mot_dec = 0.0
+                prop_mot_ra = 0.0
+
             # 2a) Construct the Pointing Coordinate
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
                                      dec=self.target.dec.in_degrees(),
-                                     pro_mot_ra=getattr(self.target, 'proper_motion_ra', 0.0) / 1000.0,
-                                     pro_mot_dec=getattr(self.target, 'proper_motion_dec', 0.0) / 1000.0,
+                                     pro_mot_ra=prop_mot_ra,
+                                     pro_mot_dec=prop_mot_dec,
                                      parallax=getattr(self.target, 'parallax', 0.0),
                                      epoch=getattr(self.target, 'epoch', 2000.0)
                                    )
