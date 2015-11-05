@@ -193,8 +193,7 @@ class SiderealTarget(Target):
     def in_rise_set_format(self):
         if hasattr(self, 'proper_motion_ra') and hasattr(self, 'proper_motion_dec'):
             # if we have proper_motion, then convert the units of proper motion to arcsec/year
-            prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self, 'proper_motion_ra'),
-                                                              getattr(self, 'proper_motion_dec'))
+            prop_mot_ra, prop_mot_dec = convert_proper_motion(self.proper_motion_ra, self.proper_motion_dec)
             # then set the target_dict with the target with proper motion
             target_dict = make_ra_dec_target(self.ra, self.dec,
                 ra_proper_motion=ProperMotion(RightAscension(degrees=prop_mot_ra, units='arc'), time='year'),

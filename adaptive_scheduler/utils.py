@@ -52,6 +52,7 @@ def set_schedule_type(schedule_type):
 def convert_proper_motion(proper_motion_ra, proper_motion_dec):
     '''
         Function converts proper motion from marcsec/year with cos(d) term to arcsec/year without term
+        Simbad convention for proper motion is marcsec*cos(d)/year so this format is most convenient for users
     :param proper_motion_ra: marcsec/year with cos(dec)
     :param proper_motion_dec: marcsec/year
     :return: proper_motion_ra, proper_motion_dec
