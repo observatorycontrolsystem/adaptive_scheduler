@@ -756,7 +756,7 @@ class Block(object):
             coord = pointing.ra_dec(
                                      ra=self.target.ra.in_degrees(),
                                      dec=self.target.dec.in_degrees(),
-                                     pro_mot_ra=(prop_mot_ra/15.0),
+                                     pro_mot_ra=(prop_mot_ra),
                                      pro_mot_dec=prop_mot_dec,
                                      parallax=getattr(self.target, 'parallax', 0.0),
                                      epoch=getattr(self.target, 'epoch', 2000.0)
