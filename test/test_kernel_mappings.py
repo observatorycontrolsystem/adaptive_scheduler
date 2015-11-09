@@ -8,7 +8,8 @@ from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
                                        Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
-                                      normalised_epoch_to_datetime)
+                                      normalised_epoch_to_datetime,
+                                      convert_proper_motion)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
@@ -56,6 +57,15 @@ class TestKernelMappings(object):
                               #dec = '+45 16 49.22',
                               ra  = 310.35795833333333,
                               dec = 45.280338888888885
+                            )
+
+        self.prop_mot_target = SiderealTarget(
+                              #ra  = '20 41 25.91',
+                              #dec = '+45 16 49.22',
+                              ra  = 310.35795833333333,
+                              dec = 45.280338888888885,
+                              proper_motion_ra= 1000.0,
+                              proper_motion_dec= 3200.0
                             )
 
         self.mol = self.mol_factory.build(
@@ -330,6 +340,14 @@ class TestKernelMappings(object):
         for resource_name, received_intervals in received.iteritems():
             for i, received_tp in enumerate(received_intervals.timepoints):
                 assert_equal(received_tp.time, rise_set_dark_intervals[i])
+
+
+    def test_proper_motion_in_rise_set(self):
+        target_dict = self.prop_mot_target.in_rise_set_format()
+        proper_motion_ra, proper_motion_dec = convert_proper_motion(getattr(self.prop_mot_target, 'proper_motion_ra'),
+                                                                    getattr(self.prop_mot_target, 'proper_motion_dec'))
+        assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), proper_motion_ra)
+        assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), proper_motion_dec)
 
 
     def test_user_interval_is_honoured(self):

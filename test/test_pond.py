@@ -18,6 +18,7 @@ from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservati
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
+from adaptive_scheduler.utils import convert_proper_motion
 from schedutils.camera_mapping        import create_camera_mapping
 import lcogtpond
 from lcogtpond import block
@@ -627,13 +628,15 @@ class TestPond(object):
         received = self.one_metre_block.create_pond_block()
         pond_mol = received.molecules[0]
 
+        prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.valid_target_with_prop_motion, 'proper_motion_ra'),
+                                                          getattr(self.valid_target_with_prop_motion, 'proper_motion_dec'))
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_equal(pond_mol.pointing.parallax, 549.30)
-        assert_equal(pond_mol.pointing.pro_mot_ra, -0.79871)
-        assert_equal(pond_mol.pointing.pro_mot_dec, 10.33777)
+        assert_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra / 15.0)
+        assert_equal(pond_mol.pointing.pro_mot_dec, prop_mot_dec)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):
