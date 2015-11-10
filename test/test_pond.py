@@ -588,6 +588,33 @@ class TestPond(object):
         assert_equal(missing['target'], ['name', 'ra', 'dec'])
 
 
+    @patch('lcogtpond.schedule.Schedule.get')
+    def test_no_pond_connection_okay(self, func_mock):
+        func_mock.side_effect = lambda *args, **kwargs: None
+
+        ur1 = UserRequest(
+                           operator='single',
+                           requests=None,
+                           proposal=None,
+                           tracking_number='0000000001',
+                           group_id=None,
+                           expires=None,
+                         )
+
+        tels = {
+                 '1m0a.doma.elp' : [],
+                 '1m0a.doma.coj' : []
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        tracking_numbers = [ur1.tracking_number]
+        pond_interface = PondScheduleInterface()
+        too_blocks = pond_interface._get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
+
+        assert_equal({}, too_blocks)
+
+
     @raises(IncompleteBlockError)
     def test_raises_error_on_incomplete_blocks(self):
         self.two_metre_block.create_pond_block()
