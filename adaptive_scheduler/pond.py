@@ -249,10 +249,12 @@ class PondScheduleInterface(object):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name).blocks
-            
-            filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
-            telescope_blocks[full_tel_name] = filtered_blocks
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name)
+            # check if schedule was actually returned (won't be if connection is down)
+            if schedule:
+                blocks = schedule.blocks
+                filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+                telescope_blocks[full_tel_name] = filtered_blocks
             
         return telescope_blocks
     
@@ -261,11 +263,13 @@ class PondScheduleInterface(object):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True).blocks
-            
-            # Remove blocks that dont have tracking numbers
-            filtered_blocks = filter(lambda block: block.tracking_num_set(), blocks)
-            telescope_blocks[full_tel_name] = filtered_blocks
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True)
+            # check if schedule was actually returned (won't be if connection is down)
+            if schedule:
+                blocks = schedule.blocks
+                # Remove blocks that dont have tracking numbers
+                filtered_blocks = filter(lambda block: block.tracking_num_set(), blocks)
+                telescope_blocks[full_tel_name] = filtered_blocks
             
         return telescope_blocks
     
@@ -324,6 +328,10 @@ class PondScheduleInterface(object):
     def _get_deletable_blocks(self, start, end, site, obs, tel):
         # Only retrieve blocks which have not been cancelled
         schedule = self._get_schedule(start, end, site, obs, tel)
+        # check if schedule was actually returned (won't be if connection is down)
+        if not schedule:
+            return []
+
         # Filter out blocks not placed by scheduler, they have not tracking number
         scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
     
@@ -398,6 +406,10 @@ class PondScheduleInterface(object):
     
     def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
         schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
+        # check if schedule was actually returned (won't be if connection is down)
+        if not schedule:
+            return []
+
         cutoff_dt = schedule.end_of_overlap(starts_before)
     
         running = [b for b in schedule.blocks if b.start < cutoff_dt and
