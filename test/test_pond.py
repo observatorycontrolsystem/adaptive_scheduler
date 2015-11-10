@@ -635,7 +635,7 @@ class TestPond(object):
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_equal(pond_mol.pointing.parallax, 549.30)
-        assert_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra / 15.0)
+        assert_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra)
         assert_equal(pond_mol.pointing.pro_mot_dec, prop_mot_dec)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
