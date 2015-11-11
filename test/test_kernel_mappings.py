@@ -346,8 +346,8 @@ class TestKernelMappings(object):
         target_dict = self.prop_mot_target.in_rise_set_format()
         proper_motion_ra, proper_motion_dec = convert_proper_motion(getattr(self.prop_mot_target, 'proper_motion_ra'),
                                                                     getattr(self.prop_mot_target, 'proper_motion_dec'))
-        assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), proper_motion_ra)
-        assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), proper_motion_dec)
+        assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), proper_motion_ra / 3600.0)
+        assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), proper_motion_dec / 3600.0)
 
 
     def test_user_interval_is_honoured(self):

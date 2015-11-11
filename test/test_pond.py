@@ -1,6 +1,6 @@
 from __future__ import division
 
-from nose.tools import assert_equal, raises
+from nose.tools import assert_equal,assert_almost_equal, raises
 from nose import SkipTest
 from mock       import patch, Mock, MagicMock
 
@@ -634,9 +634,9 @@ class TestPond(object):
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
-        assert_equal(pond_mol.pointing.parallax, 549.30)
-        assert_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra / 15.0)
-        assert_equal(pond_mol.pointing.pro_mot_dec, prop_mot_dec)
+        assert_almost_equal(pond_mol.pointing.parallax, .54930)
+        assert_almost_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra)
+        assert_almost_equal(pond_mol.pointing.pro_mot_dec, prop_mot_dec)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):

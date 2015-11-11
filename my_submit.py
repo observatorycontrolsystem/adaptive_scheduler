@@ -57,9 +57,9 @@ target = {
            'ra'                : 146.4117,      # In decimal degrees
            'dec'               : -31.1911,      # In decimal degrees
            # Optional fields. Defaults are as below.
-           'proper_motion_ra'  : 0,             # In arcsecs/yr
-           'proper_motion_dec' : 0,             # In arcsecs/yr
-           'parallax'          : 0,             # In arcsecs
+           'proper_motion_ra'  : 0,             # In milli arcsecs/yr with cos(d) as per Simbad convention
+           'proper_motion_dec' : 0,             # In milli arcsecs/yr
+           'parallax'          : 0,             # In milli arcsecs
            'epoch'             : 2000,          # Not needed unless proper motion is also specified
            'acquire_mode'      : 'ON',
            'rot_angle'         : 45.0,
