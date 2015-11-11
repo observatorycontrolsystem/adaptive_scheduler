@@ -758,6 +758,7 @@ class Block(object):
                                      dec=self.target.dec.in_degrees(),
                                      pro_mot_ra=prop_mot_ra,
                                      pro_mot_dec=prop_mot_dec,
+                                    # convert parallax from marcsec to arcsec
                                      parallax=getattr(self.target, 'parallax', 0.0) / 1000.0,
                                      epoch=getattr(self.target, 'epoch', 2000.0)
                                    )
