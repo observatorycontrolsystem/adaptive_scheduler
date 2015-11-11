@@ -49,6 +49,7 @@ from lcogtpond.block                   import BlockSaveException, BlockCancelExc
 from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark,
                                                Bias, SkyFlat, ZeroPointing, AutoFocus)
 from lcogtpond.schedule                import Schedule
+from lcogtpond.util                    import PondError
 
 # Set up and configure a module scope logger
 import logging, sys
@@ -94,7 +95,7 @@ class PondScheduleInterface(object):
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
         try:
             running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
-        except PondFacadeException, pfe:
+        except PondFacadeException as pfe:
             raise ScheduleException(pfe, "Unable to get running blocks from POND")
         
         # This is just logging held over from when this was in the scheduling loop
@@ -146,7 +147,7 @@ class PondScheduleInterface(object):
         if cancelation_dates_by_resource:
             try:
                 n_deleted = self._cancel_schedule(cancelation_dates_by_resource, reason)
-            except PondFacadeException, pfe:
+            except PondFacadeException as pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
         return n_deleted
     
@@ -249,8 +250,8 @@ class PondScheduleInterface(object):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name).blocks
-            
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name)
+            blocks = schedule.blocks
             filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
             telescope_blocks[full_tel_name] = filtered_blocks
             
@@ -261,8 +262,9 @@ class PondScheduleInterface(object):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            blocks = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True).blocks
-            
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True)
+
+            blocks = schedule.blocks
             # Remove blocks that dont have tracking numbers
             filtered_blocks = filter(lambda block: block.tracking_num_set(), blocks)
             telescope_blocks[full_tel_name] = filtered_blocks
@@ -318,12 +320,19 @@ class PondScheduleInterface(object):
                                  port=self.port, host=self.host)
         if too_blocks:
             args['too_blocks'] = too_blocks
-        return Schedule.get(**args)
+
+        try:
+            schedule = Schedule.get(**args)
+        except PondError as pe:
+            raise ScheduleException(pe, "Unable to retrieve Schedule from Pond")
+
+        return schedule
         
         
     def _get_deletable_blocks(self, start, end, site, obs, tel):
         # Only retrieve blocks which have not been cancelled
         schedule = self._get_schedule(start, end, site, obs, tel)
+
         # Filter out blocks not placed by scheduler, they have not tracking number
         scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
     
@@ -398,6 +407,7 @@ class PondScheduleInterface(object):
     
     def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
         schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
+
         cutoff_dt = schedule.end_of_overlap(starts_before)
     
         running = [b for b in schedule.blocks if b.start < cutoff_dt and

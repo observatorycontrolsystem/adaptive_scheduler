@@ -14,6 +14,7 @@ from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
+from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
@@ -586,6 +587,33 @@ class TestPond(object):
         assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
         assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
         assert_equal(missing['target'], ['name', 'ra', 'dec'])
+
+
+    @patch('lcogtpond.schedule.Schedule.get')
+    @raises(ScheduleException)
+    def test_no_pond_connection_okay(self, func_mock):
+        func_mock.side_effect = ScheduleException("bad")
+
+        ur1 = UserRequest(
+                           operator='single',
+                           requests=None,
+                           proposal=None,
+                           tracking_number='0000000001',
+                           group_id=None,
+                           expires=None,
+                         )
+
+        tels = {
+                 '1m0a.doma.elp' : [],
+                 '1m0a.doma.coj' : []
+               }
+        start = datetime(2013, 10, 3)
+        end = datetime(2013, 11, 3)
+
+        tracking_numbers = [ur1.tracking_number]
+        pond_interface = PondScheduleInterface()
+        too_blocks = pond_interface._get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
+        assert_equal({}, too_blocks)
 
 
     @raises(IncompleteBlockError)
