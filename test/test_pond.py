@@ -14,6 +14,7 @@ from adaptive_scheduler.model2 import (Proposal, Target,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
+from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
@@ -589,8 +590,9 @@ class TestPond(object):
 
 
     @patch('lcogtpond.schedule.Schedule.get')
+    @raises(ScheduleException)
     def test_no_pond_connection_okay(self, func_mock):
-        func_mock.side_effect = lambda *args, **kwargs: None
+        func_mock.side_effect = ScheduleException("bad")
 
         ur1 = UserRequest(
                            operator='single',
@@ -611,7 +613,6 @@ class TestPond(object):
         tracking_numbers = [ur1.tracking_number]
         pond_interface = PondScheduleInterface()
         too_blocks = pond_interface._get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
-
         assert_equal({}, too_blocks)
 
 
