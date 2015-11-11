@@ -646,7 +646,7 @@ class SchedulerRunner(object):
         if self.scheduler_rerun_required() or self.first_run:
             try:
                 self.create_new_schedule(scheduler_run_start)
-            except EstimateExceededException, eee:
+            except (ScheduleException, EstimateExceededException) as eee:
                 # Estimated run time was exceeded so exception was raised
                 # to short circuit to exit.  Just try again.  Run time
                 # estimate should have been updated.
@@ -875,7 +875,7 @@ class SchedulerRunner(object):
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
                 self.log.info("Normal scheduling took %.2f seconds" % normal_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
-            except EstimateExceededException, eee:
+            except EstimateExceededException as eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                 normal_scheduling_timedelta = eee.new_estimate - normal_scheduling_start
                 self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
