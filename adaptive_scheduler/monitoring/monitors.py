@@ -111,7 +111,7 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 
 
     def retrieve_data(self):
-        return get_datum("Site Agent Schedule Timestamp", persistence_model='STATUS')
+        return get_datum("Site Agent Schedule Timestamp", originator="SiteAgent", persistence_model='STATUS')
 
 
     def create_event(self, datum):

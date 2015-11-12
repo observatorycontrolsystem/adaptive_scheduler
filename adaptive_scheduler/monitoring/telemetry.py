@@ -19,20 +19,20 @@ DEFAULT_ENGINE = create_engine(DEFAULT_URL)
 class ConnectionError(Exception):
     pass
 
-def get_datum(datum, instance=None, engine=None, persistence_model=None):
+def get_datum(datum, instance=None, engine=None, persistence_model=None, originator=None):
     ''' Get data from telemetry database, ordered by timestamp ascending (i.e.
         newest value is last). '''
 
     try:
         engine  = engine or DEFAULT_ENGINE
-        results = _query_db(datum, instance, engine, persistence_model)
+        results = _query_db(datum, originator, instance, engine, persistence_model)
         datums = [_convert_datum(datum) for datum in results]
         return datums
 
     except Exception as e:
         raise ConnectionError(e)
 
-def _query_db(datum, instance, engine, persistence_model=None):
+def _query_db(datum, originator, instance, engine, persistence_model=None):
     ''' Retrieve datum from database.
 
         This query uses a table populated from the SCRAPEVALUE table at each site.
@@ -41,6 +41,8 @@ def _query_db(datum, instance, engine, persistence_model=None):
                join SCRAPEVALUE as SV on P.IDENTIFIER=SV.IDENTIFIER
                where P.ADDRESS_DATUM='{datum}' and P.ADDRESS_SITE!='tst'
             """
+    if originator:
+        query += "and P.ADDRESS_ORIGINATOR='{originator}'"
     if instance:
         query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"
     if persistence_model:
@@ -48,7 +50,7 @@ def _query_db(datum, instance, engine, persistence_model=None):
 
     query += "order by SV.TIMESTAMP_"
     connection   = engine.connect()
-    query_string = query.format(datum=datum, instance=instance, persistence_model=persistence_model)
+    query_string = query.format(datum=datum, originator=originator, instance=instance, persistence_model=persistence_model)
     results      = connection.execute(query_string).fetchall()
     connection.close()
     return results
