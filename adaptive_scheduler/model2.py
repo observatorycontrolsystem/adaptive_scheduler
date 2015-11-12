@@ -16,7 +16,8 @@ from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_minor_planet_target,
                                                       make_comet_target)
-from rise_set.rates                           import ProperMotion
+from rise_set.angle                           import InvalidAngleError, AngleConfigError
+from rise_set.rates                           import ProperMotion, RatesConfigError
 from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
@@ -775,12 +776,16 @@ class ModelBuilder(object):
 
     def build_request(self, req_dict):
         target_type = req_dict['target']['type']
-        if target_type == 'SIDEREAL':
-            target = SiderealTarget(req_dict['target'])
-        elif target_type == 'NON_SIDEREAL':
-            target = NonSiderealTarget(req_dict['target'])
-        else:
-            raise RequestError("Unsupported target type '%s'" % target_type)
+        try:
+            if target_type == 'SIDEREAL':
+                target = SiderealTarget(req_dict['target'])
+            elif target_type == 'NON_SIDEREAL':
+                target = NonSiderealTarget(req_dict['target'])
+            else:
+                raise RequestError("Unsupported target type '%s'" % target_type)
+        except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
+            msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
+            raise RequestError(msg)
 
         # Create the Molecules
         molecules = []
