@@ -10,7 +10,7 @@ March 2012
 import calendar
 from datetime import datetime, timedelta
 import time
-from math import pi, cos
+from math import pi, cos, radians
 import logging
 from opentsdb_python_metrics import metric_wrappers
 from opentsdb_python_metrics.metric_wrappers import metric_timer
@@ -49,7 +49,7 @@ def set_schedule_type(schedule_type):
         metric_wrappers.global_tags = None
 
 
-def convert_proper_motion(proper_motion_ra, proper_motion_dec):
+def convert_proper_motion(proper_motion_ra, proper_motion_dec, dec):
     '''
         Function converts proper motion from marcsec/year with cos(d) term to arcsec/year without term
         Simbad convention for proper motion is marcsec*cos(d)/year so this format is most convenient for users
@@ -58,7 +58,7 @@ def convert_proper_motion(proper_motion_ra, proper_motion_dec):
     :return: proper_motion_ra, proper_motion_dec
     '''
     prop_motion_dec = proper_motion_dec / 1000.0
-    prop_motion_ra = (proper_motion_ra / 1000.0) / cos((prop_motion_dec * pi) / 648000.0)
+    prop_motion_ra = (proper_motion_ra / 1000.0) / cos(radians(dec))
     return prop_motion_ra, prop_motion_dec
 
 

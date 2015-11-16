@@ -442,13 +442,13 @@ class TestPond(object):
                                     type  = 'sidereal',
                                     #ra  = '20 41 25.91',
                                     #dec = '+45 16 49.22',
-                                    ra  = 310.35795833333333,
-                                    dec = 45.280338888888885,
+                                    ra  = 316.73026646,
+                                    dec = 38.74205644,
                                     rot_mode  = 'SKY',
                                     rot_angle = 0.0,
                                     acquire_mode  = 'OPTIONAL',
-                                    proper_motion_ra = -798.71,
-                                    proper_motion_dec = 10337.77,
+                                    proper_motion_ra = 4106.90,
+                                    proper_motion_dec = 3144.68,
                                     epoch = 2000.0,
                                     parallax = 549.30
                                   )
@@ -656,15 +656,17 @@ class TestPond(object):
         received = self.one_metre_block.create_pond_block()
         pond_mol = received.molecules[0]
 
-        prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.valid_target_with_prop_motion, 'proper_motion_ra'),
-                                                          getattr(self.valid_target_with_prop_motion, 'proper_motion_dec'))
+        # prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.valid_target_with_prop_motion, 'proper_motion_ra'),
+        #                                                   getattr(self.valid_target_with_prop_motion, 'proper_motion_dec'),
+        #                                                   getattr(self.))
+        # According to Rob's calculations, proper motion RA and dec should be as follows
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_almost_equal(pond_mol.pointing.parallax, .54930)
-        assert_almost_equal(pond_mol.pointing.pro_mot_ra, prop_mot_ra)
-        assert_almost_equal(pond_mol.pointing.pro_mot_dec, prop_mot_dec)
+        assert_almost_equal(pond_mol.pointing.pro_mot_ra, 5.2654505)
+        assert_almost_equal(pond_mol.pointing.pro_mot_dec, 3.14468)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):
