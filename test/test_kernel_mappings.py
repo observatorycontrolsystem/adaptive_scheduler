@@ -62,10 +62,10 @@ class TestKernelMappings(object):
         self.prop_mot_target = SiderealTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
-                              ra  = 310.35795833333333,
-                              dec = 45.280338888888885,
-                              proper_motion_ra= 1000.0,
-                              proper_motion_dec= 3200.0
+                              ra  = 316.73026646,
+                              dec = 38.74205644,
+                              proper_motion_ra= 4106.90,
+                              proper_motion_dec= 3144.68
                             )
 
         self.mol = self.mol_factory.build(
@@ -344,10 +344,13 @@ class TestKernelMappings(object):
 
     def test_proper_motion_in_rise_set(self):
         target_dict = self.prop_mot_target.in_rise_set_format()
-        proper_motion_ra, proper_motion_dec = convert_proper_motion(getattr(self.prop_mot_target, 'proper_motion_ra'),
-                                                                    getattr(self.prop_mot_target, 'proper_motion_dec'))
-        assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), proper_motion_ra / 3600.0)
-        assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), proper_motion_dec / 3600.0)
+
+        # According to Rob's calculations, proper motion RA and dec should be as follows
+        # See https://issues.lcogt.net/issues/8723 for more info
+        converted_proper_motion_ra = 5.265450459478893
+        converted_proper_motion_dec = 3.14468
+        assert_almost_equals(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
+        assert_almost_equals(target_dict['dec_proper_motion'].in_degrees_per_year(), converted_proper_motion_dec / 3600.0)
 
 
     def test_user_interval_is_honoured(self):

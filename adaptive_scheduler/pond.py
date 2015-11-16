@@ -757,7 +757,8 @@ class Block(object):
             if hasattr(self.target, 'proper_motion_ra') and hasattr(self.target, 'proper_motion_dec'):
                 # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
                 prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.target, 'proper_motion_ra'),
-                                                                  getattr(self.target, 'proper_motion_dec'))
+                                                                  getattr(self.target, 'proper_motion_dec'),
+                                                                  self.target.dec.in_degrees())
             else:
                 prop_mot_dec = 0.0
                 prop_mot_ra = 0.0
