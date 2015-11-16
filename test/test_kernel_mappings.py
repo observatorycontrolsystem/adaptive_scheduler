@@ -350,8 +350,8 @@ class TestKernelMappings(object):
         # According to Rob's calculations, proper motion RA and dec should be as follows
         converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468
-        assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
-        assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), converted_proper_motion_dec / 3600.0)
+        assert_almost_equals(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
+        assert_almost_equals(target_dict['dec_proper_motion'].in_degrees_per_year(), converted_proper_motion_dec / 3600.0)
 
 
     def test_user_interval_is_honoured(self):
