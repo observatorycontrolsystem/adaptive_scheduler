@@ -344,9 +344,7 @@ class TestKernelMappings(object):
 
     def test_proper_motion_in_rise_set(self):
         target_dict = self.prop_mot_target.in_rise_set_format()
-        #proper_motion_ra, proper_motion_dec = convert_proper_motion(getattr(self.prop_mot_target, 'proper_motion_ra'),
-        #                                                            getattr(self.prop_mot_target, 'proper_motion_dec'),
-        #                                                            getattr(self.prop_mot_target, 'dec'))
+
         # According to Rob's calculations, proper motion RA and dec should be as follows
         converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468

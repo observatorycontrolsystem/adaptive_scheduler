@@ -656,17 +656,16 @@ class TestPond(object):
         received = self.one_metre_block.create_pond_block()
         pond_mol = received.molecules[0]
 
-        # prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.valid_target_with_prop_motion, 'proper_motion_ra'),
-        #                                                   getattr(self.valid_target_with_prop_motion, 'proper_motion_dec'),
-        #                                                   getattr(self.))
         # According to Rob's calculations, proper motion RA and dec should be as follows
+        converted_proper_motion_ra = 5.265450459478893
+        converted_proper_motion_dec = 3.14468
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
         assert_equal(pond_mol.inst_name, 'kb70')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_almost_equal(pond_mol.pointing.parallax, .54930)
-        assert_almost_equal(pond_mol.pointing.pro_mot_ra, 5.2654505)
-        assert_almost_equal(pond_mol.pointing.pro_mot_dec, 3.14468)
+        assert_almost_equal(pond_mol.pointing.pro_mot_ra, converted_proper_motion_ra)
+        assert_almost_equal(pond_mol.pointing.pro_mot_dec, converted_proper_motion_dec)
         assert_equal(pond_mol.pointing.epoch, 2000.0)
 
     def test_create_pond_block_with_standard_mol(self):
