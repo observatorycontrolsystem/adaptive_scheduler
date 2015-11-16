@@ -657,6 +657,7 @@ class TestPond(object):
         pond_mol = received.molecules[0]
 
         # According to Rob's calculations, proper motion RA and dec should be as follows
+        # See https://issues.lcogt.net/issues/8723 for more info
         converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468
         assert_equal(len(received.molecules), 1)

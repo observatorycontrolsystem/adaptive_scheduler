@@ -346,6 +346,7 @@ class TestKernelMappings(object):
         target_dict = self.prop_mot_target.in_rise_set_format()
 
         # According to Rob's calculations, proper motion RA and dec should be as follows
+        # See https://issues.lcogt.net/issues/8723 for more info
         converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468
         assert_almost_equals(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
