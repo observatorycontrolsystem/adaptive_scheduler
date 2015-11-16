@@ -348,7 +348,7 @@ class TestKernelMappings(object):
         #                                                            getattr(self.prop_mot_target, 'proper_motion_dec'),
         #                                                            getattr(self.prop_mot_target, 'dec'))
         # According to Rob's calculations, proper motion RA and dec should be as follows
-        converted_proper_motion_ra = 5.2654505
+        converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468
         assert_equal(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
         assert_equal(target_dict['dec_proper_motion'].in_degrees_per_year(), converted_proper_motion_dec / 3600.0)
