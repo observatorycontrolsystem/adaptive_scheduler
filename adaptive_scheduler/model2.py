@@ -16,7 +16,7 @@ from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_minor_planet_target,
                                                       make_comet_target)
-from rise_set.angle                           import InvalidAngleError, AngleConfigError
+from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
 from rise_set.rates                           import ProperMotion, RatesConfigError
 from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
 from adaptive_scheduler.printing              import plural_str as pl
@@ -199,8 +199,8 @@ class SiderealTarget(Target):
                                                               self.dec.in_degrees())
             # then set the target_dict with the target with proper motion
             target_dict = make_ra_dec_target(self.ra, self.dec,
-                ra_proper_motion=ProperMotion(RightAscension(degrees=(prop_mot_ra / 3600.0), units='arc'), time='year'),
-                dec_proper_motion=ProperMotion(Declination(degrees=(prop_mot_dec / 3600.0), units='arc'), time='year'))
+                ra_proper_motion=ProperMotion(Angle(degrees=(prop_mot_ra / 3600.0), units='arc'), time='year'),
+                dec_proper_motion=ProperMotion(Angle(degrees=(prop_mot_dec / 3600.0), units='arc'), time='year'))
         else:
             target_dict = make_ra_dec_target(self.ra, self.dec)
 
