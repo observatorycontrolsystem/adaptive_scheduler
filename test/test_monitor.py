@@ -17,7 +17,9 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     NotOkToOpenMonitor,
                                                     OfflineResourceMonitor,
                                                     SequencerEnableMonitor,
-                                                    EnclosureInterlockMonitor)
+                                                    EnclosureInterlockMonitor,
+                                                    AvailableForScheduling)
+
 
 
 class TestOfflineResourceMonitor(object):
@@ -347,3 +349,48 @@ class TestEnclosureInterlockMonitor(object):
                      timestamp_measured   = datetime(2013, 04, 26, 0, 0, 0),
                      value                = value,
                      persistence_model    = 'STATUS')
+
+
+class TestAvailableForScheduling(object):
+
+    def setUp(self):
+        self.monitor = AvailableForScheduling()
+
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_no_events_when_available_for_scheduling(self, mock_get_datum):
+        mock_get_datum.return_value = [self._create_event('true'),]
+
+        events = self.monitor.monitor()
+
+        assert_false(events)
+
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_event_when_not_avaiable_for_scheduling(self, mock_get_datum):
+        mock_get_datum.return_value = [self._create_event('false'),]
+
+        events = self.monitor.monitor()
+
+        assert_true(events)
+
+
+    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
+    def test_event_resource_is_returned(self, mock_get_datum):
+        mock_get_datum.return_value = [self._create_event('false'),]
+
+        events = self.monitor.monitor()
+
+        assert_true( '1m0a.doma.bpl' in events.keys() )
+
+
+    def _create_event(self, value):
+        return Datum(site                 = 'bpl',
+                     observatory          = 'doma',
+                     telescope            = '1m0a',
+                     instance             = '1',
+                     timestamp_changed    = datetime(2013,04,26,0,0,0),
+                     timestamp_measured   = datetime(2013,04,26,0,0,0),
+                     value                = value,
+                     persistence_model    = 'STATUS')
+

@@ -269,6 +269,7 @@ class OfflineResourceMonitor(NetworkStateMonitor):
         return datum['status'].lower() == 'offline'
 
 
+
 class EnclosureInterlockMonitor(NetworkStateMonitor):
 
     @staticmethod
@@ -328,3 +329,25 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
                 yield self._datum_name_to_key(datum_name), datum
 
         return
+
+
+class AvailableForScheduling(NetworkStateMonitor):
+
+    def retrieve_data(self):
+        return get_datum("Available For Scheduling")
+
+    def create_event(self, datum):
+        event  = Event(
+                        type       = "SEQUENCER UNAVAILABLE",
+                        reason     = "Sequencer unavailable for scheduling",
+                        start_time = datum.timestamp_changed,
+                        end_time   = datum.timestamp_measured
+                      )
+
+        return event
+
+    def create_resource(self, datum):
+        return '.'.join((datum.telescope, datum.observatory, datum.site))
+
+    def is_an_event(self, datum):
+        return 'false'.lower() == datum.value
