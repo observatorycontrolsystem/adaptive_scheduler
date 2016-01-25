@@ -23,14 +23,16 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     NotOkToOpenMonitor,
                                                     OfflineResourceMonitor,
                                                     SequencerEnableMonitor,
-                                                    EnclosureInterlockMonitor)
+                                                    EnclosureInterlockMonitor,
+                                                    AvailableForScheduling)
 from adaptive_scheduler.monitoring.telemetry import ConnectionError
 
 DEFAULT_MONITORS = [ScheduleTimestampMonitor(),
                     NotOkToOpenMonitor(),
                     OfflineResourceMonitor(),
                     SequencerEnableMonitor(),
-                    EnclosureInterlockMonitor()]
+                    EnclosureInterlockMonitor(),
+                    AvailableForScheduling()]
 
 import logging
 log = logging.getLogger(__name__)

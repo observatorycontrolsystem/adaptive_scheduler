@@ -72,3 +72,7 @@ pip-log.txt
 Icon?
 ehthumbs.db
 Thumbs.db
+
+# Intellij #
+############
+.idea
