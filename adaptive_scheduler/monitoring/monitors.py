@@ -334,7 +334,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
 class AvailableForScheduling(NetworkStateMonitor):
 
     def retrieve_data(self):
-        return get_datum("Available For Scheduling")
+        return get_datum("Available For Scheduling", "1", persistence_model="Status")
 
     def create_event(self, datum):
         event  = Event(

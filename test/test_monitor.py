@@ -367,7 +367,7 @@ class TestAvailableForScheduling(object):
 
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
-    def test_event_when_not_avaiable_for_scheduling(self, mock_get_datum):
+    def test_event_when_not_available_for_scheduling(self, mock_get_datum):
         mock_get_datum.return_value = [self._create_event('false'),]
 
         events = self.monitor.monitor()
