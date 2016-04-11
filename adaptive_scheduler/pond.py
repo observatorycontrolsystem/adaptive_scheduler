@@ -870,8 +870,8 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
                    request_number=request.request_number,
                    camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
-                   priority=30,
-                    is_too = is_too,
+                   priority=compound_request.get_ipp_modified_priority(),
+                   is_too=is_too,
                    max_airmass=request.constraints.max_airmass,
                    min_lunar_distance=request.constraints.min_lunar_distance,
                    max_lunar_phase=request.constraints.max_lunar_phase,

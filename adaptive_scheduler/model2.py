@@ -587,13 +587,14 @@ class UserRequest(CompoundRequest, DefaultMixin):
        access to proposal and expiry information.'''
 
     def __init__(self, operator, requests, proposal, expires,
-                 tracking_number, group_id):
+                 tracking_number, ipp_value, group_id):
         CompoundRequest.__init__(self, operator, requests)
 
         self.proposal        = proposal
         self.expires         = expires
         self.tracking_number = tracking_number
         self.group_id        = group_id
+        self.ipp_value       = ipp_value
 
 
     @staticmethod
@@ -645,11 +646,17 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
         # Assume only 1 child Request
         req = self.requests[0]
-        effective_priority = self.proposal.priority * req.get_duration()/60.0
+        effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
 
-        effective_priority = min(effective_priority,32000)*ran
+        effective_priority = min(effective_priority, 32000.0)*ran
 
         return effective_priority
+
+    def get_base_priority(self):
+        return self.proposal.priority
+
+    def get_ipp_modified_priority(self):
+        return self.get_base_priority()*self.ipp_value
 
     # Define properties
     priority = property(get_priority)
@@ -739,6 +746,7 @@ class ModelBuilder(object):
                                     proposal        = proposal,
                                     expires         = expiry_dt,
                                     tracking_number = tracking_number,
+                                    ipp_value       = cr_dict['ipp_value'],
                                     group_id        = cr_dict['group_id']
                                   )
 

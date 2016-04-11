@@ -192,7 +192,8 @@ class TestUserRequest(object):
                           proposal = None,
                           expires  = None,
                           tracking_number = tracking_number,
-                          group_id = None
+                          group_id = None,
+                          ipp_value = 1.0,
                          )
 
         msg = 'Yo dude'
@@ -265,6 +266,7 @@ class TestUserRequest(object):
                           proposal = proposal,
                           expires  = None,
                           tracking_number = '000000004',
+                          ipp_value = 1.0,
                           group_id = None,
                          )
 
@@ -849,6 +851,7 @@ class TestModelBuilder(object):
                    'expires' : '2014-10-29 12:12:12',
                    'group_id' : '',
                    'tracking_number' : '1',
+                   'ipp_value' : '1.0',
                    'operator' : 'many',
                    'requests' : [bad_req_dict, good_req_dict]
                    }
