@@ -715,9 +715,14 @@ class ModelBuilder(object):
         self.molecule_factory   = MoleculeFactory()
 
 
-    def build_user_request(self, cr_dict):
+    def build_user_request(self, cr_dict, ignore_ipp=False):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
+        ipp_value = cr_dict['ipp_value']
+        if ignore_ipp:
+            # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
+            ipp_value = 1.0
+
         requests, invalid_requests  = self.build_requests(cr_dict)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
@@ -746,8 +751,8 @@ class ModelBuilder(object):
                                     proposal        = proposal,
                                     expires         = expiry_dt,
                                     tracking_number = tracking_number,
-                                    ipp_value       = cr_dict['ipp_value'],
-                                    group_id        = cr_dict['group_id']
+                                    ipp_value       = ipp_value,
+                                    group_id        = cr_dict['group_id'],
                                   )
 
         # Return only the invalid request and not the error message

@@ -24,7 +24,7 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
-                 profiling_enabled=False, avg_reservation_save_time_seconds=0.05,
+                 profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
@@ -50,6 +50,7 @@ class SchedulerParameters(object):
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.too_runtime_seconds = too_runtime_seconds
+        self.ignore_ipp = ignore_ipp
 
 
     def get_model_builder(self):
@@ -130,13 +131,13 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.log = logging.getLogger(__name__)
 
 
-    def json_urs_to_scheduler_model_urs(self, json_user_request_list):
+    def json_urs_to_scheduler_model_urs(self, json_user_request_list, ignore_ipp=False):
         scheduler_model_urs = []
         invalid_json_user_requests = []
         invalid_json_requests = []
         for json_ur in json_user_request_list:
             try:
-                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur)
+                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, ignore_ipp=ignore_ipp)
                 scheduler_model_urs.append(scheduler_model_ur)
                 invalid_json_requests.extend(invalid_children)
             except RequestError as e:
@@ -196,7 +197,8 @@ class SchedulingInput(object):
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
-        scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(self.json_user_request_list)
+        scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
+            self.json_user_request_list, ignore_ipp=self.sched_params.ignore_ipp)
         self._invalid_user_requests = invalid_user_requests
         self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
