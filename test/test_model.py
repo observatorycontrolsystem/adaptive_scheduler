@@ -266,19 +266,17 @@ class TestUserRequest(object):
 
         return ur
 
-    def test_priority(self):
-        ur = self._build_user_request(base_priority=1.0, ipp_value=1.0)
-        assert_equal(1.0*1.0*ur.requests[0].get_duration() / 60.0, ur.get_priority())
-        assert_equal(1.0, ur.get_base_priority())
-        assert_equal(1.0, ur.get_ipp_modified_priority())
-
-    def test_priority_2(self):
-        base_priority = 20.0
-        ipp_value = 1.5
+    def _test_priority(self, base_priority, ipp_value):
         ur = self._build_user_request(base_priority=base_priority, ipp_value=ipp_value)
         assert_equal(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0, ur.get_priority())
         assert_equal(base_priority, ur.get_base_priority())
         assert_equal(ipp_value*base_priority, ur.get_ipp_modified_priority())
+
+    def test_priority_ipp_1(self):
+        self._test_priority(base_priority=1.0, ipp_value=1.0)
+
+    def test_priority_ipp_1_5(self):
+        self._test_priority(base_priority=20.0, ipp_value=1.5)
 
 
 class TestLocationExpander(object):
