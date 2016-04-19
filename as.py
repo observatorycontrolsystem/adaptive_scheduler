@@ -115,7 +115,7 @@ def parse_args(argv):
                                 help="Initial estimate for the normal loop runtime", default=defaults.normal_runtime_seconds)
     arg_parser.add_argument("--too_runtime_seconds", type=float, dest='too_runtime_seconds',
                                 help="Initial estimate for the ToO loop runtime", default=defaults.too_runtime_seconds)
-    arg_parser.add_argument("--ignore_ipp", type=bool, dest='ignore_ipp',
+    arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
                                 help="Ignore intra-proposal priority when computing request priority", default=defaults.ignore_ipp)
 
     # Handle command line arguments
