@@ -995,7 +995,8 @@ class TestPondInteractions(object):
                                             proposal = proposal,
                                             expires  = None,
                                             tracking_number = None,
-                                            group_id = None
+                                            group_id = None,
+                                            ipp_value = 1.0,
                                           )
 
         constraints = Constraints(
@@ -1024,7 +1025,7 @@ class TestPondInteractions(object):
         assert_equal(received.is_too, False, "Should not be a ToO block")
         
     
-    def test_build_normal_block(self):
+    def test_build_too_block(self):
 #         raise SkipTest
         reservation = Reservation(
                                    priority = None,
@@ -1042,7 +1043,8 @@ class TestPondInteractions(object):
                                             proposal = proposal,
                                             expires  = None,
                                             tracking_number = None,
-                                            group_id = None
+                                            group_id = None,
+                                            ipp_value = 1.0,
                                           )
 
         constraints = Constraints(
