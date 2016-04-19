@@ -118,8 +118,8 @@ class TestKernelMappings(object):
 
 
     def make_user_request(self, requests, operator='single'):
-        ur = UserRequest(operator, requests, 'Test Proposal',
-                         datetime(2012, 1, 1), '1', 'test group id')
+        ur = UserRequest(operator=operator, requests=requests, proposal='Test Proposal',
+                         expires=datetime(2012, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0)
         
         return ur
 

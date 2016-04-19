@@ -47,6 +47,7 @@ class TestScheduler(object):
                                tracking_number=tracking_number,
                                group_id=None,
                                expires=None,
+                               ipp_value=1.0
                              )
 
             ur_list.append(ur)

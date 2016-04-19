@@ -601,6 +601,7 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
+                           ipp_value=1.0
                          )
 
         tels = {
@@ -828,6 +829,7 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
+                           ipp_value=1.0
                          )
 
         tels = {

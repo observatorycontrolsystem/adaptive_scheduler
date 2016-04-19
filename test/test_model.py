@@ -2,7 +2,7 @@
 from __future__ import division
 
 import mock
-from nose.tools import assert_equal, assert_in, raises, nottest
+from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_equal
 from datetime import datetime
 
 # Import the modules to test
@@ -268,7 +268,8 @@ class TestUserRequest(object):
 
     def _test_priority(self, base_priority, ipp_value):
         ur = self._build_user_request(base_priority=base_priority, ipp_value=ipp_value)
-        assert_equal(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0, ur.get_priority())
+        assert_almost_equal(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0, ur.get_priority(),
+                            delta=(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0)*0.005)
         assert_equal(base_priority, ur.get_base_priority())
         assert_equal(ipp_value*base_priority, ur.get_ipp_modified_priority())
 
