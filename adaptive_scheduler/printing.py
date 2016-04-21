@@ -51,7 +51,8 @@ def log_windows(ur, log_msg):
 def log_full_ur(ur, now):
     ur_log.info("Expires = %s" % ur.expires, ur.tracking_number)
     ur_log.info("IPP Value = %s" % ur.ipp_value, ur.tracking_number)
-    ur_log.info("Priority = %s" % ur.priority, ur.tracking_number)
+    ur_log.info("Base Priority = %s" % ur.get_base_priority(), ur.tracking_number)
+    ur_log.info("Effective Priority = %s" % ur.priority, ur.tracking_number)
     ur_log.info("Operator = %s" % ur.operator, ur.tracking_number)
     ur_log.info("Scheduling horizon = %s" % ur.scheduling_horizon(now), ur.tracking_number)
 
