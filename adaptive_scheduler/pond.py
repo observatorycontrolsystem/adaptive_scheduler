@@ -580,7 +580,7 @@ class PondMoleculeFactory(object):
                  'tracking_num' : self.tracking_number,
                  'request_num'  : self.request_number,
                  'tag'          : self.proposal.tag_id,
-                 'user'         : self.proposal.observer_name,
+                 'user'         : self.proposal.user_id,
                  'proposal'     : self.proposal.proposal_id,
                  'group'        : self.group_id,
                  # Observation details
