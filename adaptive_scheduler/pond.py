@@ -531,8 +531,8 @@ class PondMoleculeFactory(object):
                             'EXPOSE'    : (self._common, self._imaging, self._targeting),
                             'STANDARD'  : (self._common, self._imaging, self._targeting),
                             'SPECTRUM'  : (self._common, self._spectro, self._targeting),
-                            'ARC'       : (self._common, self._spectro_calib),
-                            'LAMP_FLAT' : (self._common, self._spectro_calib),
+                            'ARC'       : (self._common, self._spectro_calib, self._pointing),
+                            'LAMP_FLAT' : (self._common, self._spectro_calib, self._pointing),
                             'BIAS'      : (self._no_time_common,),
                             'DARK'      : (self._common,),
                             'SKY_FLAT'  : (self._no_time_common, self._imaging),
@@ -609,6 +609,8 @@ class PondMoleculeFactory(object):
                  'ag_mode'  : ag_mode_pond_mapping[molecule.ag_mode.upper()],
                }
 
+    def _pointing(self, molecule, pond_pointing=None):
+        return {'pointing': pond_pointing}
 
     def _spectro(self, molecule, pond_pointing=None):
         acquire_mode_pond_mapping = {

@@ -375,7 +375,7 @@ class TestPondMoleculeFactory(object):
                               group_id        = 'potatoes'
                             )
 
-        pond_mol = mf.build(self.valid_arc_mol, 'dummy pointing')
+        pond_mol = mf.build(self.valid_arc_mol, self.pond_pointing)
 
         assert_equal(type(pond_mol), lcogtpond.molecule.Arc)
         assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
@@ -389,7 +389,7 @@ class TestPondMoleculeFactory(object):
                               group_id        = 'potatoes'
                             )
 
-        pond_mol = mf.build(self.valid_lamp_flat_mol, 'dummy pointing')
+        pond_mol = mf.build(self.valid_lamp_flat_mol, self.pond_pointing)
 
         assert_equal(type(pond_mol), lcogtpond.molecule.LampFlat)
         assert_equal(pond_mol._pb_obj.spectra_slit, 'slit_1.6as')
@@ -721,6 +721,7 @@ class TestPond(object):
     def test_create_pond_block_with_arc_mol(self):
         self.two_metre_block.add_proposal(self.valid_proposal)
         self.two_metre_block.add_molecule(self.valid_arc_mol)
+        self.two_metre_block.add_target(self.valid_target)
 
         received = self.two_metre_block.create_pond_block()
         pond_mol = received.molecules[0]
@@ -735,6 +736,7 @@ class TestPond(object):
     def test_create_pond_block_with_lamp_flat_mol(self):
         self.two_metre_block.add_proposal(self.valid_proposal)
         self.two_metre_block.add_molecule(self.valid_lamp_flat_mol)
+        self.two_metre_block.add_target(self.valid_target)
 
         received = self.two_metre_block.create_pond_block()
         pond_mol = received.molecules[0]
