@@ -398,12 +398,12 @@ class SchedulingInputProvider(object):
 
 class FileBasedSchedulingInputProvider(object):
 
-    def __init__(self, too_input_file, normal_input_file, is_too_mode):
+    def __init__(self, sched_params, too_input_file, normal_input_file, is_too_mode):
         self.too_input_file = too_input_file
         self.normal_input_file = normal_input_file
         self.is_too_input = is_too_mode
 
-        self.sched_params = None
+        self.sched_params = sched_params
         self.scheduler_now = None
         self._estimated_scheduler_runtime = None
         self.json_user_request_list = None
