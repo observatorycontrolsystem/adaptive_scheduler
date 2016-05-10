@@ -209,6 +209,12 @@ class SchedulingInput(object):
         self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
 
 
+    def get_scheduling_start(self):
+        if self.sched_params.input_file_name:
+            return self.scheduler_now
+        return datetime.utcnow()
+
+
     @property
     def user_requests(self):
         if self.is_too_input:
