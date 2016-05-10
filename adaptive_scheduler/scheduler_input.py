@@ -398,12 +398,12 @@ class SchedulingInputProvider(object):
 
 class FileBasedSchedulingInputProvider(object):
 
-    def __init__(self, sched_params, too_input_file, normal_input_file, is_too_mode):
+    def __init__(self, too_input_file, normal_input_file, is_too_mode):
         self.too_input_file = too_input_file
         self.normal_input_file = normal_input_file
         self.is_too_input = is_too_mode
 
-        self.sched_params = sched_params
+        self.sched_params = None
         self.scheduler_now = None
         self._estimated_scheduler_runtime = None
         self.json_user_request_list = None
@@ -440,6 +440,9 @@ class FileBasedSchedulingInputProvider(object):
         input_file.close()
 
         self.sched_params = pickle_input['sched_params']
+        # set the filename of the current sched_params to this input filename. I don't see any reason to maintain
+        # a separate current filename and 'input' filename.
+        self.sched_params.input_file_name = input_filename
         self.scheduler_now = pickle_input['scheduler_now']
         self._estimated_scheduler_runtime = pickle_input['estimated_scheduler_runtime']
         self.json_user_request_list = pickle_input['json_user_request_list']
