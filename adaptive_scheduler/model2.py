@@ -718,7 +718,7 @@ class ModelBuilder(object):
     def build_user_request(self, cr_dict, ignore_ipp=False):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
-        ipp_value = cr_dict['ipp_value']
+        ipp_value = cr_dict.get('ipp_value', 1.0)
         if ignore_ipp:
             # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0

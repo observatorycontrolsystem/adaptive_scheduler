@@ -197,8 +197,11 @@ class SchedulingInput(object):
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
+        ignore_ipp = False
+        if self.sched_params.ignore_ipp:
+            ignore_ipp = self.sched_params.ignore_ipp
         scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
-            self.json_user_request_list, ignore_ipp=self.sched_params.ignore_ipp)
+            self.json_user_request_list, ignore_ipp=ignore_ipp)
         self._invalid_user_requests = invalid_user_requests
         self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
