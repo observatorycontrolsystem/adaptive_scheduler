@@ -108,7 +108,9 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         for r in self.Yik:
             # convert self.Yik to a tuplelist for optimized searches
             # [(reqID, window idx, priority, resource, isScheduled)]
-            requestLocations.append((r[0],r[1],r[2],r[3],m.addVar(vtype=GRB.BINARY,name=str(r[0]))))
+            var = m.addVar(vtype=GRB.BINARY,name=str(r[0]))
+            var.start = r[4]
+            requestLocations.append((r[0], r[1], r[2], r[3], var))
 
         # update the Gurobi model to use isScheduled variables in constraints
         m.update()

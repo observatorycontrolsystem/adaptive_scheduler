@@ -561,8 +561,8 @@ class SchedulerResult(object):
                     request_num = res.request.request_number
                     tracking_num = res.compound_request.tracking_number
                     if not tracking_num in scheduled_requests_by_tracking_num:
-                        scheduled_requests_by_tracking_num[tracking_num] = []
-                    scheduled_requests_by_tracking_num[tracking_num].append(request_num)
+                        scheduled_requests_by_tracking_num[tracking_num] = {}
+                    scheduled_requests_by_tracking_num[tracking_num][request_num] = res
         return scheduled_requests_by_tracking_num
 
 
