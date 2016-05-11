@@ -555,14 +555,12 @@ class SchedulerResult(object):
 
     def get_scheduled_requests_by_tracking_num(self):
         scheduled_requests_by_tracking_num = {}
-        for reservations in self.schedule.values():
-            for compound_reservation in reservations:
-                for res in compound_reservation.reservation_list:
-                    request_num = res.request.request_number
-                    tracking_num = res.compound_request.tracking_number
-                    if not tracking_num in scheduled_requests_by_tracking_num:
-                        scheduled_requests_by_tracking_num[tracking_num] = {}
-                    scheduled_requests_by_tracking_num[tracking_num][request_num] = res
+        for reservation in self.schedule.values():
+            request_num = reservation.request.request_number
+            tracking_num = reservation.compound_request.tracking_number
+            if not tracking_num in scheduled_requests_by_tracking_num:
+                scheduled_requests_by_tracking_num[tracking_num] = {}
+            scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation
         return scheduled_requests_by_tracking_num
 
 
