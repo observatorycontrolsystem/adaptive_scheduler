@@ -769,7 +769,7 @@ class ModelBuilder(object):
         invalid_requests = []
         for req_dict in cr_dict['requests']:
             try:
-                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['request_number'], None)
+                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['request_number']))
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
