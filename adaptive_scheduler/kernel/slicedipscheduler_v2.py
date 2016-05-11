@@ -97,7 +97,7 @@ class SlicedIPScheduler_v2(Scheduler):
                 r.Yik_entries.append(Yik_idx)
                 # set the initial warm start solution
                 scheduled = 0
-                if previous_res and previous_res.schedule_start == ps.internal_start and previous_res.schedule_resource == ps.resource:
+                if previous_res and previous_res.scheduled_start == ps.internal_start and previous_res.scheduled_resource == ps.resource:
                     scheduled = 1
                 # now w_idx is the index into r.possible_starts, which have
                 # been reordered by time.
