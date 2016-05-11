@@ -72,14 +72,15 @@ class SchedulingInputFactory(object):
         self.input_provider = input_provider
 
 
-    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None):
+    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, scheduled_requests_by_ur={}):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
                         input_provider.estimated_scheduler_runtime(),
                         input_provider.json_user_request_list,
                         input_provider.resource_usage_snapshot,
                         input_provider.available_resources,
-                        is_too_input)
+                        is_too_input,
+                        scheduled_requests_by_ur=scheduled_requests_by_ur)
         if output_path and input_provider.sched_params.pickle:
             file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
             filename = os.path.join(output_path, 'normal_scheduling_input_%s.pickle')
@@ -94,6 +95,7 @@ class SchedulingInputFactory(object):
     @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.too_user_requests))
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
                                     output_path='/data/adaptive_scheduler/input_states/',
+                                    scheduled_requests_by_ur={},
                                     network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
@@ -104,13 +106,14 @@ class SchedulingInputFactory(object):
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_too_mode()
 
-        return self._create_scheduling_input(self.input_provider, True, output_path)
+        return self._create_scheduling_input(self.input_provider, True, output_path, scheduled_requests_by_ur=scheduled_requests_by_ur)
 
 
     @timeit
     @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.normal_user_requests))
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
+                                       scheduled_requests_by_ur={},
                                        network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
@@ -121,7 +124,7 @@ class SchedulingInputFactory(object):
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
 
-        return self._create_scheduling_input(self.input_provider, False, output_path)
+        return self._create_scheduling_input(self.input_provider, False, output_path, scheduled_requests_by_ur=scheduled_requests_by_ur)
 
 
 class SchedulingInputUtils(object, SendMetricMixin):
@@ -131,13 +134,16 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.log = logging.getLogger(__name__)
 
 
-    def json_urs_to_scheduler_model_urs(self, json_user_request_list, ignore_ipp=False):
+    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur={}, ignore_ipp=False):
         scheduler_model_urs = []
         invalid_json_user_requests = []
         invalid_json_requests = []
         for json_ur in json_user_request_list:
             try:
-                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, ignore_ipp=ignore_ipp)
+                scheduled_requests = []
+                if json_ur['tracking_number'] in scheduled_requests_by_ur:
+                    scheduled_requests = scheduled_requests_by_ur[json_ur['tracking_number']]
+                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
                 scheduler_model_urs.append(scheduler_model_ur)
                 invalid_json_requests.extend(invalid_children)
             except RequestError as e:
@@ -180,7 +186,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
 
 class SchedulingInput(object):
 
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input, scheduled_requests_by_ur={}):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -188,6 +194,7 @@ class SchedulingInput(object):
         self.resource_usage_snapshot = resource_usage_snapshot
         self.available_resources = available_resources
         self.is_too_input = is_too_input
+        self.scheduled_requests_by_ur = scheduled_requests_by_ur
         self.utils = SchedulingInputUtils(sched_params.get_model_builder())
 
         self._scheduler_model_too_user_requests = None
@@ -201,7 +208,7 @@ class SchedulingInput(object):
         if self.sched_params.ignore_ipp:
             ignore_ipp = self.sched_params.ignore_ipp
         scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
-            self.json_user_request_list, ignore_ipp=ignore_ipp)
+            self.json_user_request_list, self.scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
         self._invalid_user_requests = invalid_user_requests
         self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
