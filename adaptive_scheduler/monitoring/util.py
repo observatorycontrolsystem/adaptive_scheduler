@@ -10,6 +10,7 @@ from functools import wraps
 import datetime as dt
 import requests
 import logging
+import socket
 
 DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
 ES_ENDPOINT = 'http://es1.lco.gtn:9200/telescope_events/document/'
@@ -42,7 +43,8 @@ def construct_event_dict(telescope_name, event):
                   'telescope': split_name[0],
                   'enclosure': split_name[1],
                   'site': split_name[2],
-                  'timestamp': dt.datetime.utcnow().strftime(DATE_FORMATTER)}
+                  'timestamp': dt.datetime.utcnow().strftime(DATE_FORMATTER),
+                  'hostname': socket.gethostname()}
 
     return event_dict
 
