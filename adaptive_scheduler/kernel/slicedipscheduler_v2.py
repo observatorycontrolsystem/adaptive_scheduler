@@ -83,7 +83,10 @@ class SlicedIPScheduler_v2(Scheduler):
         # the description of slices and internal starts is in intervals.py
         for r in self.reservation_list:
             # get the previous reservation for this reservations request if it exists
-            previous_res = r.request.scheduled_reservation
+            try:
+                previous_res = r.request.scheduled_reservation
+            except AttributeError as ae:
+                previous_res = None
             r.Yik_entries = []
             r.possible_starts = []
             for resource in r.free_windows_dict.keys():
