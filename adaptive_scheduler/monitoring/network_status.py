@@ -27,6 +27,8 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.monitoring.telemetry import ConnectionError
 
+from adaptive_scheduler.monitoring.util import (construct_event_dict, send_event_to_es)
+
 DEFAULT_MONITORS = [ScheduleTimestampMonitor(),
                     NotOkToOpenMonitor(),
                     OfflineResourceMonitor(),
@@ -119,6 +121,9 @@ class Network(object):
             new_events = monitor.monitor()
             for resource, event in new_events.iteritems():
                 events.setdefault(resource, []).append(event)
+                # send the event to ES for indexing and storing
+                event_dict = construct_event_dict(resource, event)
+                send_event_to_es(event_dict)
 
         return events
 

@@ -34,6 +34,7 @@ from adaptive_scheduler.request_filters  import (filter_urs,
                                                 drop_empty_requests,
                                                 find_unschedulable_ur_numbers,
                                                 set_now)
+from adaptive_scheduler.monitoring.util import (construct_available_event_dict, send_event_to_es)
 
 
 class Scheduler(object, SendMetricMixin):
@@ -617,6 +618,8 @@ class SchedulerRunner(object):
                                                                     current_events[telescope_name])
                 self.log.info(msg)
             else:
+                event_dict = construct_available_event_dict(telescope_name)
+                send_event_to_es(event_dict)
                 telescope.events = []
 
         return
