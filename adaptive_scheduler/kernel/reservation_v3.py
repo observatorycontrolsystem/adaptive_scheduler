@@ -23,9 +23,10 @@ class Reservation_v3(object):
 
     resID = 0
 
-    def __init__(self, priority, duration, possible_windows_dict, resID=None):
+    def __init__(self, priority, duration, possible_windows_dict, resID=None, previous_solution_reservation=None):
         self.priority = priority
         self.duration = int(duration)
+        self.previous_solution_reservation = previous_solution_reservation
         self.possible_windows_dict = possible_windows_dict
         # free_windows keeps track of which of the possible_windows 
         # are free.

@@ -411,7 +411,7 @@ class Request(DefaultMixin):
     '''
 
     def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
-                 instrument_type='', observation_type='NORMAL'):
+                 instrument_type='', observation_type='NORMAL', scheduled_reservation=None):
 
         self.inst_factory = InstrumentFactory()
 
@@ -422,6 +422,7 @@ class Request(DefaultMixin):
         self.request_number    = request_number
         self.state             = state
         self.observation_type  = observation_type
+        self.scheduled_reservation = scheduled_reservation
 
         self.set_instrument(instrument_type)
 
@@ -708,10 +709,12 @@ class ModelBuilder(object):
         self.molecule_factory   = MoleculeFactory()
 
 
-    def build_user_request(self, cr_dict):
+    def build_user_request(self, cr_dict, scheduled_requests={}):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
-        requests, invalid_requests  = self.build_requests(cr_dict)
+        ipp_value = cr_dict.get('ipp_value', 1.0)
+
+        requests, invalid_requests  = self.build_requests(cr_dict, scheduled_requests)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
@@ -747,7 +750,7 @@ class ModelBuilder(object):
         return user_request, invalid_requests
 
 
-    def build_requests(self, cr_dict):
+    def build_requests(self, cr_dict, scheduled_requests={}):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors 
@@ -766,7 +769,7 @@ class ModelBuilder(object):
         invalid_requests = []
         for req_dict in cr_dict['requests']:
             try:
-                req = self.build_request(req_dict)
+                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['request_number']))
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
@@ -776,7 +779,7 @@ class ModelBuilder(object):
         return requests, invalid_requests
 
 
-    def build_request(self, req_dict):
+    def build_request(self, req_dict, scheduled_reservation=None):
         target_type = req_dict['target']['type']
         try:
             if target_type == 'SIDEREAL':
@@ -884,7 +887,8 @@ class ModelBuilder(object):
                        request_number  = req_dict['request_number'],
                        state           = req_dict['state'],
                        instrument_type = instrument_type,
-                       observation_type = req_dict['observation_type']
+                       observation_type = req_dict['observation_type'],
+                       scheduled_reservation = scheduled_reservation
                      )
 
         return req

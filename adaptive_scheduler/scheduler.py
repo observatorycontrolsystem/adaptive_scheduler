@@ -553,6 +553,18 @@ class SchedulerResult(object):
         return reservation_cnt
 
 
+    def get_scheduled_requests_by_tracking_num(self):
+        scheduled_requests_by_tracking_num = {}
+        for reservations in self.schedule.values():
+            for reservation in reservations:
+                request_num = reservation.request.request_number
+                tracking_num = reservation.compound_request.tracking_number
+                if not tracking_num in scheduled_requests_by_tracking_num:
+                    scheduled_requests_by_tracking_num[tracking_num] = {}
+                scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation
+        return scheduled_requests_by_tracking_num
+
+
     def resources_scheduled(self):
         return self.schedule.keys()
 
@@ -576,6 +588,8 @@ class SchedulerRunner(object):
         self.network_interface = network_interface
         self.network_model = network_model
         self.input_factory = input_factory
+        self.normal_scheduled_requests_by_ur = {}
+        self.too_scheduled_requests_by_ur = {}
         self.log = logging.getLogger(__name__)
         # List of strings to be printed in final scheduling summary
         self.summary_events = []
@@ -817,6 +831,7 @@ class SchedulerRunner(object):
                     if reservation_list:
                         too_resources.append(too_resource)
             try:
+                self.too_scheduled_requests_by_ur = too_scheduler_result.get_scheduled_requests_by_tracking_num()
                 self.apply_scheduler_result(too_scheduler_result,
                                                 scheduler_input,
                                                 too_resources,
@@ -863,6 +878,7 @@ class SchedulerRunner(object):
                     resources_to_clear.remove(resource)
             try:
                 before_apply = datetime.utcnow()
+                self.normal_scheduled_requests_by_ur = scheduler_result.get_scheduled_requests_by_tracking_num()
                 n_submitted = self.apply_scheduler_result(scheduler_result,
                                             scheduler_input,
                                             resources_to_clear, deadline)
@@ -913,10 +929,12 @@ class SchedulerRunner(object):
         result = None
         if schedule_type == NORMAL_SCHEDULE_TYPE:
             scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
+                                                                                scheduled_requests_by_ur=self.normal_scheduled_requests_by_ur,
                                                                      network_state_timestamp=network_state_timestamp)
             result = self.create_normal_schedule(scheduler_input, too_resources)
         elif schedule_type == TOO_SCHEDULE_TYPE:
             scheduler_input = self.input_factory.create_too_scheduling_input(self.estimated_too_run_timedelta.total_seconds(),
+                                                                             scheduled_requests_by_ur=self.too_scheduled_requests_by_ur,
                                                                    network_state_timestamp=network_state_timestamp)
             result = self.create_too_schedule(scheduler_input)
         return result
