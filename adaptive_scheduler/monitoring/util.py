@@ -11,6 +11,7 @@ import datetime as dt
 import requests
 import logging
 import socket
+import collections
 
 DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
 ES_ENDPOINT = 'http://es1.lco.gtn:9200/telescope_events/document/'
@@ -35,10 +36,10 @@ def debug(mylogger):
 
 def construct_event_dict(telescope_name, event):
     split_name = telescope_name.split('.')
-    event_dict = {'type': event['type'].replace(' ', '_'),
-                  'reason': event['reason'],
-                  'start_time': event['start_time'].strftime(DATE_FORMATTER),
-                  'end_time': event['end_time'].strftime(DATE_FORMATTER),
+    event_dict = {'type': event.type.replace(' ', '_'),
+                  'reason': event.reason,
+                  'start_time': event.start_time.strftime(DATE_FORMATTER),
+                  'end_time': event.end_time.strftime(DATE_FORMATTER),
                   'name': telescope_name,
                   'telescope': split_name[0],
                   'enclosure': split_name[1],
@@ -50,10 +51,10 @@ def construct_event_dict(telescope_name, event):
 
 
 def construct_available_event_dict(telescope_name):
-    event = {'type': 'AVAILABLE',
-             'reason': 'Available for scheduling',
-             'start_time': dt.datetime.utcnow(),
-             'end_time': dt.datetime.utcnow()}
+    event = collections.namedtuple('Event',['type', 'reason', 'start_time', 'end_time'])(type= 'AVAILABLE',
+                  reason= 'Available for scheduling',
+                  start_time= dt.datetime.utcnow(),
+                  end_time= dt.datetime.utcnow())
 
     return construct_event_dict(telescope_name, event)
 
