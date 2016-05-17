@@ -178,6 +178,8 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         # impose a time limit on the solve
         if timelimit > 0:
             m.params.timeLimit=timelimit
+        # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
+        m.params.MIPGap = 0.01
 
         # add all the constraints to the model
         m.update()
