@@ -82,11 +82,6 @@ class SlicedIPScheduler_v2(Scheduler):
         # and the dicts are keyed by resource. 
         # the description of slices and internal starts is in intervals.py
         for r in self.reservation_list:
-            # get the previous reservation for this reservations request if it exists
-            try:
-                previous_res = r.request.scheduled_reservation
-            except AttributeError as ae:
-                previous_res = None
             r.Yik_entries = []
             r.possible_starts = []
             for resource in r.free_windows_dict.keys():
@@ -100,7 +95,7 @@ class SlicedIPScheduler_v2(Scheduler):
                 r.Yik_entries.append(Yik_idx)
                 # set the initial warm start solution
                 scheduled = 0
-                if previous_res and previous_res.scheduled_start == ps.internal_start and previous_res.scheduled_resource == ps.resource:
+                if r.previous_solution_reservation and r.previous_solution_reservation.scheduled_start == ps.internal_start and r.previous_solution_reservation.scheduled_resource == ps.resource:
                     scheduled = 1
                 # now w_idx is the index into r.possible_starts, which have
                 # been reordered by time.
