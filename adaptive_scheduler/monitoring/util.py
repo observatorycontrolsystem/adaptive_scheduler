@@ -42,7 +42,7 @@ def construct_event_dict(telescope_name, event):
                   'telescope': split_name[0],
                   'enclosure': split_name[1],
                   'site': split_name[2],
-                  'scheduler_time': dt.datetime.utcnow().strftime(DATE_FORMATTER)}
+                  'timestamp': dt.datetime.utcnow().strftime(DATE_FORMATTER)}
 
     return event_dict
 
