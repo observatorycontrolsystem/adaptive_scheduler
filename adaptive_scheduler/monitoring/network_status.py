@@ -129,7 +129,7 @@ class Network(object):
                 events.setdefault(resource, []).append(event)
                 # send the event to ES for indexing and storing
                 event_dict = self._construct_event_dict(resource, event)
-                self.send_event_to_es(self.es_endpoint, event_dict)
+                self.send_event_to_es(event_dict)
 
         return events
 
@@ -162,7 +162,7 @@ class Network(object):
     def send_telescope_available_state_events(self, telescope_name_list):
         for telescope_name in telescope_name_list:
             event_dict = self._construct_available_event_dict(telescope_name)
-            self.send_event_to_es(self.sched_params.es_endpoint, event_dict)
+            self.send_event_to_es(event_dict)
 
 
     def send_event_to_es(self, event_dict):
