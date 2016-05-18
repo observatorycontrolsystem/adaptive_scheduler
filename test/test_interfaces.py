@@ -10,6 +10,7 @@ from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
 import responses
 import re
 import socket
+import json
 
 from nose.tools import assert_equal, assert_true
 class TestRequestDBInterface(object):
@@ -146,7 +147,7 @@ class TestNetworkInterface(object):
         network_interface.send_available_telescope_state_events(telescope_name_list)
 
         assert_equal(len(responses.calls), 1)
-        event_dict = responses.calls[0].request.json
+        event_dict = json.loads(responses.calls[0].request.body)
 
         event1_dict = {'type': 'AVAILABLE',
                       'reason': 'Available for scheduling',

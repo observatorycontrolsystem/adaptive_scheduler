@@ -15,6 +15,7 @@ import responses
 import datetime
 import socket
 import re
+import json
 
 from adaptive_scheduler.monitoring.monitors       import NetworkStateMonitor, Event
 from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
@@ -162,7 +163,7 @@ class TestNetworkStatus(object):
         events = network_state.update()
 
         eq_(len(responses.calls), 1)
-        event_dict = responses.calls[0].request.json
+        event_dict = json.loads(responses.calls[0].request.body)
         event1_dict['timestamp'] = event_dict['timestamp']
 
         eq_( events, {'1m0a.doma.bpl':[self.e1]})
