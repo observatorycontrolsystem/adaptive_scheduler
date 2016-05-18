@@ -59,9 +59,9 @@ def construct_available_event_dict(telescope_name):
     return construct_event_dict(telescope_name, event)
 
 
-def send_event_to_es(event_dict):
+def send_event_to_es(es_endpoint, event_dict):
     try:
-        requests.post(ES_ENDPOINT + event_dict['name'] + '_' + event_dict['type'] + '_' + event_dict['timestamp'].replace(' ', '_').replace(':', '_'),
+        requests.post(es_endpoint + event_dict['name'] + '_' + event_dict['type'] + '_' + event_dict['timestamp'].replace(' ', '_').replace(':', '_'),
                   json=event_dict).raise_for_status()
     except Exception as e:
         log.error('Exception storing telescope status event in elasticsearch: {}'.format(repr(e)))

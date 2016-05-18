@@ -619,7 +619,7 @@ class SchedulerRunner(object):
                 self.log.info(msg)
             else:
                 event_dict = construct_available_event_dict(telescope_name)
-                send_event_to_es(event_dict)
+                send_event_to_es(self.sched_params.es_endpoint, event_dict)
                 telescope.events = []
 
         return

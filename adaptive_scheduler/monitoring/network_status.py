@@ -72,7 +72,7 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, monitors=None):
+    def __init__(self, monitors=None, sched_params=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
@@ -81,6 +81,7 @@ class Network(object):
         self.monitors = monitors or DEFAULT_MONITORS
         self.current_events  = {}
         self.previous_events = {}
+        self.sched_params = sched_params
 
 
     def update(self):
@@ -123,7 +124,8 @@ class Network(object):
                 events.setdefault(resource, []).append(event)
                 # send the event to ES for indexing and storing
                 event_dict = construct_event_dict(resource, event)
-                send_event_to_es(event_dict)
+                if self.sched_params:
+                    send_event_to_es(self.sched_params.es_endpoint, event_dict)
 
         return events
 
