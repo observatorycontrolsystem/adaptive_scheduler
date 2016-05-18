@@ -10,12 +10,14 @@ May 2013
 from nose.tools import assert_true, assert_false, eq_
 from nose import SkipTest
 import mock
+import responses
 
 import datetime
+import socket
+import re
 
 from adaptive_scheduler.monitoring.monitors       import NetworkStateMonitor, Event
-from adaptive_scheduler.monitoring.network_status import Network
-
+from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
 
 class TestNetworkStatus(object):
 
@@ -134,3 +136,34 @@ class TestNetworkStatus(object):
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
+
+
+    @responses.activate
+    def test_telescope_state_event_format_correct_for_es(self):
+        es_endpoint = 'http://test-es/document/'
+        es_endpoint_re = re.compile(r'http://test-es/document/.*')
+        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
+                      status=200)
+
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
+
+        event1_dict = {'type': self.e1.type.replace(' ', '_'),
+                      'reason': self.e1.reason,
+                      'start_time': self.e1.start_time.strftime(DATE_FORMATTER),
+                      'end_time': self.e1.end_time.strftime(DATE_FORMATTER),
+                      'name': '1m0a.doma.bpl',
+                      'telescope': '1m0a',
+                      'enclosure': 'doma',
+                      'site': 'bpl',
+                      'timestamp': '',
+                      'hostname': socket.gethostname()}
+
+        network_state = Network([self.mock_monitor1], es_endpoint=es_endpoint)
+        events = network_state.update()
+
+        eq_(len(responses.calls), 1)
+        event_dict = responses.calls[0].request.json
+        event1_dict['timestamp'] = event_dict['timestamp']
+
+        eq_( events, {'1m0a.doma.bpl':[self.e1]})
+        eq_(event_dict, event1_dict)

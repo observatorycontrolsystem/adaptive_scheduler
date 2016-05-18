@@ -1,10 +1,15 @@
 from datetime import datetime, timedelta
-from mock import Mock
+from mock import Mock, MagicMock, patch
 from reqdb.client import ConnectionError, RequestDBError, SchedulerClient
 from adaptive_scheduler.requestdb import RequestDBInterface
-from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, ResourceUsageSnapshot
+from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, ResourceUsageSnapshot, NetworkInterface
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
+
+import responses
+import re
+import socket
 
 from nose.tools import assert_equal, assert_true
 class TestRequestDBInterface(object):
@@ -124,4 +129,34 @@ class TestResourceUsageSnapshot(object):
 #         from being scheduled by another child request that is running
 #         '''
 #         self.assert_equal(True, False)
-        
+
+class TestNetworkInterface(object):
+
+    @responses.activate
+    def test_send_telescope_available_state_events_to_es(self):
+        es_endpoint = 'http://test-es/document/'
+        es_endpoint_re = re.compile(r'http://test-es/document/.*')
+        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
+                      status=200)
+
+        network_state = Network(es_endpoint=es_endpoint)
+        network_interface = NetworkInterface(MagicMock(), MagicMock(), network_state)
+
+        telescope_name_list = ['1m0a.doma.tst']
+        network_interface.send_available_telescope_state_events(telescope_name_list)
+
+        assert_equal(len(responses.calls), 1)
+        event_dict = responses.calls[0].request.json
+
+        event1_dict = {'type': 'AVAILABLE',
+                      'reason': 'Available for scheduling',
+                      'start_time': event_dict['start_time'],
+                      'end_time': event_dict['end_time'],
+                      'name': '1m0a.doma.tst',
+                      'telescope': '1m0a',
+                      'enclosure': 'doma',
+                      'site': 'tst',
+                      'timestamp': event_dict['timestamp'],
+                      'hostname': socket.gethostname()}
+
+        assert_equal(event_dict, event1_dict)
