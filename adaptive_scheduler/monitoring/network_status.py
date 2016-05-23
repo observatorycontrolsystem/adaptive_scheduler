@@ -138,14 +138,17 @@ class Network(object):
         split_name = telescope_name.split('.')
         event_dict = {'type': event.type.replace(' ', '_'),
                       'reason': event.reason,
-                      'start_time': event.start_time.strftime(DATE_FORMATTER),
-                      'end_time': event.end_time.strftime(DATE_FORMATTER),
                       'name': telescope_name,
                       'telescope': split_name[0],
                       'enclosure': split_name[1],
                       'site': split_name[2],
                       'timestamp': dt.datetime.utcnow().strftime(DATE_FORMATTER),
                       'hostname': socket.gethostname()}
+        if event.start_time:
+            event_dict['start_time'] = event.start_time.strftime(DATE_FORMATTER)
+
+        if event.end_time:
+            event_dict['end_time'] = event.end_time.strftime(DATE_FORMATTER)
 
         return event_dict
 
