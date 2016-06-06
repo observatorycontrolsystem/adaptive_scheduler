@@ -23,6 +23,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
+                 es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  profiling_enabled=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120):
@@ -50,6 +51,7 @@ class SchedulerParameters(object):
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.too_runtime_seconds = too_runtime_seconds
+        self.es_endpoint = es_endpoint
 
 
     def get_model_builder(self):

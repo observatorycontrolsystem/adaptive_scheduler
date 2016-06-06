@@ -623,6 +623,7 @@ class SchedulerRunner(object):
     @metric_timer('update_network_model')
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
+        available_telescopes = []
         for telescope_name, telescope in self.network_model.iteritems():
             if telescope_name in current_events:
                 telescope.events.extend(current_events[telescope_name])
@@ -631,8 +632,9 @@ class SchedulerRunner(object):
                                                                     current_events[telescope_name])
                 self.log.info(msg)
             else:
+                available_telescopes.append(telescope_name)
                 telescope.events = []
-
+        self.network_interface.send_available_telescope_state_events(available_telescopes)
         return
 
 

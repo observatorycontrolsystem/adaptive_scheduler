@@ -107,6 +107,8 @@ def parse_args(argv):
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
                                 help="Hostname for POND communication", default=defaults.pond_host)
+    arg_parser.add_argument("--es_endpoint", type=str, dest='es_endpoint',
+                                help="Endpoint for ElasticSearch telescope events communication", default=defaults.es_endpoint)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                                 help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
@@ -179,7 +181,7 @@ def main(argv):
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
     requestdb_client = SchedulerClient(sched_params.requestdb_url)
     user_request_interface = RequestDBInterface(requestdb_client)
-    network_state_interface = Network()
+    network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
