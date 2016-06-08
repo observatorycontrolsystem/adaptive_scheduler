@@ -142,7 +142,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
         invalid_json_requests = []
         for json_ur in json_user_request_list:
             try:
-                scheduled_requests = []
+                scheduled_requests = {}
                 if json_ur['tracking_number'] in scheduled_requests_by_ur:
                     scheduled_requests = scheduled_requests_by_ur[json_ur['tracking_number']]
                 scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
