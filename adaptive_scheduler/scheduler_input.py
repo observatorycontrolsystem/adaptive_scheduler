@@ -23,6 +23,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
+                 es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120):
@@ -51,6 +52,7 @@ class SchedulerParameters(object):
         self.normal_runtime_seconds = normal_runtime_seconds
         self.too_runtime_seconds = too_runtime_seconds
         self.ignore_ipp = ignore_ipp
+        self.es_endpoint = es_endpoint
 
 
     def get_model_builder(self):
@@ -144,6 +146,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
                 if json_ur['tracking_number'] in scheduled_requests_by_ur:
                     scheduled_requests = scheduled_requests_by_ur[json_ur['tracking_number']]
                 scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
+
                 scheduler_model_urs.append(scheduler_model_ur)
                 invalid_json_requests.extend(invalid_children)
             except RequestError as e:
@@ -209,6 +212,7 @@ class SchedulingInput(object):
             ignore_ipp = self.sched_params.ignore_ipp
         scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
             self.json_user_request_list, self.scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
+
         self._invalid_user_requests = invalid_user_requests
         self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)

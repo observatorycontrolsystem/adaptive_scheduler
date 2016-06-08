@@ -190,7 +190,8 @@ class TestSchedulingInputUtils(object):
         mock_model_builder.build_user_request = Mock(return_value=(mock_ur, { 'request_number' : '1' }))
         
         utils = SchedulingInputUtils(mock_model_builder)
-        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs(['dummy1', 'dummy2'])
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'tracking_number':'dummy1'},
+                                                                                    {'tracking_number':'dummy2'}])
         assert_equal(2, len(model_urs))
         assert_equal([], invalid_urs)
         assert_equal(2, len(invalid_rs))
@@ -201,7 +202,8 @@ class TestSchedulingInputUtils(object):
         mock_model_builder.build_user_request = Mock(side_effect=RequestError)
         
         utils = SchedulingInputUtils(mock_model_builder)
-        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs(['dummy1', 'dummy2'])
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'tracking_number':'dummy1'},
+                                                                                    {'tracking_number':'dummy2'}])
         assert_equal(0, len(model_urs))
         assert_equal(2, len(invalid_urs))
         assert_equal(0, len(invalid_rs))

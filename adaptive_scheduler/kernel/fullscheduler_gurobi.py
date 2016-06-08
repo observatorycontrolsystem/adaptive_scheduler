@@ -105,12 +105,20 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
 
         # Constraint: Decision variable (isScheduled) must be binary (eq 4)
         requestLocations=tuplelist()
+        scheduled_vars = []
         for r in self.Yik:
             # convert self.Yik to a tuplelist for optimized searches
             # [(reqID, window idx, priority, resource, isScheduled)]
-            requestLocations.append((r[0],r[1],r[2],r[3],m.addVar(vtype=GRB.BINARY,name=str(r[0]))))
+            var = m.addVar(vtype=GRB.BINARY,name=str(r[0]))
+            scheduled_vars.append(var)
+            requestLocations.append((r[0], r[1], r[2], r[3], var))
 
         # update the Gurobi model to use isScheduled variables in constraints
+        m.update()
+
+        for i, r in enumerate(self.Yik):
+            scheduled_vars[i].start = r[4]
+
         m.update()
 
         # Constraint: One-of (eq 5)
@@ -170,6 +178,8 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         # impose a time limit on the solve
         if timelimit > 0:
             m.params.timeLimit=timelimit
+        # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
+        m.params.MIPGap = 0.01
 
         # add all the constraints to the model
         m.update()

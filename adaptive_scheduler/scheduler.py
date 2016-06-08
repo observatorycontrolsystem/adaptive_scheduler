@@ -556,13 +556,12 @@ class SchedulerResult(object):
     def get_scheduled_requests_by_tracking_num(self):
         scheduled_requests_by_tracking_num = {}
         for reservations in self.schedule.values():
-            for compound_reservation in reservations:
-                for res in compound_reservation.reservation_list:
-                    request_num = res.request.request_number
-                    tracking_num = res.compound_request.tracking_number
-                    if not tracking_num in scheduled_requests_by_tracking_num:
-                        scheduled_requests_by_tracking_num[tracking_num] = []
-                    scheduled_requests_by_tracking_num[tracking_num].append(request_num)
+            for reservation in reservations:
+                request_num = reservation.request.request_number
+                tracking_num = reservation.compound_request.tracking_number
+                if not tracking_num in scheduled_requests_by_tracking_num:
+                    scheduled_requests_by_tracking_num[tracking_num] = {}
+                scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation
         return scheduled_requests_by_tracking_num
 
 
@@ -624,6 +623,7 @@ class SchedulerRunner(object):
     @metric_timer('update_network_model')
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
+        available_telescopes = []
         for telescope_name, telescope in self.network_model.iteritems():
             if telescope_name in current_events:
                 telescope.events.extend(current_events[telescope_name])
@@ -632,8 +632,9 @@ class SchedulerRunner(object):
                                                                     current_events[telescope_name])
                 self.log.info(msg)
             else:
+                available_telescopes.append(telescope_name)
                 telescope.events = []
-
+        self.network_interface.send_available_telescope_state_events(available_telescopes)
         return
 
 

@@ -165,7 +165,7 @@ def construct_compound_reservation(compound_request, dt_intervals_list, sem_star
                                                                   sem_start)
 
         # Construct the kernel Reservation
-        res = Reservation(compound_request.priority, request.duration, window_dict)
+        res = Reservation(compound_request.priority, request.duration, window_dict, previous_solution_reservation=request.scheduled_reservation)
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack
         res.compound_request = compound_request
@@ -192,7 +192,7 @@ def construct_many_compound_reservation(many_c_req, child_idx,
                                                               sem_start)
 
     # Construct the kernel Reservation
-    res = Reservation(many_c_req.priority, request.duration, window_dict)
+    res = Reservation(many_c_req.priority, request.duration, window_dict, previous_solution_reservation=request.scheduled_reservation)
     # Store the original requests for recovery after scheduling
     # TODO: Do this with a field provided for this purpose, not this hack
     res.compound_request = many_c_req

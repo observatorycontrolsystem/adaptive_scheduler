@@ -7,6 +7,9 @@ Author: Martin Norbury
 May 2013
 '''
 from functools import wraps
+import logging
+
+log = logging.getLogger(__name__)
 
 def debug(mylogger):
     ''' Decorator for printing debug message. '''
