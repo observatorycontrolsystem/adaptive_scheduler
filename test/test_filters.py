@@ -47,7 +47,8 @@ class TestExpiryFilter(object):
                            proposal = None,
                            expires  = expiry_dt,
                            tracking_number = '0000000005',
-                           group_id = None
+                           group_id = None,
+                           ipp_value=1.0
                          )
         return ur1
 
@@ -605,7 +606,8 @@ class TestWindowFilters(object):
                            proposal        = None,
                            expires         = None,
                            tracking_number = '0000000001',
-                           group_id        = None
+                           group_id        = None,
+                           ipp_value=1.0
                          )
         received = drop_empty_requests([ur1])
         assert_equal(received, ['0000000005'])
@@ -635,7 +637,8 @@ class TestWindowFilters(object):
                            proposal        = None,
                            expires         = None,
                            tracking_number = '0000000001',
-                           group_id        = None
+                           group_id        = None,
+                           ipp_value=1.0
                          )
 
         filter_on_pending([ur1])

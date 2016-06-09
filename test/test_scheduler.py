@@ -47,6 +47,7 @@ class TestScheduler(object):
                                tracking_number=tracking_number,
                                group_id=None,
                                expires=None,
+                               ipp_value=1.0
                              )
 
             ur_list.append(ur)
@@ -1149,6 +1150,7 @@ def create_scheduler_input(user_requests):
     input_mock.scheduler_now = datetime.utcnow()
     input_mock.estimated_scheduler_end = datetime.utcnow()
     input_mock.user_requests = user_requests
+    input_mock.get_scheduling_start = Mock(return_value=datetime.utcnow())
 
     return input_mock
 
@@ -1608,10 +1610,12 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                     scheduler_now=datetime.utcnow(),
                                     estimated_scheduler_end=datetime.utcnow(),
                                     resource_usage_snapshot=snapshot)
+        too_scheduling_input.get_scheduling_start = Mock(return_value=datetime.utcnow())
         normal_scheduling_input = Mock(user_requests=user_requests,
                                        scheduler_now=datetime.utcnow(),
                                        estimated_scheduler_end=datetime.utcnow(),
                                        resource_usage_snapshot=snapshot)
+        normal_scheduling_input.get_scheduling_start = Mock(return_value=datetime.utcnow())
         too_input_mock = Mock(return_value=too_scheduling_input)
         self.input_factory.create_too_scheduling_input = too_input_mock
         normal_input_mock = Mock(return_value=normal_scheduling_input)

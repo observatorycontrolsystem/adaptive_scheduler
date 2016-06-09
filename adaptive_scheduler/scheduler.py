@@ -822,8 +822,7 @@ class SchedulerRunner(object):
         too_scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
             self.log.info("Start ToO Scheduling")
-            too_scheduling_start = datetime.utcnow()
-
+            too_scheduling_start = scheduler_input.get_scheduling_start()
             deadline = too_scheduling_start + self.estimated_too_run_timedelta
             too_scheduler_result = self.call_scheduler(scheduler_input, deadline)
             # Find resource scheduled by ToO run and cancel their schedules
@@ -865,7 +864,7 @@ class SchedulerRunner(object):
         scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
-            normal_scheduling_start = datetime.utcnow()
+            normal_scheduling_start = scheduler_input.get_scheduling_start()
             deadline = normal_scheduling_start + self.estimated_normal_run_timedelta
             
             if self.sched_params.profiling_enabled:

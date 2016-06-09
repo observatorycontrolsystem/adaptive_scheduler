@@ -25,7 +25,7 @@ class SchedulerParameters(object):
                  too_run_time=120, normal_run_time=360,
                  es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
                  pond_port=12345, pond_host='scheduler.lco.gtn',
-                 profiling_enabled=False, avg_reservation_save_time_seconds=0.05,
+                 profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
@@ -51,6 +51,7 @@ class SchedulerParameters(object):
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.too_runtime_seconds = too_runtime_seconds
+        self.ignore_ipp = ignore_ipp
         self.es_endpoint = es_endpoint
 
 
@@ -135,7 +136,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.log = logging.getLogger(__name__)
 
 
-    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur={}):
+    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur={}, ignore_ipp=False):
         scheduler_model_urs = []
         invalid_json_user_requests = []
         invalid_json_requests = []
@@ -144,7 +145,8 @@ class SchedulingInputUtils(object, SendMetricMixin):
                 scheduled_requests = {}
                 if json_ur['tracking_number'] in scheduled_requests_by_ur:
                     scheduled_requests = scheduled_requests_by_ur[json_ur['tracking_number']]
-                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests)
+                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
+
                 scheduler_model_urs.append(scheduler_model_ur)
                 invalid_json_requests.extend(invalid_children)
             except RequestError as e:
@@ -205,13 +207,23 @@ class SchedulingInput(object):
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
+        ignore_ipp = False
+        if self.sched_params.ignore_ipp:
+            ignore_ipp = self.sched_params.ignore_ipp
         scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
-            self.json_user_request_list, self.scheduled_requests_by_ur)
+            self.json_user_request_list, self.scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
+
         self._invalid_user_requests = invalid_user_requests
         self._invalid_requests = invalid_requests
         scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
         self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
         self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
+
+
+    def get_scheduling_start(self):
+        if self.sched_params.input_file_name:
+            return self.scheduler_now
+        return datetime.utcnow()
 
 
     @property
@@ -370,7 +382,7 @@ class SchedulingInputProvider(object):
 
     def _get_json_user_request_list(self):
         semester_start, semester_end = get_semester_block(dt=self._get_estimated_scheduler_end())
-        ur_list = self.network_interface.get_all_user_requests(semester_start, semester_end)
+        ur_list = self.network_interface.get_all_user_requests(semester_start, datetime.utcnow() + timedelta(days=self.sched_params.horizon_days))
 
         return ur_list
 
@@ -439,6 +451,9 @@ class FileBasedSchedulingInputProvider(object):
         input_file.close()
 
         self.sched_params = pickle_input['sched_params']
+        # set the filename of the current sched_params to this input filename. I don't see any reason to maintain
+        # a separate current filename and 'input' filename.
+        self.sched_params.input_file_name = input_filename
         self.scheduler_now = pickle_input['scheduler_now']
         self._estimated_scheduler_runtime = pickle_input['estimated_scheduler_runtime']
         self.json_user_request_list = pickle_input['json_user_request_list']

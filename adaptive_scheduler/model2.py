@@ -133,12 +133,6 @@ def file_to_dicts(filename):
     return ast.literal_eval(data)
 
 
-def dict_to_model(dict_repr):
-
-    user_request = build_user_request(dict_repr)
-
-
-
 class DataContainer(DefaultMixin):
     def __init__(self, *initial_data, **kwargs):
         for dictionary in initial_data:
@@ -588,13 +582,14 @@ class UserRequest(CompoundRequest, DefaultMixin):
        access to proposal and expiry information.'''
 
     def __init__(self, operator, requests, proposal, expires,
-                 tracking_number, group_id):
+                 tracking_number, ipp_value, group_id):
         CompoundRequest.__init__(self, operator, requests)
 
         self.proposal        = proposal
         self.expires         = expires
         self.tracking_number = tracking_number
         self.group_id        = group_id
+        self.ipp_value       = ipp_value
 
 
     @staticmethod
@@ -646,11 +641,17 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
         # Assume only 1 child Request
         req = self.requests[0]
-        effective_priority = self.proposal.priority * req.get_duration()/60.0
+        effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
 
-        effective_priority = min(effective_priority,32000)*ran
+        effective_priority = min(effective_priority, 32000.0)*ran
 
         return effective_priority
+
+    def get_base_priority(self):
+        return self.proposal.priority
+
+    def get_ipp_modified_priority(self):
+        return self.get_base_priority()*self.ipp_value
 
     # Define properties
     priority = property(get_priority)
@@ -709,10 +710,13 @@ class ModelBuilder(object):
         self.molecule_factory   = MoleculeFactory()
 
 
-    def build_user_request(self, cr_dict, scheduled_requests={}):
+    def build_user_request(self, cr_dict, scheduled_requests={}, ignore_ipp=False):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
         ipp_value = cr_dict.get('ipp_value', 1.0)
+        if ignore_ipp:
+             # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
+            ipp_value = 1.0
 
         requests, invalid_requests  = self.build_requests(cr_dict, scheduled_requests)
         if invalid_requests:
@@ -742,7 +746,8 @@ class ModelBuilder(object):
                                     proposal        = proposal,
                                     expires         = expiry_dt,
                                     tracking_number = tracking_number,
-                                    group_id        = cr_dict['group_id']
+                                    ipp_value       = ipp_value,
+                                    group_id        = cr_dict['group_id'],
                                   )
 
         # Return only the invalid request and not the error message

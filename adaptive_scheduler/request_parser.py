@@ -114,6 +114,7 @@ class TreeCollapser(object):
             self.collapsed_tree['proposal']        = node['proposal']
             self.collapsed_tree['operator']        = node['operator']
             self.collapsed_tree['group_id']        = node['group_id']
+            self.collapsed_tree['ipp_value']       = node['ipp_value']
 
             self.first_time = False
 

@@ -2,7 +2,7 @@
 from __future__ import division
 
 import mock
-from nose.tools import assert_equal, assert_in, raises, nottest
+from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_equal
 from datetime import datetime
 
 # Import the modules to test
@@ -192,7 +192,8 @@ class TestUserRequest(object):
                           proposal = None,
                           expires  = None,
                           tracking_number = tracking_number,
-                          group_id = None
+                          group_id = None,
+                          ipp_value = 1.0,
                          )
 
         msg = 'Yo dude'
@@ -202,11 +203,7 @@ class TestUserRequest(object):
 
         assert_equal(mock_func.called, True)
 
-
-    def test_jason_is_awesome(self):
-        # This doesn't actually test anything yet
-        # It's a placeholder for the super awesome priority function
-        # that Jason assures me is just over the horizon
+    def _build_user_request(self, base_priority=1.0, ipp_value=1.0):
         tracking_number = '0000000005'
         operator = 'single'
 
@@ -215,7 +212,7 @@ class TestUserRequest(object):
                              user           = 'Eric Saunders',
                              tag            = 'admin',
                              time_remaining = 10,               # In hours
-                             priority       = 1
+                             priority       = base_priority
                            )
 
         self.mol_factory = MoleculeFactory()
@@ -248,8 +245,6 @@ class TestUserRequest(object):
         windows = Windows()
         windows.append(w)
 
-
-
         r = Request(
                      target = None,
                      molecules = [molecule1],
@@ -265,10 +260,24 @@ class TestUserRequest(object):
                           proposal = proposal,
                           expires  = None,
                           tracking_number = '000000004',
+                          ipp_value = ipp_value,
                           group_id = None,
                          )
 
-        ur.get_priority()
+        return ur
+
+    def _test_priority(self, base_priority, ipp_value):
+        ur = self._build_user_request(base_priority=base_priority, ipp_value=ipp_value)
+        assert_almost_equal(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0, ur.get_priority(),
+                            delta=(base_priority*ipp_value*ur.requests[0].get_duration() / 60.0)*0.005)
+        assert_equal(base_priority, ur.get_base_priority())
+        assert_equal(ipp_value*base_priority, ur.get_ipp_modified_priority())
+
+    def test_priority_ipp_1(self):
+        self._test_priority(base_priority=1.0, ipp_value=1.0)
+
+    def test_priority_ipp_1_5(self):
+        self._test_priority(base_priority=20.0, ipp_value=1.5)
 
 
 class TestLocationExpander(object):
@@ -849,6 +858,7 @@ class TestModelBuilder(object):
                    'expires' : '2014-10-29 12:12:12',
                    'group_id' : '',
                    'tracking_number' : '1',
+                   'ipp_value' : '1.0',
                    'operator' : 'many',
                    'requests' : [bad_req_dict, good_req_dict]
                    }
