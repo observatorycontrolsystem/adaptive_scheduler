@@ -244,7 +244,7 @@ class NonSiderealTarget(Target):
 class SatelliteTarget(Target):
 
     def __init__(self, *initial_data, **kwargs):
-        required_fields = ('alt', 'az', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
+        required_fields = ('altitude', 'azimuth', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
                            'diff_roll_acceleration', 'diff_pitch_acceleration')
         Target.__init__(self, required_fields, *initial_data, **kwargs)
 

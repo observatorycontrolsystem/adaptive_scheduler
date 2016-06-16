@@ -786,12 +786,12 @@ class Block(object):
 
         elif isinstance(self.target, SatelliteTarget):
             alt_az_pointing_params = {
-                'alt'           : self.target.alt,
-                'az'            : self.target.az,
+                'alt'           : self.target.altitude,
+                'az'            : self.target.azimuth,
                 'diff_alt_rate' : self.target.diff_pitch_rate,
                 'diff_az_rate'  : self.target.diff_roll_rate,
-                'diff_alt_accel': self.target.diff_pitch_accel,
-                'diff_az_accel' : self.target.diff_roll_accel,
+                'diff_alt_accel': self.target.diff_pitch_acceleration,
+                'diff_az_accel' : self.target.diff_roll_acceleration,
                 'diff_ref_epoch': self.target.diff_epoch_rate
                 }
 
