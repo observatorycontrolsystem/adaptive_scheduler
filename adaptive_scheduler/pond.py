@@ -29,7 +29,7 @@ from __future__ import division
 
 import time
 
-from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
+from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
                                                NullTarget)
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
                                                split_location, merge_dicts, convert_proper_motion)
@@ -783,6 +783,20 @@ class Block(object):
 
         elif isinstance(self.target, NonSiderealTarget):
             pond_pointing = pond_pointing_from_scheme(self.target)
+
+        elif isinstance(self.target, SatelliteTarget):
+            alt_az_pointing_params = {
+                'alt'           : self.target.alt,
+                'az'            : self.target.az,
+                'diff_alt_rate' : self.target.diff_pitch_rate,
+                'diff_az_rate'  : self.target.diff_roll_rate,
+                'diff_alt_accel': self.target.diff_pitch_accel,
+                'diff_az_accel' : self.target.diff_roll_accel,
+                'diff_ref_epoch': self.target.diff_epoch_rate
+                }
+
+            alt_az_coord = pointing.alt_az(**alt_az_pointing_params)
+            pond_pointing = pointing.static(name=self.target.name, coord=alt_az_coord)
 
         elif isinstance(self.target, NullTarget):
             pond_pointing = None
