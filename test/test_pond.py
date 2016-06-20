@@ -10,7 +10,7 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       build_block, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
                                       PondScheduleInterface)
-from adaptive_scheduler.model2 import (Proposal, Target,
+from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
@@ -437,6 +437,18 @@ class TestPond(object):
                                     acquire_mode  = 'OPTIONAL',
                                   )
 
+        self.valid_satellite_target = SatelliteTarget(
+                                    name  = 'a satellite',
+                                    type  = 'satellite',
+                                    altitude  = 273.582271,
+                                    azimuth = 35.734713,
+                                    diff_pitch_rate  = -4.696643,
+                                    diff_roll_rate = -34.7765912,
+                                    diff_pitch_acceleration = -0.0050373,
+                                    diff_roll_acceleration = 0.0009016,
+                                    diff_epoch_rate = 57504.0423916,
+                                  )
+
         self.valid_target_with_prop_motion = SiderealTarget(
                                     name  = 'deneb',
                                     type  = 'sidereal',
@@ -633,6 +645,26 @@ class TestPond(object):
 
     def test_create_pond_block(self):
         received = self.create_pond_block()
+
+    def test_create_pond_block_satellite_target(self):
+        self.one_metre_block.add_proposal(self.valid_proposal)
+        self.one_metre_block.add_molecule(self.valid_expose_mol)
+        self.one_metre_block.add_target(self.valid_satellite_target)
+
+        received = self.one_metre_block.create_pond_block()
+        pond_mol = received.molecules[0]
+
+        # check that the satellite fields are in the molecule
+        assert_equal(pond_mol.pointing.roll, self.valid_satellite_target['altitude'])
+        assert_equal(pond_mol.pointing.pitch, self.valid_satellite_target['azimuth'])
+        assert_equal(pond_mol.pointing.diff_roll_rate, self.valid_satellite_target['diff_roll_rate'])
+        assert_equal(pond_mol.pointing.diff_pitch_rate, self.valid_satellite_target['diff_pitch_rate'])
+        assert_equal(pond_mol.pointing.diff_roll_accel, self.valid_satellite_target['diff_roll_acceleration'])
+        assert_equal(pond_mol.pointing.diff_pitch_accel, self.valid_satellite_target['diff_pitch_acceleration'])
+        assert_equal(pond_mol.pointing.diff_epoch_rate, self.valid_satellite_target['diff_epoch_rate'])
+        assert_equal(pond_mol.pointing.coord_sys, 'APP')
+        assert_equal(pond_mol.pointing.coord_type, 'AA')
+        assert_equal(pond_mol.pointing.ptype, 'ST')
 
     def test_create_pond_block_with_expose_mol(self):
         self.one_metre_block.add_proposal(self.valid_proposal)
