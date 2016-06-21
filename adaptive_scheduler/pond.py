@@ -805,12 +805,12 @@ class Block(object):
 
         # Set default rotator parameters if none provided
         if pond_pointing:
-            if self.target.rot_mode:
+            if hasattr(self.target, 'rot_mode') and self.target.rot_mode:
                 pond_pointing.rot_mode = self.target.rot_mode
             else:
                 pond_pointing.rot_mode  = 'SKY'
 
-            if self.target.rot_angle:
+            if hasattr(self.target, 'rot_angle') and self.target.rot_angle:
                 pond_pointing.rot_angle = self.target.rot_angle
             else:
                 pond_pointing.rot_angle = 0.0
