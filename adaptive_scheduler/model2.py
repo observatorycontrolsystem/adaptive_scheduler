@@ -250,8 +250,8 @@ class SatelliteTarget(Target):
 
 
     def in_rise_set_format(self):
-        target_dict = make_satellite_target(self.alt, self.az, self.diff_pitch_rate, self.diff_roll_rate,
-                                            self.diff_pitch_accel, self.diff_roll_accel, self.diff_epoch_rate)
+        target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_pitch_rate, self.diff_roll_rate,
+                                            self.diff_pitch_acceleration, self.diff_roll_acceleration, self.diff_epoch_rate)
 
         return target_dict
 
