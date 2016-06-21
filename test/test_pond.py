@@ -655,13 +655,13 @@ class TestPond(object):
         pond_mol = received.molecules[0]
 
         # check that the satellite fields are in the molecule
-        assert_equal(pond_mol.pointing.roll, self.valid_satellite_target['altitude'])
-        assert_equal(pond_mol.pointing.pitch, self.valid_satellite_target['azimuth'])
-        assert_equal(pond_mol.pointing.diff_roll_rate, self.valid_satellite_target['diff_roll_rate'])
-        assert_equal(pond_mol.pointing.diff_pitch_rate, self.valid_satellite_target['diff_pitch_rate'])
-        assert_equal(pond_mol.pointing.diff_roll_accel, self.valid_satellite_target['diff_roll_acceleration'])
-        assert_equal(pond_mol.pointing.diff_pitch_accel, self.valid_satellite_target['diff_pitch_acceleration'])
-        assert_equal(pond_mol.pointing.diff_epoch_rate, self.valid_satellite_target['diff_epoch_rate'])
+        assert_equal(pond_mol.pointing.roll, self.valid_satellite_target.altitude)
+        assert_equal(pond_mol.pointing.pitch, self.valid_satellite_target.azimuth)
+        assert_equal(pond_mol.pointing.diff_roll_rate, self.valid_satellite_target.diff_roll_rate)
+        assert_equal(pond_mol.pointing.diff_pitch_rate, self.valid_satellite_target.diff_pitch_rate)
+        assert_equal(pond_mol.pointing.diff_roll_accel, self.valid_satellite_target.diff_roll_acceleration)
+        assert_equal(pond_mol.pointing.diff_pitch_accel, self.valid_satellite_target.diff_pitch_acceleration)
+        assert_equal(pond_mol.pointing.diff_epoch_rate, self.valid_satellite_target.diff_epoch_rate)
         assert_equal(pond_mol.pointing.coord_sys, 'APP')
         assert_equal(pond_mol.pointing.coord_type, 'AA')
         assert_equal(pond_mol.pointing.ptype, 'ST')
