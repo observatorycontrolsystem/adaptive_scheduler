@@ -662,9 +662,9 @@ class TestPond(object):
         assert_equal(pond_mol.pointing.diff_roll_accel, self.valid_satellite_target.diff_roll_acceleration)
         assert_equal(pond_mol.pointing.diff_pitch_accel, self.valid_satellite_target.diff_pitch_acceleration)
         assert_equal(pond_mol.pointing.diff_epoch_rate, self.valid_satellite_target.diff_epoch_rate)
-        assert_equal(pond_mol.pointing.coord_sys, 'APP')
-        assert_equal(pond_mol.pointing.coord_type, 'AA')
-        assert_equal(pond_mol.pointing.ptype, 'ST')
+        assert_equal(pond_mol.pointing.coord_sys, 2)
+        assert_equal(pond_mol.pointing.coord_type, 0)
+        assert_equal(pond_mol.pointing.ptype, 2)
 
     def test_create_pond_block_with_expose_mol(self):
         self.one_metre_block.add_proposal(self.valid_proposal)
