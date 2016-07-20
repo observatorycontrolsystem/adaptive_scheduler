@@ -29,7 +29,7 @@ from __future__ import division
 
 import time
 
-from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget,
+from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
                                                NullTarget)
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
                                                split_location, merge_dicts, convert_proper_motion)
@@ -784,6 +784,20 @@ class Block(object):
         elif isinstance(self.target, NonSiderealTarget):
             pond_pointing = pond_pointing_from_scheme(self.target)
 
+        elif isinstance(self.target, SatelliteTarget):
+            alt_az_pointing_params = {
+                'alt'           : self.target.altitude,
+                'az'            : self.target.azimuth,
+                'diff_alt_rate' : self.target.diff_pitch_rate,
+                'diff_az_rate'  : self.target.diff_roll_rate,
+                'diff_alt_accel': self.target.diff_pitch_acceleration,
+                'diff_az_accel' : self.target.diff_roll_acceleration,
+                'diff_ref_epoch': self.target.diff_epoch_rate
+                }
+
+            alt_az_coord = pointing.alt_az(**alt_az_pointing_params)
+            pond_pointing = pointing.static(name=self.target.name, coord=alt_az_coord)
+
         elif isinstance(self.target, NullTarget):
             pond_pointing = None
         else:
@@ -791,12 +805,12 @@ class Block(object):
 
         # Set default rotator parameters if none provided
         if pond_pointing:
-            if self.target.rot_mode:
+            if hasattr(self.target, 'rot_mode') and self.target.rot_mode:
                 pond_pointing.rot_mode = self.target.rot_mode
             else:
                 pond_pointing.rot_mode  = 'SKY'
 
-            if self.target.rot_angle:
+            if hasattr(self.target, 'rot_angle') and self.target.rot_angle:
                 pond_pointing.rot_angle = self.target.rot_angle
             else:
                 pond_pointing.rot_angle = 0.0
