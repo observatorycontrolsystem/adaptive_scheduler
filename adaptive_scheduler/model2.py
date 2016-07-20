@@ -15,7 +15,8 @@ from __future__ import division
 from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_minor_planet_target,
-                                                      make_comet_target)
+                                                      make_comet_target,
+                                                      make_satellite_target)
 from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
 from rise_set.rates                           import ProperMotion, RatesConfigError
 from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
@@ -142,7 +143,6 @@ class DataContainer(DefaultMixin):
             setattr(self, key, kwargs[key])
 
 
-
 class Target(DataContainer):
 
     def __init__(self, required_fields, *initial_data, **kwargs):
@@ -159,14 +159,22 @@ class Target(DataContainer):
 
         return missing_fields
 
+    def __repr__(self):
+        fields_as_str = []
+        for field in self.required_fields:
+            fields_as_str.append(field + '=' + str(getattr(self, field)))
+        fields_as_str = '({})'.format(', '.join(fields_as_str))
+        return "{} {}".format(self.__class__.__name__, fields_as_str)
 
 
 class NullTarget(Target):
     def __init__(self, *initial_data, **kwargs):
         Target.__init__(self, (), *initial_data, **kwargs)
 
-class SiderealTarget(Target):
 
+class SiderealTarget(Target):
+    ''' SiderealTarget for targets with Sidereal parameters (ra/dec)
+    '''
     def __init__(self, *initial_data, **kwargs):
         Target.__init__(self, ('name', 'ra', 'dec'), *initial_data, **kwargs)
 
@@ -200,23 +208,18 @@ class SiderealTarget(Target):
 
         return target_dict
 
-
     ra  = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
-    def __repr__(self):
-        return "SiderealTarget(%s, RA=%s, Dec=%s)" % (self.name, self.ra, self.dec)
-
-
 
 class NonSiderealTarget(Target):
-
+    ''' NonSiderealTarget for targets with moving object parameters, like comets or minor planets
+    '''
     def __init__(self, *initial_data, **kwargs):
         scheme = initial_data[0]['scheme']
 
         required_fields = required_fields_from_scheme(scheme)
         Target.__init__(self, required_fields, *initial_data, **kwargs)
-
 
     def in_rise_set_format(self):
         if self.scheme.lower() == 'mpc_comet':
@@ -232,12 +235,20 @@ class NonSiderealTarget(Target):
         return target_dict
 
 
-    def __repr__(self):
-        fields_as_str = []
-        for field in self.required_fields:
-            fields_as_str.append(field + '=' + str(getattr(self, field)))
-        fields_as_str = '(' + ', '.join(fields_as_str) + ')'
-        return "NonSiderealTarget%s" % fields_as_str
+class SatelliteTarget(Target):
+    ''' SatelliteTarget for targets with satellite parameters and fixed windows. Rise-set just returns the
+        dark intervals for these, so their parameters must be precomputed for their windows.
+    '''
+    def __init__(self, *initial_data, **kwargs):
+        required_fields = ('altitude', 'azimuth', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
+                           'diff_roll_acceleration', 'diff_pitch_acceleration')
+        Target.__init__(self, required_fields, *initial_data, **kwargs)
+
+    def in_rise_set_format(self):
+        target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_pitch_rate, self.diff_roll_rate,
+                                            self.diff_pitch_acceleration, self.diff_roll_acceleration, self.diff_epoch_rate)
+
+        return target_dict
 
 
 class Constraints(DataContainer):
@@ -791,6 +802,8 @@ class ModelBuilder(object):
                 target = SiderealTarget(req_dict['target'])
             elif target_type == 'NON_SIDEREAL':
                 target = NonSiderealTarget(req_dict['target'])
+            elif target_type == 'SATELLITE':
+                target = SatelliteTarget(req_dict['target'])
             else:
                 raise RequestError("Unsupported target type '%s'" % target_type)
         except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
