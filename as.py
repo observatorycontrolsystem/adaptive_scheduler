@@ -182,7 +182,7 @@ def main(argv):
     
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
     requestdb_client = SchedulerClient(sched_params.requestdb_url)
-    user_request_interface = RequestDBInterface(requestdb_client)
+    user_request_interface = RequestDBInterface(requestdb_client, debug=sched_params.debug)
     network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
