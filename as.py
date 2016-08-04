@@ -119,6 +119,8 @@ def parse_args(argv):
                                 help="Initial estimate for the ToO loop runtime", default=defaults.too_runtime_seconds)
     arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
                                 help="Ignore intra-proposal priority when computing request priority", default=defaults.ignore_ipp)
+    arg_parser.add_argument("--debug", action="store_true", dest='debug',
+                                help="Sets debug mode in the requestdb client calls to save error output to a file.", default=defaults.debug)
 
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
