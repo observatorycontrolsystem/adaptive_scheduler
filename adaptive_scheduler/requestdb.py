@@ -14,8 +14,9 @@ log = logging.getLogger(__name__)
 
 class RequestDBInterface(object, SendMetricMixin):
     
-    def __init__(self, requestdb_client):
+    def __init__(self, requestdb_client, debug=False):
         self.requestdb_client = requestdb_client
+        self.debug = debug
         self.log = logging.getLogger(__name__)
     
     
@@ -73,7 +74,7 @@ class RequestDBInterface(object, SendMetricMixin):
         # Try and get the requests
         try:
             requests = get_requests_from_db(self.requestdb_client.url, 'dummy arg',
-                                            start, end)
+                                            start, end, self.debug)
             self.log.info("Got %d %s from Request DB", *pl(len(requests), 'User Request'))
             return requests
     
@@ -159,7 +160,7 @@ class RequestDBInterface(object, SendMetricMixin):
 
 @timeit
 @metric_timer('requestdb.get_requests', num_requests=lambda x: len(x))
-def get_requests_from_db(url, telescope_class, sem_start, sem_end):
+def get_requests_from_db(url, telescope_class, sem_start, sem_end, debug=False):
     format = '%Y-%m-%d %H:%M:%S'
 
     search = SearchQuery()
@@ -168,7 +169,7 @@ def get_requests_from_db(url, telescope_class, sem_start, sem_end):
     log.info("Asking DB (%s) for User Requests between %s and %s", url, sem_start, sem_end)
     sc = SchedulerClient(url)
 
-    ur_list = sc.retrieve(search, debug=True)
+    ur_list = sc.retrieve(search, debug=debug)
 
     return ur_list
 

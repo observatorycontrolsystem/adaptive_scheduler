@@ -119,6 +119,8 @@ def parse_args(argv):
                                 help="Initial estimate for the ToO loop runtime", default=defaults.too_runtime_seconds)
     arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
                                 help="Ignore intra-proposal priority when computing request priority", default=defaults.ignore_ipp)
+    arg_parser.add_argument("--debug", action="store_true", dest='debug',
+                                help="Sets debug mode in the requestdb client calls to save error output to a file.", default=defaults.debug)
 
     # Handle command line arguments
     args = arg_parser.parse_args(argv)
@@ -182,7 +184,7 @@ def main(argv):
     
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
     requestdb_client = SchedulerClient(sched_params.requestdb_url)
-    user_request_interface = RequestDBInterface(requestdb_client)
+    user_request_interface = RequestDBInterface(requestdb_client, debug=sched_params.debug)
     network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
