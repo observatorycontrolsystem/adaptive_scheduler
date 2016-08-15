@@ -27,12 +27,17 @@ from gurobipy import Model, tuplelist, GRB, quicksum
 
 log = logging.getLogger(__name__)
 
+
 def gurobi_cb(model, where):
     if where == GRB.Callback.MESSAGE:
-        log.info(model.cbGet(GRB.Callback.MSG_STRING))
+        msg = model.cbGet(GRB.Callback.MSG_STRING)
+        if msg:
+            log.info(msg)
+
 
 class Result(object):
     pass
+
 
 class FullScheduler_gurobi(SlicedIPScheduler_v2):
     @metric_timer('kernel.init')
@@ -190,6 +195,7 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
 
         # Set the parameter to block the gurobi stdout output
         m.params.OutputFlag = 0
+        m.params.LogToConsole = 0
 
         # add all the constraints to the model
         m.update()
