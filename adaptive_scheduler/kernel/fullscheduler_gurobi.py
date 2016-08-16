@@ -31,8 +31,8 @@ log = logging.getLogger(__name__)
 def gurobi_cb(model, where):
     if where == GRB.Callback.MESSAGE:
         msg = model.cbGet(GRB.Callback.MSG_STRING)
-        if msg:
-            log.info(msg)
+        if msg and not msg.isspace():
+            log.info(msg.lstrip())
 
 
 class Result(object):
