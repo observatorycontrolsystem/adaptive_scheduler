@@ -18,14 +18,26 @@ January 2014
 from reservation_v3 import *
 #from contracts_v2 import *
 import copy
+import logging
 from slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit, metric_timer
 
 from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
 from gurobipy import Model, tuplelist, GRB, quicksum
 
+log = logging.getLogger(__name__)
+
+
+def gurobi_cb(model, where):
+    if where == GRB.Callback.MESSAGE:
+        msg = model.cbGet(GRB.Callback.MSG_STRING)
+        if msg and not msg.isspace():
+            log.info(msg.lstrip())
+
+
 class Result(object):
     pass
+
 
 class FullScheduler_gurobi(SlicedIPScheduler_v2):
     @metric_timer('kernel.init')
@@ -181,11 +193,15 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
         m.params.MIPGap = 0.01
 
+        # Set the parameter to block the gurobi stdout output
+        m.params.OutputFlag = 0
+        m.params.LogToConsole = 0
+
         # add all the constraints to the model
         m.update()
 
         # Solve the model
-        m.optimize()
+        m.optimize(gurobi_cb)
 
         # Return the optimally-scheduled windows
         r = Result()
