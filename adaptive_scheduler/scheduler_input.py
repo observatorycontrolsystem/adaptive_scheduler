@@ -136,7 +136,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.model_builder = model_builder
         self.log = logging.getLogger(__name__)
 
-
+    @timeit
     def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur={}, ignore_ipp=False):
         scheduler_model_urs = []
         invalid_json_user_requests = []
@@ -205,6 +205,7 @@ class SchedulingInput(object):
         self._scheduler_model_normal_user_requests = None
         self._invalid_user_requests = []
         self._invalid_requests = []
+	    self._convert_json_user_requests_to_scheduler_model()
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
