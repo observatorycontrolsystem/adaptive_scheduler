@@ -26,7 +26,7 @@ class SchedulerParameters(object):
                  es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
-                 normal_runtime_seconds=360.0, too_runtime_seconds=120):
+                 normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
         self.telescopes_file = telescopes_file
         self.cameras_file = cameras_file
@@ -53,6 +53,7 @@ class SchedulerParameters(object):
         self.too_runtime_seconds = too_runtime_seconds
         self.ignore_ipp = ignore_ipp
         self.es_endpoint = es_endpoint
+        self.debug = debug
 
 
     def get_model_builder(self):
