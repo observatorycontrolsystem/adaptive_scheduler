@@ -205,7 +205,7 @@ class SchedulingInput(object):
         self._scheduler_model_normal_user_requests = None
         self._invalid_user_requests = []
         self._invalid_requests = []
-	self._convert_json_user_requests_to_scheduler_model()
+	    self._convert_json_user_requests_to_scheduler_model()
 
 
     def _convert_json_user_requests_to_scheduler_model(self):
