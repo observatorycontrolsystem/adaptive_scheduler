@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 def gurobi_cb(model, where):
     if where == GRB.Callback.MESSAGE:
-        msg = model.cbGet(GRB.Callback.MSG_STRING)
+        msg = model.cbGet(GRB.Callback.MSG_STRING).replace('|', ':')
         if msg and not msg.isspace():
             log.info(msg.lstrip())
 
