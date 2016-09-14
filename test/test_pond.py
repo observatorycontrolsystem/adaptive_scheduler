@@ -440,6 +440,8 @@ class TestPond(object):
         self.valid_satellite_target = SatelliteTarget(
                                     name  = 'a satellite',
                                     type  = 'satellite',
+                                    rot_mode='',
+                                    rot_angle=0.0,
                                     altitude  = 273.582271,
                                     azimuth = 35.734713,
                                     diff_pitch_rate  = -4.696643,

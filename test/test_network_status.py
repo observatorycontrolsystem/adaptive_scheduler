@@ -162,7 +162,6 @@ class TestNetworkStatus(object):
         network_state = Network([self.mock_monitor1], es_endpoint=es_endpoint)
         events = network_state.update()
 
-        eq_(len(responses.calls), 1)
         event_dict = json.loads(responses.calls[0].request.body)
         event1_dict['timestamp'] = event_dict['timestamp']
 

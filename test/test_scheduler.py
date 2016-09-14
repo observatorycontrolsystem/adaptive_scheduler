@@ -8,7 +8,6 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.intervals import Intervals
-from reqdb.requests import Request
 from nose.tools import nottest
 # import helpers
 
@@ -16,6 +15,7 @@ from mock import Mock, patch
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
 
 from datetime import datetime, timedelta
+
 
 class TestScheduler(object):
 
@@ -1150,6 +1150,10 @@ def create_scheduler_input(user_requests):
     input_mock.scheduler_now = datetime.utcnow()
     input_mock.estimated_scheduler_end = datetime.utcnow()
     input_mock.user_requests = user_requests
+    input_mock.resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), {}, {})
+    input_mock.available_resources = ['1m0a.doma.ogg',]
+    input_mock.invalid_requests = []
+    input_mock.invalid_user_requests = []
     input_mock.get_scheduling_start = Mock(return_value=datetime.utcnow())
 
     return input_mock
@@ -1561,7 +1565,6 @@ class TestSchedulerRunner(object):
         assert_equal(0, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
 
 
-
 class TestSchedulerRunnerUseOfRunTimes(object):
 
     def setup(self):
@@ -1725,7 +1728,6 @@ class TestSchedulerRunnerUseOfRunTimes(object):
             rerun_required = scheduler_runner.scheduler_rerun_required()
             assert_equal(1, self.network_interface.schedulable_request_set_has_changed.call_count)
             assert_equal(rerun_required, return_val, msg="scheduler_rerun_required returned %s when network_interface.current_events_has_changed returned %s" % (rerun_required, return_val))
-
 
 
 class TestSchedulerInputProvider(object):
