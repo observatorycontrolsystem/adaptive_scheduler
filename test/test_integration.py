@@ -3,6 +3,8 @@ from __future__ import division
 
 from datetime import datetime, timedelta
 
+from nose.tools import assert_true
+
 # Import the modules to test
 from adaptive_scheduler.model2      import (
                                              SiderealTarget, Telescope,
@@ -121,9 +123,14 @@ class TestIntegration(object):
                           instrument_type='1M0-SCICAM-SBIG')
 
         self.user_and_request_1 = UserRequest('and', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), 1, 1.0, 'ur 1')
+                                                  datetime(2050, 1, 1), '0000000001', 1.0, 'ur 1')
         self.user_and_request_2 = UserRequest('and', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), 2, 1.0, 'ur 2')
+                                                  datetime(2050, 1, 1), '0000000002', 1.0, 'ur 2')
+
+        self.user_many_request_1 = UserRequest('many', [self.request_1, self.request_2], self.proposal,
+                                                  datetime(2050, 1, 1), '0000000003', 1.0, 'ur 3')
+        self.user_many_request_2 = UserRequest('many', [self.request_3, self.request_4], self.proposal,
+                                                  datetime(2050, 1, 1), '0000000004', 1.0, 'ur 4')
 
 
     def test_competing_and_requests(self):
@@ -146,11 +153,41 @@ class TestIntegration(object):
         scheduled_urs = result.get_scheduled_requests_by_tracking_num()
 
         # assert that either user request 1 or user request 2 were scheduled in full, with the other not being scheduled
-        if 1 in scheduled_urs:
-            assert '0000000001' in scheduled_urs[1]
-            assert '0000000002' in scheduled_urs[1]
-            assert 2 not in scheduled_urs
+        if '0000000001' in scheduled_urs:
+            # check that ur 1s requests are scheduled
+            assert '0000000001' in scheduled_urs['0000000001']
+            assert '0000000002' in scheduled_urs['0000000001']
+            # and check that ur 2 is not scheduled
+            assert '0000000002' not in scheduled_urs
         else:
-            assert '0000000004' in scheduled_urs[2]
-            assert '0000000003' in scheduled_urs[2]
-            assert 1 not in scheduled_urs
+            assert '0000000004' in scheduled_urs['0000000002']
+            assert '0000000003' in scheduled_urs['0000000002']
+            assert '0000000001' not in scheduled_urs
+
+    def test_competing_many_requests(self):
+        sched_params = SchedulerParameters(run_once=True, dry_run=True)
+        event_bus_mock = Mock()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
+        network_interface_mock = Mock()
+        network_interface_mock.cancel = Mock(return_value=0)
+        network_interface_mock.save = Mock(return_value=0)
+        network_interface_mock.get_current_events = Mock(return_value={})
+
+        mock_input_factory = create_scheduler_input_factory([], [self.user_many_request_1, self.user_many_request_2])
+
+        scheduler_input = mock_input_factory.create_normal_scheduling_input()
+        scheduler_input.scheduler_now = self.base_time - timedelta(hours=10)
+        scheduler_input.estimated_scheduler_end = self.base_time - timedelta(hours=9, minutes=45)
+
+        result = scheduler.run_scheduler(scheduler_input, self.base_time - timedelta(hours=9, minutes=45))
+
+        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+
+        # assert that user request 3 request 1 and user request 4 request 4 were scheduled ,
+        # along with one of either 3-2 or 4-3.
+        assert '0000000003' not in scheduled_urs
+        assert '0000000004' not in scheduled_urs
+        assert '0000000001' in scheduled_urs['0000000003']
+        assert '0000000004' in scheduled_urs['0000000004']
+        assert_true('0000000002' in scheduled_urs['0000000003'] or '0000000003' in scheduled_urs['0000000004'])
+
