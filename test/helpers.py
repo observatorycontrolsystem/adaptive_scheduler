@@ -46,6 +46,10 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
         if len(req_list) == 1:
             operator = 'single'
 
+        if expires:
+            UserRequest.expires = PropertyMock(return_value=expires)
+        else:
+            UserRequest.expires = PropertyMock(return_value=datetime.utcnow() + timedelta(days=365))
         ur1 = UserRequest(
                            operator        = operator,
                            requests        = req_list,
@@ -55,10 +59,5 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                            group_id        = None,
                            ipp_value=1.0
                          )
-
-        if expires:
-            ur1.expires = PropertyMock(return_value=expires)
-        else:
-            ur1.expires = PropertyMock(return_value=datetime.utcnow() + timedelta(days=365))
 
         return ur1, window_list
