@@ -35,8 +35,7 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                           constraints    = None,
                           request_number = str(next_request_number).zfill(10)
                         )
-            r.duration = PropertyMock(return_value=duration)
-            
+
             r.get_duration = Mock(return_value=duration) 
                 
             
