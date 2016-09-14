@@ -185,9 +185,12 @@ class TestIntegration(object):
 
         # assert that user request 3 request 1 and user request 4 request 4 were scheduled ,
         # along with one of either 3-2 or 4-3.
-        assert '0000000003' not in scheduled_urs
-        assert '0000000004' not in scheduled_urs
+        assert '0000000003' in scheduled_urs
+        assert '0000000004' in scheduled_urs
         assert '0000000001' in scheduled_urs['0000000003']
         assert '0000000004' in scheduled_urs['0000000004']
-        assert_true('0000000002' in scheduled_urs['0000000003'] or '0000000003' in scheduled_urs['0000000004'])
+        if '0000000002' in scheduled_urs['0000000003']:
+            assert '0000000003' not in scheduled_urs['0000000004']
+        else:
+            assert '0000000002' not in scheduled_urs['0000000003']
 
