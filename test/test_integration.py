@@ -128,12 +128,12 @@ class TestIntegration(object):
                                                   datetime(2050, 1, 1), '0000000002', 1.0, 'ur 2')
 
         self.user_many_request_1 = UserRequest('many', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000003', 1.0, 'ur 3')
+                                                  datetime(2050, 1, 1), '0000000003', 1.5, 'ur 3')
         self.user_many_request_2 = UserRequest('many', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000004', 1.0, 'ur 4')
+                                                  datetime(2050, 1, 1), '0000000004', 1.5, 'ur 4')
 
 
-    def test_competing_and_requests(self):
+    def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time = self.base_time - timedelta(days=1)):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
@@ -142,13 +142,20 @@ class TestIntegration(object):
         network_interface_mock.save = Mock(return_value=0)
         network_interface_mock.get_current_events = Mock(return_value={})
 
-        mock_input_factory = create_scheduler_input_factory([], [self.user_and_request_1, self.user_and_request_2])
+        mock_input_factory = create_scheduler_input_factory(too_ur_list, normal_ur_list)
 
         scheduler_input = mock_input_factory.create_normal_scheduling_input()
-        scheduler_input.scheduler_now = self.base_time - timedelta(hours=10)
-        scheduler_input.estimated_scheduler_end = self.base_time - timedelta(hours=9, minutes=45)
+        scheduler_input.scheduler_now = scheduler_time
+        scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
 
-        result = scheduler.run_scheduler(scheduler_input, self.base_time - timedelta(hours=9, minutes=45))
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15))
+
+        return result
+
+
+    def test_competing_and_requests(self):
+        result = self._schedule_requests([], [self.user_and_request_1, self.user_and_request_2],
+                                         self.base_time - timedelta(hours=10))
 
         scheduled_urs = result.get_scheduled_requests_by_tracking_num()
 
@@ -165,22 +172,8 @@ class TestIntegration(object):
             assert '0000000001' not in scheduled_urs
 
     def test_competing_many_requests(self):
-        sched_params = SchedulerParameters(run_once=True, dry_run=True)
-        event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
-        network_interface_mock = Mock()
-        network_interface_mock.cancel = Mock(return_value=0)
-        network_interface_mock.save = Mock(return_value=0)
-        network_interface_mock.get_current_events = Mock(return_value={})
-
-        mock_input_factory = create_scheduler_input_factory([], [self.user_many_request_1, self.user_many_request_2])
-
-        scheduler_input = mock_input_factory.create_normal_scheduling_input()
-        scheduler_input.scheduler_now = self.base_time - timedelta(hours=10)
-        scheduler_input.estimated_scheduler_end = self.base_time - timedelta(hours=9, minutes=45)
-
-        result = scheduler.run_scheduler(scheduler_input, self.base_time - timedelta(hours=9, minutes=45))
-
+        result = self._schedule_requests([], [self.user_many_request_1, self.user_many_request_2],
+                                         self.base_time - timedelta(hours=10))
         scheduled_urs = result.get_scheduled_requests_by_tracking_num()
 
         # assert that user request 3 request 1 and user request 4 request 4 were scheduled ,
@@ -193,4 +186,18 @@ class TestIntegration(object):
             assert '0000000003' not in scheduled_urs['0000000004']
         else:
             assert '0000000002' not in scheduled_urs['0000000003']
+
+    def test_competing_many_and_requests(self):
+        normal_request_list = [self.user_and_request_1, self.user_many_request_2]
+        result = self._schedule_requests([], normal_request_list, self.base_time - timedelta(hours=10))
+        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+
+        # assert the and request was taken in full, and the remaining many ur 4 request 2 was scheduled
+        assert '0000000001' in scheduled_urs
+        assert '0000000001' in scheduled_urs['0000000001']
+        assert '0000000002' in scheduled_urs['0000000001']
+        assert '0000000004' in scheduled_urs
+        # the second request from the many was scheduled but the first was not
+        assert '0000000004' in scheduled_urs['0000000004']
+        assert '0000000003' not in scheduled_urs['0000000004']
 
