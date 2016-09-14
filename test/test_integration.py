@@ -133,7 +133,7 @@ class TestIntegration(object):
                                                   datetime(2050, 1, 1), '0000000004', 1.5, 'ur 4')
 
 
-    def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time = self.base_time - timedelta(days=1)):
+    def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
