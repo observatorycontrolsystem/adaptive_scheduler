@@ -201,3 +201,22 @@ class TestIntegration(object):
         assert '0000000004' in scheduled_urs['0000000004']
         assert '0000000003' not in scheduled_urs['0000000004']
 
+    def test_competing_many_igher_than_and_requests(self):
+        normal_request_list = [self.user_and_request_1, self.user_and_request_2,
+                               self.user_many_request_1, self.user_many_request_2]
+        result = self._schedule_requests([], normal_request_list, self.base_time - timedelta(hours=10))
+        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+
+        # assert only the manys were scheduled because they have a higher priority than the ands
+        assert '0000000001' not in scheduled_urs
+        assert '0000000002' not in scheduled_urs
+        assert '0000000003' in scheduled_urs
+        assert '0000000004' in scheduled_urs
+        assert '0000000001' in scheduled_urs['0000000003']
+        assert '0000000004' in scheduled_urs['0000000004']
+        # still the middle scheduled request could be either many
+        if '0000000002' in scheduled_urs['0000000003']:
+            assert '0000000003' not in scheduled_urs['0000000004']
+        else:
+            assert '0000000002' not in scheduled_urs['0000000003']
+
