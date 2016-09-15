@@ -146,7 +146,6 @@ class TestNetworkInterface(object):
         telescope_name_list = ['1m0a.doma.tst']
         network_interface.send_available_telescope_state_events(telescope_name_list)
 
-        assert_equal(len(responses.calls), 1)
         event_dict = json.loads(responses.calls[0].request.body)
 
         event1_dict = {'type': 'AVAILABLE',

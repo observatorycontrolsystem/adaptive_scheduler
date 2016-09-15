@@ -74,19 +74,23 @@ class TestIntegration(object):
 
         self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
         self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
-        self.resource_1 = Mock()
-        self.resource_1.name = '1m0a.doma.ogg'
-        self.window_1 = Window({'start': self.base_time, 'end': self.base_time + timedelta(hours=0, minutes=30)}, self.resource_1)
+
+        resource_1 = Mock()
+        resource_1.name = '1m0a.doma.ogg'
+        self.window_1 = Window({'start': self.base_time,
+                                'end': self.base_time + timedelta(hours=0, minutes=30)}, resource_1)
         self.windows_1 = Windows()
         self.windows_1.append(self.window_1)
-        self.resource_2 = Mock()
-        self.resource_2.name = '1m0a.doma.ogg'
-        self.window_2 = Window({'start': self.base_time + timedelta(hours=0, minutes=30), 'end': self.base_time + timedelta(hours=1, minutes=0)}, self.resource_2)
+        resource_2 = Mock()
+        resource_2.name = '1m0a.doma.ogg'
+        self.window_2 = Window({'start': self.base_time + timedelta(hours=0, minutes=30),
+                                'end': self.base_time + timedelta(hours=1, minutes=0)}, resource_2)
         self.windows_2 = Windows()
         self.windows_2.append(self.window_2)
-        self.resource_3 = Mock()
-        self.resource_3.name = '1m0a.doma.ogg'
-        self.window_3 =  Window({'start': self.base_time + timedelta(hours=1, minutes=0), 'end': self.base_time + timedelta(hours=1, minutes=30)}, self.resource_3)
+        resource_3 = Mock()
+        resource_3.name = '1m0a.doma.ogg'
+        self.window_3 =  Window({'start': self.base_time + timedelta(hours=1, minutes=0),
+                                 'end': self.base_time + timedelta(hours=1, minutes=30)}, resource_3)
         self.windows_3 = Windows()
         self.windows_3.append(self.window_3)
 
@@ -122,16 +126,15 @@ class TestIntegration(object):
                           observation_type = 'NORMAL',
                           instrument_type='1M0-SCICAM-SBIG')
 
+
         self.user_and_request_1 = UserRequest('and', [self.request_1, self.request_2], self.proposal,
                                                   datetime(2050, 1, 1), '0000000001', 1.0, 'ur 1')
         self.user_and_request_2 = UserRequest('and', [self.request_3, self.request_4], self.proposal,
                                                   datetime(2050, 1, 1), '0000000002', 1.0, 'ur 2')
-
         self.user_many_request_1 = UserRequest('many', [self.request_1, self.request_2], self.proposal,
                                                   datetime(2050, 1, 1), '0000000003', 1.5, 'ur 3')
         self.user_many_request_2 = UserRequest('many', [self.request_3, self.request_4], self.proposal,
                                                   datetime(2050, 1, 1), '0000000004', 1.5, 'ur 4')
-
 
     def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
@@ -201,22 +204,38 @@ class TestIntegration(object):
         assert '0000000004' in scheduled_urs['0000000004']
         assert '0000000003' not in scheduled_urs['0000000004']
 
-    def test_competing_many_igher_than_and_requests(self):
-        normal_request_list = [self.user_and_request_1, self.user_and_request_2,
-                               self.user_many_request_1, self.user_many_request_2]
-        result = self._schedule_requests([], normal_request_list, self.base_time - timedelta(hours=10))
+    def test_large_and_requests(self):
+        days_out = 0
+        # build up a request a day for 100 days out
+        new_time = datetime(2016, 10, 3, 5, 0)
+        request_list = []
+        while days_out < 80:
+            resource = Mock()
+            resource.name = '1m0a.doma.ogg'
+            window = Window({'start': new_time + timedelta(days=days_out),
+                                    'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
+            windows = Windows()
+            windows.append(window)
+            request = Request(target=self.target,
+                                molecules=[self.molecule],
+                                windows=windows,
+                                constraints=self.constraints,
+                                request_number="11{}".format(days_out).rjust(10, '0'),
+                                observation_type='NORMAL',
+                                instrument_type='1M0-SCICAM-SBIG')
+            request_list.append(request)
+            days_out += 1
+
+        user_request = UserRequest('and', request_list, self.proposal,
+                                    datetime(2050, 1, 1), '0000000100', 1.0, 'large ur')
+
+        normal_request_list = [user_request,]
+        result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))
         scheduled_urs = result.get_scheduled_requests_by_tracking_num()
 
-        # assert only the manys were scheduled because they have a higher priority than the ands
-        assert '0000000001' not in scheduled_urs
-        assert '0000000002' not in scheduled_urs
-        assert '0000000003' in scheduled_urs
-        assert '0000000004' in scheduled_urs
-        assert '0000000001' in scheduled_urs['0000000003']
-        assert '0000000004' in scheduled_urs['0000000004']
-        # still the middle scheduled request could be either many
-        if '0000000002' in scheduled_urs['0000000003']:
-            assert '0000000003' not in scheduled_urs['0000000004']
-        else:
-            assert '0000000002' not in scheduled_urs['0000000003']
-
+        # assert that none of the and is scheduled (since it has an unschedulable request in it)
+        # assert that both of the manys are scheduled
+        assert '0000000100' in scheduled_urs
+        for req in request_list:
+            # assert each child request is in the schedule (scheduler schedules past horizon for ands)
+            assert req.request_number in scheduled_urs['0000000100']
