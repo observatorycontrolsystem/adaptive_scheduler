@@ -28,7 +28,6 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                 windows.append(w)
                 window_list.append(w)
 
-            Request.duration = PropertyMock(return_value=duration)
             r  = Request(
                           target         = target,
                           molecules      = molecules,
@@ -36,7 +35,7 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                           constraints    = None,
                           request_number = str(next_request_number).zfill(10)
                         )
-            
+
             r.get_duration = Mock(return_value=duration) 
                 
             

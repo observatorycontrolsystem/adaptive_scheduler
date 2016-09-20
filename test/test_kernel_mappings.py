@@ -495,7 +495,7 @@ class TestKernelMappings(object):
         expected_tps = [
                          {
                            'type': 'start',
-                           'time': datetime(2013, 3, 22, 18, 11, 28, 78641)
+                           'time': datetime(2013, 3, 22, 18, 7, 32, 169190)
                          },
                          {
                            'type': 'end',
@@ -560,7 +560,7 @@ class TestKernelMappings(object):
         expected_tps = [
                          {
                            'type': 'start',
-                           'time': datetime(2013, 3, 22, 13, 12, 17, 226447)
+                           'time': datetime(2013, 3, 22, 13, 8, 21, 316996)
                          },
                          {
                            'type': 'end',
