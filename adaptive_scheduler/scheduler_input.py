@@ -384,7 +384,7 @@ class SchedulingInputProvider(object):
 
     def _get_json_user_request_list(self):
         semester_start, semester_end = get_semester_block(dt=self._get_estimated_scheduler_end())
-        ur_list = self.network_interface.get_all_user_requests(semester_start, datetime.utcnow() + timedelta(days=self.sched_params.horizon_days))
+        ur_list = self.network_interface.get_all_user_requests(semester_start, min(datetime.utcnow() + timedelta(days=self.sched_params.horizon_days), semester_end))
 
         return ur_list
 
