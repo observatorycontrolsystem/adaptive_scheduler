@@ -134,7 +134,7 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
         rs_moon_distance_intervals = visibility_from[resource_name][4](target=rs_target,
                                                                        target_intervals=rs_up_intervals,
-                                                                       moon_distance=Angle(degrees=req.contraints.min_lunar_distance))
+                                                                       moon_distance=Angle(degrees=req.constraints.min_lunar_distance))
 
 
         # Convert the rise_set intervals into kernel speak
