@@ -128,12 +128,16 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
         # HA support only currently implemented for sidereal targets
         if 'ra' in rs_target:
             rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
+            # get the moon distance intervals using the target intervals and min_lunar_distance constraint
+            rs_up_intervals = visibility_from[resource_name][4](target=rs_target,
+                                                                       target_intervals=rs_up_intervals,
+                                                                       moon_distance=Angle(degrees=req.constraints.min_lunar_distance))
         else:
             rs_ha_intervals   = rs_up_intervals
 
-
         # Convert the rise_set intervals into kernel speak
         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
+        # the target intervals then are then those that pass the moon distance constraint
         up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
         ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
 
@@ -448,8 +452,9 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         get_target = Memoize(visibility.get_target_intervals)
         get_dark   = visibility.get_dark_intervals
         get_ha     = Memoize(visibility.get_ha_intervals)
+        get_moon_distance = Memoize(visibility.get_moon_distance_intervals)
 
-        visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha)
+        visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha, get_moon_distance)
 
     return visibility_from
 

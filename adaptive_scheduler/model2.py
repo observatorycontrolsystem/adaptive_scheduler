@@ -255,7 +255,8 @@ class Constraints(DataContainer):
     #TODO: Make this a named tuple
     def __init__(self, *args, **kwargs):
         self.max_airmass        = None
-        self.min_lunar_distance = None
+        # default minimum lunar distance is 0 if none is specified in request.
+        self.min_lunar_distance = 0.0
         self.max_lunar_phase    = None
         self.max_seeing         = None
         self.min_transparency   = None
@@ -263,7 +264,7 @@ class Constraints(DataContainer):
 
 
     def __repr__(self):
-        return "Constraints(airmass=%s)" % self.max_airmass
+        return "Constraints(airmass={}, min_lunar_distance={})".format(self.max_airmass, self.min_lunar_distance)
 
 class Molecule(DataContainer):
     def __init__(self, required_fields, *initial_data, **kwargs):
