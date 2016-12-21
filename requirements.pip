@@ -16,6 +16,7 @@ reqdbclient
 schedutils
 potsdb
 requests
+retry
 opentsdb_http_client
 opentsdb_python_metrics
 lcogt-logging
