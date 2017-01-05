@@ -7,10 +7,11 @@ numpy==1.8.0
 scipy==0.13.0
 SQLAlchemy==0.8.3
 MySQL-python==1.2.5
-cvxopt>=1.1.6
+cvxopt>=1.1.6,<1.1.9
 lcogtpond>=0.3.3
 pyslalib
 rise_set
+gurobipy
 lcogt-dateutils
 reqdbclient
 schedutils
