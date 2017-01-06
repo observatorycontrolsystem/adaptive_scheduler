@@ -33,5 +33,7 @@ RUN useradd -ms /bin/bash eng
 RUN mkdir $APPLICATION_ROOT/logs
 RUN chown -R eng:eng /lco/
 
+WORKDIR $APPLICATION_ROOT
+
 CMD ["supervisord", "-n"]
 
