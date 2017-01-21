@@ -659,14 +659,14 @@ class SchedulerRunner(object):
 
         # Always run the scheduler on the first run
         scheduler_run_start = datetime.utcnow()
-        if self.scheduler_rerun_required() or self.first_run:
-            try:
+        try:
+            if self.scheduler_rerun_required() or self.first_run:
                 self.create_new_schedule(scheduler_run_start)
-            except (ScheduleException, EstimateExceededException) as eee:
-                # Estimated run time was exceeded so exception was raised
-                # to short circuit to exit.  Just try again.  Run time
-                # estimate should have been updated.
-                pass
+        except (ScheduleException, EstimateExceededException) as eee:
+            # Estimated run time was exceeded so exception was raised
+            # to short circuit to exit.  Just try again.  Run time
+            # estimate should have been updated.
+            pass
 
 
     def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
