@@ -14,7 +14,7 @@ import helpers
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
                                                  filter_out_windows_for_running_requests,
-                                                 filter_on_expiry,
+                                                 # filter_on_expiry,
                                                  filter_out_past_windows,
                                                  filter_out_future_windows,
                                                  truncate_lower_crossing_windows,
@@ -62,27 +62,27 @@ class TestExpiryFilter(object):
         assert_not_equal(ur1, ur3)
 
 
-    def test_unexpired_request_not_filtered(self):
+    # def test_unexpired_request_not_filtered(self):
+    #
+    #     ur_list = [
+    #                 self.create_user_request(self.future_expiry1),
+    #                 self.create_user_request(self.future_expiry2),
+    #               ]
+    #
+    #     received_ur_list = filter_on_expiry(ur_list)
+    #     assert_equal(received_ur_list, ur_list)
 
-        ur_list = [
-                    self.create_user_request(self.future_expiry1),
-                    self.create_user_request(self.future_expiry2),
-                  ]
 
-        received_ur_list = filter_on_expiry(ur_list)
-        assert_equal(received_ur_list, ur_list)
-
-
-    def test_expired_request_is_filtered(self):
-        ur_list = [
-                    self.create_user_request(self.past_expiry),
-                    self.create_user_request(self.future_expiry1),
-                  ]
-        expected_ur_list = deepcopy(ur_list)
-        del(expected_ur_list)[0]
-
-        received_ur_list = filter_on_expiry(ur_list)
-        assert_equal(received_ur_list, expected_ur_list)
+    # def test_expired_request_is_filtered(self):
+    #     ur_list = [
+    #                 self.create_user_request(self.past_expiry),
+    #                 self.create_user_request(self.future_expiry1),
+    #               ]
+    #     expected_ur_list = deepcopy(ur_list)
+    #     del(expected_ur_list)[0]
+    #
+    #     received_ur_list = filter_on_expiry(ur_list)
+    #     assert_equal(received_ur_list, expected_ur_list)
 
 
 

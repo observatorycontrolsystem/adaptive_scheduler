@@ -8,9 +8,7 @@ Dec 2012
 '''
 
 from reservation_v3 import *
-#from contracts_v2 import *
 import copy
-from uncontendedscheduler import *
 
 class Scheduler(object):
     

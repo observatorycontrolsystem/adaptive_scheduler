@@ -142,25 +142,12 @@ class NetworkInterface(object):
         '''
         return self.user_request_interface.is_dirty()
     
-    def clear_schedulable_request_set_changed_state(self):
-        '''True if set of schedulable requests has changed
-        '''
-        return self.user_request_interface.clear_dirty_flag()
-    
     def get_all_user_requests(self, start, end):
         '''Get all user requests waiting for scheduling between
         start and end date
         '''
         return self.user_request_interface.get_all_user_requests(start, end)            
-                
-    def set_requests_to_unschedulable(self, unschedulable_r_numbers):
-        '''Update the state of all the unschedulable Requests in the DB in one go.'''
-        return self.user_request_interface.set_requests_to_unschedulable(unschedulable_r_numbers)
-    
-    def set_user_requests_to_unschedulable(self, unschedulable_ur_numbers):
-        '''Update the state of all the unschedulable User Requests in the DB in one go.'''
-        return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
-    
+
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests

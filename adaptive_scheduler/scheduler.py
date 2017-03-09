@@ -261,18 +261,14 @@ class Scheduler(object, SendMetricMixin):
         pass
 
 
-    def unscheduleable_ur_numbers(self, unschedulable_urs):
-        return find_unschedulable_ur_numbers(unschedulable_urs)
-
-
     def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
-        request numbers 
+        request numbers
         '''
         windowsless_r_numbers = drop_empty_requests(user_requests)
-        unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
-        return unschedulable_r_numbers
+        # unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
+        # return unschedulable_r_numbers
 
 
     def create_resource_mask(self, available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled):
@@ -323,8 +319,7 @@ class Scheduler(object, SendMetricMixin):
         # A request should only be filtered from the scheduling input if it has a chance of completing successfully
         running_request_numbers = [r.request_number for r in running_requests if r.should_continue()]
         schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end, running_request_numbers)
-        unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers = self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
+        self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
         self.after_unschedulable_filters(schedulable_urs)
 
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
@@ -356,8 +351,6 @@ class Scheduler(object, SendMetricMixin):
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
-        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 
         # Include any invalid user requests in the unschedulable list
         invalid_tracking_numbers = []
@@ -366,15 +359,6 @@ class Scheduler(object, SendMetricMixin):
             if json_ur.has_key('tracking_number'):
                 invalid_tracking_numbers.append(json_ur['tracking_number'])
         scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
-        
-        # Include any invalid requests in the unschedulable list
-        invalid_request_numbers = []
-        invalid_requests = scheduler_input.invalid_requests
-        for json_r in invalid_requests:
-            if json_r.has_key('request_number'):
-                if json_r.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
-                    invalid_request_numbers.append(json_r['request_number'])
-        scheduler_result.unschedulable_request_numbers += invalid_request_numbers
         
         if compound_reservations:
             # Instantiate and run the scheduler
@@ -530,9 +514,7 @@ class SchedulerResult(object):
     '''Aggregates together output of a scheduler run
     '''
 
-    def __init__(self, schedule={}, resource_schedules_to_cancel=[],
-                 unschedulable_user_request_numbers=[],
-                 unschedulable_request_numbers=[]):
+    def __init__(self, schedule={}, resource_schedules_to_cancel=[]):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
         resource_schedules_to_cancel - List of resources to cancel schedules on
@@ -541,8 +523,6 @@ class SchedulerResult(object):
         '''
         self.schedule = schedule
         self.resource_schedules_to_cancel = resource_schedules_to_cancel
-        self.unschedulable_user_request_numbers = unschedulable_user_request_numbers
-        self.unschedulable_request_numbers = unschedulable_request_numbers
 
 
     def count_reservations(self):
@@ -695,14 +675,6 @@ class SchedulerRunner(object):
         return scheduler_result
 
 
-    def set_requests_to_unscheduleable(self, request_numbers):
-        self.network_interface.set_requests_to_unschedulable(request_numbers)
-
-
-    def set_user_requests_to_unschedulable(self, tracking_numbers):
-        self.network_interface.set_user_requests_to_unschedulable(tracking_numbers)
-
-
     def clear_resource_schedules(self, cancelation_dates_by_resource):
         n_deleted = self.network_interface.cancel(cancelation_dates_by_resource, "Superceded by new schedule")
 
@@ -776,8 +748,7 @@ class SchedulerRunner(object):
 
         semester_start, semester_end = \
                 get_semester_block(dt=apply_deadline)
-        self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
-        self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
+
         # TODO: make sure this cancels anything currently running in the ToO case
         cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(
             resources_to_clear, scheduler_result.schedule,
@@ -918,11 +889,6 @@ class SchedulerRunner(object):
                     too_resources.append(too_resource)
         self.scheduling_cycle(NORMAL_SCHEDULE_TYPE, network_state_timestamp, too_resources)
         set_schedule_type(None)
-        # Only clear the change state if scheduling is successful and not a dry run
-        if not self.sched_params.dry_run:
-            self.network_interface.clear_schedulable_request_set_changed_state()
-        # Huh?
-        sys.stdout.flush()
 
     @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def scheduling_cycle(self, schedule_type, network_state_timestamp, too_resources=None):
