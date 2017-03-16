@@ -1,12 +1,7 @@
 from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin
 from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestDBError
 from adaptive_scheduler.printing         import pluralise as pl
-<<<<<<< HEAD
-=======
-from adaptive_scheduler.request_parser   import TreeCollapser
-from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
 from adaptive_scheduler.interfaces import ScheduleException
->>>>>>> 872575b9c6401c67b09be2372c9245024b1673e7
 
 from datetime import datetime
 import json

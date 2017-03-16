@@ -1122,7 +1122,7 @@ def create_user_request(tracking_number, priority, requests, operator):  # windo
     mock_user_request.n_requests = Mock(return_value=len(requests))
     mock_user_request.get_priority = Mock(return_value=priority)
     mock_user_request.drop_empty_children = Mock(side_effect=lambda *args : [])  # [request.request_number for request in requests if len(request.windows) > 0])
-    mock_user_request.has_target_of_opportunity = Mock(return_value=reduce(lambda x, y: x and y, map(lambda r : r.observation_type == 'TARGET_OF_OPPORTUNITY', requests)))
+    mock_user_request.is_target_of_opportunity = Mock(return_value=reduce(lambda x, y: x and y, map(lambda r : r.observation_type == 'TARGET_OF_OPPORTUNITY', requests)))
 
     return mock_user_request
 

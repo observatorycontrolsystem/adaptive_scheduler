@@ -10,7 +10,7 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              SiderealTarget, NonSiderealTarget,
                                              Telescope,
                                              Proposal, MoleculeFactory,
-                                             Request, CompoundRequest, UserRequest,
+                                             Request, UserRequest,
                                              Windows, Window, Constraints,
                                              _LocationExpander, ModelBuilder,
                                              RequestError)
@@ -105,8 +105,6 @@ class TestRequest(object):
         self.duration = 60
         self.request_number = '0000000001'
 
-
-
     @raises(RequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
@@ -116,7 +114,8 @@ class TestRequest(object):
                           constraints    = self.constraints,
                           request_number = self.request_number,
                           observation_type = 'NORMAL')
-        compound_request = CompoundRequest(junk_res_type, [request])
+        user_request = UserRequest(operator=junk_res_type, requests=[request], group_id='Group 1',
+                                   proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
 
 
     def test_valid_request_type_does_not_raise_exception(self):
@@ -127,7 +126,8 @@ class TestRequest(object):
                           constraints    = self.constraints,
                           request_number = self.request_number,
                           observation_type = 'NORMAL')
-        compound_request = CompoundRequest(valid_res_type, [request])
+        user_request = UserRequest(operator=valid_res_type, requests=[request], group_id='Group 1',
+                                   proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
 
 
     def test_null_instrument_has_a_name(self):
@@ -149,31 +149,6 @@ class TestRequest(object):
                           observation_type = 'NORMAL')
 
         assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
-
-
-class TestCompoundRequest(object):
-    '''Unit tests for the adaptive scheduler CompoundRequest object.'''
-
-    def setup(self):
-        pass
-
-
-    def test_drop_empty_children(self):
-        r_mock1 = mock.MagicMock()
-        r_mock1.has_windows.return_value = True
-
-        r_mock2 = mock.MagicMock()
-        r_mock2.has_windows.return_value = False
-
-        cr = CompoundRequest(
-                              operator='many',
-                              requests=[r_mock1, r_mock2]
-                            )
-
-        cr.drop_empty_children()
-
-        assert_equal(len(cr.requests), 1)
-        assert_equal(cr.requests[0], r_mock1)
 
 
 class TestUserRequest(object):
@@ -278,6 +253,21 @@ class TestUserRequest(object):
 
     def test_priority_ipp_1_5(self):
         self._test_priority(base_priority=20.0, ipp_value=1.5)
+
+    def test_drop_empty_children(self):
+        r_mock1 = mock.MagicMock()
+        r_mock1.has_windows.return_value = True
+
+        r_mock2 = mock.MagicMock()
+        r_mock2.has_windows.return_value = False
+
+        ur = UserRequest(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1',
+                         proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
+
+        ur.drop_empty_children()
+
+        assert_equal(len(ur.requests), 1)
+        assert_equal(ur.requests[0], r_mock1)
 
 
 class TestLocationExpander(object):
@@ -849,11 +839,10 @@ class TestModelBuilder(object):
 
         cr_dict = {
                    'proposal' : {
-                                 'proposal_id' : 'INDECENT',
-                                 'user_id' : 'demi.moore',
+                                 'id' : 'INDECENT',
                                  'tag_id' : 'BAD_MOVIES',
-                                 'observer_name' : 'me',
-                                 'priority' : '10'
+                                 'pi' : 'me',
+                                 'tac_priority' : '10'
                                 },
                    'expires' : '2014-10-29 12:12:12',
                    'group_id' : '',

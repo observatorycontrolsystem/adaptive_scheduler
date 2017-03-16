@@ -179,7 +179,7 @@ class PondScheduleInterface(object):
             blocks_by_resource[resource_name] = []
             for reservation in reservations:
                 block = build_block(reservation, reservation.request,
-                                    reservation.compound_request, semester_start,
+                                    reservation.user_request, semester_start,
                                     camera_mappings_file)
     
                 blocks_by_resource[resource_name].append(block)
@@ -579,9 +579,9 @@ class PondMoleculeFactory(object):
                  # Meta data
                  'tracking_num' : self.tracking_number,
                  'request_num'  : self.request_number,
-                 'tag'          : self.proposal.tag_id,
-                 'user'         : self.proposal.user_id,
-                 'proposal'     : self.proposal.proposal_id,
+                 'tag'          : self.proposal.tag,
+                 'user'         : self.submitter,
+                 'proposal'     : self.proposal.id,
                  'group'        : self.group_id,
                  # Observation details
                  'exp_cnt'      : molecule.exposure_count,
@@ -873,16 +873,16 @@ class Block(object):
         return pond_block
 
 
-def build_block(reservation, request, compound_request, semester_start, camera_mappings_file):
+def build_block(reservation, request, user_request, semester_start, camera_mappings_file):
     camera_mapping = create_camera_mapping(camera_mappings_file)
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
-    is_too = request.observation_type == 'TARGET_OF_OPPORTUNITY'
+    is_too = user_request.observation_type == 'TARGET_OF_OPPORTUNITY'
     block = Block(
                    location=reservation.scheduled_resource,
                    start=res_start,
                    end=res_end,
-                   group_id=compound_request.group_id,
-                   tracking_number=compound_request.tracking_number,
+                   group_id=user_request.group_id,
+                   tracking_number=user_request.tracking_number,
                    request_number=request.request_number,
                    camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now
@@ -895,7 +895,7 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
                    min_transparency=request.constraints.min_transparency,
                  )
 
-    block.add_proposal(compound_request.proposal)
+    block.add_proposal(user_request.proposal)
     for molecule in request.molecules:
         block.add_molecule(molecule)
     block.add_target(request.target)

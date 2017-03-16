@@ -4,8 +4,7 @@ from __future__ import division
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
-                                       CompoundRequest, UserRequest,
-                                       Window, Windows, MoleculeFactory, Constraints)
+                                       UserRequest, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
                                       normalised_epoch_to_datetime,
@@ -108,15 +107,6 @@ class TestKernelMappings(object):
         return req
 
 
-    def make_compound_request(self, requests, operator):
-        cr = CompoundRequest(
-                              operator = operator,
-                              requests = requests
-                            )
-
-        return cr
-
-
     def make_user_request(self, requests, operator='single'):
         ur = UserRequest(operator=operator, requests=requests, proposal='Test Proposal',
                          expires=datetime(2012, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0)
@@ -156,14 +146,14 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'and'
-        compound_request  = self.make_compound_request(requests, operator)
+        user_request  = self.make_user_request(requests, operator)
         dt_intervals_list = self.make_dt_intervals_list()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        compound_request.priority = 1
+        user_request.priority = 1
 
-        received = construct_compound_reservation(compound_request,
+        received = construct_compound_reservation(user_request,
                                                   dt_intervals_list,
                                                   sem_start)
 
@@ -175,15 +165,15 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'many'
-        compound_request  = self.make_compound_request(requests, operator)
+        user_request  = self.make_user_request(requests, operator)
         intersection_dict = self.make_intersection_dict()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        compound_request.priority = 1
+        user_request.priority = 1
 
         received = construct_many_compound_reservation(
-                                               compound_request,
+                                               user_request,
                                                child_idx=0,
                                                intersection_dict=intersection_dict,
                                                sem_start=sem_start)

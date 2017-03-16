@@ -29,9 +29,9 @@ class TestReportOutcome(object):
                 self.request_number = request_number
 
         class Reservation(object):
-            def __init__(self, request, mock_cr):
+            def __init__(self, request, mock_ur):
                 self.request = request
-                self.compound_request = mock_cr
+                self.user_request = mock_ur
 
 
         mock_cr1 = Mock()

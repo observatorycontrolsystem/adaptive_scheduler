@@ -88,11 +88,10 @@ class TestPondMoleculeFactory(object):
 
     def setup(self):
         self.proposal = Proposal(
-                                  observer_name  = 'Eric Saunders',
-                                  user_id        = 'esaunders',
-                                  proposal_id    = 'Scheduler Testing',
+                                  pi  = 'Eric Saunders',
+                                  id    = 'Scheduler Testing',
                                   tag_id         = 'admin',
-                                  priority       = 2,
+                                  tac_priority       = 2,
                                 )
 
         self.pond_coords = lcogtpond.pointing.ra_dec(
@@ -400,7 +399,7 @@ class TestPond(object):
 
     def setup(self):
         # Metadata missing proposal and tag parameters
-        self.proposal = Proposal(observer_name='Eric Saunders')
+        self.proposal = Proposal(pi='Eric Saunders')
 
         self.mapping = create_camera_mapping('test/camera_mappings.dat')
 
@@ -418,11 +417,10 @@ class TestPond(object):
                                            )
 
         self.valid_proposal = Proposal(
-                                        observer_name  = 'Eric Saunders',
-                                        user_id        = 'esaunders',
-                                        proposal_id    = 'Scheduler Testing',
+                                        pi  = 'Eric Saunders',
+                                        id    = 'Scheduler Testing',
                                         tag_id         = 'admin',
-                                        priority       = 2,
+                                        tac_priority       = 2,
                                       )
 
         self.valid_target = SiderealTarget(
@@ -1025,7 +1023,7 @@ class TestPondInteractions(object):
         proposal = Proposal()
         target   = SiderealTarget()
 
-        compound_request = UserRequest(
+        user_request = UserRequest(
                                             operator = 'single',
                                             requests = None,
                                             proposal = proposal,
@@ -1053,7 +1051,7 @@ class TestPondInteractions(object):
 
         camera_mappings_file = 'camera_mappings.dat'
 
-        received = build_block(reservation, request, compound_request, self.start,
+        received = build_block(reservation, request, user_request, self.start,
                                camera_mappings_file)
         missing = received.list_missing_fields()
         print "Missing %r fields" % missing
@@ -1073,7 +1071,8 @@ class TestPondInteractions(object):
         proposal = Proposal()
         target   = SiderealTarget()
 
-        compound_request = UserRequest(
+
+        user_request = UserRequest(
                                             operator = 'single',
                                             requests = None,
                                             proposal = proposal,
@@ -1102,7 +1101,7 @@ class TestPondInteractions(object):
 
         camera_mappings_file = 'camera_mappings.dat'
 
-        received = build_block(reservation, request, compound_request, self.start,
+        received = build_block(reservation, request, user_request, self.start,
                                camera_mappings_file)
         
         assert_equal(received.is_too, True, "Should be a ToO block")

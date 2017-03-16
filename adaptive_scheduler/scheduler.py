@@ -538,7 +538,7 @@ class SchedulerResult(object):
         for reservations in self.schedule.values():
             for reservation in reservations:
                 request_num = reservation.request.request_number
-                tracking_num = reservation.compound_request.tracking_number
+                tracking_num = reservation.user_request.tracking_number
                 if not tracking_num in scheduled_requests_by_tracking_num:
                     scheduled_requests_by_tracking_num[tracking_num] = {}
                 scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation

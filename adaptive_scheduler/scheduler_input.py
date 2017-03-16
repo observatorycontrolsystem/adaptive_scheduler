@@ -25,6 +25,7 @@ class SchedulerParameters(object):
                  too_run_time=120, normal_run_time=360,
                  es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
                  pond_port=12345, pond_host='scheduler.lco.gtn',
+                 requestdb='http://valhalla.lco.gtn/',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -54,19 +55,19 @@ class SchedulerParameters(object):
         self.ignore_ipp = ignore_ipp
         self.es_endpoint = es_endpoint
         self.debug = debug
+        self.requestdb_url
 
 
     def get_model_builder(self):
-        mb = ModelBuilder(self.telescopes_file, self.cameras_file)
+        mb = ModelBuilder(self.telescopes_file, self.cameras_file, self.requestdb_url)
 
         return mb
 
 
 class RequestDBSchedulerParameters(SchedulerParameters):
 
-    def __init__(self, requestdb, **kwargs):
+    def __init__(self, **kwargs):
         SchedulerParameters.__init__(self, **kwargs)
-        self.requestdb_url = requestdb
 
 
 class SchedulingInputFactory(object):
@@ -166,7 +167,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
                                         'normal' : []
                                         }
         for scheduler_model_ur in scheduler_model_user_requests:
-            if scheduler_model_ur.has_target_of_opportunity():
+            if scheduler_model_ur.is_target_of_opportunity():
                 scheduler_models_urs_by_type['too'].append(scheduler_model_ur)
             else:
                 scheduler_models_urs_by_type['normal'].append(scheduler_model_ur)
@@ -375,10 +376,10 @@ class SchedulingInputProvider(object):
 
     def _get_estimated_scheduler_end(self):
         if self.is_too_input:
-            # TODO: Might Add a pad to account for time between not and when scheduling actually starts
+            # TODO: Might Add a pad to account for time between now and when scheduling actually starts
             return datetime.utcnow() + self.estimated_too_run_time  
         else:
-            # TODO: Might Add a pad to account for time between not and when scheduling actually starts
+            # TODO: Might Add a pad to account for time between now and when scheduling actually starts
             return datetime.utcnow() + self.estimated_normal_run_time
 
 
