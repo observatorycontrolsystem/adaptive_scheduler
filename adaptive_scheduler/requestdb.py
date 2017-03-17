@@ -3,6 +3,7 @@ from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestD
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.request_parser   import TreeCollapser
 from adaptive_scheduler.tree_walker      import RequestMaxDepthFinder
+from adaptive_scheduler.interfaces import ScheduleException
 
 from datetime import datetime
 import json
@@ -25,9 +26,10 @@ class RequestDBInterface(object, SendMetricMixin):
             dirty_response['dirty']
             return False
         except TypeError as e:
-            self.log.critical("Request DB could not update internal state. Aborting current scheduling loop.")
-            return True
-    
+            msg = "Error interpreting dirty flag from DB. Skipping this scheduling cycle"
+            self.log.critical(msg)
+            raise ScheduleException(msg)
+
     
     @timeit
     @metric_timer('requestdb.is_dirty')
@@ -36,9 +38,10 @@ class RequestDBInterface(object, SendMetricMixin):
         try:
             dirty_response = self.requestdb_client.get_dirty_flag()
         except ConnectionError as e:
-            self.log.warn("Error retrieving dirty flag from DB: %s", e)
-            self.log.warn("Skipping this scheduling cycle")
+            msg = "Error retrieving dirty flag from DB: {}. Skipping this scheduling cycle".format(e)
+            self.log.warn(msg)
             self.send_metric('requestdb.connection_status', 1)
+            raise ScheduleException(msg)
     
         #TODO: HACK to handle not a real error returned from Request DB
         if self._request_db_dirty_flag_is_invalid(dirty_response):
@@ -79,9 +82,10 @@ class RequestDBInterface(object, SendMetricMixin):
             return requests
     
         except ConnectionError as e:
-            self.log.warn("Error retrieving Requests from DB: %s", e)
-            self.log.warn("Skipping this scheduling cycle")
+            msg = "Error retrieving Requests from DB: {}. Skipping this scheduling cycle".format(e)
+            self.log.warn(msg)
             self.send_metric('requestdb.connection_status', 1)
+            raise ScheduleException(msg)
 
         return []
     

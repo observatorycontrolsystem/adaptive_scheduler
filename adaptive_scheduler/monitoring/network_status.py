@@ -30,6 +30,7 @@ from adaptive_scheduler.monitoring.telemetry import ConnectionError
 import datetime as dt
 import socket
 import requests
+from retry import retry
 import collections
 
 DEFAULT_MONITORS = [ScheduleTimestampMonitor(),
@@ -171,9 +172,12 @@ class Network(object):
     def send_event_to_es(self, event_dict):
         if self.es_endpoint:
             try:
-                sanitized_timestamp = event_dict['timestamp'].replace(' ', '_').replace(':', '_')
-                requests.post(self.es_endpoint + event_dict['name'] + '_' + event_dict['type'] + '_' + sanitized_timestamp,
-                          json=event_dict).raise_for_status()
+                self.send_to_es(event_dict)
             except Exception as e:
                 log.error('Exception storing telescope status event in elasticsearch: {}'.format(repr(e)))
 
+    @retry(tries=4)
+    def send_to_es(self, event_dict):
+        sanitized_timestamp = event_dict['timestamp'].replace(' ', '_').replace(':', '_')
+        requests.post(self.es_endpoint + event_dict['name'] + '_' + event_dict['type'] + '_' + sanitized_timestamp,
+                      json=event_dict).raise_for_status()
