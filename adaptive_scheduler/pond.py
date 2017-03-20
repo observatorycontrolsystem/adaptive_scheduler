@@ -542,7 +542,7 @@ class PondMoleculeFactory(object):
                             'SKY_FLAT'  : (self._no_time_common, self._imaging),
                             'ZERO_POINTING' : (self._common, self._imaging, self._targeting),
                             'AUTO_FOCUS' : (self._common, self._imaging, self._targeting),
-                            'TRIPLE': (self._common, self._spectro_slit, self._pointing),
+                            'TRIPLE': (self._common, self._pointing),
                             'NRES_EXPOSE': (self._common, self._spectro, self._nres, self._targeting),
                             'NRES_TEST': (self._common, self._spectro, self._nres, self._targeting),
                             'NRES_SPECTRUM': (self._common, self._spectro, self._nres, self._targeting),
