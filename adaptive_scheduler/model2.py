@@ -318,6 +318,14 @@ class MoleculeFactory(object):
                                   'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'filter', 'exposure_time',
                                                  'priority'),
+                                  'TRIPLE'      : ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                   'exposure_time', 'priority'),
+                                  'NRES_SPECTRUM': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                    'exposure_time', 'priority'),
+                                  'NRES_EXPOSE': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                    'exposure_time', 'priority'),
+                                  'NRES_TEST': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                    'exposure_time', 'priority')
                                 }
 
     def build(self, mol_dict):
