@@ -47,7 +47,8 @@ from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
 from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark, NresSpectrum,
-                                               Bias, SkyFlat, ZeroPointing, AutoFocus, Triple, NresExpose, NresTest,)
+                                               Bias, SkyFlat, ZeroPointing, AutoFocus, Triple, NresExpose, NresTest,
+                                               Engineering)
 from lcogtpond.schedule                import Schedule
 from lcogtpond.util                    import PondError
 
@@ -524,6 +525,7 @@ class PondMoleculeFactory(object):
                                   'NRES_EXPOSE'   : NresExpose,
                                   'NRES_TEST'     : NresTest,
                                   'NRES_SPECTRUM' : NresSpectrum,
+                                  'ENGINEERING' : Engineering,
                                 }
 
 
@@ -546,6 +548,7 @@ class PondMoleculeFactory(object):
                             'NRES_EXPOSE': (self._common, self._spectro, self._nres, self._targeting),
                             'NRES_TEST': (self._common, self._spectro, self._nres, self._targeting),
                             'NRES_SPECTRUM': (self._common, self._spectro, self._nres, self._targeting),
+                            'ENGINEERING': (self._common, self._targeting, self._nres, self._spectro)
                           }
 
         param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
