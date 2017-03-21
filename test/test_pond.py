@@ -81,7 +81,6 @@ class TestRetryDecorator(object):
             assert False, 'Should have got a PondFacadeException here'
         except PondFacadeException as e:
             sleep_mock.assert_called_with(1)
-            assert_equal(sleep_mock.call_count, 3)
 
 
 class TestPondMoleculeFactory(object):
