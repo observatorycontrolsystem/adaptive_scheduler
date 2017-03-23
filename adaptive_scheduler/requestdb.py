@@ -1,16 +1,14 @@
 from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin
-from reqdb.client import SearchQuery, SchedulerClient, ConnectionError, RequestDBError
-from adaptive_scheduler.printing         import pluralise as pl
-from adaptive_scheduler.interfaces import ScheduleException
 
-from datetime import datetime
-import json
 import logging
-import sys
 import requests
 from requests.exceptions import RequestException
 
 log = logging.getLogger(__name__)
+
+
+class RequestDBError(Exception):
+    pass
 
 
 class RequestDBInterface(object, SendMetricMixin):

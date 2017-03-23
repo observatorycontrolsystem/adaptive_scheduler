@@ -8,7 +8,6 @@ import itertools
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from reqdb.requests                      import Request
 from schedutils.semester_service         import get_semester_block
 from adaptive_scheduler.feedback         import TimingLogger
 from schedutils.semester_service         import get_semester_code

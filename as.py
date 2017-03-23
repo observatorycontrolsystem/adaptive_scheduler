@@ -17,16 +17,12 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface
+from adaptive_scheduler.interfaces       import NetworkInterface
 from adaptive_scheduler.pond             import PondScheduleInterface
 from adaptive_scheduler.requestdb        import RequestDBInterface 
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.scheduler_input  import SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, RequestDBSchedulerParameters
+from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, RequestDBSchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
-# from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
-
-from reqdb.client import SchedulerClient
 
 import argparse
 import logging
@@ -37,7 +33,6 @@ VERSION = '1.0.1'
 # Set up and configure an application scope logger
 # import logging.config
 # logging.config.fileConfig('logging.conf')
-import logger_config
 log = logging.getLogger('adaptive_scheduler')
 
 # Set up signal handling for graceful shutdown
