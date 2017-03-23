@@ -325,7 +325,9 @@ class MoleculeFactory(object):
                                   'NRES_EXPOSE': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
                                                     'exposure_time', 'priority'),
                                   'NRES_TEST': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                    'exposure_time', 'priority')
+                                                    'exposure_time', 'priority'),
+                                  'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                  'exposure_time', 'priority')
                                 }
 
     def build(self, mol_dict):
@@ -729,7 +731,6 @@ class ModelBuilder(object):
         self.instrument_factory = InstrumentFactory()
         self.molecule_factory   = MoleculeFactory()
 
-
     def build_user_request(self, cr_dict, scheduled_requests={}, ignore_ipp=False):
         tracking_number = cr_dict['tracking_number']
         operator = cr_dict['operator']
@@ -847,14 +848,15 @@ class ModelBuilder(object):
             instrument_info = mapping.find_by_camera(instrument_name)
 
         filters = []
+        MOLECULE_TYPES_WITHOUT_FILTERS = ['DARK', 'BIAS', 'ENGINEERING', 'NRES_SPECTRUM', 'NRES_EXPOSE', 'NRES_TEST']
+
         for molecule in molecules:
             if hasattr(molecule, 'filter') and molecule.filter:
                 filters.append(molecule.filter.lower())
             elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
                 filters.append(molecule.spectra_slit.lower())
             # bias or dark molecules don't need filter or spectra_slit
-            elif not hasattr(molecule, 'type') or not (molecule.type.lower() == 'bias'
-                or molecule.type.lower() == 'dark'):
+            elif not hasattr(molecule, 'type') or molecule.type.upper() not in MOLECULE_TYPES_WITHOUT_FILTERS:
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
         if filters:

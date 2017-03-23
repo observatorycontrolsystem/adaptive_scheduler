@@ -636,10 +636,16 @@ class PondMoleculeFactory(object):
                }
 
     def _nres(self, molecule, pond_pointing=None):
+        exp_meter_pond_mapping = {
+            'EXPMETER_OFF': 0,
+            'EXPMETER_WATCH': 1,
+            'EXPMETER_TRUNCATE': 2,
+        }
+
         return {
                  'ag_strategy' : getattr(molecule, 'ag_strategy', None) or '',
                  'acquire_strategy' : getattr(molecule, 'acquire_strategy', None) or '',
-                 'expmeter_mode' : getattr(molecule, 'expmeter_mode', None) or 'EXPMETER_OFF',
+                 'expmeter_mode' : exp_meter_pond_mapping[getattr(molecule, 'expmeter_mode', None) or 'EXPMETER_OFF'],
                  'expmeter_snr'  : getattr(molecule, 'expmeter_snr', None) or 0.0,
                }
 
@@ -835,9 +841,9 @@ class Block(object):
 
             # fill in NRES fields if they exist in input
             if hasattr(self.target, 'vmag') and self.target.vmag:
-                pond_pointing.vmag = self.target.vmag
+                pond_pointing.target_vmag = self.target.vmag
             if hasattr(self.target, 'radvel') and self.target.radvel:
-                pond_pointing.radvel = self.target.radvel
+                pond_pointing.target_radvel = self.target.radvel
 
 
         # 3) Construct the Observations
