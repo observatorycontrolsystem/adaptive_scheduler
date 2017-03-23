@@ -848,7 +848,8 @@ class ModelBuilder(object):
             instrument_info = mapping.find_by_camera(instrument_name)
 
         filters = []
-        MOLECULE_TYPES_WITHOUT_FILTERS = ['DARK', 'BIAS', 'ENGINEERING', 'NRES_SPECTRUM', 'NRES_EXPOSE', 'NRES_TEST']
+        MOLECULE_TYPES_WITHOUT_FILTERS = ['DARK', 'BIAS', 'ENGINEERING', 'NRES_SPECTRUM', 'NRES_EXPOSE', 'NRES_TEST',
+                                          'TRIPLE']
 
         for molecule in molecules:
             if hasattr(molecule, 'filter') and molecule.filter:
