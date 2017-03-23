@@ -118,7 +118,7 @@ def parse_args(argv):
                                 help="Sets debug mode in the requestdb client calls to save error output to a file.", default=defaults.debug)
 
     # Handle command line arguments
-    args = arg_parser.parse_args(argv)
+    args, unknown = arg_parser.parse_known_args(argv)
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
