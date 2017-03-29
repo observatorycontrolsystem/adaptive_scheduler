@@ -2,6 +2,7 @@ from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin
 
 import logging
 import requests
+import os
 from requests.exceptions import RequestException
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,8 @@ class RequestDBInterface(object, SendMetricMixin):
         start and end date
         '''
         try:
-            response = requests.get(self.requestdb_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat())
+            headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
+            response = requests.get(self.requestdb_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat(), headers=headers)
             response.raise_for_status()
             user_requests = response.json()
         except (RequestException) as e:

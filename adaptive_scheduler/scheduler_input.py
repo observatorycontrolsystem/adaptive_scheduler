@@ -23,7 +23,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
-                 es_endpoint='http://scheduler-dev.lco.gtn:9200/telescope_events/document/',
+                 es_endpoint=None,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  requestdb='http://valhalla.lco.gtn/',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
@@ -55,7 +55,7 @@ class SchedulerParameters(object):
         self.ignore_ipp = ignore_ipp
         self.es_endpoint = es_endpoint
         self.debug = debug
-        self.requestdb_url
+        self.requestdb_url = requestdb
 
 
     def get_model_builder(self):
@@ -145,8 +145,8 @@ class SchedulingInputUtils(object, SendMetricMixin):
         for json_ur in json_user_request_list:
             try:
                 scheduled_requests = {}
-                if json_ur['tracking_number'] in scheduled_requests_by_ur:
-                    scheduled_requests = scheduled_requests_by_ur[json_ur['tracking_number']]
+                if json_ur['id'] in scheduled_requests_by_ur:
+                    scheduled_requests = scheduled_requests_by_ur[json_ur['id']]
                 scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
 
                 scheduler_model_urs.append(scheduler_model_ur)

@@ -84,7 +84,7 @@ def iso_string_to_datetime(iso_string):
        representation of datetime objects.'''
 
     # Set the format to the string representation of a datetime
-    format = '%Y-%m-%d %H:%M:%S'
+    format = '%Y-%m-%dT%H:%M:%SZ'
     return datetime.strptime(iso_string, format)
 
 def datetime_to_epoch(dt):

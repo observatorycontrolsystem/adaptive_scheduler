@@ -33,6 +33,7 @@ from schedutils.camera_mapping                import create_camera_mapping
 
 from datetime    import datetime
 import ast
+import os
 import logging
 import random
 import requests
@@ -474,7 +475,7 @@ class UserRequest(DefaultMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id):
+    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires):
 
         self.proposal        = proposal
         self.tracking_number = tracking_number
@@ -483,6 +484,7 @@ class UserRequest(DefaultMixin):
         self.observation_type = observation_type
         self.operator = self._validate_type(operator)
         self.requests = requests
+        self.expires = expires
 
     @staticmethod
     def _validate_type(provided_operator):
@@ -701,7 +703,8 @@ class ModelBuilder(object):
     def get_proposal_details(self, proposal_id):
         if proposal_id not in self.proposals_by_id:
             try:
-                response = requests.get(self.requestdb_url + '/api/proposals/' + proposal_id + '/')
+                headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
+                response = requests.get(self.requestdb_url + '/api/proposals/' + proposal_id + '/', headers=headers)
                 response.raise_for_status()
                 self.proposals_by_id[proposal_id] = Proposal(response.json())
             except RequestException as e:
@@ -711,7 +714,7 @@ class ModelBuilder(object):
 
     def build_user_request(self, ur_dict, scheduled_requests={}, ignore_ipp=False):
         tracking_number = ur_dict['id']
-        operator = ur_dict['operator']
+        operator = ur_dict['operator'].lower()
         ipp_value = ur_dict.get('ipp_value', 1.0)
         if ignore_ipp:
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
@@ -736,7 +739,7 @@ class ModelBuilder(object):
             UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
             raise RequestError(msg)
 
-        proposal = get_proposal_details(ur_dict['proposal'])
+        proposal = self.get_proposal_details(ur_dict['proposal'])
 
         # Validate we are an allowed type of UR
         valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
@@ -744,6 +747,12 @@ class ModelBuilder(object):
         if not observation_type in valid_observation_types:
             msg = "UserRequest observation_type must be one of %s" % valid_observation_types
             raise RequestError(msg)
+
+        # Calculate the maximum window time as the expire time
+        max_window_time = datetime(1000, 1, 1)
+        for req in ur_dict['requests']:
+            for window in req['windows']:
+                max_window_time = max(max_window_time, iso_string_to_datetime(window['end']))
 
         user_request = UserRequest(
                                     operator        = operator,
@@ -753,6 +762,7 @@ class ModelBuilder(object):
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
                                     group_id        = ur_dict['group_id'],
+                                    expires         = max_window_time,
                                   )
 
         # Return only the invalid request and not the error message
@@ -957,16 +967,16 @@ class _LocationExpander(object):
 
         # We don't accept sub-filters unless all previous filters have been populated
         filters = []
-        if dict_repr['telescope_class']:
+        if 'telescope_class' in dict_repr and dict_repr['telescope_class']:
             filters.append(dict_repr['telescope_class'])
 
-            if dict_repr['site']:
+            if 'site' in dict_repr and dict_repr['site']:
                 filters.append(dict_repr['site'])
 
-                if dict_repr['observatory']:
+                if 'observatory' in dict_repr and dict_repr['observatory']:
                     filters.append(dict_repr['observatory'])
 
-                    if dict_repr['telescope']:
+                    if 'telescope' in dict_repr and dict_repr['telescope']:
                         filters.append(dict_repr['telescope'])
 
 

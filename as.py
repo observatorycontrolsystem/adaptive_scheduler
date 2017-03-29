@@ -33,6 +33,7 @@ VERSION = '1.0.1'
 # Set up and configure an application scope logger
 # import logging.config
 # logging.config.fileConfig('logging.conf')
+import logger_config
 log = logging.getLogger('adaptive_scheduler')
 
 # Set up signal handling for graceful shutdown
@@ -59,7 +60,7 @@ def kill_handler(signal, frame):
 
 
 def parse_args(argv):
-    defaults = RequestDBSchedulerParameters(None)
+    defaults = RequestDBSchedulerParameters()
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)

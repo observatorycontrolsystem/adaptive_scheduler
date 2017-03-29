@@ -301,6 +301,7 @@ class Scheduler(object, SendMetricMixin):
         # Commit schedules for unreachable resources
         # Cancel schedules for unavailable resources
         user_reqs = scheduler_input.user_requests
+
         resource_usage_snapshot = scheduler_input.resource_usage_snapshot
         available_resources = scheduler_input.available_resources
         all_ur_priorities = scheduler_input.user_request_priorities
@@ -345,20 +346,11 @@ class Scheduler(object, SendMetricMixin):
         available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
 
         print_compound_reservations(compound_reservations)
-
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
 
-        # Include any invalid user requests in the unschedulable list
-        invalid_tracking_numbers = []
-        invalid_json_user_requests = scheduler_input.invalid_user_requests
-        for json_ur in invalid_json_user_requests:
-            if json_ur.has_key('tracking_number'):
-                invalid_tracking_numbers.append(json_ur['tracking_number'])
-        scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
-        
         if compound_reservations:
             # Instantiate and run the scheduler
             contractual_obligations = []
