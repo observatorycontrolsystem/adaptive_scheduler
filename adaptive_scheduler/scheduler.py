@@ -15,7 +15,8 @@ from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
-                                            metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE)
+                                            metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE,
+                                                 get_reservation_datetimes)
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing         import (print_schedule, print_compound_reservations,
@@ -43,7 +44,10 @@ class Scheduler(object, SendMetricMixin):
         self.sched_params = sched_params
         self.event_bus = event_bus
         self.log = logging.getLogger(__name__)
-        self.estimated_scheduler_end = datetime.utcnow()
+        if self.sched_params.simulate_now:
+            self.estimated_scheduler_end = iso_string_to_datetime(self.sched_params.simulate_now)
+        else:
+            self.estimated_scheduler_end = datetime.utcnow()
         self.scheduler_summary_messages = []
 
 
@@ -260,6 +264,34 @@ class Scheduler(object, SendMetricMixin):
         pass
 
 
+    def save_schedule(self, schedule, estimated_scheduler_end, is_too):
+        ''' Save the final schedule in a json file if save_output flag was set.
+        '''
+        print("save_output = {}".format(self.sched_params.save_output))
+        if self.sched_params.save_output:
+            semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+            schedule_data = {}
+            for resource, reservations in schedule.items():
+                schedule_data[resource] = []
+                for reservation in reservations:
+                    reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
+                    res_data = {'request_number': reservation.request.request_number,
+                                'start': reservation_start.isoformat(),
+                                'end': reservation_end.isoformat(),
+                                'resource': resource}
+                    schedule_data[resource].append(res_data)
+
+            import json
+            if is_too:
+                schedule_type = TOO_SCHEDULE_TYPE
+            else:
+                schedule_type = NORMAL_SCHEDULE_TYPE
+            file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            filename = '{}_schedule_{}.json'.format(schedule_type, file_timestamp)
+            with open('/data/adaptive_scheduler/output_schedule/{}'.format(filename), 'w') as schedule_out:
+                json.dump(schedule_data, schedule_out)
+
+
     def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
@@ -366,6 +398,7 @@ class Scheduler(object, SendMetricMixin):
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
 
             # Do post scheduling stuff
+            self.save_schedule(scheduler_result.schedule, estimated_scheduler_end, preemption_enabled)
             self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")

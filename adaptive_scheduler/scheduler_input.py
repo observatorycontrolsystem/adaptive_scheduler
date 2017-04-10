@@ -23,7 +23,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
-                 es_endpoint=None,
+                 es_endpoint=None, save_output=False,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  requestdb='http://valhalla.lco.gtn/',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
@@ -44,6 +44,7 @@ class SchedulerParameters(object):
         self.kernel = kernel
         self.input_file_name = input_file_name
         self.pickle = pickle
+        self.save_output = save_output
         self.too_run_time = too_run_time
         self.normal_run_time = normal_run_time
         self.pond_port = pond_port
@@ -224,7 +225,7 @@ class SchedulingInput(object):
 
 
     def get_scheduling_start(self):
-        if self.sched_params.input_file_name:
+        if self.sched_params.input_file_name or self.sched_params.simulate_now:
             return self.scheduler_now
         return datetime.utcnow()
 
@@ -375,17 +376,19 @@ class SchedulingInputProvider(object):
 
 
     def _get_estimated_scheduler_end(self):
+        now = self._get_scheduler_now()
         if self.is_too_input:
             # TODO: Might Add a pad to account for time between now and when scheduling actually starts
-            return datetime.utcnow() + self.estimated_too_run_time  
+            return now + self.estimated_too_run_time
         else:
             # TODO: Might Add a pad to account for time between now and when scheduling actually starts
-            return datetime.utcnow() + self.estimated_normal_run_time
+            return now + self.estimated_normal_run_time
 
 
     def _get_json_user_request_list(self):
+        now = self._get_scheduler_now()
         semester_start, semester_end = get_semester_block(dt=self._get_estimated_scheduler_end())
-        ur_list = self.network_interface.get_all_user_requests(semester_start, min(datetime.utcnow() + timedelta(days=self.sched_params.horizon_days), semester_end))
+        ur_list = self.network_interface.get_all_user_requests(semester_start, min(now + timedelta(days=self.sched_params.horizon_days), semester_end))
 
         return ur_list
 

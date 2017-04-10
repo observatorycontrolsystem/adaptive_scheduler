@@ -99,6 +99,8 @@ def parse_args(argv):
                             help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
                                 help="Enable storing pickled files of scheduling run input")
+    arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
+                                help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
