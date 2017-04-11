@@ -504,9 +504,10 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
 
 class PondMoleculeFactory(object):
 
-    def __init__(self, tracking_number, request_number, proposal, group_id):
+    def __init__(self, tracking_number, request_number, proposal, group_id, submitter):
         self.tracking_number = tracking_number
         self.request_number  = request_number
+        self.submitter = submitter
         self.proposal        = proposal
         self.group_id        = group_id
         self.molecule_classes = {
@@ -634,7 +635,7 @@ class PondMoleculeFactory(object):
 
 class Block(object):
 
-    def __init__(self, location, start, end, group_id, tracking_number,
+    def __init__(self, location, start, end, group_id, tracking_number, submitter,
                  request_number, camera_mapping, priority=0, is_too=False,
                  max_airmass=None, min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
@@ -643,6 +644,7 @@ class Block(object):
         self.start              = start
         self.end                = end
         self.group_id           = group_id
+        self.submitter          = submitter
         self.tracking_number    = str(tracking_number)
         self.request_number     = str(request_number)
         self.priority           = priority
@@ -859,7 +861,7 @@ class Block(object):
 
 
             pond_molecule_factory = PondMoleculeFactory(self.tracking_number, self.request_number,
-                                                        self.proposal, self.group_id)
+                                                        self.proposal, self.group_id, self.submitter)
             obs = pond_molecule_factory.build(molecule, pond_pointing)
 
             observations.append(obs)
@@ -883,6 +885,7 @@ def build_block(reservation, request, user_request, semester_start, camera_mappi
                    end=res_end,
                    group_id=user_request.group_id,
                    tracking_number=user_request.tracking_number,
+                   submitter=user_request.submitter,
                    request_number=request.request_number,
                    camera_mapping=camera_mapping,
                    # Hard-code all scheduler output to a highish number, for now

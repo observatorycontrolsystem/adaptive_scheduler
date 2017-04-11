@@ -89,7 +89,7 @@ class TestPondMoleculeFactory(object):
         self.proposal = Proposal(
                                   pi  = 'Eric Saunders',
                                   id    = 'Scheduler Testing',
-                                  tag_id         = 'admin',
+                                  tag         = 'admin',
                                   tac_priority       = 2,
                                 )
 
@@ -253,7 +253,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_expose_mol, self.pond_pointing)
@@ -267,7 +268,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_standard_mol, self.pond_pointing)
@@ -281,7 +283,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_auto_focus_mol, self.pond_pointing)
@@ -296,7 +299,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_zero_pointing_mol, self.pond_pointing)
@@ -311,7 +315,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_sky_flat_mol, self.pond_pointing)
@@ -326,7 +331,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_bias_mol, self.pond_pointing)
@@ -340,7 +346,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_dark_mol, self.pond_pointing)
@@ -354,7 +361,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_spectrum_mol, self.pond_pointing)
@@ -370,7 +378,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_arc_mol, self.pond_pointing)
@@ -384,7 +393,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_lamp_flat_mol, self.pond_pointing)
@@ -418,7 +428,7 @@ class TestPond(object):
         self.valid_proposal = Proposal(
                                         pi  = 'Eric Saunders',
                                         id    = 'Scheduler Testing',
-                                        tag_id         = 'admin',
+                                        tag        = 'admin',
                                         tac_priority       = 2,
                                       )
 
@@ -544,6 +554,7 @@ class TestPond(object):
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things',
                                  tracking_number = '0000000001',
+                                 submitter = '',
                                  request_number  = '0000000001',
                                  camera_mapping = self.mapping,
                                )
@@ -553,6 +564,7 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things',
+                                 submitter= '',
                                  tracking_number = '0000000001',
                                  request_number  = '0000000001',
                                  camera_mapping = self.mapping,
@@ -560,7 +572,7 @@ class TestPond(object):
 
 
     def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
-                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group',
+                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group', submitter='mysubmitter',
                           tracking_number='0000000001', request_number='0000000001'):
         scheduled_block = Block(
                                  location=location,
@@ -568,6 +580,7 @@ class TestPond(object):
                                  end=end,
                                  group_id=group_id,
                                  tracking_number=tracking_number,
+                                 submitter=submitter,
                                  request_number=request_number,
                                  camera_mapping=self.mapping,
                                )
@@ -584,7 +597,7 @@ class TestPond(object):
 
         assert_equal(
                       missing,
-                      ['proposal_id', 'user_id', 'tag_id', 'priority']
+                      ['id', 'tag', 'tac_priority']
                     )
 
 
@@ -595,7 +608,7 @@ class TestPond(object):
 
         missing = self.two_metre_block.list_missing_fields()
 
-        assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
+        assert_equal(missing['proposal'], ['id', 'tag', 'tac_priority'])
         assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
         assert_equal(missing['target'], ['name', 'ra', 'dec'])
 
@@ -612,7 +625,9 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
-                           ipp_value=1.0
+                           ipp_value=1.0,
+                           observation_type="TARGET_OF_OPPORTUNITY",
+                           submitter=''
                          )
 
         tels = {
@@ -862,7 +877,9 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
-                           ipp_value=1.0
+                           ipp_value=1.0,
+                           observation_type="TARGET_OF_OPPORTUNITY",
+                           submitter=''
                          )
 
         tels = {
@@ -1030,6 +1047,8 @@ class TestPondInteractions(object):
                                             tracking_number = None,
                                             group_id = None,
                                             ipp_value = 1.0,
+                                            observation_type = "NORMAL",
+                                            submitter = ''
                                           )
 
         constraints = Constraints(
@@ -1079,6 +1098,8 @@ class TestPondInteractions(object):
                                             tracking_number = None,
                                             group_id = None,
                                             ipp_value = 1.0,
+                                            observation_type = "TARGET_OF_OPPORTUNITY",
+                                            submitter = ''
                                           )
 
         constraints = Constraints(
@@ -1095,7 +1116,6 @@ class TestPondInteractions(object):
                            windows        = None,
                            constraints    = constraints,
                            request_number = None,
-                           observation_type = "TARGET_OF_OPPORTUNITY"
                            )
 
         camera_mappings_file = 'camera_mappings.dat'

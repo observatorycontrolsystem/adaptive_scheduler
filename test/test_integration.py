@@ -47,11 +47,10 @@ class TestIntegration(object):
         self.telescope_network = TelescopeNetwork(self.telescopes)
 
         self.proposal = Proposal(
-                                  proposal_name  = 'LCOSchedulerTest',
-                                  user           = 'Eric Saunders',
+                                  id  = 'LCOSchedulerTest',
+                                  pi           = 'Eric Saunders',
                                   tag            = 'admin',
-                                  time_remaining = 10,               # In hours
-                                  priority       = 1
+                                  tac_priority       = 1
                                 )
 
         self.mol_factory = MoleculeFactory()
@@ -99,7 +98,6 @@ class TestIntegration(object):
                           windows        = self.windows_1,
                           constraints    = self.constraints,
                           request_number = '0000000001',
-                          observation_type = 'NORMAL',
                           instrument_type = '1M0-SCICAM-SBIG')
 
         self.request_2 = Request(target         = self.target,
@@ -107,7 +105,6 @@ class TestIntegration(object):
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000002',
-                          observation_type = 'NORMAL',
                           instrument_type='1M0-SCICAM-SBIG')
 
         self.request_3 = Request(target         = self.target,
@@ -115,7 +112,6 @@ class TestIntegration(object):
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000003',
-                          observation_type = 'NORMAL',
                           instrument_type='1M0-SCICAM-SBIG')
 
         self.request_4 = Request(target         = self.target,
@@ -123,18 +119,25 @@ class TestIntegration(object):
                           windows        = self.windows_3,
                           constraints    = self.constraints,
                           request_number = '0000000004',
-                          observation_type = 'NORMAL',
                           instrument_type='1M0-SCICAM-SBIG')
 
 
-        self.user_and_request_1 = UserRequest('and', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000001', 1.0, 'ur 1')
-        self.user_and_request_2 = UserRequest('and', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000002', 1.0, 'ur 2')
-        self.user_many_request_1 = UserRequest('many', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000003', 1.5, 'ur 3')
-        self.user_many_request_2 = UserRequest('many', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000004', 1.5, 'ur 4')
+        self.user_and_request_1 = UserRequest(operator='and', requests=[self.request_1, self.request_2],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000001', observation_type='NORMAL',
+                                              ipp_value=1.0, group_id='ur 1', submitter='')
+        self.user_and_request_2 = UserRequest(operator='and', requests=[self.request_3, self.request_4],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000002', observation_type='NORMAL',
+                                              ipp_value=1.0, group_id='ur 2', submitter='')
+        self.user_many_request_1 = UserRequest(operator='many', requests=[self.request_1, self.request_2],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000003', observation_type='NORMAL',
+                                              ipp_value=1.5, group_id='ur 3', submitter='')
+        self.user_many_request_2 = UserRequest(operator='many', requests=[self.request_3, self.request_4],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000004', observation_type='NORMAL',
+                                              ipp_value=1.5, group_id='ur 4', submitter='')
 
     def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
@@ -221,13 +224,13 @@ class TestIntegration(object):
                                 windows=windows,
                                 constraints=self.constraints,
                                 request_number="11{}".format(days_out).rjust(10, '0'),
-                                observation_type='NORMAL',
                                 instrument_type='1M0-SCICAM-SBIG')
             request_list.append(request)
             days_out += 1
 
-        user_request = UserRequest('and', request_list, self.proposal,
-                                    datetime(2050, 1, 1), '0000000100', 1.0, 'large ur')
+        user_request = UserRequest(operator='and', requests=request_list, proposal=self.proposal,
+                                    expires=datetime(2050, 1, 1), tracking_number='0000000100',
+                                   ipp_value=1.0, group_id='large ur', submitter='', observation_type='NORMAL')
 
         normal_request_list = [user_request,]
         result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))

@@ -3,7 +3,7 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
+from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request, Proposal,
                                        UserRequest, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (iso_string_to_datetime,
                                       datetime_to_epoch,
@@ -108,8 +108,10 @@ class TestKernelMappings(object):
 
 
     def make_user_request(self, requests, operator='single'):
-        ur = UserRequest(operator=operator, requests=requests, proposal='Test Proposal',
-                         expires=datetime(2012, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0)
+        proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
+        ur = UserRequest(operator=operator, requests=requests, proposal=proposal, submitter='',
+                         expires=datetime(2999, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0,
+                         observation_type='NORMAL')
         
         return ur
 
@@ -151,7 +153,7 @@ class TestKernelMappings(object):
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.priority = 1
+        user_request.proposal.tac_priority = 1
 
         received = construct_compound_reservation(user_request,
                                                   dt_intervals_list,
@@ -170,7 +172,7 @@ class TestKernelMappings(object):
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.priority = 1
+        user_request.proposal.tac_priority = 1
 
         received = construct_many_compound_reservation(
                                                user_request,

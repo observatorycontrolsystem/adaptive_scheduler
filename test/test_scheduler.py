@@ -20,8 +20,8 @@ from datetime import datetime, timedelta
 class TestScheduler(object):
 
     def __init__(self):
-        self.scheduler_run_date = "2013-05-22 00:00:00"
-        self.normalize_windows_to = datetime.strptime(self.scheduler_run_date, '%Y-%m-%d %H:%M:%S')
+        self.scheduler_run_date = "2013-05-22T00:00:00Z"
+        self.normalize_windows_to = datetime.strptime(self.scheduler_run_date, '%Y-%m-%dT%H:%M:%SZ')
 
         self.sched_params = SchedulerParameters()
         self.sched_params.simulate_now = self.scheduler_run_date
@@ -87,7 +87,7 @@ class TestScheduler(object):
         # tel2 is not used
         tels = ['1m0a.doma.tel1', '1m0a.doma.tel2']
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -268,7 +268,7 @@ class TestScheduler(object):
                 '1m0a.doma.tel3'
                 ]
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -313,7 +313,7 @@ class TestScheduler(object):
                 '1m0a.doma.tel3'
                 ]
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -566,7 +566,7 @@ class TestScheduler(object):
         tracking_number = 1
         request_number = 1
         target_telescope = '1m0a.doma.elp'
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope])
         normal_single_ur = create_user_request(tracking_number, priority, [request], 'single')
 
@@ -671,7 +671,7 @@ class TestScheduler(object):
         request_number = 1
         telescope1 = '1m0a.doma.elp'
         telescope2 = '1m0a.doma.lsc'
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[telescope1, telescope2], is_too=True)
         too_single_ur = create_user_request(tracking_number, priority, [request], 'single')
 
@@ -734,7 +734,7 @@ class TestScheduler(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -813,7 +813,7 @@ class TestScheduler(object):
         low_priority_normal_request_number = 2
         high_priority_normal_tracking_number = 3
         high_prioirty_normal_request_number = 3
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, low_priority, [too_request], 'single')
         low_priority_normal_request = create_request(low_priority_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -896,7 +896,7 @@ class TestScheduler(object):
         old_low_priority_too_request_number = 2
         old_high_priority_too_tracking_number = 3
         old_high_priority_too_request_number = 3
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         new_too_request = create_request(new_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         new_too_single_ur = create_user_request(new_too_tracking_number, low_priority, [new_too_request], 'single')
         old_low_priority_too_request = create_request(old_low_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
@@ -1406,7 +1406,7 @@ class TestSchedulerRunner(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -1432,7 +1432,7 @@ class TestSchedulerRunner(object):
         priority = 10
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
         normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
 
@@ -1457,7 +1457,7 @@ class TestSchedulerRunner(object):
         priority = 10
         too_tracking_number = 1
         too_request_number = 1
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
 
@@ -1537,7 +1537,7 @@ class TestSchedulerRunner(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
 #         too_single_ur.has_target_of_opportunity = Mock(return_value=True)
@@ -1583,7 +1583,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
         normal_request_number = 2
         request_windows = create_user_request_windows(
                             (
-                             ("2013-05-22 19:00:00", "2013-05-22 20:00:00"),
+                             ("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),
                             ))
         too_request = create_request(too_request_number,
                                      duration=request_duration_seconds,

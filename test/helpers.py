@@ -56,7 +56,9 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                            expires         = None,
                            tracking_number = tracking_number,
                            group_id        = None,
-                           ipp_value=1.0
+                           ipp_value       = 1.0,
+                           observation_type= 'NORMAL',
+                           submitter       = '',
                          )
 
         return ur1, window_list

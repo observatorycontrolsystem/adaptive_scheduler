@@ -47,8 +47,8 @@ class TestSchedulingInputProvider(object):
         
         
     def test_input_scheduler_now_when_provided_by_parameter(self):
-        simulated_now_str = '1980-06-10 08:00:00'
-        simulated_now = datetime.strptime(simulated_now_str, '%Y-%m-%d %H:%M:%S')
+        simulated_now_str = '1980-06-10T08:00:00Z'
+        simulated_now = datetime.strptime(simulated_now_str, '%Y-%m-%dT%H:%M:%SZ')
         self.sched_params.simulate_now = simulated_now_str
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=True)
         input_provider.refresh()
@@ -187,11 +187,11 @@ class TestSchedulingInputUtils(object):
     def test_json_urs_to_scheduler_model_urs_returns_invalid_requests(self):
         mock_model_builder = Mock()
         mock_ur = Mock()
-        mock_model_builder.build_user_request = Mock(return_value=(mock_ur, { 'request_number' : '1' }))
+        mock_model_builder.build_user_request = Mock(return_value=(mock_ur, { 'id' : '1' }))
         
         utils = SchedulingInputUtils(mock_model_builder)
-        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'tracking_number':'dummy1'},
-                                                                                    {'tracking_number':'dummy2'}])
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'id':'dummy1'},
+                                                                                    {'id':'dummy2'}])
         assert_equal(2, len(model_urs))
         assert_equal([], invalid_urs)
         assert_equal(2, len(invalid_rs))
@@ -202,8 +202,8 @@ class TestSchedulingInputUtils(object):
         mock_model_builder.build_user_request = Mock(side_effect=RequestError)
         
         utils = SchedulingInputUtils(mock_model_builder)
-        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'tracking_number':'dummy1'},
-                                                                                    {'tracking_number':'dummy2'}])
+        model_urs, invalid_urs, invalid_rs = utils.json_urs_to_scheduler_model_urs([{'id':'dummy1'},
+                                                                                    {'id':'dummy2'}])
         assert_equal(0, len(model_urs))
         assert_equal(2, len(invalid_urs))
         assert_equal(0, len(invalid_rs))

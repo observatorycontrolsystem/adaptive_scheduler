@@ -113,9 +113,10 @@ class TestRequest(object):
                           windows        = self.windows,
                           constraints    = self.constraints,
                           request_number = self.request_number,
-                          observation_type = 'NORMAL')
-        user_request = UserRequest(operator=junk_res_type, requests=[request], group_id='Group 1',
-                                   proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
+                          )
+        user_request = UserRequest(operator=junk_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
+                                   expires=datetime(2999,1,1), submitter='')
 
 
     def test_valid_request_type_does_not_raise_exception(self):
@@ -125,9 +126,10 @@ class TestRequest(object):
                           windows        = self.windows,
                           constraints    = self.constraints,
                           request_number = self.request_number,
-                          observation_type = 'NORMAL')
-        user_request = UserRequest(operator=valid_res_type, requests=[request], group_id='Group 1',
-                                   proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
+                          )
+        user_request = UserRequest(operator=valid_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
+                                   expires=datetime(2999,1,1), submitter='')
 
 
     def test_null_instrument_has_a_name(self):
@@ -136,7 +138,7 @@ class TestRequest(object):
                           windows        = self.windows,
                           constraints    = self.constraints,
                           request_number = self.request_number,
-                          observation_type = 'NORMAL')
+                          )
         assert_equal(request.get_instrument_type(), 'NULL-INSTRUMENT')
 
     def test_configured_instrument_has_a_name(self):
@@ -146,7 +148,7 @@ class TestRequest(object):
                           constraints     = self.constraints,
                           request_number  = self.request_number,
                           instrument_type = '1M0-SCICAM-SINISTRO',
-                          observation_type = 'NORMAL')
+                          )
 
         assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
 
@@ -169,6 +171,8 @@ class TestUserRequest(object):
                           tracking_number = tracking_number,
                           group_id = None,
                           ipp_value = 1.0,
+                          observation_type='NORMAL',
+                          submitter=''
                          )
 
         msg = 'Yo dude'
@@ -183,11 +187,10 @@ class TestUserRequest(object):
         operator = 'single'
 
         proposal = Proposal(
-                             proposal_name  = 'LCOSchedulerTest',
-                             user           = 'Eric Saunders',
+                             id  = 'LCOSchedulerTest',
+                             pi           = 'Eric Saunders',
                              tag            = 'admin',
-                             time_remaining = 10,               # In hours
-                             priority       = base_priority
+                             tac_priority       = base_priority
                            )
 
         self.mol_factory = MoleculeFactory()
@@ -210,8 +213,8 @@ class TestUserRequest(object):
                                 longitude = -156.258055556,
                               )
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
@@ -236,7 +239,9 @@ class TestUserRequest(object):
                           expires  = None,
                           tracking_number = '000000004',
                           ipp_value = ipp_value,
+                          observation_type='NORMAL',
                           group_id = None,
+                          submitter='Eric Saunders'
                          )
 
         return ur
@@ -261,8 +266,9 @@ class TestUserRequest(object):
         r_mock2 = mock.MagicMock()
         r_mock2.has_windows.return_value = False
 
-        ur = UserRequest(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1',
-                         proposal={}, tracking_number=1, observation_type='NORMAL', ipp_value=1.0)
+        ur = UserRequest(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1', proposal=Proposal(),
+                         tracking_number=1, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999,1,1),
+                         submitter='')
 
         ur.drop_empty_children()
 
@@ -408,8 +414,8 @@ class TestWindows(object):
 
     def test_has_windows_windows(self):
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
@@ -428,8 +434,8 @@ class TestWindows(object):
 
     def test_is_empty_has_windows_empty_on_one_resource(self):
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
@@ -523,7 +529,7 @@ class TestModelBuilder(object):
         self.request_number = '0000000002'
         self.state          = 'PENDING'
 
-        self.mb = ModelBuilder('test/telescopes.dat', 'test/camera_mappings.dat')
+        self.mb = ModelBuilder('test/telescopes.dat', 'test/camera_mappings.dat', '')
 
     def test_build_request_sinistro_resolves_to_lsc_subnetwork(self):
         req_dict = {
@@ -532,9 +538,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -556,9 +561,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -586,9 +590,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -609,9 +612,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -637,9 +639,8 @@ class TestModelBuilder(object):
                                         },
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -665,45 +666,14 @@ class TestModelBuilder(object):
                                         },
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
         assert_equal(request.instrument.type, '2M0-SCICAM-MEROPE')
         assert_equal(set(['2m0a.clma.ogg']),
                      set(request.windows.windows_for_resource.keys()))
-
-    def test_build_request_observation_type_normal(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules'      : self.molecules,
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'NORMAL',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.observation_type, 'NORMAL')
-
-    def test_build_request_observation_type_target_of_opportunity(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules'      : self.molecules,
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'TARGET_OF_OPPORTUNITY',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.observation_type, 'TARGET_OF_OPPORTUNITY')
 
 
     @raises(RequestError)
@@ -716,9 +686,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -741,9 +710,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -763,9 +731,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -784,12 +751,66 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
+
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_request_observation_type_normal(self, mock_func):
+        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'id' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'NORMAL',
+        }
+
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        assert_equal(user_request_model.observation_type, 'NORMAL')
+
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_request_observation_type_target_of_opportunity(self, mock_func):
+        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'id' : self.request_number,
+                     'state'          : self.state,
+                   }
+
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'TARGET_OF_OPPORTUNITY',
+        }
+
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        assert_equal(user_request_model.observation_type, 'TARGET_OF_OPPORTUNITY')
+
 
     @raises(RequestError)
     def test_dont_accept_unsupported_observation_type(self):
@@ -799,14 +820,26 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
                      'state'          : self.state,
-                     'observation_type' : 'ABNORMAL',
                    }
 
-        request = self.mb.build_request(req_dict)
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'ABNORMAL',
+        }
 
-    def test_build_user_request_returns_invalid_user_requests(self):
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_user_request_returns_invalid_user_requests(self, mock_func):
+        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         bad_req_dict = {
                      'target' : {
                                   'type' : 'POTATOES',
@@ -815,9 +848,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : '2',
+                     'id' : '2',
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
         
         good_req_dict = {
@@ -832,23 +864,19 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : '3',
+                     'id' : '3',
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         cr_dict = {
-                   'proposal' : {
-                                 'id' : 'INDECENT',
-                                 'tag_id' : 'BAD_MOVIES',
-                                 'pi' : 'me',
-                                 'tac_priority' : '10'
-                                },
+                   'proposal' : 'TestProposal',
                    'expires' : '2014-10-29 12:12:12',
                    'group_id' : '',
-                   'tracking_number' : '1',
+                   'id' : '1',
                    'ipp_value' : '1.0',
                    'operator' : 'many',
+                   'observation_type': 'NORMAL',
+                   'submitter': '',
                    'requests' : [bad_req_dict, good_req_dict]
                    }
         

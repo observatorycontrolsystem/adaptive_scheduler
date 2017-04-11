@@ -78,7 +78,7 @@ def parse_args(argv):
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
-                            help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
+                            help="Alternative datetime to use as 'now', for running simulations (in isoformat: %%Y-%%m-%%dT%%H:%%M:%%SZ)")
     arg_parser.add_argument("-t", "--telescopes", type=str, default=defaults.telescopes_file, dest='telescopes_file',
                             help="Available telescopes file")
     arg_parser.add_argument("-c", "--cameras", type=str, default=defaults.cameras_file, dest='cameras_file',

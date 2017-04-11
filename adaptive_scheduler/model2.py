@@ -91,7 +91,7 @@ def generate_request_description(user_request_json, request_json):
     telescope_class = None
     inst_type = None
     if 'proposal' in user_request_json:
-        prop_id = user_request_json.get('proposal').get('id')
+        prop_id = user_request_json.get('proposal')
         user_id = user_request_json.get('submitter')
     if 'location' in request_json:
         telescope_class = request_json.get('location').get('telescope_class')
@@ -475,7 +475,7 @@ class UserRequest(DefaultMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires):
+    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires, submitter):
 
         self.proposal        = proposal
         self.tracking_number = tracking_number
@@ -485,6 +485,7 @@ class UserRequest(DefaultMixin):
         self.operator = self._validate_type(operator)
         self.requests = requests
         self.expires = expires
+        self.submitter = submitter
 
     @staticmethod
     def _validate_type(provided_operator):
@@ -716,6 +717,7 @@ class ModelBuilder(object):
         tracking_number = ur_dict['id']
         operator = ur_dict['operator'].lower()
         ipp_value = ur_dict.get('ipp_value', 1.0)
+        submitter = ur_dict.get('submitter', '')
         if ignore_ipp:
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
@@ -750,9 +752,10 @@ class ModelBuilder(object):
 
         # Calculate the maximum window time as the expire time
         max_window_time = datetime(1000, 1, 1)
-        for req in ur_dict['requests']:
-            for window in req['windows']:
-                max_window_time = max(max_window_time, iso_string_to_datetime(window['end']))
+        for req in requests:
+            for windows in req.windows.windows_for_resource.values():
+                for window in windows:
+                    max_window_time = max(max_window_time, window.end)
 
         user_request = UserRequest(
                                     operator        = operator,
@@ -763,6 +766,7 @@ class ModelBuilder(object):
                                     ipp_value       = ipp_value,
                                     group_id        = ur_dict['group_id'],
                                     expires         = max_window_time,
+                                    submitter       = submitter,
                                   )
 
         # Return only the invalid request and not the error message
@@ -793,7 +797,7 @@ class ModelBuilder(object):
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
-                log.warn('Invalid Request: {}'.format(generate_request_description(cr_dict, req_dict)))
+                log.warn('Invalid Request: {}'.format(generate_request_description(ur_dict, req_dict)))
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests

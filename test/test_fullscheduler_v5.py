@@ -7,12 +7,13 @@ Author: Sotiria Lampoudi
 August 2012
 '''
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, nottest
 from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.intervals import *
 from adaptive_scheduler.kernel.fullscheduler_v5 import *
 import copy
 
+@nottest
 class TestFullScheduler_v5(object):
 
     def setup(self):
