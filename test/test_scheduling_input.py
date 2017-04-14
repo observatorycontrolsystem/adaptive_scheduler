@@ -15,6 +15,12 @@ class TestSchedulingInputProvider(object):
         self.sched_params = SchedulerParameters()
         self.network_interface = Mock()
         self.network_interface.get_all_user_requests = Mock(return_value=[])
+
+        self.valhalla_interface = Mock()
+        self.valhalla_interface.get_semester_details = Mock(return_value={'id': '2015A',
+                                                                          'start': datetime.utcnow() - timedelta(days=30),
+                                                                          'end': datetime.utcnow() + timedelta(days=30)})
+        self.network_interface.valhalla_interface = self.valhalla_interface
         self.network_model = {}
         
     

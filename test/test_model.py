@@ -15,8 +15,6 @@ from adaptive_scheduler.model2      import ( build_telescope_network,
                                              _LocationExpander, ModelBuilder,
                                              RequestError)
 
-#TODO: Clean up unit tests, remove this
-from schedutils.instruments         import Spectrograph
 
 class TestTelescopeNetwork(object):
 
@@ -132,27 +130,6 @@ class TestRequest(object):
                                    expires=datetime(2999,1,1), submitter='')
 
 
-    def test_null_instrument_has_a_name(self):
-        request = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows,
-                          constraints    = self.constraints,
-                          request_number = self.request_number,
-                          )
-        assert_equal(request.get_instrument_type(), 'NULL-INSTRUMENT')
-
-    def test_configured_instrument_has_a_name(self):
-        request = Request(target          = self.target,
-                          molecules       = [self.molecule],
-                          windows         = self.windows,
-                          constraints     = self.constraints,
-                          request_number  = self.request_number,
-                          instrument_type = '1M0-SCICAM-SINISTRO',
-                          )
-
-        assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
-
-
 class TestUserRequest(object):
     '''Unit tests for the adaptive scheduler UserRequest object.'''
 
@@ -229,7 +206,7 @@ class TestUserRequest(object):
                      windows = windows,
                      constraints = None,
                      request_number = '0000000003',
-                     instrument_type ='1M0-SCICAM-SBIG'
+                     duration = 10
                    )
 
         ur = UserRequest(
@@ -538,12 +515,12 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']),
                      set(request.windows.windows_for_resource.keys()))
 
@@ -561,12 +538,12 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SBIG')
 
         # Verify that only telescopes with SBIG cameras were selected
         assert_equal(set(['1m0a.doma.coj', '1m0a.domb.coj',
@@ -590,7 +567,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
@@ -612,12 +590,12 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.domb.lsc']),
                      set(request.windows.windows_for_resource.keys()))
 
@@ -639,12 +617,12 @@ class TestModelBuilder(object):
                                         },
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '2M0-FLOYDS-SCICAM')
         assert_equal(set(['2m0a.clma.coj']),
                      set(request.windows.windows_for_resource.keys()))
 
@@ -666,12 +644,12 @@ class TestModelBuilder(object):
                                         },
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '2M0-SCICAM-MEROPE')
         assert_equal(set(['2m0a.clma.ogg']),
                      set(request.windows.windows_for_resource.keys()))
 
@@ -757,16 +735,19 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict)
 
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
-    def test_build_request_observation_type_normal(self, mock_func):
-        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+    def test_build_request_observation_type_normal(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         req_dict = {
                      'target'         : self.target,
                      'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
@@ -784,16 +765,19 @@ class TestModelBuilder(object):
         user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
         assert_equal(user_request_model.observation_type, 'NORMAL')
 
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
-    def test_build_request_observation_type_target_of_opportunity(self, mock_func):
-        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+    def test_build_request_observation_type_target_of_opportunity(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         req_dict = {
                      'target'         : self.target,
                      'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 
@@ -813,14 +797,19 @@ class TestModelBuilder(object):
 
 
     @raises(RequestError)
-    def test_dont_accept_unsupported_observation_type(self):
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_dont_accept_unsupported_observation_type(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         req_dict = {
                      'target'         : self.target,
                      'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10.0,
                      'state'          : self.state,
                    }
 
@@ -837,9 +826,11 @@ class TestModelBuilder(object):
 
         user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
 
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
-    def test_build_user_request_returns_invalid_user_requests(self, mock_func):
-        mock_func.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+    def test_build_user_request_returns_invalid_user_requests(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         bad_req_dict = {
                      'target' : {
                                   'type' : 'POTATOES',
@@ -848,7 +839,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : '2',
+                     'id'             : '2',
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
         
@@ -864,7 +856,8 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'id' : '3',
+                     'id'             : '3',
+                     'duration'       : 10,
                      'state'          : self.state,
                    }
 

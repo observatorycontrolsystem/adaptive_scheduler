@@ -16,14 +16,14 @@ May 2015
 '''
 
 from reqdb.client                 import SchedulerClient
-from adaptive_scheduler.requestdb import RequestDBInterface
+from adaptive_scheduler.valhalla_connections import ValhallaInterface
 
 from datetime    import datetime
 from collections import defaultdict
 
 def get_user_requests(requestdb_url, start, end):
     requestdb_client = SchedulerClient(requestdb_url)
-    reqdb = RequestDBInterface(requestdb_client)
+    reqdb = ValhallaInterface(requestdb_client)
     urs = reqdb.get_all_user_requests(start, end)
 
     return urs

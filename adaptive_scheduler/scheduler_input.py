@@ -1,7 +1,7 @@
 from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
-from schedutils.semester_service         import get_semester_block
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin
+from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
 
 import os
 import logging
@@ -25,7 +25,7 @@ class SchedulerParameters(object):
                  too_run_time=120, normal_run_time=360,
                  es_endpoint=None, save_output=False,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
-                 requestdb='http://valhalla.lco.gtn/',
+                 valhalla_url='http://valhalla.lco.gtn/',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -56,19 +56,7 @@ class SchedulerParameters(object):
         self.ignore_ipp = ignore_ipp
         self.es_endpoint = es_endpoint
         self.debug = debug
-        self.requestdb_url = requestdb
-
-
-    def get_model_builder(self):
-        mb = ModelBuilder(self.telescopes_file, self.cameras_file, self.requestdb_url)
-
-        return mb
-
-
-class RequestDBSchedulerParameters(SchedulerParameters):
-
-    def __init__(self, **kwargs):
-        SchedulerParameters.__init__(self, **kwargs)
+        self.valhalla_url = valhalla_url
 
 
 class SchedulingInputFactory(object):
@@ -83,6 +71,7 @@ class SchedulingInputFactory(object):
                         input_provider.estimated_scheduler_runtime(),
                         input_provider.json_user_request_list,
                         input_provider.resource_usage_snapshot,
+                        SchedulingInputUtils(input_provider.get_model_builder()),
                         input_provider.available_resources,
                         is_too_input,
                         scheduled_requests_by_ur=scheduled_requests_by_ur)
@@ -192,7 +181,7 @@ class SchedulingInputUtils(object, SendMetricMixin):
 
 class SchedulingInput(object):
 
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, available_resources, is_too_input, scheduled_requests_by_ur={}):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, scheduling_input_utils, available_resources, is_too_input, scheduled_requests_by_ur={}):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -201,7 +190,7 @@ class SchedulingInput(object):
         self.available_resources = available_resources
         self.is_too_input = is_too_input
         self.scheduled_requests_by_ur = scheduled_requests_by_ur
-        self.utils = SchedulingInputUtils(sched_params.get_model_builder())
+        self.utils = scheduling_input_utils
 
         self._scheduler_model_too_user_requests = None
         self._scheduler_model_normal_user_requests = None
@@ -296,14 +285,6 @@ class SchedulingInput(object):
         outfile.close()
 
 
-    @staticmethod
-    def read_from_file(self, filename):
-        infile = open(filename, 'r')
-        input_from_file = pickle.load(infile)
-
-        return SchedulingInput(**input_from_file)
-
-
 class SchedulingInputProvider(object):
 
     def __init__(self, sched_params, network_interface, network_model, is_too_input=False):
@@ -311,7 +292,7 @@ class SchedulingInputProvider(object):
         self.network_interface = network_interface
         self.network_model = network_model
         self.is_too_input = is_too_input
-        self.utils = SchedulingInputUtils(sched_params.get_model_builder())
+        # self.utils = SchedulingInputUtils(sched_params.get_model_builder())
 
         self.estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
         self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
@@ -387,10 +368,16 @@ class SchedulingInputProvider(object):
 
     def _get_json_user_request_list(self):
         now = self._get_scheduler_now()
-        semester_start, semester_end = get_semester_block(dt=self._get_estimated_scheduler_end())
-        ur_list = self.network_interface.get_all_user_requests(semester_start, min(now + timedelta(days=self.sched_params.horizon_days), semester_end))
+        try:
+            semester_details = self.network_interface.valhalla_interface.get_semester_details(self._get_estimated_scheduler_end())
+        except ValhallaConnectionError as e:
+            raise SchedulingInputException("Can't retrieve current semester to get user requests.")
+        ur_list = self.network_interface.get_all_user_requests(semester_details['start'],
+                                                               min(now + timedelta(days=self.sched_params.horizon_days),
+                                                               semester_details['end']))
 
         return ur_list
+
 
 
     def _get_available_resources(self):
@@ -411,6 +398,12 @@ class SchedulingInputProvider(object):
         snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self._get_estimated_scheduler_end())
 
         return snapshot
+
+
+    def get_model_builder(self):
+        mb = ModelBuilder(self.sched_params.telescopes_file, self.sched_params.self.cameras_file, self.network_interface.user_request_interface)
+
+        return mb
 
 
 class FileBasedSchedulingInputProvider(object):

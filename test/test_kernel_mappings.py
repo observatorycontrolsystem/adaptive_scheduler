@@ -101,7 +101,7 @@ class TestKernelMappings(object):
                         windows        = dt_windows,
                         constraints    = constraints,
                         request_number = '1',
-                        instrument_type = '1M0-SCICAM-SBIG',
+                        duration       = 10
                       )
 
         return req
@@ -474,7 +474,7 @@ class TestKernelMappings(object):
                        windows         = dt_windows,
                        constraints     = constraints,
                        request_number  = '1',
-                       instrument_type = '1M0-SCICAM-SBIG',
+                       duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
@@ -539,7 +539,7 @@ class TestKernelMappings(object):
                        windows         = dt_windows,
                        constraints     = constraints,
                        request_number  = '1',
-                       instrument_type = '1M0-SCICAM-SBIG',
+                       duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)

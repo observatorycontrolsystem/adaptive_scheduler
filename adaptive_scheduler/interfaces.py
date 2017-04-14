@@ -124,7 +124,7 @@ class NetworkInterface(object):
     
     def __init__(self, schedule_interface, user_request_interface, network_state_interface):
         self.network_schedule_interface = schedule_interface
-        self.user_request_interface = user_request_interface
+        self.valhalla_interface = user_request_interface
         self.network_state_interface = network_state_interface
         
     def _running_user_requests_by_tracking_number(self):
@@ -140,13 +140,13 @@ class NetworkInterface(object):
     def schedulable_request_set_has_changed(self):
         '''True if set of schedulable requests has changed
         '''
-        return self.user_request_interface.is_dirty()
+        return self.valhalla_interface.is_dirty()
     
     def get_all_user_requests(self, start, end):
         '''Get all user requests waiting for scheduling between
         start and end date
         '''
-        return self.user_request_interface.get_all_user_requests(start, end)            
+        return self.valhalla_interface.get_all_user_requests(start, end)
 
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end

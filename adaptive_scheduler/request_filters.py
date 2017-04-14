@@ -135,7 +135,7 @@ def run_all_filters(ur_list, running_request_numbers):
        truncated during this process. Unschedulable User Requests are discarded.'''
     ur_list = filter_out_windows_for_running_requests(ur_list, running_request_numbers)
     ur_list = filter_on_pending(ur_list)
-    ur_list = filter_on_expiry(ur_list)
+    #ur_list = filter_on_expiry(ur_list)
     ur_list = filter_out_past_windows(ur_list)
     ur_list = truncate_lower_crossing_windows(ur_list)
     ur_list = truncate_upper_crossing_windows(ur_list)
@@ -158,6 +158,22 @@ def filter_out_windows_for_running_requests(ur_list, running_request_numbers):
             return False
         else:
             return True
+    
+    import json
+    window_set = {}
+    for ur in ur_list:
+        for req in ur.requests:
+            window_set[req.request_number] = {}
+            for resource, windows in req.windows.windows_for_resource.items():
+                window_set[req.request_number][resource] = []
+                for window in windows:
+                    window_set[req.request_number][resource].append({'start': window.start.isoformat(), 'end': window.end.isoformat()})
+
+    file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    f = open('/data/adaptive_scheduler/input_states/window_set_{}.json'.format(file_timestamp), 'w')
+    json.dump(window_set, f)
+    f.close()
+                    
 
     return _for_all_ur_windows(ur_list, filter_test)
 
@@ -209,7 +225,7 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
     global now
 
     def truncate_upper_crossing(w, ur, r):
-        effective_horizon = ur.scheduling_horizon(now)
+        effective_horizon = ur.expires
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon
@@ -234,7 +250,7 @@ def filter_out_future_windows(ur_list, horizon=None):
     global now
 
     def filter_on_future(w, ur, r):
-        effective_horizon = ur.scheduling_horizon(now)
+        effective_horizon = ur.expires
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon

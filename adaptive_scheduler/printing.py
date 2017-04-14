@@ -54,7 +54,6 @@ def log_full_ur(ur, now):
     ur_log.info("Base Priority = %s" % ur.get_base_priority(), ur.tracking_number)
     ur_log.info("Effective Priority = %s" % ur.priority, ur.tracking_number)
     ur_log.info("Operator = %s" % ur.operator, ur.tracking_number)
-    ur_log.info("Scheduling horizon = %s" % ur.scheduling_horizon(now), ur.tracking_number)
 
     for r in ur.requests:
         ur_log.info("Request %s: duration = %ss" % (r.request_number, r.duration),

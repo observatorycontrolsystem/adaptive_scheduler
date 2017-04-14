@@ -19,9 +19,9 @@ from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface
 from adaptive_scheduler.pond             import PondScheduleInterface
-from adaptive_scheduler.requestdb        import RequestDBInterface 
+from adaptive_scheduler.valhalla_connections        import ValhallaInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, RequestDBSchedulerParameters
+from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
 
 import argparse
@@ -60,7 +60,7 @@ def kill_handler(signal, frame):
 
 
 def parse_args(argv):
-    defaults = RequestDBSchedulerParameters()
+    defaults = SchedulerParameters()
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
@@ -73,8 +73,8 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
-                            help="Request DB endpoint URL")
+    arg_parser.add_argument("-r", "--valhalla_url", type=str, required=True,
+                            help="Valhalla endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
@@ -128,7 +128,7 @@ def parse_args(argv):
     log.info("Using available telescopes file '%s'", args.telescopes_file)
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
     
-    sched_params = RequestDBSchedulerParameters(**vars(args))
+    sched_params = SchedulerParameters(**vars(args))
 
     return sched_params
 
@@ -181,12 +181,13 @@ def main(argv):
                            event_type=TimingLogger._EndEvent)
     
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
-    user_request_interface = RequestDBInterface(sched_params.requestdb_url, debug=sched_params.debug)
+    user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
     network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
+    # TODO: replace this model builder usage with configdb set of telescopes
     network_model = sched_params.get_model_builder().tel_network.telescopes
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:

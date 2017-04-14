@@ -3,8 +3,6 @@ from __future__ import division
 
 from datetime import datetime, timedelta
 
-from nose.tools import assert_true
-
 # Import the modules to test
 from adaptive_scheduler.model2      import (
                                              SiderealTarget, Telescope,
@@ -71,9 +69,6 @@ class TestIntegration(object):
 
         self.base_time = datetime(2016, 9, 14, 6, 0)
 
-        self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
-        self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
-
         resource_1 = Mock()
         resource_1.name = '1m0a.doma.ogg'
         self.window_1 = Window({'start': self.base_time,
@@ -98,28 +93,28 @@ class TestIntegration(object):
                           windows        = self.windows_1,
                           constraints    = self.constraints,
                           request_number = '0000000001',
-                          instrument_type = '1M0-SCICAM-SBIG')
+                          duration       = 1750)
 
         self.request_2 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000002',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
         self.request_3 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000003',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
         self.request_4 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_3,
                           constraints    = self.constraints,
                           request_number = '0000000004',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
 
         self.user_and_request_1 = UserRequest(operator='and', requests=[self.request_1, self.request_2],
@@ -153,8 +148,10 @@ class TestIntegration(object):
         scheduler_input = mock_input_factory.create_normal_scheduling_input()
         scheduler_input.scheduler_now = scheduler_time
         scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
+        fake_semester = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
+                         'end': scheduler_time + timedelta(days=150)}
 
-        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15))
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), fake_semester)
 
         return result
 
@@ -224,7 +221,7 @@ class TestIntegration(object):
                                 windows=windows,
                                 constraints=self.constraints,
                                 request_number="11{}".format(days_out).rjust(10, '0'),
-                                instrument_type='1M0-SCICAM-SBIG')
+                                duration=1750)
             request_list.append(request)
             days_out += 1
 

@@ -35,6 +35,19 @@ NORMAL_SCHEDULE_TYPE = 'normal'
 TOO_SCHEDULE_TYPE = 'too'
 
 
+class EqualityMixin(object):
+    '''Inherit from this class if you want your object to have simple equality
+       properties based on common attributes (this is what you usually want).'''
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 def set_schedule_type(schedule_type):
     '''
         Function takes in a schedule type and adjusts the global tags used in saving metrics accordingly

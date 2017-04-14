@@ -19,10 +19,8 @@ from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservati
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-from adaptive_scheduler.utils import convert_proper_motion
 from schedutils.camera_mapping        import create_camera_mapping
 import lcogtpond
-from lcogtpond import block
 
 from datetime import datetime, timedelta
 import collections

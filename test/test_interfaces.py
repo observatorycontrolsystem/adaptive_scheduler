@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from mock import Mock, MagicMock, patch
-from adaptive_scheduler.requestdb import RequestDBInterface
+from adaptive_scheduler.valhalla_connections import ValhallaInterface
 from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, ResourceUsageSnapshot, NetworkInterface
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.intervals import Intervals

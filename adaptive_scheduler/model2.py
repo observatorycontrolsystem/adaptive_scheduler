@@ -19,25 +19,22 @@ from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_satellite_target)
 from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
 from rise_set.rates                           import ProperMotion, RatesConfigError
-from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
+from adaptive_scheduler.utils                 import (iso_string_to_datetime, join_location, convert_proper_motion,
+                                                      EqualityMixin)
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
-from schedutils                               import semester_service
-from schedutils.utils                         import EqualityMixin, DefaultMixin
+from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
 from schedutils.instruments                   import InstrumentFactory
 from schedutils.camera_mapping                import create_camera_mapping
 
 from datetime    import datetime
 import ast
-import os
 import logging
 import random
-import requests
-from requests.exceptions import RequestException
 
 log = logging.getLogger(__name__)
 
@@ -137,7 +134,7 @@ def file_to_dicts(filename):
     return ast.literal_eval(data)
 
 
-class DataContainer(DefaultMixin):
+class DataContainer(EqualityMixin):
     def __init__(self, *initial_data, **kwargs):
         for dictionary in initial_data:
             for key in dictionary:
@@ -340,7 +337,7 @@ class MoleculeFactory(object):
 
 
 
-class Window(DefaultMixin):
+class Window(EqualityMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
     def __init__(self, window_dict, resource):
         try:
@@ -360,7 +357,7 @@ class Window(DefaultMixin):
 
 
 
-class Windows(DefaultMixin):
+class Windows(EqualityMixin):
     def __init__(self):
         self.windows_for_resource = {}
 
@@ -413,7 +410,7 @@ class Telescope(DataContainer):
 
 
 
-class Request(DefaultMixin):
+class Request(EqualityMixin):
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
@@ -431,9 +428,7 @@ class Request(DefaultMixin):
     '''
 
     def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
-                 instrument_type='', scheduled_reservation=None):
-
-        self.inst_factory = InstrumentFactory()
+                 duration=0, scheduled_reservation=None):
 
         self.target            = target
         self.molecules         = molecules
@@ -441,21 +436,11 @@ class Request(DefaultMixin):
         self.constraints       = constraints
         self.request_number    = request_number
         self.state             = state
+        self.req_duration      = duration
         self.scheduled_reservation = scheduled_reservation
 
-        self.set_instrument(instrument_type)
-
-
-    def set_instrument(self, instrument_type):
-        self.instrument = self.inst_factory.make_instrument_by_type(instrument_type)
-
-        return
-
-    def get_instrument_type(self):
-        return self.instrument.type
-
     def get_duration(self):
-        return self.instrument.get_duration(self.molecules, self.target).total_seconds()
+        return self.req_duration
 
     def has_windows(self):
         return self.windows.has_windows()
@@ -467,7 +452,7 @@ class Request(DefaultMixin):
     duration = property(get_duration)
 
 
-class UserRequest(DefaultMixin):
+class UserRequest(EqualityMixin):
     '''UserRequests are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
        ipp info, an id, and group name. This is translated into a CompoundReservation when scheduling'''
 
@@ -599,14 +584,6 @@ class UserRequest(DefaultMixin):
     def emit_user_feedback(self, msg, tag, timestamp=None):
         UserRequest.emit_user_request_feedback(self.tracking_number, msg, tag, timestamp)
 
-
-    def scheduling_horizon(self, now):
-        sem_end = semester_service.get_semester_end(now)
-        if self.expires and self.expires < sem_end:
-            return self.expires
-        return sem_end
-
-
     def get_priority_dumb(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
@@ -693,25 +670,35 @@ class TelescopeNetwork(object):
 
 class ModelBuilder(object):
 
-    def __init__(self, tel_file, camera_mappings_file, requestdb_url):
+    def __init__(self, tel_file, camera_mappings_file, valhalla_interface):
         self.tel_network        = build_telescope_network(tel_file)
         self.camera_mappings    = camera_mappings_file
         self.instrument_factory = InstrumentFactory()
         self.molecule_factory   = MoleculeFactory()
-        self.requestdb_url = requestdb_url
+        self.valhalla_interface = valhalla_interface
         self.proposals_by_id = {}
+        self.semester_details = None
 
     def get_proposal_details(self, proposal_id):
         if proposal_id not in self.proposals_by_id:
             try:
-                headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
-                response = requests.get(self.requestdb_url + '/api/proposals/' + proposal_id + '/', headers=headers)
-                response.raise_for_status()
-                self.proposals_by_id[proposal_id] = Proposal(response.json())
-            except RequestException as e:
+                proposal = Proposal(self.valhalla_interface.get_proposal_by_id(proposal_id))
+                self.proposals_by_id[proposal_id] = proposal
+            except ValhallaConnectionError as e:
                 raise RequestError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
         return self.proposals_by_id[proposal_id]
+
+
+    def get_semester_details(self, date):
+        if not self.semester_details:
+            try:
+                self.semester_details = self.valhalla_interface.get_semester_details(date)
+            except ValhallaConnectionError as e:
+                raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
+
+        return self.semester_details
+
 
     def build_user_request(self, ur_dict, scheduled_requests={}, ignore_ipp=False):
         tracking_number = ur_dict['id']
@@ -756,6 +743,11 @@ class ModelBuilder(object):
             for windows in req.windows.windows_for_resource.values():
                 for window in windows:
                     max_window_time = max(max_window_time, window.end)
+
+        #truncate the expire time by the current semesters end
+        semester_details = self.get_semester_details(datetime.utcnow())
+        if semester_details:
+            max_window_time = min(max_window_time, semester_details['end'])
 
         user_request = UserRequest(
                                     operator        = operator,
@@ -888,8 +880,6 @@ class ModelBuilder(object):
                                                                                )
             raise RequestError(msg)
 
-        instrument_type = instrument_info[0]['camera_type']
-
         # Create a window for each telescope in the subnetwork
         windows = Windows()
         for telescope in subnetwork:
@@ -907,7 +897,7 @@ class ModelBuilder(object):
                        constraints     = constraints,
                        request_number  = req_dict['id'],
                        state           = req_dict['state'],
-                       instrument_type = instrument_type,
+                       duration        = req_dict['duration'],
                        scheduled_reservation = scheduled_reservation
                      )
 
