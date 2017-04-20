@@ -4,12 +4,9 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.model2      import (
-                                             SiderealTarget, Telescope,
-                                             Proposal, MoleculeFactory,
+from adaptive_scheduler.model2      import ( SiderealTarget, Proposal, MoleculeFactory,
                                              Request, UserRequest,
-                                             Windows, Window, Constraints,
-                                             TelescopeNetwork)
+                                             Windows, Window, Constraints)
 
 from test_scheduler import create_scheduler_input_factory
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
@@ -31,7 +28,7 @@ class TestIntegration(object):
                                       epoch = 2000,
                                      )
 
-        self.telescope = Telescope(
+        self.telescope = dict(
                                     name      = '1m0a.doma.ogg',
                                     latitude  = 20.7069444444,
                                     longitude = -156.258055556,
@@ -42,7 +39,6 @@ class TestIntegration(object):
                                     ha_limit_pos = 4.6,
                                   )
         self.telescopes = {'1m0a.doma.ogg': self.telescope}
-        self.telescope_network = TelescopeNetwork(self.telescopes)
 
         self.proposal = Proposal(
                                   id  = 'LCOSchedulerTest',
@@ -69,20 +65,18 @@ class TestIntegration(object):
 
         self.base_time = datetime(2016, 9, 14, 6, 0)
 
-        resource_1 = Mock()
-        resource_1.name = '1m0a.doma.ogg'
+        resource_1 = '1m0a.doma.ogg'
         self.window_1 = Window({'start': self.base_time,
                                 'end': self.base_time + timedelta(hours=0, minutes=30)}, resource_1)
         self.windows_1 = Windows()
         self.windows_1.append(self.window_1)
-        resource_2 = Mock()
-        resource_2.name = '1m0a.doma.ogg'
+
+        resource_2 = '1m0a.doma.ogg'
         self.window_2 = Window({'start': self.base_time + timedelta(hours=0, minutes=30),
                                 'end': self.base_time + timedelta(hours=1, minutes=0)}, resource_2)
         self.windows_2 = Windows()
         self.windows_2.append(self.window_2)
-        resource_3 = Mock()
-        resource_3.name = '1m0a.doma.ogg'
+        resource_3 = '1m0a.doma.ogg'
         self.window_3 =  Window({'start': self.base_time + timedelta(hours=1, minutes=0),
                                  'end': self.base_time + timedelta(hours=1, minutes=30)}, resource_3)
         self.windows_3 = Windows()
@@ -210,8 +204,7 @@ class TestIntegration(object):
         new_time = datetime(2016, 10, 3, 5, 0)
         request_list = []
         while days_out < 80:
-            resource = Mock()
-            resource.name = '1m0a.doma.ogg'
+            resource = '1m0a.doma.ogg'
             window = Window({'start': new_time + timedelta(days=days_out),
                                     'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
             windows = Windows()

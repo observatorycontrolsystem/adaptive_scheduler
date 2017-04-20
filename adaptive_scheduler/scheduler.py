@@ -68,7 +68,6 @@ class Scheduler(object, SendMetricMixin):
         return resources_to_cancel
 
 
-
     # TODO - Move to a utils library
     def combine_excluded_intervals(self, excluded_intervals_1, excluded_intervals_2):
         ''' Combine two dictionaries where Intervals are the values '''
@@ -628,14 +627,14 @@ class SchedulerRunner(object):
         available_telescopes = []
         for telescope_name, telescope in self.network_model.iteritems():
             if telescope_name in current_events:
-                telescope.events.extend(current_events[telescope_name])
+                telescope['events'].extend(current_events[telescope_name])
                 msg = "Found network event for '%s' - removing from consideration (%s)" % (
                                                                     telescope_name,
                                                                     current_events[telescope_name])
                 self.log.info(msg)
             else:
                 available_telescopes.append(telescope_name)
-                telescope.events = []
+                telescope['events'] = []
         self.network_interface.send_available_telescope_state_events(available_telescopes)
         return
 
@@ -720,7 +719,7 @@ class SchedulerRunner(object):
             self.network_interface.abort(rr, reason)
 
     def save_resource_schedules(self, schedule, denormalization_date):
-        n_submitted = self.network_interface.save(schedule, denormalization_date, self.sched_params.cameras_file, False)
+        n_submitted = self.network_interface.save(schedule, denormalization_date, False)
 
         return n_submitted
 

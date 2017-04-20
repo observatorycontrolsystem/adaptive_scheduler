@@ -15,9 +15,7 @@ class SchedulingInputException(Exception):
 
 class SchedulerParameters(object):
 
-    def __init__(self, dry_run=False, run_once=False,
-                 telescopes_file='telescopes.dat',
-                 cameras_file='camera_mappings.dat', no_weather=False,
+    def __init__(self, dry_run=False, run_once=False, no_weather=False,
                  no_singles=False, no_compounds=False, no_too=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
@@ -26,11 +24,10 @@ class SchedulerParameters(object):
                  es_endpoint=None, save_output=False,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  valhalla_url='http://valhalla.lco.gtn/',
+                 configdb_url='http://configdb.lco.gtn/',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
-        self.telescopes_file = telescopes_file
-        self.cameras_file = cameras_file
         self.no_weather = no_weather
         self.no_singles = no_singles
         self.no_compounds = no_compounds
@@ -57,6 +54,7 @@ class SchedulerParameters(object):
         self.es_endpoint = es_endpoint
         self.debug = debug
         self.valhalla_url = valhalla_url
+        self.configdb_url = configdb_url
 
 
 class SchedulingInputFactory(object):
@@ -383,7 +381,7 @@ class SchedulingInputProvider(object):
     def _get_available_resources(self):
         resources = []
         for resource_name, resource in self.network_model.iteritems():
-            if not resource.events:
+            if not resource['events']:
                 resources.append(resource_name)
 
         return resources
@@ -401,7 +399,8 @@ class SchedulingInputProvider(object):
 
 
     def get_model_builder(self):
-        mb = ModelBuilder(self.sched_params.telescopes_file, self.sched_params.self.cameras_file, self.network_interface.user_request_interface)
+        mb = ModelBuilder(self.network_interface.user_request_interface,
+                          self.network_interface.configdb_interface)
 
         return mb
 

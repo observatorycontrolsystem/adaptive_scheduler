@@ -28,8 +28,6 @@ from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
-from schedutils.instruments                   import InstrumentFactory
-from schedutils.camera_mapping                import create_camera_mapping
 
 from datetime    import datetime
 import ast
@@ -350,7 +348,7 @@ class Window(EqualityMixin):
         self.resource = resource
 
     def get_resource_name(self):
-        return self.resource.name
+        return self.resource
 
     def __repr__(self):
         return "Window (%s, %s)" % (self.start, self.end)
@@ -400,14 +398,6 @@ class Proposal(DataContainer):
                 missing_fields.append(field)
 
         return missing_fields
-
-
-
-class Telescope(DataContainer):
-    def __init__(self, *initial_data, **kwargs):
-        kwargs['events'] = []
-        DataContainer.__init__(self, *initial_data, **kwargs)
-
 
 
 class Request(EqualityMixin):
@@ -624,58 +614,12 @@ class UserRequest(EqualityMixin):
     priority = property(get_priority)
 
 
-
-def build_telescope_network(tel_file=None, tel_dicts=None):
-    '''Factory for TelescopeNetwork objects.'''
-
-    # TODO: Raise exception if at least one argument isn't passed
-
-    if tel_file:
-        tel_dicts = file_to_dicts(tel_file)
-
-    # Key the telescopes on <name.tel_class>
-    telescopes = {}
-    for d in tel_dicts:
-        telescopes[ d['name'] ] = Telescope(d)
-
-    return TelescopeNetwork(telescopes)
-
-
-class TelescopeNetwork(object):
-    def __init__(self, telescopes):
-        self.telescopes = telescopes
-
-        valid_locations = []
-        for tel_name, tel in self.telescopes.iteritems():
-            valid_locations.append(tel_name + '.' + tel.tel_class)
-
-        self.le = _LocationExpander(valid_locations)
-
-
-    def get_telescope(self, tel_name):
-        return self.telescopes.get(tel_name, None)
-
-
-    def get_telescopes_at_location(self, location):
-        locations = self.le.expand_locations(location)
-
-        telescopes = []
-        for l in locations:
-            tel = self.get_telescope(l)
-            telescopes.append(tel)
-
-        return telescopes
-
-
-
 class ModelBuilder(object):
 
-    def __init__(self, tel_file, camera_mappings_file, valhalla_interface):
-        self.tel_network        = build_telescope_network(tel_file)
-        self.camera_mappings    = camera_mappings_file
-        self.instrument_factory = InstrumentFactory()
+    def __init__(self, valhalla_interface, configdb_interface):
         self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
+        self.configdb_interface = configdb_interface
         self.proposals_by_id = {}
         self.semester_details = None
 
@@ -822,20 +766,8 @@ class ModelBuilder(object):
             msg += " - removing from consideration"
             raise RequestError(msg)
 
-        # To preserve the deprecated interface, map SCICAM -> 1m0-SCICAM-SBIG
-        self.map_scicam_keyword(molecules, req_dict['id'])
-
         # Get the instrument (we know they are all the same)
         instrument_name = molecules[0].instrument_name
-
-        mapping = create_camera_mapping(self.camera_mappings)
-
-        generic_camera_names = self.instrument_factory.instrument_names
-
-        if instrument_name.upper() in generic_camera_names:
-            instrument_info = mapping.find_by_camera_type(instrument_name)
-        else:
-            instrument_info = mapping.find_by_camera(instrument_name)
 
         filters = []
 
@@ -850,39 +782,33 @@ class ModelBuilder(object):
             elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        if filters:
-            valid_instruments = mapping.find_by_filter(filters, instrument_info)
-        else:
-            valid_instruments = mapping.find_by_camera_type(instrument_name)
+        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_name, filters,
+                                                                           req_dict['location'])
 
-        # Determine the resource subnetwork satisfying the camera and location requirements
-        telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])
-        tels_with_inst = [join_location(x['site'], x['observatory'], x['telescope']) for x in valid_instruments]
-        subnetwork     = [t for t in telescopes if t.name in tels_with_inst]
-
-        if not subnetwork:
+        if not telescopes:
             # Complain
-            site_str = req_dict['location']['site'] or ''
-            obs_str  = req_dict['location']['observatory'] or ''
-            tel_str  = req_dict['location']['telescope'] or ''
+            site_str = req_dict['location']['site'] if 'site' in req_dict['location'] else ''
+            obs_str = req_dict['location']['observatory'] if 'observatory' in req_dict['location'] else ''
+            tel_str = req_dict['location']['telescope'] if 'telescope' in req_dict['location'] else ''
+            telescope_class = req_dict['location']['telescope_class'] if 'telescope_class' in req_dict['location'] else ''
             req_location = '.'.join(
-                                     (
-                                       req_dict['location']['telescope_class'],
-                                       site_str,
-                                       obs_str,
-                                       tel_str
-                                     )
-                                   )
-            msg = "Request %s wants camera %s, which is not available on the subnetwork '%s'" % (
-                                                                                req_dict['id'],
-                                                                                instrument_name,
-                                                                                req_location
-                                                                               )
+                (
+                    telescope_class,
+                    site_str,
+                    obs_str,
+                    tel_str
+                )
+            )
+            msg = "Request {} wants camera {}, which is not available on the subnetwork '{}'".format(
+                req_dict['id'],
+                instrument_name,
+                req_location
+            )
             raise RequestError(msg)
 
         # Create a window for each telescope in the subnetwork
         windows = Windows()
-        for telescope in subnetwork:
+        for telescope in telescopes:
             for window_dict in req_dict['windows']:
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
@@ -913,80 +839,6 @@ class ModelBuilder(object):
             return False
 
         return True
-
-
-    def map_scicam_keyword(self, molecules, request_number):
-        # Assume all molecules have the same instrument
-        SBIG_SCICAM = '1M0-SCICAM-SBIG'
-        for mol in molecules:
-            if mol.instrument_name.upper() == 'SCICAM':
-                mol.instrument_name = SBIG_SCICAM
-
-            if mol.ag_name:
-                if mol.ag_name.upper() == 'SCICAM':
-                    mol.ag_name = SBIG_SCICAM
-
-#            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
-#                                                                                        request_number,
-#                                                                                        SBIG_SCICAM
-#                                                                                      )
-#            log.warn(msg)
-
-        return
-
-
-
-class _LocationExpander(object):
-    def __init__(self, locations):
-        self.set_locations(locations)
-
-
-    def set_locations(self, locations):
-        ''' Expects a tuple of fully qualified names, with the telescope class
-            prepended to the front. Example:
-
-            location =  (
-                          '0m4a.aqwa.bpl.0m4',
-                          '0m4b.aqwa.bpl.0m4',
-                          '1m0a.doma.elp.1m0',
-                        )
-        '''
-
-        self.telescopes = [ location.split('.') for location in locations ]
-
-        return
-
-
-    def expand_locations(self, dict_repr):
-
-        # We don't accept sub-filters unless all previous filters have been populated
-        filters = []
-        if 'telescope_class' in dict_repr and dict_repr['telescope_class']:
-            filters.append(dict_repr['telescope_class'])
-
-            if 'site' in dict_repr and dict_repr['site']:
-                filters.append(dict_repr['site'])
-
-                if 'observatory' in dict_repr and dict_repr['observatory']:
-                    filters.append(dict_repr['observatory'])
-
-                    if 'telescope' in dict_repr and dict_repr['telescope']:
-                        filters.append(dict_repr['telescope'])
-
-
-        # Now run the filters to pick out only matches
-        filtered_subset = self.telescopes
-        for f in filters:
-            new_filtered_subset = []
-            for location in filtered_subset:
-                if f in location:
-                    new_filtered_subset.append(location)
-            filtered_subset = new_filtered_subset
-
-        # Reconstruct the location string, but drop the telescope class
-        locations = [ '.'.join(location[:-1]) for location in filtered_subset ]
-
-        return locations
 
 
 class RequestError(Exception):

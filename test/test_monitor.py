@@ -19,19 +19,24 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     SequencerEnableMonitor,
                                                     EnclosureInterlockMonitor,
                                                     AvailableForScheduling)
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
 
 
 
 class TestOfflineResourceMonitor(object):
 
     def test_telescope_is_offline(self):
-        monitor = OfflineResourceMonitor(self._create_resource('offline'))
+        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='',
+                                                                              telescopes_file='test/telescopes_sqa_offline.json',
+                                                                              active_instruments_file='test/active_instruments.json'))
         event   = monitor.monitor()
 
         eq_(event['0m8a.doma.sqa'].type, 'OFFLINE')
 
     def test_telescope_is_online(self):
-        monitor = OfflineResourceMonitor(self._create_resource('online'))
+        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='',
+                                                                              telescopes_file='test/telescopes.json',
+                                                                              active_instruments_file='test/active_instruments.json'))
         event   = monitor.monitor()
 
         assert_false(event)
@@ -43,7 +48,9 @@ class TestOfflineResourceMonitor(object):
 class TestNotOkToOpenMonitor(object):
 
     def setUp(self):
-        self.monitor = NotOkToOpenMonitor(telescopes_file='test/telescopes.dat')
+        self.monitor = NotOkToOpenMonitor(configdb_interface=ConfigDBInterface(configdb_url='',
+                                                                               telescopes_file='test/telescopes.json',
+                                                                               active_instruments_file='test/active_instruments.json'))
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_we_are_okay_to_open(self,mock_get_datum):
@@ -75,7 +82,7 @@ class TestNotOkToOpenMonitor(object):
 
         event = self.monitor.monitor()
 
-        resources = sorted(['1m0a.doma.lsc','1m0a.domb.lsc','1m0a.domc.lsc'])
+        resources = sorted(['1m0a.doma.lsc','1m0a.domb.lsc','1m0a.domc.lsc', '0m4a.aqwa.lsc'])
         eq_(resources, sorted(event.keys()))
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
@@ -206,7 +213,9 @@ def _mocked_get_datum_consistent(datum, instance=None, engine=None, persistence_
 class TestScheduleTimestampMonitor(object):
 
     def setUp(self):
-        self.monitor = ScheduleTimestampMonitor()
+        self.monitor = ScheduleTimestampMonitor(ConfigDBInterface(configdb_url='',
+                                                                  telescopes_file='test/telescopes.json',
+                                                                  active_instruments_file='test/active_instruments.json'))
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.datetime')
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
@@ -254,7 +263,9 @@ class TestScheduleTimestampMonitor(object):
 class TestSequencerEnableMonitor(object):
 
     def setUp(self):
-        self.monitor = SequencerEnableMonitor()
+        self.monitor = SequencerEnableMonitor(ConfigDBInterface(configdb_url='',
+                                                                telescopes_file='test/telescopes.json',
+                                                                active_instruments_file='test/active_instruments.json'))
 
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
@@ -298,7 +309,9 @@ class TestSequencerEnableMonitor(object):
 class TestEnclosureInterlockMonitor(object):
 
     def setUp(self):
-        self.monitor = EnclosureInterlockMonitor(telescopes_file='test/telescopes.dat')
+        self.monitor = EnclosureInterlockMonitor(configdb_interface=ConfigDBInterface(configdb_url='',
+                                                                                      telescopes_file='test/telescopes.json',
+                                                                                      active_instruments_file='test/active_instruments.json'))
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_when_enclosure_is_interlocked(self, mock_get_datum):
@@ -354,7 +367,9 @@ class TestEnclosureInterlockMonitor(object):
 class TestAvailableForScheduling(object):
 
     def setUp(self):
-        self.monitor = AvailableForScheduling()
+        self.monitor = AvailableForScheduling(ConfigDBInterface(configdb_url='',
+                                                                telescopes_file='test/telescopes.json',
+                                                                active_instruments_file='test/active_instruments.json'))
 
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')

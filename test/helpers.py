@@ -1,5 +1,4 @@
-from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
-                                                 Windows, Telescope )
+from adaptive_scheduler.model2          import ( UserRequest, Request, Window, Windows)
 
 from mock import Mock, PropertyMock
 from datetime import datetime, timedelta
@@ -11,9 +10,7 @@ def create_mock_proposal():
     return mock_proposal
 
 def create_user_request(window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60, first_request_number='0000000005', tracking_number='0000000005'):
-        t1 = Telescope(
-                        name = resource_name
-                      )
+        t1 = {'name': resource_name}
 
         req_list = []
         window_list = []
@@ -23,7 +20,7 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
             for window_dict in req_windows:
                 w = Window(
                             window_dict = window_dict,
-                            resource    = t1
+                            resource    = t1['name']
                           )
                 windows.append(w)
                 window_list.append(w)

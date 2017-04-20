@@ -19,7 +19,8 @@ from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface
 from adaptive_scheduler.pond             import PondScheduleInterface
-from adaptive_scheduler.valhalla_connections        import ValhallaInterface
+from adaptive_scheduler.valhalla_connections import ValhallaInterface
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
@@ -73,16 +74,14 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-r", "--valhalla_url", type=str, required=True,
+    arg_parser.add_argument("-r", "--valhalla_url", type=str, required=True, dest='valhalla_url',
                             help="Valhalla endpoint URL")
+    arg_parser.add_argument("-c", "--configdb_url", type=str, dest='configdb_url', default=defaults.configdb_url,
+                            help="ConfigDB endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
                             help="Alternative datetime to use as 'now', for running simulations (in isoformat: %%Y-%%m-%%dT%%H:%%M:%%SZ)")
-    arg_parser.add_argument("-t", "--telescopes", type=str, default=defaults.telescopes_file, dest='telescopes_file',
-                            help="Available telescopes file")
-    arg_parser.add_argument("-c", "--cameras", type=str, default=defaults.cameras_file, dest='cameras_file',
-                            help="Instrument description file")
     arg_parser.add_argument("-w", "--noweather", action="store_true", dest='no_weather',
                             help="Disable weather checking")
     arg_parser.add_argument("--nosingles", action="store_true", dest='no_singles',
@@ -125,7 +124,6 @@ def parse_args(argv):
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
-    log.info("Using available telescopes file '%s'", args.telescopes_file)
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
     
     sched_params = SchedulerParameters(**vars(args))
@@ -182,13 +180,14 @@ def main(argv):
     
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
     user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
-    network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
-    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
+    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
+    network_state_interface = Network(configdb_interface, es_endpoint=sched_params.es_endpoint)
+    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface,
+                                         configdb_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
-    # TODO: replace this model builder usage with configdb set of telescopes
-    network_model = sched_params.get_model_builder().tel_network.telescopes
+    network_model = configdb_interface.get_telescopes()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
         too_infile, normal_infile = sched_params.input_file_name.split(',')

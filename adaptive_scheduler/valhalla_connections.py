@@ -6,8 +6,6 @@ import os
 from datetime import datetime
 from requests.exceptions import RequestException
 
-log = logging.getLogger(__name__)
-
 
 class ValhallaConnectionError(Exception):
     pass

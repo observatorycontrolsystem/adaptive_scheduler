@@ -1,7 +1,6 @@
 from adaptive_scheduler.scheduler_input import SchedulingInputProvider, SchedulerParameters, SchedulingInputFactory,\
     SchedulingInputUtils
-from adaptive_scheduler.interfaces import ResourceUsageSnapshot
-from adaptive_scheduler.model2 import Telescope, RequestError
+from adaptive_scheduler.model2 import RequestError
 
 from mock import Mock, patch
 from nose.tools import assert_equal, assert_almost_equal, assert_not_equal, assert_true, assert_false
@@ -35,10 +34,14 @@ class TestSchedulingInputProvider(object):
         assert_equal(None, input_provider.resource_usage_snapshot)
         
     
-    def test_input_does_not_exlude_resources_with_events(self):
-        self.network_model['1m0a.doma.elp'] = Telescope()
-        self.network_model['1m0a.doma.lsc'] = Telescope()
-        self.network_model['1m0a.doma.lsc'].events.append('event')
+    def test_input_does_not_exclude_resources_with_events(self):
+        self.network_model['1m0a.doma.elp'] = {'name': '1m0a.doma.elp',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.lsc']['events'].append('event')
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_too_input=True)
         input_provider.refresh()
         assert_equal(['1m0a.doma.elp'], input_provider.available_resources)

@@ -25,7 +25,7 @@ class TestNetworkStatus(object):
     def setup(self):
         self.mock_monitor1 = mock.MagicMock()
         self.mock_monitor2 = mock.MagicMock()
-        self.network = Network([self.mock_monitor1, self.mock_monitor2])
+        self.network = Network(mock.MagicMock(), [self.mock_monitor1, self.mock_monitor2])
         self.e1= Event(
                             type       = "NOT OK TO OPEN",
                             reason     = "DEWPOINT",
@@ -159,7 +159,7 @@ class TestNetworkStatus(object):
                       'timestamp': '',
                       'hostname': socket.gethostname()}
 
-        network_state = Network([self.mock_monitor1], es_endpoint=es_endpoint)
+        network_state = Network(mock.MagicMock(), [self.mock_monitor1], es_endpoint=es_endpoint)
         events = network_state.update()
 
         event_dict = json.loads(responses.calls[0].request.body)

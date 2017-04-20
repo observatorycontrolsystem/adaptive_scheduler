@@ -62,10 +62,10 @@ def telescope_to_rise_set_telescope(telescope):
     # TODO: Move scheduler Telescope code to rise_set.
     HOURS_TO_DEGREES = 15
     telescope_dict = {
-                        'latitude'  : Angle(degrees=telescope.latitude),
-                        'longitude' : Angle(degrees=telescope.longitude),
-                        'ha_limit_neg' : Angle(degrees=telescope.ha_limit_neg * HOURS_TO_DEGREES),
-                        'ha_limit_pos' : Angle(degrees=telescope.ha_limit_pos * HOURS_TO_DEGREES),
+                        'latitude'  : Angle(degrees=telescope['latitude']),
+                        'longitude' : Angle(degrees=telescope['longitude']),
+                        'ha_limit_neg' : Angle(degrees=telescope['ha_limit_neg'] * HOURS_TO_DEGREES),
+                        'ha_limit_pos' : Angle(degrees=telescope['ha_limit_pos'] * HOURS_TO_DEGREES),
                      }
 
     return telescope_dict
@@ -113,7 +113,6 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
        dark and up from the requested resource, and convert this into a list of
        kernel intervals to return.'''
 
-    # TODO: Expand to allow proper motion etc.
     rs_target = req.target.in_rise_set_format()
 
     intersections_for_resource = {}
@@ -446,9 +445,9 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     for tel_name, tel in tels.iteritems():
         rs_telescope = telescope_to_rise_set_telescope(tel)
         visibility = Visibility(rs_telescope, semester_start,
-                                semester_end, tel.horizon,
-                                twilight, tel.ha_limit_neg,
-                                tel.ha_limit_pos)
+                                semester_end, tel['horizon'],
+                                twilight, tel['ha_limit_neg'],
+                                tel['ha_limit_pos'])
         get_target = Memoize(visibility.get_target_intervals)
         get_dark   = visibility.get_dark_intervals
         get_ha     = Memoize(visibility.get_ha_intervals)

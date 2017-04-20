@@ -122,9 +122,10 @@ class ResourceUsageSnapshot(object):
 
 class NetworkInterface(object):
     
-    def __init__(self, schedule_interface, user_request_interface, network_state_interface):
+    def __init__(self, schedule_interface, user_request_interface, network_state_interface, configdb_interface):
         self.network_schedule_interface = schedule_interface
         self.valhalla_interface = user_request_interface
+        self.configdb_interface = configdb_interface
         self.network_state_interface = network_state_interface
         
     def _running_user_requests_by_tracking_number(self):
@@ -157,11 +158,11 @@ class NetworkInterface(object):
     def abort(self, running_request, reason):
         return self.network_schedule_interface.abort(running_request, reason)
             
-    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+    def save(self, schedule, semester_start, dry_run=False):
         ''' Save the provided observing schedule
         Return the number of submitted requests
         '''
-        return self.network_schedule_interface.save(schedule, semester_start, camera_mappings, dry_run)
+        return self.network_schedule_interface.save(schedule, semester_start, self.configdb_interface, dry_run)
     
     def get_current_events(self):
         ''' Get the current network events
@@ -234,7 +235,7 @@ class CachedInputNetworkInterface(object):
         '''
         pass
             
-    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+    def save(self, schedule, semester_start, dry_run=False):
         ''' Save the provided observing schedule
         Return the number of submitted requests
         '''

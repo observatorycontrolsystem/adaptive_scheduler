@@ -1,6 +1,6 @@
 from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
 from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput, SchedulingInputUtils
-from adaptive_scheduler.model2 import UserRequest, Window, Windows, Telescope, ModelBuilder
+from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -9,7 +9,6 @@ from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.intervals import Intervals
 from nose.tools import nottest
-# import helpers
 
 from mock import Mock, patch
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
@@ -27,7 +26,13 @@ class TestScheduler(object):
         self.sched_params.simulate_now = self.scheduler_run_date
         self.sched_params.timelimit_seconds = 5
         self.sched_params.slicesize_seconds = 300
-        self.network_model = {'1m0a.doma.elp':{}, '1m0a.doma.lsc':{}}
+        self.network_model = {'1m0a.doma.elp':{'status': 'online',
+                                               'name': '1m0a.doma.elp',
+                                               'events': []},
+                              '1m0a.doma.lsc':{'status': 'online',
+                                               'name': '1m0a.doma.lsc',
+                                               'events': []}
+                              }
 
         self.event_bus_mock = Mock()
         self.network_snapshot_mock = Mock()
@@ -1148,8 +1153,7 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     model_windows = Windows()
     for window in windows:
         for telescope in possible_telescopes:
-            mock_resource = Mock()
-            mock_resource.name = telescope
+            mock_resource = telescope
             model_windows.append(Window(window, mock_resource))
     observation_type = "NORMAL"
     if is_too:
@@ -1190,14 +1194,26 @@ class TestSchedulerRunner(object):
 
     def setup(self):
         self.mock_kernel_class = Mock()
-        self.sched_params = SchedulerParameters(run_once=True, cameras_file='test/camera_mappings.dat',
-                                                telescopes_file='test/telescopes.dat')
+        self.sched_params = SchedulerParameters(run_once=True)
         self.mock_event_bus = Mock()
         self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
 
         self.network_interface_mock = Mock()
         self.network_interface_mock.cancel = Mock(return_value=0)
         self.network_interface_mock.save = Mock(return_value=0)
+
+        self.configdb_interface_mock = Mock()
+        self.configdb_interface_mock.get_telescope_info = {'1m0a.doma.lsc': {'name': '1m0a.doma.lsc',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           '1m0a.doma.coj': {'name': '1m0a.doma.coj',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           '1m0a.doma.elp': {'name': '1m0a.doma.elp',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           }
+        self.network_interface_mock.configdb_interface = self.configdb_interface_mock
 
         self.valhalla_interface_mock = Mock()
         self.valhalla_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
@@ -1211,22 +1227,30 @@ class TestSchedulerRunner(object):
         self.scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(datetime.utcnow())
 
     def test_update_network_model_no_events(self):
-        self.network_model['1m0a.doma.lsc'] = Telescope()
-        self.network_model['1m0a.doma.coj'] = Telescope()
+        self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.coj'] = {'name': '1m0a.doma.coj',
+                                               'events': [],
+                                               'status': 'online'}
 
         current_events = {}
         current_events['1m0a.doma.lsc'] = []
-        current_events['1m0a.doma.lcoj'] = []
+        current_events['1m0a.doma.coj'] = []
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, [])
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
 
 
     def test_update_network_model_one_event(self):
-        self.network_model['1m0a.doma.lsc'] = Telescope()
-        self.network_model['1m0a.doma.coj'] = Telescope()
+        self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.coj'] = {'name': '1m0a.doma.coj',
+                                               'events': [],
+                                               'status': 'online'}
 
         current_events = {}
         current_events['1m0a.doma.lsc'] = ['event1', 'event2']
@@ -1234,39 +1258,47 @@ class TestSchedulerRunner(object):
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, ['event1', 'event2'])
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], ['event1', 'event2'])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
 
 
     def test_scheduler_runner_update_network_model_with_new_event(self):
         network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
+                         '1m0a.doma.elp' : {'name': '1m0a.doma.elp',
+                                               'events': [],
+                                               'status': 'online'},
+                         '1m0a.doma.lsc' : {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
                          }
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
         scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         self.network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp' : ['event']})
         scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.lsc should have no events")
 
 
     def test_scheduler_runner_update_network_model_clear_event(self):
         network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
+                         '1m0a.doma.elp' : {'name': '1m0a.doma.elp',
+                                               'events': [],
+                                               'status': 'online'},
+                         '1m0a.doma.lsc' : {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
                          }
-        network_model['1m0a.doma.elp'].events.append('event')
+        network_model['1m0a.doma.elp']['events'].append('event')
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
         scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
 
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.lsc should have no events")
 
         self.network_interface_mock.get_current_events = Mock(return_value={})
         scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, [], "1m0a.doma.elp should have no events")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.elp should have no events")
 
 
     def test_determine_resource_cancelation_start_date_for_reservation_conflicting_running_request(self):
@@ -1772,8 +1804,8 @@ class TestSchedulerInputProvider(object):
         available_resource = 'available'
         unavailable_resource = 'unavailable'
         network_model = {
-                         available_resource : Mock(events=[]),
-                         unavailable_resource : Mock(events=[1]),
+                         available_resource : dict(events=[]),
+                         unavailable_resource : dict(events=[1]),
                          }
 
         sched_params = SchedulerParameters()

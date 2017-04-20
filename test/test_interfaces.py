@@ -139,8 +139,8 @@ class TestNetworkInterface(object):
         responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
                       status=200)
 
-        network_state = Network(es_endpoint=es_endpoint)
-        network_interface = NetworkInterface(MagicMock(), MagicMock(), network_state)
+        network_state = Network(MagicMock(), es_endpoint=es_endpoint)
+        network_interface = NetworkInterface(MagicMock(), MagicMock(), network_state, MagicMock())
 
         telescope_name_list = ['1m0a.doma.tst']
         network_interface.send_available_telescope_state_events(telescope_name_list)
