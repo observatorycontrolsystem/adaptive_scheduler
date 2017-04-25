@@ -327,6 +327,8 @@ class MoleculeFactory(object):
                                   'NRES_EXPOSE' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
                                                  'instrument_name', 'priority', 'acquire_mode',
                                                  'acquire_radius_arcsec'),
+                                  'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                 'exposure_time', 'priority')
                                 }
 
     def build(self, mol_dict):
@@ -771,7 +773,8 @@ class ModelBuilder(object):
 
         filters = []
 
-        molecule_types_without_filter = ['dark', 'bias', 'triple', 'nres_test', 'nres_spectrum', 'nres_expose']
+        molecule_types_without_filter = ['dark', 'bias', 'engineering', 'triple', 'nres_test', 'nres_spectrum',
+                                         'nres_expose']
 
         for molecule in molecules:
             if hasattr(molecule, 'filter') and molecule.filter:

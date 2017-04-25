@@ -44,8 +44,9 @@ from adaptive_scheduler.configdb_connections import ConfigDBError
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
 from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark,
-                                               Bias, SkyFlat, ZeroPointing, AutoFocus)
+from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark, NresSpectrum,
+                                               Bias, SkyFlat, ZeroPointing, AutoFocus, Triple, NresExpose, NresTest,
+                                               Engineering)
 from lcogtpond.schedule                import Schedule
 from lcogtpond.util                    import PondError
 
@@ -498,6 +499,11 @@ class PondMoleculeFactory(object):
                                   'SKY_FLAT'  : SkyFlat,
                                   'AUTO_FOCUS' : AutoFocus,
                                   'ZERO_POINTING' : ZeroPointing,
+                                  'TRIPLE'        : Triple,
+                                  'NRES_EXPOSE'   : NresExpose,
+                                  'NRES_TEST'     : NresTest,
+                                  'NRES_SPECTRUM' : NresSpectrum,
+                                  'ENGINEERING' : Engineering,
                                 }
 
 
@@ -508,14 +514,19 @@ class PondMoleculeFactory(object):
         molecule_fields = {
                             'EXPOSE'    : (self._common, self._imaging, self._targeting),
                             'STANDARD'  : (self._common, self._imaging, self._targeting),
-                            'SPECTRUM'  : (self._common, self._spectro, self._targeting),
-                            'ARC'       : (self._common, self._spectro_calib, self._pointing),
-                            'LAMP_FLAT' : (self._common, self._spectro_calib, self._pointing),
+                            'SPECTRUM'  : (self._common, self._spectro, self._spectro_slit, self._targeting),
+                            'ARC'       : (self._common, self._spectro_slit, self._pointing),
+                            'LAMP_FLAT' : (self._common, self._spectro_slit, self._pointing),
                             'BIAS'      : (self._no_time_common,),
                             'DARK'      : (self._common,),
                             'SKY_FLAT'  : (self._no_time_common, self._imaging),
                             'ZERO_POINTING' : (self._common, self._imaging, self._targeting),
                             'AUTO_FOCUS' : (self._common, self._imaging, self._targeting),
+                            'TRIPLE': (self._common, self._pointing),
+                            'NRES_EXPOSE': (self._common, self._spectro, self._nres, self._targeting),
+                            'NRES_TEST': (self._common, self._spectro, self._nres, self._targeting),
+                            'NRES_SPECTRUM': (self._common, self._spectro, self._nres, self._targeting),
+                            'ENGINEERING': (self._common, self._targeting, self._nres, self._spectro)
                           }
 
         param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
@@ -598,12 +609,25 @@ class PondMoleculeFactory(object):
                                     }
 
         return {
-                 'spectra_slit' : molecule.spectra_slit,
                  'acquire_mode' : acquire_mode_pond_mapping[molecule.acquire_mode.upper()],
                  'acquire_radius_arcsec' : molecule.acquire_radius_arcsec,
                }
 
-    def _spectro_calib(self, molecule, pond_pointing=None):
+    def _nres(self, molecule, pond_pointing=None):
+        exp_meter_pond_mapping = {
+            'EXPMETER_OFF': 0,
+            'EXPMETER_WATCH': 1,
+            'EXPMETER_TRUNCATE': 2,
+        }
+
+        return {
+                 'ag_strategy' : getattr(molecule, 'ag_strategy', None) or '',
+                 'acquire_strategy' : getattr(molecule, 'acquire_strategy', None) or '',
+                 'expmeter_mode' : exp_meter_pond_mapping[getattr(molecule, 'expmeter_mode', None) or 'EXPMETER_OFF'],
+                 'expmeter_snr'  : getattr(molecule, 'expmeter_snr', None) or 0.0,
+               }
+
+    def _spectro_slit(self, molecule, pond_pointing=None):
         return {
                  'spectra_slit' : molecule.spectra_slit,
                }
@@ -767,8 +791,8 @@ class Block(object):
         else:
             raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
 
-        # Set default rotator parameters if none provided
         if pond_pointing:
+            # Set default rotator parameters if none provided
             if hasattr(self.target, 'rot_mode') and self.target.rot_mode:
                 pond_pointing.rot_mode = self.target.rot_mode
             else:
@@ -778,6 +802,12 @@ class Block(object):
                 pond_pointing.rot_angle = self.target.rot_angle
             else:
                 pond_pointing.rot_angle = 0.0
+
+            # fill in NRES fields if they exist in input
+            if hasattr(self.target, 'vmag') and self.target.vmag:
+                pond_pointing.target_vmag = self.target.vmag
+            if hasattr(self.target, 'radvel') and self.target.radvel:
+                pond_pointing.target_radvel = self.target.radvel
 
 
         # 3) Construct the Observations
