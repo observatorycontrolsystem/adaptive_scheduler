@@ -29,7 +29,7 @@ import argparse
 import logging
 import sys
 
-VERSION = '1.0.1'
+VERSION = '1.1.0'
 
 # Set up and configure an application scope logger
 # import logging.config
@@ -187,7 +187,7 @@ def main(argv):
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
-    network_model = configdb_interface.get_telescopes()
+    network_model = configdb_interface.get_telescope_info()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
         too_infile, normal_infile = sched_params.input_file_name.split(',')

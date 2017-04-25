@@ -305,7 +305,7 @@ class SchedulingInputProvider(object):
 
     def refresh(self):
         # The order of these is important
-        self.scheduler_now = self._get_scheduler_now()
+        self.scheduler_now = self.get_scheduler_now()
         self.json_user_request_list = self._get_json_user_request_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
@@ -340,7 +340,7 @@ class SchedulingInputProvider(object):
             return self.estimated_normal_run_time
 
 
-    def _get_scheduler_now(self):
+    def get_scheduler_now(self):
         '''Use a static command line datetime if provided, or default to utcnow, with a
            little extra to cover the scheduler's run time.'''
         if self.sched_params.simulate_now:
@@ -355,7 +355,7 @@ class SchedulingInputProvider(object):
 
 
     def _get_estimated_scheduler_end(self):
-        now = self._get_scheduler_now()
+        now = self.get_scheduler_now()
         if self.is_too_input:
             # TODO: Might Add a pad to account for time between now and when scheduling actually starts
             return now + self.estimated_too_run_time
@@ -365,7 +365,7 @@ class SchedulingInputProvider(object):
 
 
     def _get_json_user_request_list(self):
-        now = self._get_scheduler_now()
+        now = self.get_scheduler_now()
         try:
             semester_details = self.network_interface.valhalla_interface.get_semester_details(self._get_estimated_scheduler_end())
         except ValhallaConnectionError as e:
@@ -373,6 +373,7 @@ class SchedulingInputProvider(object):
         ur_list = self.network_interface.get_all_user_requests(semester_details['start'],
                                                                min(now + timedelta(days=self.sched_params.horizon_days),
                                                                semester_details['end']))
+        logging.getLogger(__name__).warning("_get_json_user_request_list got {} urs".format(len(ur_list)))
 
         return ur_list
 
@@ -399,7 +400,7 @@ class SchedulingInputProvider(object):
 
 
     def get_model_builder(self):
-        mb = ModelBuilder(self.network_interface.user_request_interface,
+        mb = ModelBuilder(self.network_interface.valhalla_interface,
                           self.network_interface.configdb_interface)
 
         return mb

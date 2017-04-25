@@ -371,14 +371,14 @@ class Windows(EqualityMixin):
         return self.windows_for_resource[resource_name]
 
     def has_windows(self):
-        return bool(self.size())
+        return self.size() > 0
 
     def size(self):
-        all_windows = []
+        all_windows_size = 0
         for resource_name, windows in self.windows_for_resource.iteritems():
-            all_windows += windows
+            all_windows_size += len(windows)
 
-        return len(all_windows)
+        return all_windows_size
 
     def __iter__(self):
         for resource_name, windows in self.windows_for_resource.iteritems():

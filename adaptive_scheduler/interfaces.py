@@ -122,9 +122,9 @@ class ResourceUsageSnapshot(object):
 
 class NetworkInterface(object):
     
-    def __init__(self, schedule_interface, user_request_interface, network_state_interface, configdb_interface):
+    def __init__(self, schedule_interface, valhalla_interface, network_state_interface, configdb_interface):
         self.network_schedule_interface = schedule_interface
-        self.valhalla_interface = user_request_interface
+        self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
         self.network_state_interface = network_state_interface
         

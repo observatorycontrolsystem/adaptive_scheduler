@@ -464,7 +464,13 @@ class LCOGTNetworkScheduler(Scheduler):
     def prepare_for_kernel(self, window_adjusted_urs, semester_details):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
+        # Uncomment these next lines to make the output match the old scheduler/requestdb
+        # window_adjusted_urs.sort(key=lambda x: int(x.tracking_number))
+        # for ur in window_adjusted_urs:
+        #     ur.requests.sort(key=lambda x: int(x.request_number))
+
         # Convert CompoundRequests -> CompoundReservations
+
         semester_start = semester_details['start']
 
         many_urs, other_urs = differentiate_by_type('many', window_adjusted_urs)
@@ -668,9 +674,10 @@ class SchedulerRunner(object):
             self.update_network_model()
 
         # Always run the scheduler on the first run
-        scheduler_run_start = datetime.utcnow()
+        scheduler_run_start = self.input_factory.input_provider.get_scheduler_now()
         try:
-            self.semester_details = self.get_semester_details(datetime.utcnow())
+            self.semester_details = self.get_semester_details(scheduler_run_start)
+            self.network_interface.configdb_interface.update_configdb_structures()
             if self.scheduler_rerun_required() or self.first_run:
                 self.create_new_schedule(scheduler_run_start)
         except (ScheduleException, EstimateExceededException) as eee:
@@ -678,17 +685,6 @@ class SchedulerRunner(object):
             # to short circuit to exit.  Just try again.  Run time
             # estimate should have been updated.
             pass
-
-
-    def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
-        import pickle
-        output = {
-                  'json_user_request_list' : json_user_request_list,
-                  'resource_usage_snapshot' : resource_usage_snapshot
-                  }
-        outfile = open('/data/adaptive_scheduler/input_states/scheduler_input.pickle', 'w')
-        pickle.dump(output, outfile)
-        outfile.close()
 
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
