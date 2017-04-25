@@ -29,8 +29,8 @@ from __future__ import division
 
 import time
 
-from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
-                                               NullTarget)
+from adaptive_scheduler.model         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
+                                              NullTarget)
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
                                                split_location, merge_dicts, convert_proper_motion)
 
