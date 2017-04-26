@@ -8,7 +8,7 @@ April 2013
 '''
 
 from __future__ import division
-from adaptive_scheduler.model import Request, Molecule
+from adaptive_scheduler.model2 import Request, Molecule
 
 
 m = Molecule(

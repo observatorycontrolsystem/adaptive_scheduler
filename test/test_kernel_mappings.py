@@ -3,8 +3,8 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model import (SiderealTarget, Request, Proposal,
-                                      UserRequest, Window, Windows, MoleculeFactory, Constraints)
+from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
+                                       UserRequest, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,

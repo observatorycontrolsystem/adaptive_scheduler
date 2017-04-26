@@ -18,7 +18,7 @@ from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime,
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing         import print_compound_reservations,summarise_urs, log_full_ur, log_windows
-from adaptive_scheduler.model           import filter_out_compounds, differentiate_by_type, n_requests
+from adaptive_scheduler.model2           import filter_out_compounds, differentiate_by_type, n_requests
 from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,

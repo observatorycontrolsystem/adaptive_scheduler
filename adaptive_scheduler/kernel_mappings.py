@@ -36,7 +36,7 @@ from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           normalised_epoch_to_datetime,
                                           epoch_to_datetime, timeit, metric_timer )
 from adaptive_scheduler.printing import print_req_summary, plural_str as pl
-from adaptive_scheduler.model   import Window, Windows, differentiate_by_type, filter_compounds_by_type
+from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-model.py - summary line
+model2.py - summary line
 
 description
 

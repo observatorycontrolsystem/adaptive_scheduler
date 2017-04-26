@@ -7,7 +7,7 @@ from mock       import patch, Mock
 from datetime   import datetime, timedelta
 from copy       import deepcopy
 
-from adaptive_scheduler.model          import (UserRequest, Request, Windows)
+from adaptive_scheduler.model2          import (UserRequest, Request, Windows)
 import helpers
 
 import adaptive_scheduler.request_filters

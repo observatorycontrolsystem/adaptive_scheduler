@@ -6,12 +6,12 @@ from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_e
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.model      import (SiderealTarget, NonSiderealTarget,
-                                           Proposal, MoleculeFactory,
-                                           Request, UserRequest,
-                                           Windows, Window, Constraints,
-                                           ModelBuilder,
-                                           RequestError)
+from adaptive_scheduler.model2      import (SiderealTarget, NonSiderealTarget,
+                                            Proposal, MoleculeFactory,
+                                            Request, UserRequest,
+                                            Windows, Window, Constraints,
+                                            ModelBuilder,
+                                            RequestError)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 
 

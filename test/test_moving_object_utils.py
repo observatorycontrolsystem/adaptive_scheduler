@@ -11,7 +11,7 @@ December 2013
 
 from adaptive_scheduler.moving_object_utils import (pond_pointing_from_scheme,
                                                     InvalidElements)
-from adaptive_scheduler.model              import NonSiderealTarget
+from adaptive_scheduler.model2              import NonSiderealTarget
 
 from nose.tools import assert_equal, raises
 

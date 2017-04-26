@@ -10,10 +10,10 @@ from adaptive_scheduler.pond  import (Block, IncompleteBlockError,
                                       build_block, retry_or_reraise,
                                       resolve_instrument, resolve_autoguider,
                                       PondScheduleInterface)
-from adaptive_scheduler.model import (Proposal, Target, SatelliteTarget,
-                                      SiderealTarget, Request,
-                                      UserRequest, Constraints,
-                                      MoleculeFactory)
+from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
+                                       SiderealTarget, Request,
+                                       UserRequest, Constraints,
+                                       MoleculeFactory)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation

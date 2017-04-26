@@ -1,4 +1,4 @@
-from adaptive_scheduler.model           import ModelBuilder, RequestError, n_base_requests
+from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin
 from adaptive_scheduler.valhalla_connections import ValhallaConnectionError

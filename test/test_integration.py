@@ -4,9 +4,9 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.model      import (SiderealTarget, Proposal, MoleculeFactory,
-                                           Request, UserRequest,
-                                           Windows, Window, Constraints)
+from adaptive_scheduler.model2      import (SiderealTarget, Proposal, MoleculeFactory,
+                                            Request, UserRequest,
+                                            Windows, Window, Constraints)
 
 from test_scheduler import create_scheduler_input_factory
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
