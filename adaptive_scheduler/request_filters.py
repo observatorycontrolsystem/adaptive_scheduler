@@ -135,7 +135,7 @@ def run_all_filters(ur_list, running_request_numbers):
        truncated during this process. Unschedulable User Requests are discarded.'''
     ur_list = filter_out_windows_for_running_requests(ur_list, running_request_numbers)
     ur_list = filter_on_pending(ur_list)
-    #ur_list = filter_on_expiry(ur_list)
+    ur_list = filter_on_expiry(ur_list)
     ur_list = filter_out_past_windows(ur_list)
     ur_list = truncate_lower_crossing_windows(ur_list)
     ur_list = truncate_upper_crossing_windows(ur_list)

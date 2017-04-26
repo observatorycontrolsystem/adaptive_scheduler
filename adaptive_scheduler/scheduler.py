@@ -3,6 +3,7 @@ from __future__ import division
 import time
 import logging
 import itertools
+import json
 
 from collections import defaultdict
 from datetime import datetime, timedelta
@@ -271,7 +272,6 @@ class Scheduler(object, SendMetricMixin):
                                 'resource': resource}
                     schedule_data[resource].append(res_data)
 
-            import json
             if is_too:
                 schedule_type = TOO_SCHEDULE_TYPE
             else:
