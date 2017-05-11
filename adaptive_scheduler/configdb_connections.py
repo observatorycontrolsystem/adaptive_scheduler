@@ -1,4 +1,4 @@
-from adaptive_scheduler.utils import metric_timer, SendMetricMixin
+from adaptive_scheduler.utils import metric_timer, SendMetricMixin, case_insensitive_equals
 
 import logging
 import json
@@ -88,13 +88,13 @@ class ConfigDBInterface(object, SendMetricMixin):
         matched_instrument_type = False
         for instrument in self.active_instruments:
             inst_type = instrument['science_camera']['camera_type']['code']
-            if instrument_type.upper() == inst_type.upper():
+            if case_insensitive_equals(instrument_type, inst_type):
                 matched_instrument_type = True
                 split_string = instrument['__str__'].lower().split('.')
-                temp_site = split_string[0]
-                temp_observatory = split_string[1]
-                temp_telescope = split_string[2]
-                if site == temp_site and observatory == temp_observatory and telescope == temp_telescope:
+                temp_site, temp_observatory, temp_telescope, _ = split_string
+                if (case_insensitive_equals(site, temp_site) and
+                        case_insensitive_equals(observatory, temp_observatory) and
+                        case_insensitive_equals(telescope, temp_telescope)):
                     return instrument['science_camera']['code']
 
         if matched_instrument_type:
@@ -104,19 +104,18 @@ class ConfigDBInterface(object, SendMetricMixin):
         return instrument_type
 
     def get_autoguider_for_instrument(self, instrument_name, ag_name=''):
-        if ag_name == instrument_name:
+        if case_insensitive_equals(ag_name, instrument_name):
             # always allow self-guiding
             return instrument_name
         for instrument in self.active_instruments:
-            if instrument_name == instrument['science_camera']['code']:
-                if not ag_name or ag_name == instrument['autoguider_camera']['code']:
+            if case_insensitive_equals(instrument_name, instrument['science_camera']['code']):
+                if not ag_name or case_insensitive_equals(ag_name, instrument['autoguider_camera']['code']):
                     return instrument['autoguider_camera']['code']
-                elif ag_name.upper() == instrument['science_camera']['camera_type']['code'].upper():
+                elif case_insensitive_equals(ag_name, instrument['science_camera']['camera_type']['code']):
                     return instrument['science_camera']['code']
 
         raise ConfigDBError("get_autoguider_for_instrument failed: unable to find autoguider {} for instrument {}"
                             .format(ag_name, instrument_name))
-
 
     def get_telescopes_for_instrument(self, instrument_name, filters, location_dict):
         '''Gets the set of telescopes that a request can be observed on given its instrument class, filter set, and
@@ -125,21 +124,23 @@ class ConfigDBInterface(object, SendMetricMixin):
         telescopes = set()
         for instrument in self.active_instruments:
             instrument_type = instrument['science_camera']['camera_type']['code']
-            if instrument_name.lower() == instrument['science_camera']['code'].lower() or instrument_name.upper() == instrument_type.upper():
+            if (case_insensitive_equals(instrument_name, instrument['science_camera']['code']) or
+                    case_insensitive_equals(instrument_name, instrument_type)):
                 camera_filters = {x.lower() for x in instrument['science_camera']['filters'].split(',')}
                 if set(filters).issubset(camera_filters):
                     split_string = instrument['__str__'].lower().split('.')
-                    site = split_string[0]
-                    observatory = split_string[1]
-                    telescope = split_string[2]
+                    site, observatory, telescope, _ = split_string
                     telescope_class = telescope[:3]
-                    if 'telescope_class' in location_dict and telescope_class != location_dict['telescope_class']:
+                    if ('telescope_class' in location_dict and
+                            not case_insensitive_equals(telescope_class, location_dict['telescope_class'])):
                         continue
-                    if 'site' in location_dict and site != location_dict['site']:
+                    if 'site' in location_dict and not case_insensitive_equals(site, location_dict['site']):
                         continue
-                    if 'observatory' in location_dict and observatory != location_dict['observatory']:
+                    if ('observatory' in location_dict and
+                            not case_insensitive_equals(observatory, location_dict['observatory'])):
                         continue
-                    if 'telescope' in location_dict and telescope != location_dict['telescope']:
+                    if ('telescope' in location_dict and
+                            not case_insensitive_equals(telescope, location_dict['telescope'])):
                         continue
                     # add telescope of the form site.obs.tel to the list of available ones
                     telescopes.add('.'.join(reversed(split_string[:3])))

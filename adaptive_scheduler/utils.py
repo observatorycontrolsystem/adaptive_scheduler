@@ -35,6 +35,10 @@ NORMAL_SCHEDULE_TYPE = 'normal'
 TOO_SCHEDULE_TYPE = 'too'
 
 
+def case_insensitive_equals(str1, str2):
+    return str1.lower() == str2.lower()
+
+
 class EqualityMixin(object):
     '''Inherit from this class if you want your object to have simple equality
        properties based on common attributes (this is what you usually want).'''

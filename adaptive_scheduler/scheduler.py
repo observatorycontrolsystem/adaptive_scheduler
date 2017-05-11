@@ -464,11 +464,6 @@ class LCOGTNetworkScheduler(Scheduler):
     def prepare_for_kernel(self, window_adjusted_urs, semester_details):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
-        # Uncomment these next lines to make the output match the old scheduler/requestdb
-        # window_adjusted_urs.sort(key=lambda x: int(x.tracking_number))
-        # for ur in window_adjusted_urs:
-        #     ur.requests.sort(key=lambda x: int(x.request_number))
-
         # Convert CompoundRequests -> CompoundReservations
 
         semester_start = semester_details['start']

@@ -52,11 +52,11 @@ February 2013
 '''
 
 from datetime import datetime, timedelta
-from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.log      import UserRequestLogger
 
-
 import logging
+import json
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -158,22 +158,6 @@ def filter_out_windows_for_running_requests(ur_list, running_request_numbers):
             return False
         else:
             return True
-    
-    import json
-    window_set = {}
-    for ur in ur_list:
-        for req in ur.requests:
-            window_set[req.request_number] = {}
-            for resource, windows in req.windows.windows_for_resource.items():
-                window_set[req.request_number][resource] = []
-                for window in windows:
-                    window_set[req.request_number][resource].append({'start': window.start.isoformat(), 'end': window.end.isoformat()})
-
-    file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-    f = open('/data/adaptive_scheduler/input_states/window_set_{}.json'.format(file_timestamp), 'w')
-    json.dump(window_set, f)
-    f.close()
-                    
 
     return _for_all_ur_windows(ur_list, filter_test)
 

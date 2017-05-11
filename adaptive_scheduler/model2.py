@@ -440,7 +440,6 @@ class Request(EqualityMixin):
     def n_windows(self):
         return self.windows.size()
 
-
     duration = property(get_duration)
 
 
@@ -454,10 +453,10 @@ class UserRequest(EqualityMixin):
 
     def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires, submitter):
 
-        self.proposal        = proposal
+        self.proposal = proposal
         self.tracking_number = tracking_number
-        self.group_id        = group_id
-        self.ipp_value       = ipp_value
+        self.group_id = group_id
+        self.ipp_value = ipp_value
         self.observation_type = observation_type
         self.operator = self._validate_type(operator)
         self.requests = requests
@@ -690,7 +689,7 @@ class ModelBuilder(object):
                 for window in windows:
                     max_window_time = max(max_window_time, window.end)
 
-        #truncate the expire time by the current semesters end
+        # Truncate the expire time by the current semester's end
         semester_details = self.get_semester_details(datetime.utcnow())
         if semester_details:
             max_window_time = min(max_window_time, semester_details['end'])

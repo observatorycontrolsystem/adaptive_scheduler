@@ -290,8 +290,6 @@ class SchedulingInputProvider(object):
         self.network_interface = network_interface
         self.network_model = network_model
         self.is_too_input = is_too_input
-        # self.utils = SchedulingInputUtils(sched_params.get_model_builder())
-
         self.estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
         self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
 
