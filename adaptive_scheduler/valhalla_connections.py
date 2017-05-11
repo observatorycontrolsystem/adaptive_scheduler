@@ -20,7 +20,19 @@ class ValhallaInterface(object, SendMetricMixin):
         self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
         self.current_semester_details = None
 
+    def get_proposals(self):
+        ''' Returns all active proposals using the bulk proposals API of valhalla
+        '''
+        try:
+            response = requests.get(self.valhalla_url + '/api/proposals/?active=true', headers=self.headers)
+            response.raise_for_status()
+            return response.json()['results']
+        except RequestException as e:
+            raise ValhallaConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
+
     def get_proposal_by_id(self, proposal_id):
+        ''' Returns the proposal details for the proposal_id given from the valhalla proposal API
+        '''
         try:
             response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers)
             response.raise_for_status()
@@ -52,7 +64,7 @@ class ValhallaInterface(object, SendMetricMixin):
     @timeit
     @metric_timer('requestdb.is_dirty')
     def is_dirty(self):
-        '''Trigger valhalla to update request states from recent pond blocks, and report back if any states were updated
+        ''' Triggers valhalla to update request states from recent pond blocks, and report back if any states were updated
         '''
         try:
             response = requests.get(self.valhalla_url + '/api/isDirty/', headers=self.headers)
@@ -66,8 +78,8 @@ class ValhallaInterface(object, SendMetricMixin):
     @timeit
     @metric_timer('requestdb.get_requests', num_requests=lambda x: len(x))
     def get_all_user_requests(self, start, end):
-        '''Get all user requests waiting for scheduling between
-        start and end date
+        ''' Get all user requests waiting for scheduling between
+            start and end date
         '''
         try:
             response = requests.get(self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat(), headers=self.headers)

@@ -623,6 +623,16 @@ class ModelBuilder(object):
         self.configdb_interface = configdb_interface
         self.proposals_by_id = {}
         self.semester_details = None
+        self._get_all_proposals()
+
+    def _get_all_proposals(self):
+        try:
+            proposals = self.valhalla_interface.get_proposals()
+            for prop in proposals:
+                proposal = Proposal(prop)
+                self.proposals_by_id[proposal.id] = proposal
+        except ValhallaConnectionError as e:
+            log.warning("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_details(self, proposal_id):
         if proposal_id not in self.proposals_by_id:

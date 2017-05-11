@@ -841,7 +841,7 @@ class TestPond(object):
 
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
-        ag_name         = None
+        ag_name         = ''
         inst_name       = 'fl15'
         site, obs, tel  = ('lsc', 'doma', '1m0a')
 
@@ -852,7 +852,7 @@ class TestPond(object):
 
     @raises(InstrumentResolutionError)
     def test_no_matching_autoguider_raises_an_exception(self):
-        ag_name         = None
+        ag_name         = ''
         inst_name       = 'abcd'
         site, obs, tel  = ('looloo', 'doma', '1m0a')
 
