@@ -464,6 +464,11 @@ class LCOGTNetworkScheduler(Scheduler):
     def prepare_for_kernel(self, window_adjusted_urs, semester_details):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
+        # Uncomment these next lines to make the output match the old scheduler/requestdb
+        # window_adjusted_urs.sort(key=lambda x: int(x.tracking_number))
+        # for ur in window_adjusted_urs:
+        #     ur.requests.sort(key=lambda x: int(x.request_number))
+
         # Convert CompoundRequests -> CompoundReservations
 
         semester_start = semester_details['start']
@@ -646,6 +651,7 @@ class SchedulerRunner(object):
         try:
             self.semester_details = self.network_interface.valhalla_interface.get_semester_details(date)
         except ValhallaConnectionError as e:
+            self.log.warning("Error getting current semester: {}".format(repr(e)))
             raise ScheduleException("Unable to get current semester details. Skipping run.")
         return self.semester_details
 
