@@ -17,22 +17,19 @@ from __future__ import division
 
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.interfaces       import NetworkInterface, CachedInputNetworkInterface
+from adaptive_scheduler.interfaces       import NetworkInterface
 from adaptive_scheduler.pond             import PondScheduleInterface
-from adaptive_scheduler.requestdb        import RequestDBInterface 
+from adaptive_scheduler.valhalla_connections import ValhallaInterface
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.scheduler_input  import SchedulerParameters, SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, RequestDBSchedulerParameters
+from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status   import Network
-# from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi as FullScheduler
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
-
-from reqdb.client import SchedulerClient
 
 import argparse
 import logging
 import sys
 
-VERSION = '1.0.1'
+VERSION = '1.1.0'
 
 # Set up and configure an application scope logger
 # import logging.config
@@ -64,7 +61,7 @@ def kill_handler(signal, frame):
 
 
 def parse_args(argv):
-    defaults = RequestDBSchedulerParameters(None)
+    defaults = SchedulerParameters()
     arg_parser = argparse.ArgumentParser(
                                 formatter_class=argparse.RawDescriptionHelpFormatter,
                                 description=__doc__)
@@ -77,16 +74,14 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-r", "--requestdb", type=str, required=True,
-                            help="Request DB endpoint URL")
+    arg_parser.add_argument("-r", "--valhalla_url", type=str, required=True, dest='valhalla_url',
+                            help="Valhalla endpoint URL")
+    arg_parser.add_argument("-c", "--configdb_url", type=str, dest='configdb_url', default=defaults.configdb_url,
+                            help="ConfigDB endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
-                            help="Alternative datetime to use as 'now', for running simulations (%%Y-%%m-%%d %%H:%%M:%%S)")
-    arg_parser.add_argument("-t", "--telescopes", type=str, default=defaults.telescopes_file, dest='telescopes_file',
-                            help="Available telescopes file")
-    arg_parser.add_argument("-c", "--cameras", type=str, default=defaults.cameras_file, dest='cameras_file',
-                            help="Instrument description file")
+                            help="Alternative datetime to use as 'now', for running simulations (in isoformat: %%Y-%%m-%%dT%%H:%%M:%%SZ)")
     arg_parser.add_argument("-w", "--noweather", action="store_true", dest='no_weather',
                             help="Disable weather checking")
     arg_parser.add_argument("--nosingles", action="store_true", dest='no_singles',
@@ -103,6 +98,8 @@ def parse_args(argv):
                             help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
                                 help="Enable storing pickled files of scheduling run input")
+    arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
+                                help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
@@ -127,10 +124,9 @@ def parse_args(argv):
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
-    log.info("Using available telescopes file '%s'", args.telescopes_file)
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
     
-    sched_params = RequestDBSchedulerParameters(**vars(args))
+    sched_params = SchedulerParameters(**vars(args))
 
     return sched_params
 
@@ -183,14 +179,15 @@ def main(argv):
                            event_type=TimingLogger._EndEvent)
     
     schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
-    requestdb_client = SchedulerClient(sched_params.requestdb_url)
-    user_request_interface = RequestDBInterface(requestdb_client, debug=sched_params.debug)
-    network_state_interface = Network(es_endpoint=sched_params.es_endpoint)
-    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface)
+    user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
+    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
+    network_state_interface = Network(configdb_interface, es_endpoint=sched_params.es_endpoint)
+    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface,
+                                         configdb_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
     kernel_class = get_kernel_class(sched_params)
-    network_model = sched_params.get_model_builder().tel_network.telescopes
+    network_model = configdb_interface.get_telescope_info()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
         too_infile, normal_infile = sched_params.input_file_name.split(',')

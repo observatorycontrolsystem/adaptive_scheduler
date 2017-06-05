@@ -35,6 +35,23 @@ NORMAL_SCHEDULE_TYPE = 'normal'
 TOO_SCHEDULE_TYPE = 'too'
 
 
+def case_insensitive_equals(str1, str2):
+    return str1.lower() == str2.lower()
+
+
+class EqualityMixin(object):
+    '''Inherit from this class if you want your object to have simple equality
+       properties based on common attributes (this is what you usually want).'''
+
+    def __eq__(self, other):
+        if type(other) is type(self):
+            return self.__dict__ == other.__dict__
+        return False
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+
 def set_schedule_type(schedule_type):
     '''
         Function takes in a schedule type and adjusts the global tags used in saving metrics accordingly
@@ -84,7 +101,7 @@ def iso_string_to_datetime(iso_string):
        representation of datetime objects.'''
 
     # Set the format to the string representation of a datetime
-    format = '%Y-%m-%d %H:%M:%S'
+    format = '%Y-%m-%dT%H:%M:%SZ'
     return datetime.strptime(iso_string, format)
 
 def datetime_to_epoch(dt):

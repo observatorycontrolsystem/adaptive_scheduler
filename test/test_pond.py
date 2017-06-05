@@ -14,15 +14,13 @@ from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
                                        SiderealTarget, Request,
                                        UserRequest, Constraints,
                                        MoleculeFactory)
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-from adaptive_scheduler.utils import convert_proper_motion
-from schedutils.camera_mapping        import create_camera_mapping
 import lcogtpond
-from lcogtpond import block
 
 from datetime import datetime, timedelta
 import collections
@@ -87,11 +85,10 @@ class TestPondMoleculeFactory(object):
 
     def setup(self):
         self.proposal = Proposal(
-                                  observer_name  = 'Eric Saunders',
-                                  user_id        = 'esaunders',
-                                  proposal_id    = 'Scheduler Testing',
-                                  tag_id         = 'admin',
-                                  priority       = 2,
+                                  pi  = 'Eric Saunders',
+                                  id    = 'Scheduler Testing',
+                                  tag         = 'admin',
+                                  tac_priority       = 2,
                                 )
 
         self.pond_coords = lcogtpond.pointing.ra_dec(
@@ -254,7 +251,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_expose_mol, self.pond_pointing)
@@ -268,7 +266,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_standard_mol, self.pond_pointing)
@@ -282,7 +281,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_auto_focus_mol, self.pond_pointing)
@@ -297,7 +297,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_zero_pointing_mol, self.pond_pointing)
@@ -312,7 +313,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_sky_flat_mol, self.pond_pointing)
@@ -327,7 +329,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_bias_mol, self.pond_pointing)
@@ -341,7 +344,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_dark_mol, self.pond_pointing)
@@ -355,7 +359,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_spectrum_mol, self.pond_pointing)
@@ -371,7 +376,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_arc_mol, self.pond_pointing)
@@ -385,7 +391,8 @@ class TestPondMoleculeFactory(object):
                               tracking_number = '0000000001',
                               request_number  = '0000000002',
                               proposal        = self.proposal,
-                              group_id        = 'potatoes'
+                              group_id        = 'potatoes',
+                              submitter       = ''
                             )
 
         pond_mol = mf.build(self.valid_lamp_flat_mol, self.pond_pointing)
@@ -399,9 +406,11 @@ class TestPond(object):
 
     def setup(self):
         # Metadata missing proposal and tag parameters
-        self.proposal = Proposal(observer_name='Eric Saunders')
+        self.proposal = Proposal(pi='Eric Saunders')
 
-        self.mapping = create_camera_mapping('test/camera_mappings.dat')
+        self.configdb_interface = ConfigDBInterface(configdb_url='',
+                                                    telescopes_file='test/telescopes.json',
+                                                    active_instruments_file='test/active_instruments.json')
 
         self.mol_factory = MoleculeFactory()
         # Molecule missing a binning parameter (which is required)
@@ -417,11 +426,10 @@ class TestPond(object):
                                            )
 
         self.valid_proposal = Proposal(
-                                        observer_name  = 'Eric Saunders',
-                                        user_id        = 'esaunders',
-                                        proposal_id    = 'Scheduler Testing',
-                                        tag_id         = 'admin',
-                                        priority       = 2,
+                                        pi  = 'Eric Saunders',
+                                        id    = 'Scheduler Testing',
+                                        tag        = 'admin',
+                                        tac_priority       = 2,
                                       )
 
         self.valid_target = SiderealTarget(
@@ -472,7 +480,7 @@ class TestPond(object):
                                                         exposure_count  = 1,
                                                         bin_x           = 2,
                                                         bin_y           = 2,
-                                                        instrument_name = '1m0-SciCam-SBIG',
+                                                        instrument_name = '1m0-SciCam-SINISTRO',
                                                         filter          = 'B',
                                                         exposure_time   = 30,
                                                         priority        = 1,
@@ -487,7 +495,7 @@ class TestPond(object):
                                                         exposure_count  = 1,
                                                         bin_x           = 2,
                                                         bin_y           = 2,
-                                                        instrument_name = '1m0-SciCam-SBIG',
+                                                        instrument_name = '1m0-SciCam-SINISTRO',
                                                         filter          = 'B',
                                                         exposure_time   = 30,
                                                         priority        = 1,
@@ -546,8 +554,9 @@ class TestPond(object):
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things',
                                  tracking_number = '0000000001',
+                                 submitter = '',
                                  request_number  = '0000000001',
-                                 camera_mapping = self.mapping,
+                                 configdb_interface = self.configdb_interface,
                                )
 
         self.two_metre_block = Block(
@@ -555,14 +564,15 @@ class TestPond(object):
                                  start    = datetime(2012, 1, 1, 0, 0, 0),
                                  end      = datetime(2012, 1, 2, 0, 0, 0),
                                  group_id = 'related things',
+                                 submitter= '',
                                  tracking_number = '0000000001',
                                  request_number  = '0000000001',
-                                 camera_mapping = self.mapping,
+                                 configdb_interface = self.configdb_interface,
                                )
 
 
     def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
-                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group',
+                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group', submitter='mysubmitter',
                           tracking_number='0000000001', request_number='0000000001'):
         scheduled_block = Block(
                                  location=location,
@@ -570,8 +580,9 @@ class TestPond(object):
                                  end=end,
                                  group_id=group_id,
                                  tracking_number=tracking_number,
+                                 submitter=submitter,
                                  request_number=request_number,
-                                 camera_mapping=self.mapping,
+                                 configdb_interface=self.configdb_interface,
                                )
 
         scheduled_block.add_proposal(self.valid_proposal)
@@ -586,7 +597,7 @@ class TestPond(object):
 
         assert_equal(
                       missing,
-                      ['proposal_id', 'user_id', 'tag_id', 'priority']
+                      ['id', 'tag', 'tac_priority']
                     )
 
 
@@ -597,7 +608,7 @@ class TestPond(object):
 
         missing = self.two_metre_block.list_missing_fields()
 
-        assert_equal(missing['proposal'], ['proposal_id', 'user_id', 'tag_id', 'priority'])
+        assert_equal(missing['proposal'], ['id', 'tag', 'tac_priority'])
         assert_equal(missing['molecule'], ['bin_x', 'bin_y', 'exposure_time', 'priority'])
         assert_equal(missing['target'], ['name', 'ra', 'dec'])
 
@@ -614,7 +625,9 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
-                           ipp_value=1.0
+                           ipp_value=1.0,
+                           observation_type="TARGET_OF_OPPORTUNITY",
+                           submitter=''
                          )
 
         tels = {
@@ -677,7 +690,7 @@ class TestPond(object):
 
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
-        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.inst_name, 'fl16')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_equal(pond_mol.pointing.roll, 310.35795833333333)
         assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
@@ -696,7 +709,7 @@ class TestPond(object):
         converted_proper_motion_dec = 3.14468
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Expose)
-        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.inst_name, 'fl16')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_almost_equal(pond_mol.pointing.parallax, .54930)
         assert_almost_equal(pond_mol.pointing.pro_mot_ra, converted_proper_motion_ra)
@@ -713,7 +726,7 @@ class TestPond(object):
 
         assert_equal(len(received.molecules), 1)
         assert_equal(type(pond_mol), lcogtpond.molecule.Standard)
-        assert_equal(pond_mol.inst_name, 'kb70')
+        assert_equal(pond_mol.inst_name, 'fl16')
         assert_equal(pond_mol.ag_name, 'ef02')
         assert_equal(pond_mol.pointing.roll, 310.35795833333333)
         assert_equal(pond_mol.pointing.pitch, 45.280338888888885)
@@ -785,7 +798,7 @@ class TestPond(object):
         instrument_name = 'kb12'
         site, obs, tel  = ('lsc', 'doma', '1m0a')
 
-        received = resolve_instrument(instrument_name, site, obs, tel, self.mapping)
+        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
 
         assert_equal(received, 'kb12')
 
@@ -794,9 +807,9 @@ class TestPond(object):
         instrument_name = '1M0-SCICAM-SINISTRO'
         site, obs, tel  = ('lsc', 'doma', '1m0a')
 
-        received = resolve_instrument(instrument_name, site, obs, tel, self.mapping)
+        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
 
-        assert_equal(received, 'fl02')
+        assert_equal(received, 'fl15')
 
 
     @raises(InstrumentResolutionError)
@@ -804,46 +817,46 @@ class TestPond(object):
         instrument_name = '1M0-SCICAM-SINISTRO'
         site, obs, tel  = ('looloo', 'doma', '1m0a')
 
-        received = resolve_instrument(instrument_name, site, obs, tel, self.mapping)
+        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
 
 
     def test_resolve_autoguider_pass_through_if_camera_specified(self):
-        ag_name         = 'kb12'
-        inst_name       = 'abcd'
+        ag_name         = 'ef06'
+        inst_name       = 'fl15'
         site, obs, tel  = ('lsc', 'doma', '1m0a')
 
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
 
-        assert_equal(received, 'kb12')
+        assert_equal(received, 'ef06')
 
 
     def test_scicam_autoguider_resolves_to_primary_instrument(self):
         ag_name         = '1M0-SCICAM-SINISTRO'
-        inst_name       = 'abcd'
+        specific_inst_name       = 'fl15'
         site, obs, tel  = ('lsc', 'doma', '1m0a')
 
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
+        received = resolve_autoguider(ag_name, specific_inst_name, site, obs, tel, self.configdb_interface)
 
-        assert_equal(received, 'fl02')
+        assert_equal(received, 'fl15')
 
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
-        ag_name         = None
-        inst_name       = 'fl01'
-        site, obs, tel  = ('bpl', 'doma', '1m0a')
+        ag_name         = ''
+        inst_name       = 'fl15'
+        site, obs, tel  = ('lsc', 'doma', '1m0a')
 
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
 
-        assert_equal(received, 'ef12')
+        assert_equal(received, 'ef06')
 
 
     @raises(InstrumentResolutionError)
     def test_no_matching_autoguider_raises_an_exception(self):
-        ag_name         = None
+        ag_name         = ''
         inst_name       = 'abcd'
         site, obs, tel  = ('looloo', 'doma', '1m0a')
 
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.mapping)
+        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
 
     @patch('lcogtpond.schedule.Schedule.get')
     def test_get_too_blocks(self, func_mock):
@@ -864,7 +877,9 @@ class TestPond(object):
                            tracking_number='0000000001',
                            group_id=None,
                            expires=None,
-                           ipp_value=1.0
+                           ipp_value=1.0,
+                           observation_type="TARGET_OF_OPPORTUNITY",
+                           submitter=''
                          )
 
         tels = {
@@ -891,6 +906,7 @@ class TestPondInteractions(object):
         self.site  = 'lsc'
         self.obs   = 'doma'
         self.tel   = '1m0a'
+        self.configdb_interface = Mock()
 
     def make_fake_block(self, start_dt, tracking_num_set):
         class FakeBlock(object):
@@ -991,8 +1007,6 @@ class TestPondInteractions(object):
                      '1m0a.doma.lsc' : mock_res_list
                    }
 
-        camera_mappings_file = 'camera_mappings.dat'
-
         # Choose a value that isn't True or False, since we only want to check the
         # value makes it through to the second mock
         dry_run = 123
@@ -1006,7 +1020,7 @@ class TestPondInteractions(object):
 
         pond_interface = PondScheduleInterface()
         n_submitted_total = pond_interface._send_schedule_to_pond(schedule, self.start,
-                                                  camera_mappings_file, dry_run)
+                                                  self.configdb_interface, dry_run)
 
         assert_equal(n_submitted_total, 2)
         mock_func2.assert_called_once_with(schedule, dry_run)
@@ -1024,7 +1038,7 @@ class TestPondInteractions(object):
         proposal = Proposal()
         target   = SiderealTarget()
 
-        compound_request = UserRequest(
+        user_request = UserRequest(
                                             operator = 'single',
                                             requests = None,
                                             proposal = proposal,
@@ -1032,6 +1046,8 @@ class TestPondInteractions(object):
                                             tracking_number = None,
                                             group_id = None,
                                             ipp_value = 1.0,
+                                            observation_type = "NORMAL",
+                                            submitter = ''
                                           )
 
         constraints = Constraints(
@@ -1050,10 +1066,8 @@ class TestPondInteractions(object):
                            request_number = None
                            )
 
-        camera_mappings_file = 'camera_mappings.dat'
-
-        received = build_block(reservation, request, compound_request, self.start,
-                               camera_mappings_file)
+        received = build_block(reservation, request, user_request, self.start,
+                               self.configdb_interface)
         missing = received.list_missing_fields()
         print "Missing %r fields" % missing
         
@@ -1072,7 +1086,8 @@ class TestPondInteractions(object):
         proposal = Proposal()
         target   = SiderealTarget()
 
-        compound_request = UserRequest(
+
+        user_request = UserRequest(
                                             operator = 'single',
                                             requests = None,
                                             proposal = proposal,
@@ -1080,6 +1095,8 @@ class TestPondInteractions(object):
                                             tracking_number = None,
                                             group_id = None,
                                             ipp_value = 1.0,
+                                            observation_type = "TARGET_OF_OPPORTUNITY",
+                                            submitter = ''
                                           )
 
         constraints = Constraints(
@@ -1096,12 +1113,9 @@ class TestPondInteractions(object):
                            windows        = None,
                            constraints    = constraints,
                            request_number = None,
-                           observation_type = "TARGET_OF_OPPORTUNITY"
                            )
 
-        camera_mappings_file = 'camera_mappings.dat'
-
-        received = build_block(reservation, request, compound_request, self.start,
-                               camera_mappings_file)
+        received = build_block(reservation, request, user_request, self.start,
+                               self.configdb_interface)
         
         assert_equal(received.is_too, True, "Should be a ToO block")

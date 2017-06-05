@@ -1,6 +1,6 @@
-from adaptive_scheduler.scheduler import Scheduler, LCOGTNetworkScheduler, SchedulerRunner, SchedulerResult
-from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInputFactory, SchedulingInput
-from adaptive_scheduler.model2 import UserRequest, Window, Windows, Telescope
+from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
+from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput, SchedulingInputUtils
+from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -9,7 +9,6 @@ from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.intervals import Intervals
 from nose.tools import nottest
-# import helpers
 
 from mock import Mock, patch
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
@@ -20,21 +19,29 @@ from datetime import datetime, timedelta
 class TestScheduler(object):
 
     def __init__(self):
-        self.scheduler_run_date = "2013-05-22 00:00:00"
-        self.normalize_windows_to = datetime.strptime(self.scheduler_run_date, '%Y-%m-%d %H:%M:%S')
+        self.scheduler_run_date = "2013-05-22T00:00:00Z"
+        self.normalize_windows_to = datetime.strptime(self.scheduler_run_date, '%Y-%m-%dT%H:%M:%SZ')
 
         self.sched_params = SchedulerParameters()
         self.sched_params.simulate_now = self.scheduler_run_date
         self.sched_params.timelimit_seconds = 5
         self.sched_params.slicesize_seconds = 300
-        self.network_model = self.sched_params.get_model_builder().tel_network.telescopes.keys()
+        self.network_model = {'1m0a.doma.elp':{'status': 'online',
+                                               'name': '1m0a.doma.elp',
+                                               'events': []},
+                              '1m0a.doma.lsc':{'status': 'online',
+                                               'name': '1m0a.doma.lsc',
+                                               'events': []}
+                              }
 
         self.event_bus_mock = Mock()
         self.network_snapshot_mock = Mock()
         self.network_snapshot_mock.running_tracking_numbers = Mock(return_value=[])
         self.intervals_mock = Mock(timepoints=[])
         self.network_snapshot_mock.blocked_intervals = Mock(return_value=self.intervals_mock)
-
+        self.fake_semester = {'id': '2015A',
+                              'start': (datetime.utcnow() - timedelta(days=30)),
+                              'end': (datetime.utcnow() + timedelta(days=30))}
 
 
     def build_ur_list(self, *tracking_numbers):
@@ -68,26 +75,29 @@ class TestScheduler(object):
         network_snapshot_mock.blocked_intervals = Mock(return_value=intervals_mock)
         network_snapshot_mock.running_requests_for_resources = Mock(return_value=[])
         network_snapshot_mock.user_requests_for_resource = Mock(return_value=[])
-        network_model = sched_params.get_model_builder().tel_network.telescopes.keys()
+        network_model = ['',]
         estimated_scheduler_runtime = timedelta(seconds=300)
 
         kernel_class_mock = Mock()
         scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
-        scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime, normal_user_requests, network_snapshot_mock, network_model, False)
+        scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime,
+                                          normal_user_requests, network_snapshot_mock, SchedulingInputUtils(None),
+                                          self.network_model, False)
         estimated_scheduler_end = datetime.utcnow() + estimated_scheduler_runtime
-        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=False)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=False)
 
         assert_equal({}, scheduler_result.schedule)
         assert_equal({}, scheduler_result.resource_schedules_to_cancel)
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     def test_constructing_value_matrix(self):
         # tel2 is not used
         tels = ['1m0a.doma.tel1', '1m0a.doma.tel2']
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -268,7 +278,7 @@ class TestScheduler(object):
                 '1m0a.doma.tel3'
                 ]
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -313,7 +323,7 @@ class TestScheduler(object):
                 '1m0a.doma.tel3'
                 ]
 
-        windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_r1 = create_request(1, 60, windows, tels, is_too=True)
         too_ur1 = create_user_request(1, 20, [too_r1], 'single')
         too_r2 = create_request(2, 60, windows, tels, is_too=True)
@@ -505,10 +515,11 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=False)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=False)
         
-        assert_equal(['123456789'], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal(['123456789'], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     def test_invalid_request_included_in_unschedulable_list(self):
@@ -527,10 +538,11 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = [dict(request_number='123456789', state='PENDING')]
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=False)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=False)
         
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal(['123456789'], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal(['123456789'], scheduler_result.unschedulable_request_numbers)
 
 
     def test_invalid_unschedulable_request_not_included_in_unschedulable_list(self):
@@ -549,10 +561,11 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = [dict(request_number='123456789', state='UNSCHEDULABLE')]
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=False)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=False)
         
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -566,7 +579,7 @@ class TestScheduler(object):
         tracking_number = 1
         request_number = 1
         target_telescope = '1m0a.doma.elp'
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[target_telescope])
         normal_single_ur = create_user_request(tracking_number, priority, [request], 'single')
 
@@ -601,7 +614,8 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=False)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=False)
 
         # Start assertions
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
@@ -612,8 +626,8 @@ class TestScheduler(object):
         assert_true(self.scheduled_duration_is(request_number, scheduler_result.schedule, self.sched_params.slicesize_seconds, request_duration_seconds))
 
         assert_equal(sorted(self.network_model), sorted(scheduler_result.resource_schedules_to_cancel))
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
 #     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -671,7 +685,7 @@ class TestScheduler(object):
         request_number = 1
         telescope1 = '1m0a.doma.elp'
         telescope2 = '1m0a.doma.lsc'
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         request = create_request(request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[telescope1, telescope2], is_too=True)
         too_single_ur = create_user_request(tracking_number, priority, [request], 'single')
 
@@ -707,7 +721,8 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=True)
 
         # Start assertions
         assert_true(self.is_scheduled(1, scheduler_result.schedule))
@@ -718,8 +733,8 @@ class TestScheduler(object):
 
         assert_equal(1, len(scheduler_result.resource_schedules_to_cancel))
         assert_true(scheduler_result.resource_schedules_to_cancel[0] in ['1m0a.doma.lsc', '1m0a.doma.elp'])
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -734,7 +749,7 @@ class TestScheduler(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -769,6 +784,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
+                            SchedulingInputUtils(None),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -778,7 +794,8 @@ class TestScheduler(object):
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -794,8 +811,8 @@ class TestScheduler(object):
         assert_true(self.scheduled_duration_is(too_request_number, scheduler_result.schedule, self.sched_params.slicesize_seconds, request_duration_seconds))
 
         assert_equal(['1m0a.doma.elp'], scheduler_result.resource_schedules_to_cancel)
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -813,7 +830,7 @@ class TestScheduler(object):
         low_priority_normal_request_number = 2
         high_priority_normal_tracking_number = 3
         high_prioirty_normal_request_number = 3
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, low_priority, [too_request], 'single')
         low_priority_normal_request = create_request(low_priority_normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -852,6 +869,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
+                            SchedulingInputUtils(None),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -861,7 +879,8 @@ class TestScheduler(object):
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -877,8 +896,8 @@ class TestScheduler(object):
         assert_true(self.scheduled_duration_is(too_request_number, scheduler_result.schedule, self.sched_params.slicesize_seconds, request_duration_seconds))
 
         assert_equal(['1m0a.doma.lsc'], scheduler_result.resource_schedules_to_cancel)
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -896,7 +915,7 @@ class TestScheduler(object):
         old_low_priority_too_request_number = 2
         old_high_priority_too_tracking_number = 3
         old_high_priority_too_request_number = 3
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         new_too_request = create_request(new_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         new_too_single_ur = create_user_request(new_too_tracking_number, low_priority, [new_too_request], 'single')
         old_low_priority_too_request = create_request(old_low_priority_too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
@@ -928,6 +947,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
+                            SchedulingInputUtils(None),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -937,7 +957,8 @@ class TestScheduler(object):
         # Start scheduler run
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=True)
 
         # Start assertions
         # This checks to see that windows are only created for the correct telescope resources
@@ -950,8 +971,8 @@ class TestScheduler(object):
         assert_false(self.is_scheduled(3, scheduler_result.schedule))
 
         assert_equal([], scheduler_result.resource_schedules_to_cancel)
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
     @patch.object(Scheduler, 'apply_window_filters')
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
@@ -994,14 +1015,15 @@ class TestScheduler(object):
         mock_scheduler_input.invalid_requests = []
         scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
-        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end, preemption_enabled=True)
+        scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
+                                                   self.fake_semester, preemption_enabled=True)
 
         # Start assertions
         assert_equal({}, scheduler_result.schedule)
         assert_false(self.is_scheduled(request_number, scheduler_result.schedule))
         assert_equal([], sorted(scheduler_result.resource_schedules_to_cancel))
-        assert_equal([], scheduler_result.unschedulable_user_request_numbers)
-        assert_equal([], scheduler_result.unschedulable_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_user_request_numbers)
+        # assert_equal([], scheduler_result.unschedulable_request_numbers)
 
         # Make sure the prepare_for_kernel_mock is called once with empty UR list
         assert_equal(1, prepare_for_kernel_mock.call_count)
@@ -1122,7 +1144,7 @@ def create_user_request(tracking_number, priority, requests, operator):  # windo
     mock_user_request.n_requests = Mock(return_value=len(requests))
     mock_user_request.get_priority = Mock(return_value=priority)
     mock_user_request.drop_empty_children = Mock(side_effect=lambda *args : [])  # [request.request_number for request in requests if len(request.windows) > 0])
-    mock_user_request.has_target_of_opportunity = Mock(return_value=reduce(lambda x, y: x and y, map(lambda r : r.observation_type == 'TARGET_OF_OPPORTUNITY', requests)))
+    mock_user_request.is_target_of_opportunity = Mock(return_value=reduce(lambda x, y: x and y, map(lambda r : r.observation_type == 'TARGET_OF_OPPORTUNITY', requests)))
 
     return mock_user_request
 
@@ -1131,8 +1153,7 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     model_windows = Windows()
     for window in windows:
         for telescope in possible_telescopes:
-            mock_resource = Mock()
-            mock_resource.name = telescope
+            mock_resource = telescope
             model_windows.append(Window(window, mock_resource))
     observation_type = "NORMAL"
     if is_too:
@@ -1173,8 +1194,7 @@ class TestSchedulerRunner(object):
 
     def setup(self):
         self.mock_kernel_class = Mock()
-        self.sched_params = SchedulerParameters(run_once=True, cameras_file='test/camera_mappings.dat',
-                                                telescopes_file='test/telescopes.dat')
+        self.sched_params = SchedulerParameters(run_once=True)
         self.mock_event_bus = Mock()
         self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
 
@@ -1182,28 +1202,55 @@ class TestSchedulerRunner(object):
         self.network_interface_mock.cancel = Mock(return_value=0)
         self.network_interface_mock.save = Mock(return_value=0)
 
+        self.configdb_interface_mock = Mock()
+        self.configdb_interface_mock.get_telescope_info = {'1m0a.doma.lsc': {'name': '1m0a.doma.lsc',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           '1m0a.doma.coj': {'name': '1m0a.doma.coj',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           '1m0a.doma.elp': {'name': '1m0a.doma.elp',
+                                                                             'events': [],
+                                                                             'status': 'online'},
+                                                           }
+        self.network_interface_mock.configdb_interface = self.configdb_interface_mock
+
+        self.valhalla_interface_mock = Mock()
+        self.valhalla_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
+                                                                               'start': datetime.utcnow() - timedelta(days=30),
+                                                                               'end': datetime.utcnow() + timedelta(days=30)})
+        self.network_interface_mock.valhalla_interface = self.valhalla_interface_mock
+
         self.network_model = {}
         self.mock_input_factory = Mock()
         self.scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, self.mock_input_factory)
-
+        self.scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(datetime.utcnow())
 
     def test_update_network_model_no_events(self):
-        self.network_model['1m0a.doma.lsc'] = Telescope()
-        self.network_model['1m0a.doma.coj'] = Telescope()
+        self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.coj'] = {'name': '1m0a.doma.coj',
+                                               'events': [],
+                                               'status': 'online'}
 
         current_events = {}
         current_events['1m0a.doma.lsc'] = []
-        current_events['1m0a.doma.lcoj'] = []
+        current_events['1m0a.doma.coj'] = []
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, [])
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
 
 
     def test_update_network_model_one_event(self):
-        self.network_model['1m0a.doma.lsc'] = Telescope()
-        self.network_model['1m0a.doma.coj'] = Telescope()
+        self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
+        self.network_model['1m0a.doma.coj'] = {'name': '1m0a.doma.coj',
+                                               'events': [],
+                                               'status': 'online'}
 
         current_events = {}
         current_events['1m0a.doma.lsc'] = ['event1', 'event2']
@@ -1211,38 +1258,47 @@ class TestSchedulerRunner(object):
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
         self.scheduler_runner.update_network_model()
 
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc'].events, ['event1', 'event2'])
-        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj'].events, [])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], ['event1', 'event2'])
+        assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
 
 
     def test_scheduler_runner_update_network_model_with_new_event(self):
         network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
+                         '1m0a.doma.elp' : {'name': '1m0a.doma.elp',
+                                               'events': [],
+                                               'status': 'online'},
+                         '1m0a.doma.lsc' : {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
                          }
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
-
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         self.network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp' : ['event']})
         scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.lsc should have no events")
 
 
     def test_scheduler_runner_update_network_model_clear_event(self):
         network_model = {
-                         '1m0a.doma.elp' : Telescope(),
-                         '1m0a.doma.lsc' : Telescope()
+                         '1m0a.doma.elp' : {'name': '1m0a.doma.elp',
+                                               'events': [],
+                                               'status': 'online'},
+                         '1m0a.doma.lsc' : {'name': '1m0a.doma.lsc',
+                                               'events': [],
+                                               'status': 'online'}
                          }
-        network_model['1m0a.doma.elp'].events.append('event')
+        network_model['1m0a.doma.elp']['events'].append('event')
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
 
-        assert_equal(network_model['1m0a.doma.elp'].events, ['event'], "1m0a.doma.elp should have a single event")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.lsc should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], ['event'], "1m0a.doma.elp should have a single event")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.lsc should have no events")
 
         self.network_interface_mock.get_current_events = Mock(return_value={})
         scheduler_runner.update_network_model()
-        assert_equal(network_model['1m0a.doma.elp'].events, [], "1m0a.doma.elp should have no events")
-        assert_equal(network_model['1m0a.doma.lsc'].events, [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.elp']['events'], [], "1m0a.doma.elp should have no events")
+        assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.elp should have no events")
 
 
     def test_determine_resource_cancelation_start_date_for_reservation_conflicting_running_request(self):
@@ -1406,7 +1462,7 @@ class TestSchedulerRunner(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
@@ -1416,14 +1472,14 @@ class TestSchedulerRunner(object):
 
         mock_input_factory = create_scheduler_input_factory([too_single_ur], [normal_single_ur])
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         scheduler_runner.run()
 
         assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(2, self.network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(2, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        # assert_equal(2, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        # assert_equal(2, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
         assert_equal(2, self.network_interface_mock.cancel.call_count)
         assert_equal(2, self.network_interface_mock.save.call_count)
-        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
 
 
     def test_scheduler_runner_no_too_requests(self):
@@ -1433,7 +1489,7 @@ class TestSchedulerRunner(object):
         priority = 10
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         normal_request = create_request(normal_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
         normal_single_ur = create_user_request(normal_tracking_number, priority, [normal_request], 'single')
 
@@ -1441,15 +1497,15 @@ class TestSchedulerRunner(object):
 
         mock_input_factory = create_scheduler_input_factory([], [normal_single_ur])
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[normal_single_ur])
         scheduler_runner.run()
 
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        # assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        # assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
         assert_equal(1, self.network_interface_mock.cancel.call_count)
         assert_equal(1, self.network_interface_mock.save.call_count)
-        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
 
 
     def test_scheduler_runner_no_normal_requests(self):
@@ -1459,7 +1515,7 @@ class TestSchedulerRunner(object):
         priority = 10
         too_tracking_number = 1
         too_request_number = 1
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
 
@@ -1467,15 +1523,15 @@ class TestSchedulerRunner(object):
 
         mock_input_factory = create_scheduler_input_factory([too_single_ur], [])
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         scheduler_runner.json_urs_to_scheduler_model_urs = Mock(return_value=[too_single_ur])
         scheduler_runner.run()
 
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        # assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        # assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
         assert_equal(1, self.network_interface_mock.cancel.call_count)
         assert_equal(1, self.network_interface_mock.save.call_count)
-        assert_equal(1, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
 
 
     @patch('adaptive_scheduler.scheduler_input.SchedulingInput.user_requests')
@@ -1483,11 +1539,12 @@ class TestSchedulerRunner(object):
         ''' Only resources scheduled for ToO should be canceled after ToO scheduling run
         and should not be cancelled before saving normal schedule
         '''
-        network_model = self.sched_params.get_model_builder().tel_network.telescopes
+        network_model = {'1m0a.doma.lsc': {}, '1m0a.doma.elp': {}}
         too_input = SchedulingInput(sched_params=SchedulerParameters(), scheduler_now=datetime.utcnow(),
                                     estimated_scheduler_runtime=timedelta(seconds=300),
                                     json_user_request_list=[],
                                     resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
+                                    scheduling_input_utils=SchedulingInputUtils(None),
                                     available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
                                     is_too_input=True)
 #         too_input.user_requests = Mock()
@@ -1496,12 +1553,14 @@ class TestSchedulerRunner(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300),
                                     json_user_request_list=[],
                                     resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
+                                    scheduling_input_utils=SchedulingInputUtils(None),
                                     available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
                                     is_too_input=False)
 #         normal_input.user_requests = Mock()
         self.mock_input_factory.create_normal_scheduling_input = Mock(return_value=normal_input)
 
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         too_scheduler_result = SchedulerResult(
                                 resource_schedules_to_cancel=['1m0a.doma.lsc'],
                                 schedule={'1m0a.doma.lsc':[Mock()]}
@@ -1540,7 +1599,7 @@ class TestSchedulerRunner(object):
         too_request_number = 1
         normal_tracking_number = 2
         normal_request_number = 2
-        request_windows = create_user_request_windows((("2013-05-22 19:00:00", "2013-05-22 20:00:00"),))
+        request_windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         too_request = create_request(too_request_number, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_too=True)
         too_single_ur = create_user_request(too_tracking_number, priority, [too_request], 'single')
 #         too_single_ur.has_target_of_opportunity = Mock(return_value=True)
@@ -1555,14 +1614,14 @@ class TestSchedulerRunner(object):
 
         mock_input_factory = create_scheduler_input_factory([too_single_ur], [normal_single_ur])
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, self.network_interface_mock, network_model_mock, mock_input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
         scheduler_runner.run()
 
         assert_equal(2, scheduler_mock.run_scheduler.call_count)
-        assert_equal(0, self.network_interface_mock.set_requests_to_unschedulable.call_count)
-        assert_equal(0, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
+        # assert_equal(0, self.network_interface_mock.set_requests_to_unschedulable.call_count)
+        # assert_equal(0, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
         assert_equal(0, self.network_interface_mock.cancel.call_count)
         assert_equal(0, self.network_interface_mock.save.call_count)
-        assert_equal(0, self.network_interface_mock.clear_schedulable_request_set_changed_state.call_count)
 
 
 class TestSchedulerRunnerUseOfRunTimes(object):
@@ -1574,6 +1633,11 @@ class TestSchedulerRunnerUseOfRunTimes(object):
         self.network_interface = Mock()
         self.network_interface.cancel = Mock(return_value=0)
         self.network_interface.save = Mock(return_value=0)
+        self.valhalla_interface_mock = Mock()
+        self.valhalla_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
+                                                                               'start': datetime.utcnow() - timedelta(days=30),
+                                                                               'end': datetime.utcnow() + timedelta(days=30)})
+        self.network_interface.valhalla_interface = self.valhalla_interface_mock
         self.network_model = {}
         self.input_factory = Mock()
 
@@ -1587,7 +1651,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
         normal_request_number = 2
         request_windows = create_user_request_windows(
                             (
-                             ("2013-05-22 19:00:00", "2013-05-22 20:00:00"),
+                             ("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),
                             ))
         too_request = create_request(too_request_number,
                                      duration=request_duration_seconds,
@@ -1662,6 +1726,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                            self.network_interface,
                                            self.network_model,
                                            self.input_factory)
+        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(datetime.utcnow())
         expected_too_run_time_arg = scheduler_runner.estimated_too_run_timedelta
         expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
         network_state_timestamp = datetime(2014, 10, 29, 12, 0, 0)
@@ -1739,8 +1804,8 @@ class TestSchedulerInputProvider(object):
         available_resource = 'available'
         unavailable_resource = 'unavailable'
         network_model = {
-                         available_resource : Mock(events=[]),
-                         unavailable_resource : Mock(events=[1]),
+                         available_resource : dict(events=[]),
+                         unavailable_resource : dict(events=[1]),
                          }
 
         sched_params = SchedulerParameters()

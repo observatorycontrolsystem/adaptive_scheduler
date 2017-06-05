@@ -76,7 +76,6 @@ if __name__ == '__main__':
                      'service_windows',
                      'service_location',
                      'service_requests',
-                     'service_compoundrequests',
                      'service_userrequests',
                    )
 

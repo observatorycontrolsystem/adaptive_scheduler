@@ -11,7 +11,7 @@ October 2013
 
 from adaptive_scheduler.eventbus import BaseListener, Event
 from adaptive_scheduler.log      import UserRequestLogger
-from schedutils.utils            import EqualityMixin
+from adaptive_scheduler.utils    import EqualityMixin
 import os.path
 import logging
 

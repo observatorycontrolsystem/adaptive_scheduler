@@ -3,15 +3,10 @@ from __future__ import division
 
 from datetime import datetime, timedelta
 
-from nose.tools import assert_true
-
 # Import the modules to test
-from adaptive_scheduler.model2      import (
-                                             SiderealTarget, Telescope,
-                                             Proposal, MoleculeFactory,
-                                             Request, UserRequest,
-                                             Windows, Window, Constraints,
-                                             TelescopeNetwork)
+from adaptive_scheduler.model2      import (SiderealTarget, Proposal, MoleculeFactory,
+                                            Request, UserRequest,
+                                            Windows, Window, Constraints)
 
 from test_scheduler import create_scheduler_input_factory
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
@@ -33,7 +28,7 @@ class TestIntegration(object):
                                       epoch = 2000,
                                      )
 
-        self.telescope = Telescope(
+        self.telescope = dict(
                                     name      = '1m0a.doma.ogg',
                                     latitude  = 20.7069444444,
                                     longitude = -156.258055556,
@@ -44,14 +39,12 @@ class TestIntegration(object):
                                     ha_limit_pos = 4.6,
                                   )
         self.telescopes = {'1m0a.doma.ogg': self.telescope}
-        self.telescope_network = TelescopeNetwork(self.telescopes)
 
         self.proposal = Proposal(
-                                  proposal_name  = 'LCOSchedulerTest',
-                                  user           = 'Eric Saunders',
+                                  id  = 'LCOSchedulerTest',
+                                  pi           = 'Eric Saunders',
                                   tag            = 'admin',
-                                  time_remaining = 10,               # In hours
-                                  priority       = 1
+                                  tac_priority       = 1
                                 )
 
         self.mol_factory = MoleculeFactory()
@@ -72,23 +65,18 @@ class TestIntegration(object):
 
         self.base_time = datetime(2016, 9, 14, 6, 0)
 
-        self.semester_start = datetime(2011, 11, 1, 0, 0, 0)
-        self.semester_end   = datetime(2011, 11, 8, 0, 0, 0)
-
-        resource_1 = Mock()
-        resource_1.name = '1m0a.doma.ogg'
+        resource_1 = '1m0a.doma.ogg'
         self.window_1 = Window({'start': self.base_time,
                                 'end': self.base_time + timedelta(hours=0, minutes=30)}, resource_1)
         self.windows_1 = Windows()
         self.windows_1.append(self.window_1)
-        resource_2 = Mock()
-        resource_2.name = '1m0a.doma.ogg'
+
+        resource_2 = '1m0a.doma.ogg'
         self.window_2 = Window({'start': self.base_time + timedelta(hours=0, minutes=30),
                                 'end': self.base_time + timedelta(hours=1, minutes=0)}, resource_2)
         self.windows_2 = Windows()
         self.windows_2.append(self.window_2)
-        resource_3 = Mock()
-        resource_3.name = '1m0a.doma.ogg'
+        resource_3 = '1m0a.doma.ogg'
         self.window_3 =  Window({'start': self.base_time + timedelta(hours=1, minutes=0),
                                  'end': self.base_time + timedelta(hours=1, minutes=30)}, resource_3)
         self.windows_3 = Windows()
@@ -99,42 +87,46 @@ class TestIntegration(object):
                           windows        = self.windows_1,
                           constraints    = self.constraints,
                           request_number = '0000000001',
-                          observation_type = 'NORMAL',
-                          instrument_type = '1M0-SCICAM-SBIG')
+                          duration       = 1750)
 
         self.request_2 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000002',
-                          observation_type = 'NORMAL',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
         self.request_3 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_2,
                           constraints    = self.constraints,
                           request_number = '0000000003',
-                          observation_type = 'NORMAL',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
         self.request_4 = Request(target         = self.target,
                           molecules      = [self.molecule],
                           windows        = self.windows_3,
                           constraints    = self.constraints,
                           request_number = '0000000004',
-                          observation_type = 'NORMAL',
-                          instrument_type='1M0-SCICAM-SBIG')
+                          duration       =1750)
 
 
-        self.user_and_request_1 = UserRequest('and', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000001', 1.0, 'ur 1')
-        self.user_and_request_2 = UserRequest('and', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000002', 1.0, 'ur 2')
-        self.user_many_request_1 = UserRequest('many', [self.request_1, self.request_2], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000003', 1.5, 'ur 3')
-        self.user_many_request_2 = UserRequest('many', [self.request_3, self.request_4], self.proposal,
-                                                  datetime(2050, 1, 1), '0000000004', 1.5, 'ur 4')
+        self.user_and_request_1 = UserRequest(operator='and', requests=[self.request_1, self.request_2],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000001', observation_type='NORMAL',
+                                              ipp_value=1.0, group_id='ur 1', submitter='')
+        self.user_and_request_2 = UserRequest(operator='and', requests=[self.request_3, self.request_4],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000002', observation_type='NORMAL',
+                                              ipp_value=1.0, group_id='ur 2', submitter='')
+        self.user_many_request_1 = UserRequest(operator='many', requests=[self.request_1, self.request_2],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000003', observation_type='NORMAL',
+                                              ipp_value=1.5, group_id='ur 3', submitter='')
+        self.user_many_request_2 = UserRequest(operator='many', requests=[self.request_3, self.request_4],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000004', observation_type='NORMAL',
+                                              ipp_value=1.5, group_id='ur 4', submitter='')
 
     def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
@@ -150,8 +142,10 @@ class TestIntegration(object):
         scheduler_input = mock_input_factory.create_normal_scheduling_input()
         scheduler_input.scheduler_now = scheduler_time
         scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
+        fake_semester = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
+                         'end': scheduler_time + timedelta(days=150)}
 
-        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15))
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), fake_semester)
 
         return result
 
@@ -210,8 +204,7 @@ class TestIntegration(object):
         new_time = datetime(2016, 10, 3, 5, 0)
         request_list = []
         while days_out < 80:
-            resource = Mock()
-            resource.name = '1m0a.doma.ogg'
+            resource = '1m0a.doma.ogg'
             window = Window({'start': new_time + timedelta(days=days_out),
                                     'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
             windows = Windows()
@@ -221,13 +214,13 @@ class TestIntegration(object):
                                 windows=windows,
                                 constraints=self.constraints,
                                 request_number="11{}".format(days_out).rjust(10, '0'),
-                                observation_type='NORMAL',
-                                instrument_type='1M0-SCICAM-SBIG')
+                                duration=1750)
             request_list.append(request)
             days_out += 1
 
-        user_request = UserRequest('and', request_list, self.proposal,
-                                    datetime(2050, 1, 1), '0000000100', 1.0, 'large ur')
+        user_request = UserRequest(operator='and', requests=request_list, proposal=self.proposal,
+                                    expires=datetime(2050, 1, 1), tracking_number='0000000100',
+                                   ipp_value=1.0, group_id='large ur', submitter='', observation_type='NORMAL')
 
         normal_request_list = [user_request,]
         result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))

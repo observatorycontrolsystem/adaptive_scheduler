@@ -7,13 +7,10 @@ Author: Martin Norbury
 May 2013
 '''
 import abc
-import ast
 from datetime   import datetime, timedelta
-from contextlib import closing
 import collections
 import itertools
 
-from adaptive_scheduler.monitoring           import resources
 from lcogt                                   import dateutil
 from adaptive_scheduler.monitoring.telemetry import get_datum
 
@@ -29,8 +26,8 @@ class NetworkStateMonitor(object):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, telescopes_file='telescopes.dat'):
-        self.telescopes_file = telescopes_file
+    def __init__(self, configdb_interface):
+        self.configdb_interface = configdb_interface
 
     def monitor(self):
         ''' Monitor for changes. '''
@@ -72,8 +69,8 @@ class NetworkStateMonitor(object):
 class SequencerEnableMonitor(NetworkStateMonitor):
     ''' Monitor the sequencer enable state. '''
 
-    def __init__(self, telescopes_file='telescopes.dat'):
-        super(SequencerEnableMonitor, self).__init__(telescopes_file=telescopes_file)
+    def __init__(self, configdb_interface):
+        super(SequencerEnableMonitor, self).__init__(configdb_interface=configdb_interface)
         self.reason = None
 
 
@@ -105,8 +102,8 @@ class SequencerEnableMonitor(NetworkStateMonitor):
 class ScheduleTimestampMonitor(NetworkStateMonitor):
     ''' Monitor the scheduler last update timestamp. '''
 
-    def __init__(self, telescopes_file='telescopes.dat'):
-        super(ScheduleTimestampMonitor, self).__init__(telescopes_file=telescopes_file)
+    def __init__(self, configdb_interface):
+        super(ScheduleTimestampMonitor, self).__init__(configdb_interface=configdb_interface)
         self.reason = None
 
 
@@ -149,8 +146,8 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 class NotOkToOpenMonitor(NetworkStateMonitor):
     ''' Monitor the OK_TO_OPEN flag. '''
 
-    def __init__(self, telescopes_file='telescopes.dat'):
-        super(NotOkToOpenMonitor, self).__init__(telescopes_file=telescopes_file)
+    def __init__(self, configdb_interface):
+        super(NotOkToOpenMonitor, self).__init__(configdb_interface=configdb_interface)
         self._overridden_observatories = []
 
     def retrieve_data(self):
@@ -214,7 +211,8 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         :param datum: Datum used to generate resource list.
         :return: Create a list of resources with the current event. Exclude any resource that is currently overridden.
         '''
-        site_resources = resources.get_site_resources(datum.ok_to_open.site, self.telescopes_file)
+        telescopes = self.configdb_interface.get_telescope_info()
+        site_resources = [tel for tel in telescopes.keys() if datum.ok_to_open.site in tel]
         return [resource for resource in site_resources if not self._is_resource_overridden(resource)]
 
 
@@ -236,18 +234,11 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 class OfflineResourceMonitor(NetworkStateMonitor):
     ''' Monitor resource ONLINE/OFFLINE state. '''
 
-    def __init__(self, telescopes_file='telescopes.dat'):
-        super(OfflineResourceMonitor, self).__init__(telescopes_file=telescopes_file)
+    def __init__(self, configdb_interface):
+        super(OfflineResourceMonitor, self).__init__(configdb_interface=configdb_interface)
 
     def retrieve_data(self):
-        try:
-            resource_file = open(self.telescopes_file)
-        except TypeError:
-            resource_file = closing(self.telescopes_file)
-
-        with resource_file as filep:
-            raw_data = filep.read()
-        return ast.literal_eval(raw_data)
+        return self.configdb_interface.get_telescope_info().values()
 
 
     def create_event(self, datum):
@@ -320,8 +311,8 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         interlocked = datum['enclosure_interlocked']
         site        = interlocked.site
         observatory = interlocked.observatory
-
-        return resources.get_observatory_resources(site, observatory, self.telescopes_file)
+        telescopes = self.configdb_interface.get_telescope_info()
+        return [tel for tel in telescopes.keys() if '.'.join([observatory, site]) in tel]
 
     def _flatten_data(self, datum_names):
         for datum_name in datum_names:

@@ -22,12 +22,12 @@ def report_scheduling_outcome(to_schedule, scheduled_reservations):
     for res in scheduled_reservations:
         tag = 'WasScheduled'
         msg = 'This Request (request number=%s) was scheduled' % res.request.request_number
-        res.compound_request.emit_user_feedback(msg, tag)
+        res.user_request.emit_user_feedback(msg, tag)
 
     for res in not_scheduled_res:
         tag = 'WasNotScheduled'
         msg = 'This Request (request number=%s) was not scheduled (it clashed)' % res.request.request_number
-        res.compound_request.emit_user_feedback(msg, tag)
+        res.user_request.emit_user_feedback(msg, tag)
 
     return
 

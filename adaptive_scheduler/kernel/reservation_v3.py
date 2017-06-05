@@ -161,6 +161,7 @@ class CompoundReservation_v2(object):
         'single' : 'A single one of the provided blocks is to be scheduled',
         'oneof'  : 'One of the provided blocks are to be scheduled',
         'and'    : 'All of the provided blocks are to be scheduled',
+        'many'   : 'Any of the provided blocks are to be scheduled individually'
         }
 
     def __init__(self, reservation_list, type='single'):

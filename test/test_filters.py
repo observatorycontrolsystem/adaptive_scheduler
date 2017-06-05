@@ -7,14 +7,13 @@ from mock       import patch, Mock
 from datetime   import datetime, timedelta
 from copy       import deepcopy
 
-from adaptive_scheduler.model2          import ( UserRequest, Request, Window,
-                                                 Windows, Telescope )
+from adaptive_scheduler.model2          import (UserRequest, Request, Windows)
 import helpers
 
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
                                                  filter_out_windows_for_running_requests,
-                                                 filter_on_expiry,
+                                                 # filter_on_expiry,
                                                  filter_out_past_windows,
                                                  filter_out_future_windows,
                                                  truncate_lower_crossing_windows,
@@ -48,7 +47,9 @@ class TestExpiryFilter(object):
                            expires  = expiry_dt,
                            tracking_number = '0000000005',
                            group_id = None,
-                           ipp_value=1.0
+                           ipp_value=1.0,
+                           observation_type='NORMAL',
+                           submitter=''
                          )
         return ur1
 
@@ -62,27 +63,27 @@ class TestExpiryFilter(object):
         assert_not_equal(ur1, ur3)
 
 
-    def test_unexpired_request_not_filtered(self):
+    # def test_unexpired_request_not_filtered(self):
+    #
+    #     ur_list = [
+    #                 self.create_user_request(self.future_expiry1),
+    #                 self.create_user_request(self.future_expiry2),
+    #               ]
+    #
+    #     received_ur_list = filter_on_expiry(ur_list)
+    #     assert_equal(received_ur_list, ur_list)
 
-        ur_list = [
-                    self.create_user_request(self.future_expiry1),
-                    self.create_user_request(self.future_expiry2),
-                  ]
 
-        received_ur_list = filter_on_expiry(ur_list)
-        assert_equal(received_ur_list, ur_list)
-
-
-    def test_expired_request_is_filtered(self):
-        ur_list = [
-                    self.create_user_request(self.past_expiry),
-                    self.create_user_request(self.future_expiry1),
-                  ]
-        expected_ur_list = deepcopy(ur_list)
-        del(expected_ur_list)[0]
-
-        received_ur_list = filter_on_expiry(ur_list)
-        assert_equal(received_ur_list, expected_ur_list)
+    # def test_expired_request_is_filtered(self):
+    #     ur_list = [
+    #                 self.create_user_request(self.past_expiry),
+    #                 self.create_user_request(self.future_expiry1),
+    #               ]
+    #     expected_ur_list = deepcopy(ur_list)
+    #     del(expected_ur_list)[0]
+    #
+    #     received_ur_list = filter_on_expiry(ur_list)
+    #     assert_equal(received_ur_list, expected_ur_list)
 
 
 
@@ -95,19 +96,19 @@ class TestWindowFilters(object):
         adaptive_scheduler.request_filters.now = self.current_time
 
 
-    def create_user_request(self, windows, operator='and'):
-        return helpers.create_user_request(windows, operator)
+    def create_user_request(self, windows, operator='and', expires=None):
+        return helpers.create_user_request(windows, operator, expires=expires)
 
     def test_filters_out_only_past_windows(self):
 
         window_dict1 = {
-                         'start' : "2013-01-01 00:00:00",
-                         'end'   : "2013-01-01 01:00:00",
+                         'start' : "2013-01-01T00:00:00Z",
+                         'end'   : "2013-01-01T01:00:00Z",
                        }
         # Comes after self.current_time, so should not be filtered
         window_dict2 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-06-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-06-01T01:00:00Z",
                        }
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows)
@@ -124,13 +125,13 @@ class TestWindowFilters(object):
     def test_filters_out_only_past_windows_straddling_boundary(self):
 
         window_dict1 = {
-                         'start' : "2013-02-26 11:30:00",
-                         'end'   : "2013-02-27 00:30:00",
+                         'start' : "2013-02-26T11:30:00Z",
+                         'end'   : "2013-02-27T00:30:00Z",
                        }
         # Comes after self.current_time, so should not be filtered
         window_dict2 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-06-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-06-01T01:00:00Z",
                        }
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows)
@@ -139,29 +140,37 @@ class TestWindowFilters(object):
 
         request = received_ur_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
-        print received_windows
 
         expected_window = [window_list[0], window_list[1]]
         assert_equal(received_windows, expected_window)
 
 
-    @patch("adaptive_scheduler.model2.semester_service")
+    @patch("adaptive_scheduler.valhalla_connections.ValhallaInterface.get_semester_details")
     def test_filters_out_only_future_windows(self, mock_semester_service):
-        mock_semester_service.get_semester_end.return_value = self.semester_end
+        mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=300),
+                                              'end': self.semester_end}
 
         # Comes after self.current_time, so should not be filtered
         window_dict1 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-06-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-06-01T01:00:00Z",
                        }
         # Comes after semester_end, so should be filtered
         window_dict2 = {
-                         'start' : "2013-12-01 00:00:00",
-                         'end'   : "2013-12-01 01:00:00",
+                         'start' : "2013-12-01T00:00:00Z",
+                         'end'   : "2013-12-01T01:00:00Z",
                        }
 
+
         windows = [ (window_dict1, window_dict2) ]
-        ur1, window_list = self.create_user_request(windows)
+        expire_time = datetime(2000, 1, 1)
+        for window in windows[0]:
+            end_time = datetime.strptime(window['end'], '%Y-%m-%dT%H:%M:%SZ')
+            if  end_time > expire_time:
+                expire_time = end_time
+        expire_time = min(expire_time, self.semester_end)
+
+        ur1, window_list = self.create_user_request(windows, expires=expire_time)
 
         received_ur_list = filter_out_future_windows([ur1])
 
@@ -172,20 +181,21 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-    @patch("adaptive_scheduler.model2.semester_service")
+    @patch("adaptive_scheduler.valhalla_connections.ValhallaInterface.get_semester_details")
     def test_filters_out_only_future_windows2(self, mock_semester_service):
-        mock_semester_service.get_semester_end.return_value = self.semester_end
+        mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=30),
+                                              'end': self.semester_end}
 
         horizon = datetime(2013, 7, 1)
         # Comes after self.current_time, so should not be filtered
         window_dict1 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-06-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-06-01T01:00:00Z",
                        }
         # Comes after effective horizon, so should be filtered
         window_dict2 = {
-                         'start' : "2013-08-01 00:00:00",
-                         'end'   : "2013-09-01 01:00:00",
+                         'start' : "2013-08-01T00:00:00Z",
+                         'end'   : "2013-09-01T01:00:00Z",
                        }
 
         windows = [ (window_dict1, window_dict2) ]
@@ -204,8 +214,8 @@ class TestWindowFilters(object):
 
         # Crosses self.current time, so should be truncated
         window_dict1 = {
-                         'start' : "2013-01-01 00:00:00",
-                         'end'   : "2013-03-01 01:00:00",
+                         'start' : "2013-01-01T00:00:00Z",
+                         'end'   : "2013-03-01T01:00:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -218,17 +228,21 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].start, self.current_time)
 
 
-    @patch("adaptive_scheduler.model2.semester_service")
+    @patch("adaptive_scheduler.valhalla_connections.ValhallaInterface.get_semester_details")
     def test_truncates_upper_crossing_windows(self, mock_semester_service):
-        mock_semester_service.get_semester_end.return_value = self.semester_end
+        mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=300),
+                                              'end': self.semester_end}
 
         # Crosses semester end, so should be truncated
         window_dict1 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-11-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-11-01T01:00:00Z",
                        }
         windows = [ (window_dict1,) ]
-        ur1, window_list = self.create_user_request(windows)
+        window_end = datetime.strptime(window_dict1['end'], '%Y-%m-%dT%H:%M:%SZ')
+        expire_time = min(window_end, self.semester_end)
+
+        ur1, window_list = self.create_user_request(windows, expires=expire_time)
         ur1.expires = datetime(2013, 12, 1)
         received_ur_list = truncate_upper_crossing_windows([ur1])
 
@@ -238,15 +252,16 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].end, self.semester_end)
 
 
-    @patch("adaptive_scheduler.model2.semester_service")
+    @patch("adaptive_scheduler.valhalla_connections.ValhallaInterface.get_semester_details")
     def test_truncates_upper_crossing_windows_extra_horizon(self, mock_semester_service):
-        mock_semester_service.get_semester_end.return_value = self.semester_end
+        mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=30),
+                                              'end': self.semester_end}
 
         horizon = datetime(2013, 7, 1)
         # Crosses effective horizon, so should be truncated
         window_dict1 = {
-                         'start' : "2013-06-01 00:00:00",
-                         'end'   : "2013-11-01 01:00:00",
+                         'start' : "2013-06-01T00:00:00Z",
+                         'end'   : "2013-11-01T01:00:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -265,8 +280,8 @@ class TestWindowFilters(object):
 
         # Window is larger than one hour
         window_dict1 = {
-                         'start' : "2013-09-01 00:00:00",
-                         'end'   : "2013-11-01 01:00:00",
+                         'start' : "2013-09-01T00:00:00Z",
+                         'end'   : "2013-11-01T01:00:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -285,8 +300,8 @@ class TestWindowFilters(object):
 
         # Window is larger than one hour
         window_dict1 = {
-                         'start' : "2013-09-01 00:00:00",
-                         'end'   : "2013-11-01 01:00:00",
+                         'start' : "2013-09-01T00:00:00Z",
+                         'end'   : "2013-11-01T01:00:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -305,8 +320,8 @@ class TestWindowFilters(object):
 
         # Window is smaller than one hour
         window_dict1 = {
-                         'start' : "2013-09-01 00:00:00",
-                         'end'   : "2013-09-01 00:30:00",
+                         'start' : "2013-09-01T00:00:00Z",
+                         'end'   : "2013-09-01T00:30:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -327,8 +342,8 @@ class TestWindowFilters(object):
 
         # Window is smaller than one hour
         window_dict1 = {
-                         'start' : "2013-09-01 00:00:00",
-                         'end'   : "2013-09-01 00:30:00",
+                         'start' : "2013-09-01T00:00:00Z",
+                         'end'   : "2013-09-01T00:30:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows)
@@ -401,12 +416,12 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_AND_both_requests_have_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1,), (window_dict2,) ]
         ur1, window_list = self.create_user_request(windows, operator='and')
@@ -427,8 +442,8 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_AND_one_request_has_no_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1,), () ]
         ur1, window_list = self.create_user_request(windows, operator='and')
@@ -441,12 +456,12 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_AND_two_windows_one_request_has_no_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1, window_dict2), () ]
         ur1, window_list = self.create_user_request(windows, operator='and')
@@ -458,12 +473,12 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_ONEOF_both_requests_have_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1,), (window_dict2,) ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
@@ -475,8 +490,8 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_ONEOF_one_request_has_no_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1,), () ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
@@ -488,12 +503,12 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_ONEOF_two_windows_one_request_has_no_windows(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1, window_dict2), () ]
         ur1, window_list = self.create_user_request(windows, operator='oneof')
@@ -523,12 +538,12 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_SINGLE_two_windows_one_request(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
@@ -568,8 +583,8 @@ class TestWindowFilters(object):
     def test_filter_on_type_NON_SINGLE_both_one_request_no_windows_but_running(self):
         for operator in ('and', 'many', 'oneof'):
             window_dict1 = {
-                             'start' : "2013-03-01 00:00:00",
-                             'end'   : "2013-03-01 00:30:00",
+                             'start' : "2013-03-01T00:00:00Z",
+                             'end'   : "2013-03-01T00:30:00Z",
                            }
             windows = [(), (window_dict1,)]
             ur1, window_list = self.create_user_request(windows, operator='and')
@@ -607,7 +622,9 @@ class TestWindowFilters(object):
                            expires         = None,
                            tracking_number = '0000000001',
                            group_id        = None,
-                           ipp_value=1.0
+                           ipp_value       = 1.0,
+                           observation_type= 'NORMAL',
+                           submitter       = '',
                          )
         received = drop_empty_requests([ur1])
         assert_equal(received, ['0000000005'])
@@ -638,7 +655,9 @@ class TestWindowFilters(object):
                            expires         = None,
                            tracking_number = '0000000001',
                            group_id        = None,
-                           ipp_value=1.0
+                           ipp_value       = 1.0,
+                           observation_type= 'NORMAL',
+                           submitter       = '',
                          )
 
         filter_on_pending([ur1])
@@ -648,8 +667,8 @@ class TestWindowFilters(object):
 
     def test_run_all_filters(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 01:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T01:30:00Z",
                        }
         windows = [ (window_dict1,) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
@@ -664,12 +683,12 @@ class TestWindowFilters(object):
         
     def test_filter_out_windows_for_running_requests_single(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows, operator='single')
@@ -687,12 +706,12 @@ class TestWindowFilters(object):
         
     def test_filter_out_windows_for_running_requests_many(self):
         window_dict1 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         window_dict2 = {
-                         'start' : "2013-03-01 00:00:00",
-                         'end'   : "2013-03-01 00:30:00",
+                         'start' : "2013-03-01T00:00:00Z",
+                         'end'   : "2013-03-01T00:30:00Z",
                        }
         windows = [ (window_dict1, window_dict2), (window_dict1, window_dict2) ]
         ur1, window_list = self.create_user_request(windows, operator='many')

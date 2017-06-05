@@ -3,17 +3,13 @@ from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (Telescope, SiderealTarget, Request,
-                                       CompoundRequest, UserRequest,
-                                       Window, Windows, MoleculeFactory, Constraints)
-from adaptive_scheduler.utils import (iso_string_to_datetime,
-                                      datetime_to_epoch,
-                                      normalised_epoch_to_datetime,
-                                      convert_proper_motion)
+from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
+                                       UserRequest, Window, Windows, MoleculeFactory, Constraints)
+from adaptive_scheduler.utils import (datetime_to_epoch,
+                                      normalised_epoch_to_datetime)
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
-                                                rise_set_to_kernel_intervals,
                                                 make_dark_up_kernel_intervals,
                                                 construct_global_availability,
                                                 normalise_dt_intervals,
@@ -25,7 +21,6 @@ from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 
-from mock import Mock
 from datetime import datetime
 
 
@@ -41,7 +36,7 @@ class TestKernelMappings(object):
 
         self.tels = {
                       '1m0a.doma.bpl' :
-                                        Telescope(
+                                        dict(
                                                    name         = '1m0a.doma.bpl',
                                                    tel_class    = '1m0',
                                                    latitude     = 34.433157,
@@ -91,7 +86,7 @@ class TestKernelMappings(object):
         resource_name = '1m0a.doma.bpl'
         resource      = self.tels[resource_name]
 
-        window     = Window(window_dict, resource)
+        window     = Window(window_dict, resource['name'])
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -102,24 +97,17 @@ class TestKernelMappings(object):
                         windows        = dt_windows,
                         constraints    = constraints,
                         request_number = '1',
-                        instrument_type = '1M0-SCICAM-SBIG',
+                        duration       = 10
                       )
 
         return req
 
 
-    def make_compound_request(self, requests, operator):
-        cr = CompoundRequest(
-                              operator = operator,
-                              requests = requests
-                            )
-
-        return cr
-
-
     def make_user_request(self, requests, operator='single'):
-        ur = UserRequest(operator=operator, requests=requests, proposal='Test Proposal',
-                         expires=datetime(2012, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0)
+        proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
+        ur = UserRequest(operator=operator, requests=requests, proposal=proposal, submitter='',
+                         expires=datetime(2999, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0,
+                         observation_type='NORMAL')
         
         return ur
 
@@ -156,14 +144,14 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'and'
-        compound_request  = self.make_compound_request(requests, operator)
+        user_request  = self.make_user_request(requests, operator)
         dt_intervals_list = self.make_dt_intervals_list()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        compound_request.priority = 1
+        user_request.proposal.tac_priority = 1
 
-        received = construct_compound_reservation(compound_request,
+        received = construct_compound_reservation(user_request,
                                                   dt_intervals_list,
                                                   sem_start)
 
@@ -175,15 +163,15 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'many'
-        compound_request  = self.make_compound_request(requests, operator)
+        user_request  = self.make_user_request(requests, operator)
         intersection_dict = self.make_intersection_dict()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        compound_request.priority = 1
+        user_request.proposal.tac_priority = 1
 
         received = construct_many_compound_reservation(
-                                               compound_request,
+                                               user_request,
                                                child_idx=0,
                                                intersection_dict=intersection_dict,
                                                sem_start=sem_start)
@@ -311,7 +299,7 @@ class TestKernelMappings(object):
         resource_name = '1m0a.doma.bpl'
         resource = self.tels[resource_name]
 
-        window = Window(window_dict, resource)
+        window = Window(window_dict, resource['name'])
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -362,7 +350,7 @@ class TestKernelMappings(object):
         resource_name = '1m0a.doma.bpl'
         resource = self.tels[resource_name]
 
-        window = Window(window_dict, resource)
+        window = Window(window_dict, resource['name'])
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -413,7 +401,7 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         resource_name = '1m0a.doma.bpl'
         for w in windows:
-            dt_windows.append(Window(w, self.tels[resource_name]))
+            dt_windows.append(Window(w, self.tels[resource_name]['name']))
 
         constraints = Constraints({})
         req  = Request(
@@ -452,7 +440,7 @@ class TestKernelMappings(object):
                       }
 
         tel_name = '1m0a.doma.coj'
-        tel = Telescope(
+        tel = dict(
                          name         = tel_name,
                          tel_class    = '1m0',
                          latitude     = -31.273,
@@ -471,7 +459,7 @@ class TestKernelMappings(object):
                                   dec = -60.0,
                                )
 
-        window = Window(window_dict, tel)
+        window = Window(window_dict, tel['name'])
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -482,7 +470,7 @@ class TestKernelMappings(object):
                        windows         = dt_windows,
                        constraints     = constraints,
                        request_number  = '1',
-                       instrument_type = '1M0-SCICAM-SBIG',
+                       duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
@@ -516,7 +504,7 @@ class TestKernelMappings(object):
                       }
 
         tel_name = '1m0a.doma.coj'
-        tel = Telescope(
+        tel = dict(
                          name         = tel_name,
                          tel_class    = '1m0',
                          latitude     = -31.273,
@@ -536,7 +524,7 @@ class TestKernelMappings(object):
                                   dec = -60.0,
                                )
 
-        window = Window(window_dict, tel)
+        window = Window(window_dict, tel['name'])
         dt_windows = Windows()
         dt_windows.append(window)
 
@@ -547,7 +535,7 @@ class TestKernelMappings(object):
                        windows         = dt_windows,
                        constraints     = constraints,
                        request_number  = '1',
-                       instrument_type = '1M0-SCICAM-SBIG',
+                       duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
@@ -575,7 +563,7 @@ class TestKernelMappings(object):
 
 
     def test_construct_global_availability(self):
-        tel_name = '1m0a.doma.bpl'
+        tel_name = '1m0a.doma.lsc'
         sem_start = datetime(2012, 10, 1)
 
         # Resource is available from 3-7
@@ -598,7 +586,7 @@ class TestKernelMappings(object):
         dt2 = datetime(2013, 3, 22, 4)
         dt3 = datetime(2013, 3, 22, 5)
         masked_inervals = {
-                           '1m0a.doma.bpl' : Intervals([Timepoint(dt2, 'start'),
+                           '1m0a.doma.lsc' : Intervals([Timepoint(dt2, 'start'),
                                                         Timepoint(dt3, 'end')])
                            }
 

@@ -5,13 +5,13 @@ from rise_set.visibility import Visibility
 from rise_set.angle import Angle
 from rise_set.sky_coordinates import RightAscension, Declination
 
-from adaptive_scheduler.model2 import (Telescope, Target)
+from adaptive_scheduler.model2 import Target
 
 start = datetime(2011, 11, 1, 0, 0, 0)
 end   = datetime(2011, 11, 3, 0, 0, 0)
 
 resource_name = '1m0a.doma.bpl'
-tel = Telescope(
+tel = dict(
                name      = '1m0a.doma.bpl',
                tel_class = '1m0',
                latitude  = 34.433157,

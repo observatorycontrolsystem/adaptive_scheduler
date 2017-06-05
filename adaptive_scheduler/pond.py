@@ -39,9 +39,7 @@ from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
-
-from schedutils.instruments            import InstrumentFactory
-from schedutils.camera_mapping         import create_camera_mapping
+from adaptive_scheduler.configdb_connections import ConfigDBError
 
 from lcogtpond                         import pointing
 from lcogtpond.block                   import Block as PondBlock
@@ -53,8 +51,7 @@ from lcogtpond.schedule                import Schedule
 from lcogtpond.util                    import PondError
 
 # Set up and configure a module scope logger
-import logging, sys
-from datetime import datetime
+import logging
 from adaptive_scheduler.utils            import metric_timer
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
@@ -162,17 +159,17 @@ class PondScheduleInterface(object):
             raise ScheduleException(pfe, "Unable to abort POND block")
     
     @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
-    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+    def save(self, schedule, semester_start, configdb_interface, dry_run=False):
         ''' Save the provided observing schedule
         '''
         # Convert the kernel schedule into POND blocks, and send them to the POND
         n_submitted = self._send_schedule_to_pond(schedule, semester_start,
-                                            camera_mappings, dry_run)
+                                            configdb_interface, dry_run)
         return n_submitted
     
     # Already timed by the save method
     @timeit
-    def _send_schedule_to_pond(self, schedule, semester_start, camera_mappings_file, dry_run=False):
+    def _send_schedule_to_pond(self, schedule, semester_start, configdb_interface, dry_run=False):
         '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
     
         blocks_by_resource = {}
@@ -180,8 +177,8 @@ class PondScheduleInterface(object):
             blocks_by_resource[resource_name] = []
             for reservation in reservations:
                 block = build_block(reservation, reservation.request,
-                                    reservation.compound_request, semester_start,
-                                    camera_mappings_file)
+                                    reservation.user_request, semester_start,
+                                    configdb_interface)
     
                 blocks_by_resource[resource_name].append(block)
     
@@ -456,58 +453,39 @@ def retry_or_reraise(max_tries=6, delay=10):
     return wrapper
 
 
-def resolve_instrument(instrument_name, site, obs, tel, mapping):
+def resolve_instrument(instrument_name, site, obs, tel, configdb_interface):
     '''Determine the specific camera name for a given site.
        If a non-generic name is provided, we just pass it through and assume it's ok.'''
-
-    instrument_factory   = InstrumentFactory()
-    generic_camera_names = instrument_factory.instrument_names
-    specific_camera      = instrument_name
-    if instrument_name.upper() in generic_camera_names:
-        inst_match = mapping.find_by_camera_type_and_location(site,
-                                                              obs,
-                                                              tel,
-                                                              instrument_name)
-
-        if not inst_match:
-            msg = "Couldn't find any instrument for '%s' at %s.%s.%s" % (
-                                                                    instrument_name,
-                                                                    tel, obs, site)
-            raise InstrumentResolutionError(msg)
-        specific_camera = inst_match[0]['camera']
+    try:
+        specific_camera = configdb_interface.get_specific_instrument(instrument_name, site, obs, tel)
+    except ConfigDBError as e:
+        msg = "Couldn't find any instrument for '{}' at {}.{}.{}".format(instrument_name, tel, obs, site)
+        raise InstrumentResolutionError(msg)
 
     return specific_camera
 
 
-def resolve_autoguider(ag_name, specific_camera, site, obs, tel, mapping):
+def resolve_autoguider(ag_name, specific_camera, site, obs, tel, configdb_interface):
     '''Determine the specific autoguider for a given site.
        If a specific name is provided, pass through and return it.
        If a generic name (SCICAM-*) is provided, resolve for self-guiding.
        If nothing is specified, resolve to the preferred autoguider.'''
 
-    if ag_name:
-        # If SCICAM-* is provided, we will self-guide
-        # Otherwise, we'll use whatever they suggest
-        specific_ag = resolve_instrument(ag_name, site, obs, tel, mapping)
-    else:
-        # With no autoguider specified, we go with the preferred autoguider
-        ag_match = mapping.find_by_camera(specific_camera)
+    try:
+        ag_match = configdb_interface.get_autoguider_for_instrument(specific_camera, ag_name)
+    except ConfigDBError as e:
+        msg = "Couldn't find any autoguider {} for '{}' at {}.{}.{}".format(ag_name, specific_camera, tel, obs, site)
+        raise InstrumentResolutionError(msg)
 
-        if not ag_match:
-            msg = "Couldn't find any autoguider for '%s' at %s.%s.%s" % (
-                                                                         specific_camera, tel,
-                                                                         obs, site)
-            raise InstrumentResolutionError(msg)
-        specific_ag = ag_match[0]['autoguider']
-
-    return specific_ag
+    return ag_match
 
 
 class PondMoleculeFactory(object):
 
-    def __init__(self, tracking_number, request_number, proposal, group_id):
+    def __init__(self, tracking_number, request_number, proposal, group_id, submitter):
         self.tracking_number = tracking_number
         self.request_number  = request_number
+        self.submitter = submitter
         self.proposal        = proposal
         self.group_id        = group_id
         self.molecule_classes = {
@@ -590,9 +568,9 @@ class PondMoleculeFactory(object):
                  # Meta data
                  'tracking_num' : self.tracking_number,
                  'request_num'  : self.request_number,
-                 'tag'          : self.proposal.tag_id,
-                 'user'         : self.proposal.user_id,
-                 'proposal'     : self.proposal.proposal_id,
+                 'tag'          : self.proposal.tag,
+                 'user'         : self.submitter,
+                 'proposal'     : self.proposal.id,
                  'group'        : self.group_id,
                  # Observation details
                  'exp_cnt'      : molecule.exposure_count,
@@ -658,8 +636,8 @@ class PondMoleculeFactory(object):
 
 class Block(object):
 
-    def __init__(self, location, start, end, group_id, tracking_number,
-                 request_number, camera_mapping, priority=0, is_too=False,
+    def __init__(self, location, start, end, group_id, tracking_number, submitter,
+                 request_number, configdb_interface, priority=0, is_too=False,
                  max_airmass=None, min_lunar_distance=None, max_lunar_phase=None,
                  max_seeing=None, min_transparency=None):
         # TODO: Extend to allow datetimes or epoch times (and convert transparently)
@@ -667,12 +645,13 @@ class Block(object):
         self.start              = start
         self.end                = end
         self.group_id           = group_id
+        self.submitter          = submitter
         self.tracking_number    = str(tracking_number)
         self.request_number     = str(request_number)
         self.priority           = priority
         self.is_too             = is_too
 
-        self.camera_mapping     = camera_mapping
+        self.configdb_interface = configdb_interface
 
         self.max_airmass        = max_airmass
         self.min_lunar_distance = min_lunar_distance
@@ -726,21 +705,6 @@ class Block(object):
 
     def add_target(self, target):
         self.target = target
-
-
-    def resolve_autoguider_in_molecule_fields(self, fields, tracking_number, site,
-                                              observatory, telescope, camera_mapping):
-        if fields['ag_mode'] != 'OFF':
-            specific_ag = resolve_autoguider(fields['ag_name'], fields['inst_name'],
-                                             site, observatory, telescope, camera_mapping)
-            fields['ag_name'] = specific_ag
-
-            msg = "Autoguider resolved as '%s'" % specific_ag
-            log.debug(msg)
-            ur_log.debug(msg, self.tracking_number)
-
-        return
-
 
     def create_pond_block(self):
         if self.pond_block:
@@ -868,7 +832,7 @@ class Block(object):
             ur_log.debug(mol_summary_msg, self.tracking_number)
 
             specific_camera = resolve_instrument(molecule.instrument_name, site,
-                                                 observatory, telescope, self.camera_mapping)
+                                                 observatory, telescope, self.configdb_interface)
 
             molecule.instrument_name = specific_camera
 
@@ -880,7 +844,7 @@ class Block(object):
                 ag_name = getattr(molecule, 'ag_name', None) or ''
                 specific_ag = resolve_autoguider(ag_name, specific_camera,
                                                  site, observatory, telescope,
-                                                 self.camera_mapping)
+                                                 self.configdb_interface)
                 molecule.ag_name = specific_ag
 
                 msg = "Autoguider resolved as '%s'" % specific_ag
@@ -889,7 +853,7 @@ class Block(object):
 
 
             pond_molecule_factory = PondMoleculeFactory(self.tracking_number, self.request_number,
-                                                        self.proposal, self.group_id)
+                                                        self.proposal, self.group_id, self.submitter)
             obs = pond_molecule_factory.build(molecule, pond_pointing)
 
             observations.append(obs)
@@ -903,18 +867,18 @@ class Block(object):
         return pond_block
 
 
-def build_block(reservation, request, compound_request, semester_start, camera_mappings_file):
-    camera_mapping = create_camera_mapping(camera_mappings_file)
+def build_block(reservation, request, user_request, semester_start, configdb_interface):
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
-    is_too = request.observation_type == 'TARGET_OF_OPPORTUNITY'
+    is_too = user_request.observation_type == 'TARGET_OF_OPPORTUNITY'
     block = Block(
                    location=reservation.scheduled_resource,
                    start=res_start,
                    end=res_end,
-                   group_id=compound_request.group_id,
-                   tracking_number=compound_request.tracking_number,
+                   group_id=user_request.group_id,
+                   tracking_number=user_request.tracking_number,
+                   submitter=user_request.submitter,
                    request_number=request.request_number,
-                   camera_mapping=camera_mapping,
+                   configdb_interface=configdb_interface,
                    # Hard-code all scheduler output to a highish number, for now
                    priority=30,
                    is_too=is_too,
@@ -925,7 +889,7 @@ def build_block(reservation, request, compound_request, semester_start, camera_m
                    min_transparency=request.constraints.min_transparency,
                  )
 
-    block.add_proposal(compound_request.proposal)
+    block.add_proposal(user_request.proposal)
     for molecule in request.molecules:
         block.add_molecule(molecule)
     block.add_target(request.target)

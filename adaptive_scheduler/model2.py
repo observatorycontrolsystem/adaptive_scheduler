@@ -19,17 +19,15 @@ from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_satellite_target)
 from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
 from rise_set.rates                           import ProperMotion, RatesConfigError
-from adaptive_scheduler.utils                 import iso_string_to_datetime, join_location, convert_proper_motion
+from adaptive_scheduler.utils                 import (iso_string_to_datetime, join_location, convert_proper_motion,
+                                                      EqualityMixin)
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
-from schedutils                               import semester_service
-from schedutils.utils                         import EqualityMixin, DefaultMixin
-from schedutils.instruments                   import InstrumentFactory
-from schedutils.camera_mapping                import create_camera_mapping
+from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
 
 from datetime    import datetime
 import ast
@@ -67,19 +65,19 @@ def filter_out_compounds(user_reqs):
     return single_urs
 
 
-def filter_compounds_by_type(crs):
-    '''Given a list of CompoundRequests, Return a dictionary that sorts them by type.'''
-    crs_by_type = {
+def filter_compounds_by_type(urs):
+    '''Given a list of UserRequests, Return a dictionary that sorts them by type.'''
+    urs_by_type = {
                     'single' : [],
                     'many'   : [],
                     'and'    : [],
                     'oneof'  : [],
                   }
 
-    for cr in crs:
-        crs_by_type[cr.operator].append(cr)
+    for ur in urs:
+        urs_by_type[ur.operator].append(ur)
 
-    return crs_by_type
+    return urs_by_type
 
 
 def generate_request_description(user_request_json, request_json):
@@ -88,8 +86,8 @@ def generate_request_description(user_request_json, request_json):
     telescope_class = None
     inst_type = None
     if 'proposal' in user_request_json:
-        prop_id = user_request_json.get('proposal').get('proposal_id')
-        user_id = user_request_json.get('proposal').get('user_id')
+        prop_id = user_request_json.get('proposal')
+        user_id = user_request_json.get('submitter')
     if 'location' in request_json:
         telescope_class = request_json.get('location').get('telescope_class')
     if 'molecules' in request_json and len(request_json['molecules']) > 0:
@@ -105,24 +103,24 @@ def generate_request_description(user_request_json, request_json):
     return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
-                    user_request_json.get('tracking_number'),
-                    request_json.get('request_number'),
+                    user_request_json.get('id'),
+                    request_json.get('id'),
                     telescope_class,
                     inst_type,
                     filter_string)
 
 
-def differentiate_by_type(cr_type, crs):
-    '''Given an operator type and a list of CompoundRequests, split the list into two
+def differentiate_by_type(operator, urs):
+    '''Given an operator type and a list of UserRequests, split the list into two
        lists, the chosen type, and the remainder.
        Valid operator types are 'single', 'and', 'oneof', 'many'.'''
     chosen_type = []
     other_types = []
-    for cr in crs:
-        if cr.operator == cr_type:
-            chosen_type.append(cr)
+    for ur in urs:
+        if ur.operator == operator:
+            chosen_type.append(ur)
         else:
-            other_types.append(cr)
+            other_types.append(ur)
 
     return chosen_type, other_types
 
@@ -134,7 +132,7 @@ def file_to_dicts(filename):
     return ast.literal_eval(data)
 
 
-class DataContainer(DefaultMixin):
+class DataContainer(EqualityMixin):
     def __init__(self, *initial_data, **kwargs):
         for dictionary in initial_data:
             for key in dictionary:
@@ -318,16 +316,19 @@ class MoleculeFactory(object):
                                   'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'filter', 'exposure_time',
                                                  'priority'),
-                                  'TRIPLE'      : ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                   'exposure_time', 'priority'),
-                                  'NRES_SPECTRUM': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                    'exposure_time', 'priority'),
-                                  'NRES_EXPOSE': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                    'exposure_time', 'priority'),
-                                  'NRES_TEST': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                    'exposure_time', 'priority'),
+                                  'TRIPLE'    : ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                 'exposure_time', 'priority'),
+                                  'NRES_TEST' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'priority', 'acquire_mode',
+                                                 'acquire_radius_arcsec'),
+                                  'NRES_SPECTRUM' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'priority', 'acquire_mode',
+                                                 'acquire_radius_arcsec'),
+                                  'NRES_EXPOSE' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
+                                                 'instrument_name', 'priority', 'acquire_mode',
+                                                 'acquire_radius_arcsec'),
                                   'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                  'exposure_time', 'priority')
+                                                 'exposure_time', 'priority')
                                 }
 
     def build(self, mol_dict):
@@ -336,7 +337,7 @@ class MoleculeFactory(object):
 
 
 
-class Window(DefaultMixin):
+class Window(EqualityMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
     def __init__(self, window_dict, resource):
         try:
@@ -349,14 +350,14 @@ class Window(DefaultMixin):
         self.resource = resource
 
     def get_resource_name(self):
-        return self.resource.name
+        return self.resource
 
     def __repr__(self):
         return "Window (%s, %s)" % (self.start, self.end)
 
 
 
-class Windows(DefaultMixin):
+class Windows(EqualityMixin):
     def __init__(self):
         self.windows_for_resource = {}
 
@@ -372,14 +373,14 @@ class Windows(DefaultMixin):
         return self.windows_for_resource[resource_name]
 
     def has_windows(self):
-        return bool(self.size())
+        return self.size() > 0
 
     def size(self):
-        all_windows = []
+        all_windows_size = 0
         for resource_name, windows in self.windows_for_resource.iteritems():
-            all_windows += windows
+            all_windows_size += len(windows)
 
-        return len(all_windows)
+        return all_windows_size
 
     def __iter__(self):
         for resource_name, windows in self.windows_for_resource.iteritems():
@@ -389,7 +390,7 @@ class Windows(DefaultMixin):
 
 class Proposal(DataContainer):
     def list_missing_fields(self):
-        req_fields = ('proposal_id', 'user_id', 'tag_id', 'observer_name', 'priority')
+        req_fields = ('id', 'tag', 'pi', 'tac_priority')
         missing_fields = []
 
         for field in req_fields:
@@ -401,15 +402,7 @@ class Proposal(DataContainer):
         return missing_fields
 
 
-
-class Telescope(DataContainer):
-    def __init__(self, *initial_data, **kwargs):
-        kwargs['events'] = []
-        DataContainer.__init__(self, *initial_data, **kwargs)
-
-
-
-class Request(DefaultMixin):
+class Request(EqualityMixin):
     '''
         Represents a single valid configuration where an observation could take
         place. These are combined within a CompoundRequest to allow AND and OR
@@ -427,9 +420,7 @@ class Request(DefaultMixin):
     '''
 
     def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
-                 instrument_type='', observation_type='NORMAL', scheduled_reservation=None):
-
-        self.inst_factory = InstrumentFactory()
+                 duration=0, scheduled_reservation=None):
 
         self.target            = target
         self.molecules         = molecules
@@ -437,22 +428,11 @@ class Request(DefaultMixin):
         self.constraints       = constraints
         self.request_number    = request_number
         self.state             = state
-        self.observation_type  = observation_type
+        self.req_duration      = duration
         self.scheduled_reservation = scheduled_reservation
 
-        self.set_instrument(instrument_type)
-
-
-    def set_instrument(self, instrument_type):
-        self.instrument = self.inst_factory.make_instrument_by_type(instrument_type)
-
-        return
-
-    def get_instrument_type(self):
-        return self.instrument.type
-
     def get_duration(self):
-        return self.instrument.get_duration(self.molecules, self.target).total_seconds()
+        return self.req_duration
 
     def has_windows(self):
         return self.windows.has_windows()
@@ -460,56 +440,53 @@ class Request(DefaultMixin):
     def n_windows(self):
         return self.windows.size()
 
-
     duration = property(get_duration)
 
 
+class UserRequest(EqualityMixin):
+    '''UserRequests are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
+       ipp info, an id, and group name. This is translated into a CompoundReservation when scheduling'''
 
-class CompoundRequest(DefaultMixin):
-    '''
-        A user-level request for an observation. This will be translated into the
-        Reservation/CompoundReservation of the scheduling kernel.
-
-        operator - the type of compound request (single, and, oneof)
-        proposal - proposal meta information associated with this request
-        requests - a list of Request objects. There must be at least one.
-    '''
-
-    _many_type  = { 'many' : 'As many as possible of the provided blocks are to be scheduled' }
+    _many_type = {'many': 'As many as possible of the provided blocks are to be scheduled'}
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests):
-        self.operator  = self._validate_type(operator)
-        self.requests  = requests
+    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires, submitter):
 
+        self.proposal = proposal
+        self.tracking_number = tracking_number
+        self.group_id = group_id
+        self.ipp_value = ipp_value
+        self.observation_type = observation_type
+        self.operator = self._validate_type(operator)
+        self.requests = requests
+        self.expires = expires
+        self.submitter = submitter
 
-    def _validate_type(self, provided_operator):
+    @staticmethod
+    def _validate_type(provided_operator):
         '''Check the operator type being asked for matches a valid type
            of CompoundObservation.'''
 
-        if provided_operator not in CompoundRequest.valid_types:
+        if provided_operator not in UserRequest.valid_types:
 
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid operator types are:\n")
 
-            for res_type, help_txt in CompoundRequest.valid_types.iteritems():
+            for res_type, help_txt in UserRequest.valid_types.iteritems():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise RequestError(error_msg)
 
         return provided_operator
 
-
     def filter_requests(self, filter_test):
         for r in self.requests:
             for resource_name, windows in r.windows.windows_for_resource.items():
                 r.windows.windows_for_resource[resource_name] = [w for w in windows if filter_test(w, self, r)]
 
-
     def n_requests(self):
         return len(self.requests)
-
 
     def n_windows(self):
         n_windows = 0
@@ -517,7 +494,6 @@ class CompoundRequest(DefaultMixin):
             n_windows += request.windows.size()
 
         return n_windows
-
 
     def drop_empty_children(self):
         to_keep = []
@@ -532,7 +508,6 @@ class CompoundRequest(DefaultMixin):
 
         return dropped
 
-
     def drop_non_pending(self):
         to_keep = []
         dropped = []
@@ -546,26 +521,13 @@ class CompoundRequest(DefaultMixin):
 
         return dropped
 
-
-    def has_target_of_opportunity(self):
-        '''Return True if request or child request is a ToO.
+    def is_target_of_opportunity(self):
+        '''Return True if request is a ToO.
         '''
-        is_too_request = False
-        for child_request in self.requests:
-            if isinstance(child_request, Request):
-                is_too_request = (child_request.observation_type == 'TARGET_OF_OPPORTUNITY')
-            else:
-                is_too_request = is_too_request or child_request.has_target_of_opportunity()
-
-            if is_too_request:
-                break
-
-        return is_too_request
-
+        return self.observation_type == 'TARGET_OF_OPPORTUNITY'
 
     def is_schedulable(self, running_request_numbers):
         return self._is_schedulable_easy(running_request_numbers)
-
 
     def _is_schedulable_easy(self, running_request_numbers):
             if self.operator == 'and':
@@ -582,7 +544,6 @@ class CompoundRequest(DefaultMixin):
 
             return is_ok_to_return
 
-
     def _is_schedulable_hard(self, running_request_numbers):
         is_ok_to_return = {
                             'and'    : (False, lambda r: not r.has_windows() and not r.request_number in running_request_numbers),
@@ -596,23 +557,6 @@ class CompoundRequest(DefaultMixin):
                 return is_ok_to_return[self.operator][0]
 
         return not is_ok_to_return[self.operator][0]
-
-
-
-class UserRequest(CompoundRequest, DefaultMixin):
-    '''UserRequests are just top-level CompoundRequests. They differ only in having
-       access to proposal and expiry information.'''
-
-    def __init__(self, operator, requests, proposal, expires,
-                 tracking_number, ipp_value, group_id):
-        CompoundRequest.__init__(self, operator, requests)
-
-        self.proposal        = proposal
-        self.expires         = expires
-        self.tracking_number = tracking_number
-        self.group_id        = group_id
-        self.ipp_value       = ipp_value
-
 
     @staticmethod
     def emit_user_request_feedback(tracking_number, msg, tag, timestamp=None):
@@ -631,14 +575,6 @@ class UserRequest(CompoundRequest, DefaultMixin):
     def emit_user_feedback(self, msg, tag, timestamp=None):
         UserRequest.emit_user_request_feedback(self.tracking_number, msg, tag, timestamp)
 
-
-    def scheduling_horizon(self, now):
-        sem_end = semester_service.get_semester_end(now)
-        if self.expires and self.expires < sem_end:
-            return self.expires
-        return sem_end
-
-
     def get_priority_dumb(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
@@ -650,7 +586,7 @@ class UserRequest(CompoundRequest, DefaultMixin):
 
         #TODO: Placeholder for more sophisticated priority scheme
         # add small random bit to help scheduler break degeneracies
-        return self.proposal.priority*ran
+        return self.proposal.tac_priority*ran
 
     def get_priority(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
@@ -670,7 +606,7 @@ class UserRequest(CompoundRequest, DefaultMixin):
         return effective_priority
 
     def get_base_priority(self):
-        return self.proposal.priority
+        return self.proposal.tac_priority
 
     def get_ipp_modified_priority(self):
         return self.get_base_priority()*self.ipp_value
@@ -679,67 +615,56 @@ class UserRequest(CompoundRequest, DefaultMixin):
     priority = property(get_priority)
 
 
-
-def build_telescope_network(tel_file=None, tel_dicts=None):
-    '''Factory for TelescopeNetwork objects.'''
-
-    # TODO: Raise exception if at least one argument isn't passed
-
-    if tel_file:
-        tel_dicts = file_to_dicts(tel_file)
-
-    # Key the telescopes on <name.tel_class>
-    telescopes = {}
-    for d in tel_dicts:
-        telescopes[ d['name'] ] = Telescope(d)
-
-    return TelescopeNetwork(telescopes)
-
-
-class TelescopeNetwork(object):
-    def __init__(self, telescopes):
-        self.telescopes = telescopes
-
-        valid_locations = []
-        for tel_name, tel in self.telescopes.iteritems():
-            valid_locations.append(tel_name + '.' + tel.tel_class)
-
-        self.le = _LocationExpander(valid_locations)
-
-
-    def get_telescope(self, tel_name):
-        return self.telescopes.get(tel_name, None)
-
-
-    def get_telescopes_at_location(self, location):
-        locations = self.le.expand_locations(location)
-
-        telescopes = []
-        for l in locations:
-            tel = self.get_telescope(l)
-            telescopes.append(tel)
-
-        return telescopes
-
-
-
 class ModelBuilder(object):
 
-    def __init__(self, tel_file, camera_mappings_file):
-        self.tel_network        = build_telescope_network(tel_file)
-        self.camera_mappings    = camera_mappings_file
-        self.instrument_factory = InstrumentFactory()
+    def __init__(self, valhalla_interface, configdb_interface):
         self.molecule_factory   = MoleculeFactory()
+        self.valhalla_interface = valhalla_interface
+        self.configdb_interface = configdb_interface
+        self.proposals_by_id = {}
+        self.semester_details = None
+        self._get_all_proposals()
 
-    def build_user_request(self, cr_dict, scheduled_requests={}, ignore_ipp=False):
-        tracking_number = cr_dict['tracking_number']
-        operator = cr_dict['operator']
-        ipp_value = cr_dict.get('ipp_value', 1.0)
+    def _get_all_proposals(self):
+        try:
+            proposals = self.valhalla_interface.get_proposals()
+            for prop in proposals:
+                proposal = Proposal(prop)
+                self.proposals_by_id[proposal.id] = proposal
+        except ValhallaConnectionError as e:
+            log.warning("failed to retrieve bulk proposals: {}".format(repr(e)))
+
+    def get_proposal_details(self, proposal_id):
+        if proposal_id not in self.proposals_by_id:
+            try:
+                proposal = Proposal(self.valhalla_interface.get_proposal_by_id(proposal_id))
+                self.proposals_by_id[proposal_id] = proposal
+            except ValhallaConnectionError as e:
+                raise RequestError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
+
+        return self.proposals_by_id[proposal_id]
+
+
+    def get_semester_details(self, date):
+        if not self.semester_details:
+            try:
+                self.semester_details = self.valhalla_interface.get_semester_details(date)
+            except ValhallaConnectionError as e:
+                raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
+
+        return self.semester_details
+
+
+    def build_user_request(self, ur_dict, scheduled_requests={}, ignore_ipp=False):
+        tracking_number = ur_dict['id']
+        operator = ur_dict['operator'].lower()
+        ipp_value = ur_dict.get('ipp_value', 1.0)
+        submitter = ur_dict.get('submitter', '')
         if ignore_ipp:
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
 
-        requests, invalid_requests  = self.build_requests(cr_dict, scheduled_requests)
+        requests, invalid_requests  = self.build_requests(ur_dict, scheduled_requests)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
@@ -758,17 +683,37 @@ class ModelBuilder(object):
             UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
             raise RequestError(msg)
 
-        proposal  = Proposal(cr_dict['proposal'])
-        expiry_dt = iso_string_to_datetime(cr_dict['expires'])
+        proposal = self.get_proposal_details(ur_dict['proposal'])
+
+        # Validate we are an allowed type of UR
+        valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
+        observation_type = ur_dict['observation_type']
+        if not observation_type in valid_observation_types:
+            msg = "UserRequest observation_type must be one of %s" % valid_observation_types
+            raise RequestError(msg)
+
+        # Calculate the maximum window time as the expire time
+        max_window_time = datetime(1000, 1, 1)
+        for req in requests:
+            for windows in req.windows.windows_for_resource.values():
+                for window in windows:
+                    max_window_time = max(max_window_time, window.end)
+
+        # Truncate the expire time by the current semester's end
+        semester_details = self.get_semester_details(datetime.utcnow())
+        if semester_details:
+            max_window_time = min(max_window_time, semester_details['end'])
 
         user_request = UserRequest(
                                     operator        = operator,
                                     requests        = requests,
                                     proposal        = proposal,
-                                    expires         = expiry_dt,
                                     tracking_number = tracking_number,
+                                    observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = cr_dict['group_id'],
+                                    group_id        = ur_dict['group_id'],
+                                    expires         = max_window_time,
+                                    submitter       = submitter,
                                   )
 
         # Return only the invalid request and not the error message
@@ -776,7 +721,7 @@ class ModelBuilder(object):
         return user_request, invalid_requests
 
 
-    def build_requests(self, cr_dict, scheduled_requests={}):
+    def build_requests(self, ur_dict, scheduled_requests={}):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors 
@@ -793,13 +738,13 @@ class ModelBuilder(object):
         '''
         requests         = []
         invalid_requests = []
-        for req_dict in cr_dict['requests']:
+        for req_dict in ur_dict['requests']:
             try:
-                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['request_number']))
+                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['id']))
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
-                log.warn('Invalid Request: {}'.format(generate_request_description(cr_dict, req_dict)))
+                log.warn('Invalid Request: {}'.format(generate_request_description(ur_dict, req_dict)))
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests
@@ -828,28 +773,17 @@ class ModelBuilder(object):
         # A Request can only be scheduled on one instrument-based subnetwork
         if not self.have_same_instrument(molecules):
             # Complain
-            msg  = "Request %s has molecules with different instruments" % req_dict['request_number']
+            msg  = "Request %s has molecules with different instruments" % req_dict['id']
             msg += " - removing from consideration"
             raise RequestError(msg)
-
-        # To preserve the deprecated interface, map SCICAM -> 1m0-SCICAM-SBIG
-        self.map_scicam_keyword(molecules, req_dict['request_number'])
 
         # Get the instrument (we know they are all the same)
         instrument_name = molecules[0].instrument_name
 
-        mapping = create_camera_mapping(self.camera_mappings)
-
-        generic_camera_names = self.instrument_factory.instrument_names
-
-        if instrument_name.upper() in generic_camera_names:
-            instrument_info = mapping.find_by_camera_type(instrument_name)
-        else:
-            instrument_info = mapping.find_by_camera(instrument_name)
-
         filters = []
-        MOLECULE_TYPES_WITHOUT_FILTERS = ['DARK', 'BIAS', 'ENGINEERING', 'NRES_SPECTRUM', 'NRES_EXPOSE', 'NRES_TEST',
-                                          'TRIPLE']
+
+        molecule_types_without_filter = ['dark', 'bias', 'engineering', 'triple', 'nres_test', 'nres_spectrum',
+                                         'nres_expose']
 
         for molecule in molecules:
             if hasattr(molecule, 'filter') and molecule.filter:
@@ -857,51 +791,36 @@ class ModelBuilder(object):
             elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
                 filters.append(molecule.spectra_slit.lower())
             # bias or dark molecules don't need filter or spectra_slit
-            elif not hasattr(molecule, 'type') or molecule.type.upper() not in MOLECULE_TYPES_WITHOUT_FILTERS:
+            elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        if filters:
-            valid_instruments = mapping.find_by_filter(filters, instrument_info)
-        else:
-            valid_instruments = mapping.find_by_camera_type(instrument_name)
+        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_name, filters,
+                                                                           req_dict['location'])
 
-        # Determine the resource subnetwork satisfying the camera and location requirements
-        telescopes     = self.tel_network.get_telescopes_at_location(req_dict['location'])
-        tels_with_inst = [join_location(x['site'], x['observatory'], x['telescope']) for x in valid_instruments]
-        subnetwork     = [t for t in telescopes if t.name in tels_with_inst]
-
-        if not subnetwork:
+        if not telescopes:
             # Complain
-            site_str = req_dict['location']['site'] or ''
-            obs_str  = req_dict['location']['observatory'] or ''
-            tel_str  = req_dict['location']['telescope'] or ''
+            site_str = req_dict['location']['site'] if 'site' in req_dict['location'] else ''
+            obs_str = req_dict['location']['observatory'] if 'observatory' in req_dict['location'] else ''
+            tel_str = req_dict['location']['telescope'] if 'telescope' in req_dict['location'] else ''
+            telescope_class = req_dict['location']['telescope_class'] if 'telescope_class' in req_dict['location'] else ''
             req_location = '.'.join(
-                                     (
-                                       req_dict['location']['telescope_class'],
-                                       site_str,
-                                       obs_str,
-                                       tel_str
-                                     )
-                                   )
-            msg = "Request %s wants camera %s, which is not available on the subnetwork '%s'" % (
-                                                                                req_dict['request_number'],
-                                                                                instrument_name,
-                                                                                req_location
-                                                                               )
-            raise RequestError(msg)
-
-        instrument_type = instrument_info[0]['camera_type']
-
-        # Validate we are an allowed type of Request
-        valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
-        observation_type        = req_dict['observation_type']
-        if not observation_type in valid_observation_types:
-            msg = "Request observation_type must be one of %s" % valid_observation_types
+                (
+                    telescope_class,
+                    site_str,
+                    obs_str,
+                    tel_str
+                )
+            )
+            msg = "Request {} wants camera {}, which is not available on the subnetwork '{}'".format(
+                req_dict['id'],
+                instrument_name,
+                req_location
+            )
             raise RequestError(msg)
 
         # Create a window for each telescope in the subnetwork
         windows = Windows()
-        for telescope in subnetwork:
+        for telescope in telescopes:
             for window_dict in req_dict['windows']:
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
@@ -914,10 +833,9 @@ class ModelBuilder(object):
                        molecules       = molecules,
                        windows         = windows,
                        constraints     = constraints,
-                       request_number  = req_dict['request_number'],
+                       request_number  = req_dict['id'],
                        state           = req_dict['state'],
-                       instrument_type = instrument_type,
-                       observation_type = req_dict['observation_type'],
+                       duration        = req_dict['duration'],
                        scheduled_reservation = scheduled_reservation
                      )
 
@@ -933,80 +851,6 @@ class ModelBuilder(object):
             return False
 
         return True
-
-
-    def map_scicam_keyword(self, molecules, request_number):
-        # Assume all molecules have the same instrument
-        SBIG_SCICAM = '1M0-SCICAM-SBIG'
-        for mol in molecules:
-            if mol.instrument_name.upper() == 'SCICAM':
-                mol.instrument_name = SBIG_SCICAM
-
-            if mol.ag_name:
-                if mol.ag_name.upper() == 'SCICAM':
-                    mol.ag_name = SBIG_SCICAM
-
-#            msg = "Request %s passed deprecated 'SCICAM' keyword - remapping to %s" % (
-#                                                                                        request_number,
-#                                                                                        SBIG_SCICAM
-#                                                                                      )
-#            log.warn(msg)
-
-        return
-
-
-
-class _LocationExpander(object):
-    def __init__(self, locations):
-        self.set_locations(locations)
-
-
-    def set_locations(self, locations):
-        ''' Expects a tuple of fully qualified names, with the telescope class
-            prepended to the front. Example:
-
-            location =  (
-                          '0m4a.aqwa.bpl.0m4',
-                          '0m4b.aqwa.bpl.0m4',
-                          '1m0a.doma.elp.1m0',
-                        )
-        '''
-
-        self.telescopes = [ location.split('.') for location in locations ]
-
-        return
-
-
-    def expand_locations(self, dict_repr):
-
-        # We don't accept sub-filters unless all previous filters have been populated
-        filters = []
-        if dict_repr['telescope_class']:
-            filters.append(dict_repr['telescope_class'])
-
-            if dict_repr['site']:
-                filters.append(dict_repr['site'])
-
-                if dict_repr['observatory']:
-                    filters.append(dict_repr['observatory'])
-
-                    if dict_repr['telescope']:
-                        filters.append(dict_repr['telescope'])
-
-
-        # Now run the filters to pick out only matches
-        filtered_subset = self.telescopes
-        for f in filters:
-            new_filtered_subset = []
-            for location in filtered_subset:
-                if f in location:
-                    new_filtered_subset.append(location)
-            filtered_subset = new_filtered_subset
-
-        # Reconstruct the location string, but drop the telescope class
-        locations = [ '.'.join(location[:-1]) for location in filtered_subset ]
-
-        return locations
 
 
 class RequestError(Exception):

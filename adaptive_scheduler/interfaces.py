@@ -122,9 +122,10 @@ class ResourceUsageSnapshot(object):
 
 class NetworkInterface(object):
     
-    def __init__(self, schedule_interface, user_request_interface, network_state_interface):
+    def __init__(self, schedule_interface, valhalla_interface, network_state_interface, configdb_interface):
         self.network_schedule_interface = schedule_interface
-        self.user_request_interface = user_request_interface
+        self.valhalla_interface = valhalla_interface
+        self.configdb_interface = configdb_interface
         self.network_state_interface = network_state_interface
         
     def _running_user_requests_by_tracking_number(self):
@@ -140,27 +141,14 @@ class NetworkInterface(object):
     def schedulable_request_set_has_changed(self):
         '''True if set of schedulable requests has changed
         '''
-        return self.user_request_interface.is_dirty()
-    
-    def clear_schedulable_request_set_changed_state(self):
-        '''True if set of schedulable requests has changed
-        '''
-        return self.user_request_interface.clear_dirty_flag()
+        return self.valhalla_interface.is_dirty()
     
     def get_all_user_requests(self, start, end):
         '''Get all user requests waiting for scheduling between
         start and end date
         '''
-        return self.user_request_interface.get_all_user_requests(start, end)            
-                
-    def set_requests_to_unschedulable(self, unschedulable_r_numbers):
-        '''Update the state of all the unschedulable Requests in the DB in one go.'''
-        return self.user_request_interface.set_requests_to_unschedulable(unschedulable_r_numbers)
-    
-    def set_user_requests_to_unschedulable(self, unschedulable_ur_numbers):
-        '''Update the state of all the unschedulable User Requests in the DB in one go.'''
-        return self.user_request_interface.set_user_requests_to_unschedulable(unschedulable_ur_numbers)
-    
+        return self.valhalla_interface.get_all_user_requests(start, end)
+
     def cancel(self, cancelation_dates_by_resource, reason):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
@@ -170,11 +158,11 @@ class NetworkInterface(object):
     def abort(self, running_request, reason):
         return self.network_schedule_interface.abort(running_request, reason)
             
-    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+    def save(self, schedule, semester_start, dry_run=False):
         ''' Save the provided observing schedule
         Return the number of submitted requests
         '''
-        return self.network_schedule_interface.save(schedule, semester_start, camera_mappings, dry_run)
+        return self.network_schedule_interface.save(schedule, semester_start, self.configdb_interface, dry_run)
     
     def get_current_events(self):
         ''' Get the current network events
@@ -247,7 +235,7 @@ class CachedInputNetworkInterface(object):
         '''
         pass
             
-    def save(self, schedule, semester_start, camera_mappings, dry_run=False):
+    def save(self, schedule, semester_start, dry_run=False):
         ''' Save the provided observing schedule
         Return the number of submitted requests
         '''

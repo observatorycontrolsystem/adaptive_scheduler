@@ -29,10 +29,10 @@ def file_to_dicts(filename):
 def get_proposal():
 
     proposal = {
-                 'proposal_id'   : 'LCOSchedulerTest',
-                 'user_id'       : 'esaunders@lcogt.net',
-                 'tag_id'        : 'LCOGT',
-                 'priority'      : 20               # 'TAC priority': LARGER means MORE IMPORTANT
+                 'id'   : 'LCOSchedulerTest',
+                 'pi'       : 'esaunders@lcogt.net',
+                 'tag'        : 'LCOGT',
+                 'tac_priority'      : 20               # 'TAC priority': LARGER means MORE IMPORTANT
                }
 
     return proposal

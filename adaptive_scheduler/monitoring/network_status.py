@@ -33,12 +33,12 @@ import requests
 from retry import retry
 import collections
 
-DEFAULT_MONITORS = [ScheduleTimestampMonitor(),
-                    NotOkToOpenMonitor(),
-                    OfflineResourceMonitor(),
-                    SequencerEnableMonitor(),
-                    EnclosureInterlockMonitor(),
-                    AvailableForScheduling()]
+DEFAULT_MONITORS = [ScheduleTimestampMonitor,
+                    NotOkToOpenMonitor,
+                    OfflineResourceMonitor,
+                    SequencerEnableMonitor,
+                    EnclosureInterlockMonitor,
+                    AvailableForScheduling]
 
 DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
 
@@ -78,13 +78,18 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, monitors=None, es_endpoint=None):
+    def __init__(self, configdb_interface, monitors=None, es_endpoint=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
         '''
         # Use default monitors if not specified
-        self.monitors = monitors or DEFAULT_MONITORS
+        if monitors:
+            self.monitors = monitors
+        else:
+            self.monitors = []
+            for monitor in DEFAULT_MONITORS:
+                self.monitors.append(monitor(configdb_interface))
         self.current_events  = {}
         self.previous_events = {}
         self.es_endpoint = es_endpoint

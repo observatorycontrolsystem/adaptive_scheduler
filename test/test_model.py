@@ -6,53 +6,13 @@ from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_e
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.model2      import ( build_telescope_network,
-                                             SiderealTarget, NonSiderealTarget,
-                                             Telescope,
-                                             Proposal, MoleculeFactory,
-                                             Request, CompoundRequest, UserRequest,
-                                             Windows, Window, Constraints,
-                                             _LocationExpander, ModelBuilder,
-                                             RequestError)
-
-#TODO: Clean up unit tests, remove this
-from schedutils.instruments         import Spectrograph
-
-class TestTelescopeNetwork(object):
-
-    def setup(self):
-        self.tel_name1 = '2m0a.clma.ogg'
-        self.tel_name2 = '1m0a.doma.ogg'
-        self.tel_data = [
-                            {
-                                'name'      : self.tel_name1,
-                                'tel_class' : '2m0',
-                            },
-                            {
-                                'name'      : self.tel_name2,
-                                'tel_class' : '1m0',
-                            },
-                        ]
-
-        self.tel_network = build_telescope_network(tel_dicts=self.tel_data)
-
-
-    def test_get_telescope(self):
-        assert_equal(self.tel_network.get_telescope(self.tel_name1),
-                     Telescope(self.tel_data[0]))
-
-
-    def test_get_telescopes_at_location(self):
-        dict_repr = {
-                      'telescope_class' : '1m0a',
-                      'site'            : 'ogg',
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.tel_network.get_telescopes_at_location(dict_repr)
-        expected = [ Telescope(self.tel_data[1]) ]
-        assert_equal(received, expected)
+from adaptive_scheduler.model2      import (SiderealTarget, NonSiderealTarget,
+                                            Proposal, MoleculeFactory,
+                                            Request, UserRequest,
+                                            Windows, Window, Constraints,
+                                            ModelBuilder,
+                                            RequestError)
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
 
 
 class TestRequest(object):
@@ -68,7 +28,7 @@ class TestRequest(object):
                                       epoch = 2000,
                                      )
 
-        self.telescope = Telescope(
+        self.telescope = dict(
                                     name      = 'maui',
                                     latitude  = 20.7069444444,
                                     longitude = -156.258055556,
@@ -105,8 +65,6 @@ class TestRequest(object):
         self.duration = 60
         self.request_number = '0000000001'
 
-
-
     @raises(RequestError)
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
@@ -115,8 +73,10 @@ class TestRequest(object):
                           windows        = self.windows,
                           constraints    = self.constraints,
                           request_number = self.request_number,
-                          observation_type = 'NORMAL')
-        compound_request = CompoundRequest(junk_res_type, [request])
+                          )
+        user_request = UserRequest(operator=junk_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
+                                   expires=datetime(2999,1,1), submitter='')
 
 
     def test_valid_request_type_does_not_raise_exception(self):
@@ -126,54 +86,10 @@ class TestRequest(object):
                           windows        = self.windows,
                           constraints    = self.constraints,
                           request_number = self.request_number,
-                          observation_type = 'NORMAL')
-        compound_request = CompoundRequest(valid_res_type, [request])
-
-
-    def test_null_instrument_has_a_name(self):
-        request = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows,
-                          constraints    = self.constraints,
-                          request_number = self.request_number,
-                          observation_type = 'NORMAL')
-        assert_equal(request.get_instrument_type(), 'NULL-INSTRUMENT')
-
-    def test_configured_instrument_has_a_name(self):
-        request = Request(target          = self.target,
-                          molecules       = [self.molecule],
-                          windows         = self.windows,
-                          constraints     = self.constraints,
-                          request_number  = self.request_number,
-                          instrument_type = '1M0-SCICAM-SINISTRO',
-                          observation_type = 'NORMAL')
-
-        assert_equal(request.get_instrument_type(), '1M0-SCICAM-SINISTRO')
-
-
-class TestCompoundRequest(object):
-    '''Unit tests for the adaptive scheduler CompoundRequest object.'''
-
-    def setup(self):
-        pass
-
-
-    def test_drop_empty_children(self):
-        r_mock1 = mock.MagicMock()
-        r_mock1.has_windows.return_value = True
-
-        r_mock2 = mock.MagicMock()
-        r_mock2.has_windows.return_value = False
-
-        cr = CompoundRequest(
-                              operator='many',
-                              requests=[r_mock1, r_mock2]
-                            )
-
-        cr.drop_empty_children()
-
-        assert_equal(len(cr.requests), 1)
-        assert_equal(cr.requests[0], r_mock1)
+                          )
+        user_request = UserRequest(operator=valid_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
+                                   expires=datetime(2999,1,1), submitter='')
 
 
 class TestUserRequest(object):
@@ -194,6 +110,8 @@ class TestUserRequest(object):
                           tracking_number = tracking_number,
                           group_id = None,
                           ipp_value = 1.0,
+                          observation_type='NORMAL',
+                          submitter=''
                          )
 
         msg = 'Yo dude'
@@ -208,11 +126,10 @@ class TestUserRequest(object):
         operator = 'single'
 
         proposal = Proposal(
-                             proposal_name  = 'LCOSchedulerTest',
-                             user           = 'Eric Saunders',
+                             id  = 'LCOSchedulerTest',
+                             pi           = 'Eric Saunders',
                              tag            = 'admin',
-                             time_remaining = 10,               # In hours
-                             priority       = base_priority
+                             tac_priority       = base_priority
                            )
 
         self.mol_factory = MoleculeFactory()
@@ -229,18 +146,18 @@ class TestUserRequest(object):
                                 )
                             )
 
-        telescope = Telescope(
-                                name      = 'maui',
-                                latitude  = 20.7069444444,
-                                longitude = -156.258055556,
-                              )
+        telescope = dict(
+            name='maui',
+            latitude=20.7069444444,
+            longitude=-156.258055556,
+        )
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
-                    resource    = telescope
+                    resource    = telescope['name']
                   )
         windows = Windows()
         windows.append(w)
@@ -251,7 +168,7 @@ class TestUserRequest(object):
                      windows = windows,
                      constraints = None,
                      request_number = '0000000003',
-                     instrument_type ='1M0-SCICAM-SBIG'
+                     duration = 10
                    )
 
         ur = UserRequest(
@@ -261,7 +178,9 @@ class TestUserRequest(object):
                           expires  = None,
                           tracking_number = '000000004',
                           ipp_value = ipp_value,
+                          observation_type='NORMAL',
                           group_id = None,
+                          submitter='Eric Saunders'
                          )
 
         return ur
@@ -279,151 +198,167 @@ class TestUserRequest(object):
     def test_priority_ipp_1_5(self):
         self._test_priority(base_priority=20.0, ipp_value=1.5)
 
+    def test_drop_empty_children(self):
+        r_mock1 = mock.MagicMock()
+        r_mock1.has_windows.return_value = True
 
-class TestLocationExpander(object):
+        r_mock2 = mock.MagicMock()
+        r_mock2.has_windows.return_value = False
 
-    def setup(self):
-        self.telescopes = (
-                            '0m4a.aqwa.bpl.0m4',
-                            '0m4b.aqwa.bpl.0m4',
-                            '1m0a.doma.elp.1m0',
-                            '1m0a.doma.bpl.1m0',
-                            '2m0a.clma.ogg.2m0',
-                            '2m0a.clma.coj.2m0',
-                          )
+        ur = UserRequest(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1', proposal=Proposal(),
+                         tracking_number=1, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999,1,1),
+                         submitter='')
 
-        self.le = _LocationExpander(self.telescopes)
+        ur.drop_empty_children()
 
-
-    def test_expand_locations_no_filtering_if_empty_dict(self):
-        dict_repr = {
-                      'telescope_class' : None,
-                      'site'            : None,
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-
-        # We expect the full telescope list, with the telescope classes trimmed off
-        expected = [ '.'.join(loc.split('.')[:-1]) for loc in self.telescopes ]
-
-        assert_equal(received, expected)
+        assert_equal(len(ur.requests), 1)
+        assert_equal(ur.requests[0], r_mock1)
 
 
-    def test_expand_locations_no_class_match(self):
-        dict_repr = {
-                      'telescope_class' : '40m0',
-                      'site'            : None,
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = []
-
-        assert_equal(received, expected)
-
-
-    def test_expand_locations_no_site_match(self):
-        dict_repr = {
-                      'telescope_class' : '1m0',
-                      'site'            : 'ogg',
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = []
-
-        assert_equal(received, expected)
-
-
-    def test_expand_locations_class_only(self):
-        dict_repr = {
-                      'telescope_class' : '1m0',
-                      'site'            : None,
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = [
-                     '1m0a.doma.elp',
-                     '1m0a.doma.bpl',
-                   ]
-
-        assert_equal(received, expected)
-
-
-    def test_expand_locations_class_and_site(self):
-        dict_repr = {
-                      'telescope_class' : '1m0',
-                      'site'            : 'elp',
-                      'observatory'     : None,
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = [
-                     '1m0a.doma.elp',
-                   ]
-
-        assert_equal(received, expected)
-
-
-    def test_expand_locations_class_and_site_and_obs(self):
-        dict_repr = {
-                      'telescope_class' : '0m4',
-                      'site'            : 'bpl',
-                      'observatory'     : 'aqwa',
-                      'telescope'       : None
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = [
-                     '0m4a.aqwa.bpl',
-                     '0m4b.aqwa.bpl',
-                   ]
-
-        assert_equal(received, expected)
-
-
-    def test_expand_locations_class_and_site_and_obs_and_tel(self):
-        dict_repr = {
-                      'telescope_class' : '0m4',
-                      'site'            : 'bpl',
-                      'observatory'     : 'aqwa',
-                      'telescope'       : '0m4b'
-                    }
-
-        received = self.le.expand_locations(dict_repr)
-        expected = [
-                     '0m4b.aqwa.bpl',
-                   ]
-
-        assert_equal(received, expected)
+# class TestLocationExpander(object):
+#
+#     def setup(self):
+#         self.telescopes = (
+#                             '0m4a.aqwa.bpl.0m4',
+#                             '0m4b.aqwa.bpl.0m4',
+#                             '1m0a.doma.elp.1m0',
+#                             '1m0a.doma.bpl.1m0',
+#                             '2m0a.clma.ogg.2m0',
+#                             '2m0a.clma.coj.2m0',
+#                           )
+#
+#         self.le = _LocationExpander(self.telescopes)
+#
+#
+#     def test_expand_locations_no_filtering_if_empty_dict(self):
+#         dict_repr = {
+#                       'telescope_class' : None,
+#                       'site'            : None,
+#                       'observatory'     : None,
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#
+#         # We expect the full telescope list, with the telescope classes trimmed off
+#         expected = [ '.'.join(loc.split('.')[:-1]) for loc in self.telescopes ]
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_no_class_match(self):
+#         dict_repr = {
+#                       'telescope_class' : '40m0',
+#                       'site'            : None,
+#                       'observatory'     : None,
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = []
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_no_site_match(self):
+#         dict_repr = {
+#                       'telescope_class' : '1m0',
+#                       'site'            : 'ogg',
+#                       'observatory'     : None,
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = []
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_class_only(self):
+#         dict_repr = {
+#                       'telescope_class' : '1m0',
+#                       'site'            : None,
+#                       'observatory'     : None,
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = [
+#                      '1m0a.doma.elp',
+#                      '1m0a.doma.bpl',
+#                    ]
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_class_and_site(self):
+#         dict_repr = {
+#                       'telescope_class' : '1m0',
+#                       'site'            : 'elp',
+#                       'observatory'     : None,
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = [
+#                      '1m0a.doma.elp',
+#                    ]
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_class_and_site_and_obs(self):
+#         dict_repr = {
+#                       'telescope_class' : '0m4',
+#                       'site'            : 'bpl',
+#                       'observatory'     : 'aqwa',
+#                       'telescope'       : None
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = [
+#                      '0m4a.aqwa.bpl',
+#                      '0m4b.aqwa.bpl',
+#                    ]
+#
+#         assert_equal(received, expected)
+#
+#
+#     def test_expand_locations_class_and_site_and_obs_and_tel(self):
+#         dict_repr = {
+#                       'telescope_class' : '0m4',
+#                       'site'            : 'bpl',
+#                       'observatory'     : 'aqwa',
+#                       'telescope'       : '0m4b'
+#                     }
+#
+#         received = self.le.expand_locations(dict_repr)
+#         expected = [
+#                      '0m4b.aqwa.bpl',
+#                    ]
+#
+#         assert_equal(received, expected)
 
 
 class TestWindows(object):
 
     def setup(self):
-        self.t1 = Telescope(
+        self.t1 = dict(
                              name = "Baltic"
                            )
-        self.t2 = Telescope(
+        self.t2 = dict(
                              name = "Sea"
                            )
 
 
     def test_has_windows_windows(self):
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
-                    resource    = self.t1
+                    resource    = self.t1['name']
                   )
         windows = Windows()
         windows.append(w)
@@ -438,39 +373,25 @@ class TestWindows(object):
 
     def test_is_empty_has_windows_empty_on_one_resource(self):
         window_dict = {
-                        'start' : "2013-03-01 00:00:00",
-                        'end'   : "2013-03-01 00:30:00",
+                        'start' : "2013-03-01T00:00:00Z",
+                        'end'   : "2013-03-01T00:30:00Z",
                       }
         w = Window(
                     window_dict = window_dict,
-                    resource    = self.t1
+                    resource    = self.t1['name']
                   )
         w2 = Window(
                      window_dict = window_dict,
-                     resource    = self.t2
+                     resource    = self.t2['name']
                    )
 
         windows = Windows()
         windows.append(w)
         windows.append(w2)
-        windows.windows_for_resource[self.t2.name] = []
+        windows.windows_for_resource[self.t2['name']] = []
 
         assert_equal(windows.has_windows(), True)
         assert_equal(windows.size(), 1)
-
-
-
-class TestTelescope(object):
-
-    def __init__(self):
-        pass
-
-
-    def test_telescope_has_empty_events_list(self):
-        telescope = Telescope()
-
-        assert_equal(telescope.events, [])
-
 
 
 class TestNonSiderealTarget(object):
@@ -519,9 +440,6 @@ class TestModelBuilder(object):
                          ]
         self.location = {
                           'telescope_class' : '1m0',
-                          'site'            : None,
-                          'observatory'     : None,
-                          'telescope'       : None,
                         }
         self.windows = [
                          {
@@ -533,77 +451,28 @@ class TestModelBuilder(object):
         self.request_number = '0000000002'
         self.state          = 'PENDING'
 
-        self.mb = ModelBuilder('test/telescopes.dat', 'test/camera_mappings.dat')
+
+        self.mb = ModelBuilder(mock.MagicMock(), ConfigDBInterface(configdb_url='',
+                                                                   active_instruments_file='test/active_instruments.json',
+                                                                   telescopes_file='test/telescopes.json'))
 
     def test_build_request_sinistro_resolves_to_lsc_subnetwork(self):
+        location = self.location.copy()
+        location['site'] = 'lsc'
         req_dict = {
                      'target'         : self.target,
                      'molecules'      : self.molecules,
-                     'location'       : self.location,
+                     'location'       : location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']),
                      set(request.windows.windows_for_resource.keys()))
-
-
-    def test_build_request_scicam_instrument_maps_to_sbig(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : 'SciCam',
-                                       'type'            : 'expose',
-                                       'filter'          : 'B',
-                                     },
-                                   ],
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'NORMAL',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SBIG')
-
-        # Verify that only telescopes with SBIG cameras were selected
-        assert_equal(set(['1m0a.doma.coj', '1m0a.domb.coj',
-                          '1m0a.doma.cpt', '1m0a.domb.cpt', '1m0a.domc.cpt',
-                          '1m0a.doma.elp'
-                         ]),
-                     set(request.windows.windows_for_resource.keys()))
-
-
-    def test_build_request_scicam_autoguider_maps_to_sbig(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : 'SciCam',
-                                       'type'            : 'expose',
-                                       'ag_name'         : 'scicam',
-                                       'filter'          : 'B',
-                                     },
-                                   ],
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'NORMAL',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        for mol in request.molecules:
-            assert_equal(mol.ag_name, '1M0-SCICAM-SBIG')
 
 
     def test_build_request_fl03_resolves_to_lsc_telescope(self):
@@ -619,13 +488,12 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '1M0-SCICAM-SINISTRO')
         assert_equal(set(['1m0a.domb.lsc']),
                      set(request.windows.windows_for_resource.keys()))
 
@@ -641,79 +509,17 @@ class TestModelBuilder(object):
                                    ],
                      'location'       : {
                                           'telescope_class' : '2m0',
-                                          'site'            : None,
-                                          'observatory'     : None,
-                                          'telescope'       : None,
                                         },
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '2M0-FLOYDS-SCICAM')
-        assert_equal(set(['2m0a.clma.coj']),
+        assert_equal(set(['2m0a.clma.coj', '2m0a.clma.ogg']),
                      set(request.windows.windows_for_resource.keys()))
-
-    def test_build_request_nh2_resolves_to_ogg_telescope(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules' : [
-                                     {
-                                       'instrument_name' : '2m0-SciCam-Merope',
-                                       'type'            : 'expose',
-                                       'filter'          : 'NH2',
-                                     },
-                                   ],
-                     'location'       : {
-                                          'telescope_class' : '2m0',
-                                          'site'            : None,
-                                          'observatory'     : None,
-                                          'telescope'       : None,
-                                        },
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'NORMAL',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.instrument.type, '2M0-SCICAM-MEROPE')
-        assert_equal(set(['2m0a.clma.ogg']),
-                     set(request.windows.windows_for_resource.keys()))
-
-    def test_build_request_observation_type_normal(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules'      : self.molecules,
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'NORMAL',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.observation_type, 'NORMAL')
-
-    def test_build_request_observation_type_target_of_opportunity(self):
-        req_dict = {
-                     'target'         : self.target,
-                     'molecules'      : self.molecules,
-                     'location'       : self.location,
-                     'windows'        : self.windows,
-                     'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
-                     'state'          : self.state,
-                     'observation_type' : 'TARGET_OF_OPPORTUNITY',
-                   }
-
-        request = self.mb.build_request(req_dict)
-        assert_equal(request.observation_type, 'TARGET_OF_OPPORTUNITY')
 
 
     @raises(RequestError)
@@ -726,9 +532,9 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
+                     'duration': 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -751,9 +557,9 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
+                     'duration': 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -773,9 +579,9 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
+                     'duration': 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
@@ -794,29 +600,109 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id' : self.request_number,
+                     'duration': 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         request = self.mb.build_request(req_dict)
 
-    @raises(RequestError)
-    def test_dont_accept_unsupported_observation_type(self):
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_request_observation_type_normal(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         req_dict = {
                      'target'         : self.target,
                      'molecules'      : self.molecules,
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : self.request_number,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'ABNORMAL',
                    }
 
-        request = self.mb.build_request(req_dict)
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'NORMAL',
+        }
 
-    def test_build_user_request_returns_invalid_user_requests(self):
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        assert_equal(user_request_model.observation_type, 'NORMAL')
+
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_request_observation_type_target_of_opportunity(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'id'             : self.request_number,
+                     'duration'       : 10,
+                     'state'          : self.state,
+                   }
+
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'TARGET_OF_OPPORTUNITY',
+        }
+
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        assert_equal(user_request_model.observation_type, 'TARGET_OF_OPPORTUNITY')
+
+
+    @raises(RequestError)
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_dont_accept_unsupported_observation_type(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+        req_dict = {
+                     'target'         : self.target,
+                     'molecules'      : self.molecules,
+                     'location'       : self.location,
+                     'windows'        : self.windows,
+                     'constraints'    : self.constraints,
+                     'id'             : self.request_number,
+                     'duration'       : 10.0,
+                     'state'          : self.state,
+                   }
+
+        cr_dict = {
+            'proposal': 'TestProposal',
+            'expires': '2014-10-29 12:12:12',
+            'group_id': '',
+            'id': '1',
+            'ipp_value': '1.0',
+            'operator': 'many',
+            'requests': [req_dict, ],
+            'observation_type': 'ABNORMAL',
+        }
+
+        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    def test_build_user_request_returns_invalid_user_requests(self, mock_proposal, mock_semester):
+        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         bad_req_dict = {
                      'target' : {
                                   'type' : 'POTATOES',
@@ -825,16 +711,16 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : '2',
+                     'id'             : '2',
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
         
         good_req_dict = {
                      'target'         : self.target,
                      'molecules' : [
                                      {
-                                       'instrument_name' : 'SciCam',
+                                       'instrument_name' : '1M0-SCICAM-SINISTRO',
                                        'type'            : 'expose',
                                        'filter'          : 'B',
                                      },
@@ -842,24 +728,20 @@ class TestModelBuilder(object):
                      'location'       : self.location,
                      'windows'        : self.windows,
                      'constraints'    : self.constraints,
-                     'request_number' : '3',
+                     'id'             : '3',
+                     'duration'       : 10,
                      'state'          : self.state,
-                     'observation_type' : 'NORMAL',
                    }
 
         cr_dict = {
-                   'proposal' : {
-                                 'proposal_id' : 'INDECENT',
-                                 'user_id' : 'demi.moore',
-                                 'tag_id' : 'BAD_MOVIES',
-                                 'observer_name' : 'me',
-                                 'priority' : '10'
-                                },
+                   'proposal' : 'TestProposal',
                    'expires' : '2014-10-29 12:12:12',
                    'group_id' : '',
-                   'tracking_number' : '1',
+                   'id' : '1',
                    'ipp_value' : '1.0',
                    'operator' : 'many',
+                   'observation_type': 'NORMAL',
+                   'submitter': '',
                    'requests' : [bad_req_dict, good_req_dict]
                    }
         

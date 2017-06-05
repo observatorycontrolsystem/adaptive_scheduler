@@ -29,7 +29,6 @@ RUN cp $GUROBI_HOME/lib/gurobipy.so /usr/lib/python2.7/site-packages/gurobipy/
 
 # create eng user necessary to run scheduler and use gurobi
 RUN useradd -ms /bin/bash eng
-RUN mkdir $APPLICATION_ROOT/logs
 RUN chown -R eng:eng /lco/
 
 WORKDIR $APPLICATION_ROOT

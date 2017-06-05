@@ -52,11 +52,11 @@ February 2013
 '''
 
 from datetime import datetime, timedelta
-from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.log      import UserRequestLogger
 
-
 import logging
+import json
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -209,7 +209,7 @@ def truncate_upper_crossing_windows(ur_list, horizon=None):
     global now
 
     def truncate_upper_crossing(w, ur, r):
-        effective_horizon = ur.scheduling_horizon(now)
+        effective_horizon = ur.expires
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon
@@ -234,7 +234,7 @@ def filter_out_future_windows(ur_list, horizon=None):
     global now
 
     def filter_on_future(w, ur, r):
-        effective_horizon = ur.scheduling_horizon(now)
+        effective_horizon = ur.expires
         if horizon:
             if horizon < effective_horizon:
                 effective_horizon = horizon

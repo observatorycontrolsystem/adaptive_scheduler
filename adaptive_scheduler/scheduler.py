@@ -1,39 +1,32 @@
 from __future__ import division
 
 import time
-import sys
 import logging
 import itertools
+import json
 
 from collections import defaultdict
 from datetime import datetime, timedelta
 
-from reqdb.requests                      import Request
-from schedutils.semester_service         import get_semester_block
 from adaptive_scheduler.feedback         import TimingLogger
-from schedutils.semester_service         import get_semester_code
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
-                                            metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE)
+                                            metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE,
+                                                 get_reservation_datetimes)
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
-from adaptive_scheduler.printing         import (print_schedule, print_compound_reservations,
-                                         summarise_urs, log_full_ur, log_windows)
-from adaptive_scheduler.model2           import (filter_out_compounds,
-                                         differentiate_by_type, n_requests,
-                                         RequestError)
+from adaptive_scheduler.printing         import print_compound_reservations,summarise_urs, log_full_ur, log_windows
+from adaptive_scheduler.model2           import filter_out_compounds, differentiate_by_type, n_requests
 from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
                                                  make_many_type_compound_reservations,
                                                  filter_for_kernel,
                                                  construct_global_availability)
-from adaptive_scheduler.request_filters  import (filter_urs,
-                                                drop_empty_requests,
-                                                find_unschedulable_ur_numbers,
-                                                set_now)
+from adaptive_scheduler.request_filters  import filter_urs, drop_empty_requests, set_now
+from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
 
 
 class Scheduler(object, SendMetricMixin):
@@ -44,7 +37,10 @@ class Scheduler(object, SendMetricMixin):
         self.sched_params = sched_params
         self.event_bus = event_bus
         self.log = logging.getLogger(__name__)
-        self.estimated_scheduler_end = datetime.utcnow()
+        if self.sched_params.simulate_now:
+            self.estimated_scheduler_end = iso_string_to_datetime(self.sched_params.simulate_now)
+        else:
+            self.estimated_scheduler_end = datetime.utcnow()
         self.scheduler_summary_messages = []
 
 
@@ -71,7 +67,6 @@ class Scheduler(object, SendMetricMixin):
         resources_to_cancel = [ combination[0] for combination in optimal_combination ]
 
         return resources_to_cancel
-
 
 
     # TODO - Move to a utils library
@@ -201,7 +196,6 @@ class Scheduler(object, SendMetricMixin):
 
 
     def scheduling_horizon(self, estimated_scheduler_end):
-        ONE_MONTH = timedelta(weeks=4)
         ONE_WEEK = timedelta(weeks=1)
 
         return estimated_scheduler_end + ONE_WEEK
@@ -214,27 +208,27 @@ class Scheduler(object, SendMetricMixin):
         return user_reqs, []
 
 
-    def apply_window_filters(self, user_reqs, estimated_scheduler_end):
+    def apply_window_filters(self, user_reqs, estimated_scheduler_end, semester_details):
         ''' Returns the set of URs with windows adjusted to include only URs with windows
         suitable for scheduling
         '''
         return user_reqs
 
 
-    def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
+    def prepare_for_kernel(self, window_adjusted_urs, semester_details):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
         return []
 
 
-    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, semester_details):
         ''' Construct the set of resource windows available for use in scheduling
         '''
         return []
 
 
     # TODO: replace with event bus event
-    def on_run_scheduler(self, user_requests):
+    def on_run_scheduler(self, user_requests, semester_details):
         ''' Handler called at beginning run_schedule
         '''
         pass
@@ -261,18 +255,41 @@ class Scheduler(object, SendMetricMixin):
         pass
 
 
-    def unscheduleable_ur_numbers(self, unschedulable_urs):
-        return find_unschedulable_ur_numbers(unschedulable_urs)
+    def save_schedule(self, schedule, semester_details, is_too):
+        ''' Save the final schedule in a json file if save_output flag was set.
+        '''
+        print("save_output = {}".format(self.sched_params.save_output))
+        if self.sched_params.save_output:
+            semester_start = semester_details['start']
+            schedule_data = {}
+            for resource, reservations in schedule.items():
+                schedule_data[resource] = []
+                for reservation in reservations:
+                    reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
+                    res_data = {'request_number': reservation.request.request_number,
+                                'start': reservation_start.isoformat(),
+                                'end': reservation_end.isoformat(),
+                                'resource': resource}
+                    schedule_data[resource].append(res_data)
+
+            if is_too:
+                schedule_type = TOO_SCHEDULE_TYPE
+            else:
+                schedule_type = NORMAL_SCHEDULE_TYPE
+            file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            filename = '{}_schedule_{}.json'.format(schedule_type, file_timestamp)
+            with open('/data/adaptive_scheduler/output_schedule/{}'.format(filename), 'w') as schedule_out:
+                json.dump(schedule_data, schedule_out)
 
 
     def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
-        request numbers 
+        request numbers
         '''
         windowsless_r_numbers = drop_empty_requests(user_requests)
-        unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
-        return unschedulable_r_numbers
+        # unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
+        # return unschedulable_r_numbers
 
 
     def create_resource_mask(self, available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled):
@@ -297,7 +314,7 @@ class Scheduler(object, SendMetricMixin):
     # TODO: refactor into smaller chunks
     @timeit
     @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
-    def run_scheduler(self, scheduler_input, estimated_scheduler_end, preemption_enabled=False):
+    def run_scheduler(self, scheduler_input, estimated_scheduler_end, semester_details, preemption_enabled=False):
         start_event = TimingLogger.create_start_event(datetime.utcnow())
         self.event_bus.fire_event(start_event)
 
@@ -306,12 +323,13 @@ class Scheduler(object, SendMetricMixin):
         # Commit schedules for unreachable resources
         # Cancel schedules for unavailable resources
         user_reqs = scheduler_input.user_requests
+
         resource_usage_snapshot = scheduler_input.resource_usage_snapshot
         available_resources = scheduler_input.available_resources
         all_ur_priorities = scheduler_input.user_request_priorities
 
         self.estimated_scheduler_end = estimated_scheduler_end
-        self.on_run_scheduler(user_reqs)
+        self.on_run_scheduler(user_reqs, semester_details)
 
         if self.sched_params.no_singles:
             user_reqs = self.remove_singles(user_reqs)
@@ -322,12 +340,12 @@ class Scheduler(object, SendMetricMixin):
         running_requests = resource_usage_snapshot.running_requests_for_resources(available_resources)
         # A request should only be filtered from the scheduling input if it has a chance of completing successfully
         running_request_numbers = [r.request_number for r in running_requests if r.should_continue()]
-        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end, running_request_numbers)
-        unschedulable_ur_numbers = self.unscheduleable_ur_numbers(unschedulable_urs)
-        unschedulable_r_numbers = self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
+        schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end,
+                                                                              running_request_numbers)
+        self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
         self.after_unschedulable_filters(schedulable_urs)
 
-        window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end)
+        window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end, semester_details)
         self.after_window_filters(window_adjusted_urs)
 
 # Optimization of ToO output for least impact doesn't work as planned.  See https://issues.lcogt.net/issues/7851
@@ -345,42 +363,25 @@ class Scheduler(object, SendMetricMixin):
 
         # By default, schedule on all resources
         resources_to_schedule = list(available_resources)
-        resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot, scheduler_input.too_tracking_numbers, preemption_enabled)
+        resource_interval_mask = self.create_resource_mask(available_resources, resource_usage_snapshot,
+                                                           scheduler_input.too_tracking_numbers, preemption_enabled)
 
-        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, estimated_scheduler_end)
-        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask, estimated_scheduler_end)
+        compound_reservations = self.prepare_for_kernel(window_adjusted_urs, semester_details)
+        available_windows = self.prepare_available_windows_for_kernel(resources_to_schedule, resource_interval_mask,
+                                                                      semester_details)
 
         print_compound_reservations(compound_reservations)
-
         # Prepare scheduler result
         scheduler_result = SchedulerResult()
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
-        scheduler_result.unschedulable_user_request_numbers = unschedulable_ur_numbers
-        scheduler_result.unschedulable_request_numbers = unschedulable_r_numbers
 
-        # Include any invalid user requests in the unschedulable list
-        invalid_tracking_numbers = []
-        invalid_json_user_requests = scheduler_input.invalid_user_requests
-        for json_ur in invalid_json_user_requests:
-            if json_ur.has_key('tracking_number'):
-                invalid_tracking_numbers.append(json_ur['tracking_number'])
-        scheduler_result.unschedulable_user_request_numbers += invalid_tracking_numbers
-        
-        # Include any invalid requests in the unschedulable list
-        invalid_request_numbers = []
-        invalid_requests = scheduler_input.invalid_requests
-        for json_r in invalid_requests:
-            if json_r.has_key('request_number'):
-                if json_r.get('state', 'UNSCHEDULABLE') != 'UNSCHEDULABLE':
-                    invalid_request_numbers.append(json_r['request_number'])
-        scheduler_result.unschedulable_request_numbers += invalid_request_numbers
-        
         if compound_reservations:
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations, self.sched_params.slicesize_seconds)
+            kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations,
+                                       self.sched_params.slicesize_seconds)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
@@ -391,6 +392,7 @@ class Scheduler(object, SendMetricMixin):
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
 
             # Do post scheduling stuff
+            self.save_schedule(scheduler_result.schedule, semester_details, preemption_enabled)
             self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")
@@ -410,11 +412,10 @@ class LCOGTNetworkScheduler(Scheduler):
         self.network_model = network_model
 
 
-    def _log_scheduler_start_details(self, estimated_scheduler_end):
-        semester_start, semester_end = get_semester_block(dt=estimated_scheduler_end)
-        self.log.info("Scheduling for semester %s (%s to %s)", get_semester_code(),
-                                                         semester_start.strftime(self.date_fmt),
-                                                         semester_end.strftime(self.date_fmt))
+    def _log_scheduler_start_details(self, estimated_scheduler_end, semester_details):
+        self.log.info("Scheduling for semester %s (%s to %s)", semester_details['id'],
+                      semester_details['start'].isoformat(),
+                      semester_details['end'].isoformat())
         strfmt_horizon = self.scheduling_horizon(estimated_scheduler_end).strftime(self.date_time_fmt)
         self.log.info("Scheduling horizon is %s", strfmt_horizon)
 
@@ -446,24 +447,32 @@ class LCOGTNetworkScheduler(Scheduler):
         return schedulable_urs, unschedulable_urs
 
     @metric_timer('apply_window_filters', num_requests=lambda x: len(x))
-    def apply_window_filters(self, user_reqs, estimated_scheduler_end):
+    def apply_window_filters(self, user_reqs, estimated_scheduler_end, semester_details):
         ''' Returns the set of URs with windows adjusted to include only URs with windows
         suitable for scheduling
         '''
         self.log.info("Filtering on dark/rise_set")
 
-        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        semester_end = semester_details['end']
+
         filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache,
                                         estimated_scheduler_end, semester_end, self.scheduling_horizon(estimated_scheduler_end))
 
         return filtered_window_user_reqs
 
     @metric_timer('prepare_for_kernel', num_requests=lambda x: len(x))
-    def prepare_for_kernel(self, window_adjusted_urs, estimated_scheduler_end):
+    def prepare_for_kernel(self, window_adjusted_urs, semester_details):
         ''' Convert UR model to formalization expected by the scheduling kernel
         '''
+        # Uncomment these next lines to make the output match the old scheduler/requestdb
+        # window_adjusted_urs.sort(key=lambda x: int(x.tracking_number))
+        # for ur in window_adjusted_urs:
+        #     ur.requests.sort(key=lambda x: int(x.request_number))
+
         # Convert CompoundRequests -> CompoundReservations
-        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+
+        semester_start = semester_details['start']
+
         many_urs, other_urs = differentiate_by_type('many', window_adjusted_urs)
         many_compound_reservations = make_many_type_compound_reservations(many_urs, self.visibility_cache,
                                                                 semester_start)
@@ -474,10 +483,11 @@ class LCOGTNetworkScheduler(Scheduler):
         return all_compound_reservations
 
     @metric_timer('prepare_available_windows_for_kernel')
-    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, estimated_scheduler_end):
+    def prepare_available_windows_for_kernel(self, available_resources, resource_interval_mask, semester_details):
         ''' Construct the set of resource windows available for use in scheduling
         '''
-        semester_start, semester_end = get_semester_block(estimated_scheduler_end)
+        semester_start = semester_details['start']
+
         # Translate when telescopes are available into kernel speak
         resource_windows = construct_resource_windows(self.visibility_cache, semester_start, available_resources)
         
@@ -488,11 +498,12 @@ class LCOGTNetworkScheduler(Scheduler):
         return global_windows
 
 
-    def on_run_scheduler(self, user_requests):
-        self._log_scheduler_start_details(self.estimated_scheduler_end)
+    def on_run_scheduler(self, user_requests, semester_details):
+        self._log_scheduler_start_details(self.estimated_scheduler_end, semester_details)
         self._log_ur_input_details(user_requests, self.estimated_scheduler_end)
 
-        semester_start, semester_end = get_semester_block(dt=self.estimated_scheduler_end)
+        semester_start = semester_details['start']
+        semester_end = semester_details['end']
 
         # Construct visibility objects for each telescope
         self.log.info("Constructing telescope visibilities")
@@ -530,9 +541,7 @@ class SchedulerResult(object):
     '''Aggregates together output of a scheduler run
     '''
 
-    def __init__(self, schedule={}, resource_schedules_to_cancel=[],
-                 unschedulable_user_request_numbers=[],
-                 unschedulable_request_numbers=[]):
+    def __init__(self, schedule={}, resource_schedules_to_cancel=[]):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
         resource_schedules_to_cancel - List of resources to cancel schedules on
@@ -541,8 +550,6 @@ class SchedulerResult(object):
         '''
         self.schedule = schedule
         self.resource_schedules_to_cancel = resource_schedules_to_cancel
-        self.unschedulable_user_request_numbers = unschedulable_user_request_numbers
-        self.unschedulable_request_numbers = unschedulable_request_numbers
 
 
     def count_reservations(self):
@@ -558,7 +565,7 @@ class SchedulerResult(object):
         for reservations in self.schedule.values():
             for reservation in reservations:
                 request_num = reservation.request.request_number
-                tracking_num = reservation.compound_request.tracking_number
+                tracking_num = reservation.user_request.tracking_number
                 if not tracking_num in scheduled_requests_by_tracking_num:
                     scheduled_requests_by_tracking_num[tracking_num] = {}
                 scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation
@@ -598,7 +605,7 @@ class SchedulerRunner(object):
         self.estimated_normal_run_timedelta = timedelta(seconds=sched_params.normal_runtime_seconds)
         self.avg_save_time_per_reservation_timedelta = timedelta(seconds=sched_params.avg_reservation_save_time_seconds)
         self.first_run = True
-
+        self.semester_details = None
 
 
     def scheduler_rerun_required(self):
@@ -626,17 +633,27 @@ class SchedulerRunner(object):
         available_telescopes = []
         for telescope_name, telescope in self.network_model.iteritems():
             if telescope_name in current_events:
-                telescope.events.extend(current_events[telescope_name])
+                telescope['events'].extend(current_events[telescope_name])
                 msg = "Found network event for '%s' - removing from consideration (%s)" % (
                                                                     telescope_name,
                                                                     current_events[telescope_name])
                 self.log.info(msg)
             else:
                 available_telescopes.append(telescope_name)
-                telescope.events = []
+                telescope['events'] = []
         self.network_interface.send_available_telescope_state_events(available_telescopes)
         return
 
+    def get_semester_details(self, date):
+        '''Attempts to get the semester details for the current date (if it is not the current semester).
+           If it fails, previous semester details will be returned.
+        '''
+        try:
+            self.semester_details = self.network_interface.valhalla_interface.get_semester_details(date)
+        except ValhallaConnectionError as e:
+            self.log.warning("Error getting current semester: {}".format(repr(e)))
+            raise ScheduleException("Unable to get current semester details. Skipping run.")
+        return self.semester_details
 
     def run(self):
         while self.run_flag:
@@ -658,8 +675,10 @@ class SchedulerRunner(object):
             self.update_network_model()
 
         # Always run the scheduler on the first run
-        scheduler_run_start = datetime.utcnow()
+        scheduler_run_start = self.input_factory.input_provider.get_scheduler_now()
         try:
+            self.semester_details = self.get_semester_details(scheduler_run_start)
+            self.network_interface.configdb_interface.update_configdb_structures()
             if self.scheduler_rerun_required() or self.first_run:
                 self.create_new_schedule(scheduler_run_start)
         except (ScheduleException, EstimateExceededException) as eee:
@@ -667,17 +686,6 @@ class SchedulerRunner(object):
             # to short circuit to exit.  Just try again.  Run time
             # estimate should have been updated.
             pass
-
-
-    def _write_scheduler_input_files(self, json_user_request_list, resource_usage_snapshot):
-        import pickle
-        output = {
-                  'json_user_request_list' : json_user_request_list,
-                  'resource_usage_snapshot' : resource_usage_snapshot
-                  }
-        outfile = open('/data/adaptive_scheduler/input_states/scheduler_input.pickle', 'w')
-        pickle.dump(output, outfile)
-        outfile.close()
 
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
@@ -688,19 +696,13 @@ class SchedulerRunner(object):
         self.summary_events.append("Received %d %s (%d %s) from Request DB" % (pl(n_urs, 'User Request') + pl(n_rs, 'Request')))
         scheduler_result = None
         try:
-            scheduler_result = self.scheduler.run_scheduler(scheduler_input, estimated_scheduler_end, preemption_enabled=scheduler_input.is_too_input)
-        except ScheduleException, se:
+            scheduler_result = self.scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
+                                                            self.semester_details,
+                                                            preemption_enabled=scheduler_input.is_too_input)
+        except ScheduleException as se:
             self.log.error(se, "aborting run")
 
         return scheduler_result
-
-
-    def set_requests_to_unscheduleable(self, request_numbers):
-        self.network_interface.set_requests_to_unschedulable(request_numbers)
-
-
-    def set_user_requests_to_unschedulable(self, tracking_numbers):
-        self.network_interface.set_user_requests_to_unschedulable(tracking_numbers)
 
 
     def clear_resource_schedules(self, cancelation_dates_by_resource):
@@ -714,7 +716,7 @@ class SchedulerRunner(object):
             self.network_interface.abort(rr, reason)
 
     def save_resource_schedules(self, schedule, denormalization_date):
-        n_submitted = self.network_interface.save(schedule, denormalization_date, self.sched_params.cameras_file, False)
+        n_submitted = self.network_interface.save(schedule, denormalization_date, False)
 
         return n_submitted
 
@@ -774,10 +776,9 @@ class SchedulerRunner(object):
         if estimated_apply_completion > apply_deadline:
             raise EstimateExceededException("Estimated end time %s is after deadline %s" % (str(estimated_apply_completion), str(apply_deadline)), estimated_apply_completion)
 
-        semester_start, semester_end = \
-                get_semester_block(dt=apply_deadline)
-        self.set_requests_to_unscheduleable(scheduler_result.unschedulable_request_numbers)
-        self.set_user_requests_to_unschedulable(scheduler_result.unschedulable_user_request_numbers)
+        semester_start = self.semester_details['start']
+        semester_end = self.semester_details['end']
+
         # TODO: make sure this cancels anything currently running in the ToO case
         cancelation_dates_by_resource = self._determine_schedule_cancelation_start_dates(
             resources_to_clear, scheduler_result.schedule,
@@ -864,8 +865,8 @@ class SchedulerRunner(object):
         scheduler_result = SchedulerResult()
         if scheduler_input.user_requests:
             self.log.info("Start Normal Scheduling")
-            normal_scheduling_start = scheduler_input.get_scheduling_start()
-            deadline = normal_scheduling_start + self.estimated_normal_run_timedelta
+            normal_scheduling_start =  datetime.utcnow()
+            deadline = scheduler_input.get_scheduling_start() + self.estimated_normal_run_timedelta
             
             if self.sched_params.profiling_enabled:
                 import cProfile
@@ -918,11 +919,6 @@ class SchedulerRunner(object):
                     too_resources.append(too_resource)
         self.scheduling_cycle(NORMAL_SCHEDULE_TYPE, network_state_timestamp, too_resources)
         set_schedule_type(None)
-        # Only clear the change state if scheduling is successful and not a dry run
-        if not self.sched_params.dry_run:
-            self.network_interface.clear_schedulable_request_set_changed_state()
-        # Huh?
-        sys.stdout.flush()
 
     @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
     def scheduling_cycle(self, schedule_type, network_state_timestamp, too_resources=None):
