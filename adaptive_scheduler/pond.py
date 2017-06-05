@@ -615,6 +615,7 @@ class PondMoleculeFactory(object):
 
     def _nres(self, molecule, pond_pointing=None):
         exp_meter_pond_mapping = {
+            'OFF': 0,
             'EXPMETER_OFF': 0,
             'EXPMETER_WATCH': 1,
             'EXPMETER_TRUNCATE': 2,
