@@ -681,7 +681,8 @@ class SchedulerRunner(object):
             self.network_interface.configdb_interface.update_configdb_structures()
             if self.scheduler_rerun_required() or self.first_run:
                 self.create_new_schedule(scheduler_run_start)
-        except (ScheduleException, EstimateExceededException) as eee:
+        except (ValhallaConnectionError, ScheduleException, EstimateExceededException) as eee:
+            self.log.warning("Skipping Scheduling Run: {}".format(repr(eee)))
             # Estimated run time was exceeded so exception was raised
             # to short circuit to exit.  Just try again.  Run time
             # estimate should have been updated.

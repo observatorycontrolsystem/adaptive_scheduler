@@ -73,6 +73,7 @@ class ValhallaInterface(object, SendMetricMixin):
         except (RequestException) as e:
             raise ValhallaConnectionError("is_dirty check failed: {}".format(repr(e)))
 
+        self.log.info("isDirty returned {}".format(is_dirty))
         return is_dirty
 
     @timeit
