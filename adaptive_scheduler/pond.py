@@ -122,7 +122,7 @@ class PondScheduleInterface(object):
         running_urs = {}
         for blocks in self.running_blocks_by_telescope.values():
             for block in blocks:
-                tracking_number = block.tracking_num_set()[0]
+                tracking_number = int(block.tracking_num_set()[0])
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
                 telescope = block.telescope + '.' +  block.observatory + '.' + block.site
                 running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
@@ -647,8 +647,8 @@ class Block(object):
         self.end                = end
         self.group_id           = group_id
         self.submitter          = submitter
-        self.tracking_number    = str(tracking_number)
-        self.request_number     = str(request_number)
+        self.tracking_number    = str(tracking_number).zfill(10)
+        self.request_number     = str(request_number).zfill(10)
         self.priority           = priority
         self.is_too             = is_too
 

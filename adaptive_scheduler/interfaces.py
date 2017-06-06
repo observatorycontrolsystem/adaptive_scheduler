@@ -14,7 +14,7 @@ class ScheduleException(Exception):
 class RunningUserRequest(object):
     
     def __init__(self, tracking_number, *running_requests):
-        self.tracking_number = tracking_number
+        self.tracking_number = int(tracking_number)
         self.running_requests = list(running_requests)
         
     def add_running_request(self, running_request):
@@ -31,7 +31,7 @@ class RunningRequest(object):
 
     def __init__(self, resource, request_number, start, end):
         self.resource = resource
-        self.request_number = request_number
+        self.request_number = int(request_number)
         self.start = start
         self.end = end
         self._errors = []

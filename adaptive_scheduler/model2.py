@@ -656,7 +656,7 @@ class ModelBuilder(object):
 
 
     def build_user_request(self, ur_dict, scheduled_requests={}, ignore_ipp=False):
-        tracking_number = ur_dict['id']
+        tracking_number = int(ur_dict['id'])
         operator = ur_dict['operator'].lower()
         ipp_value = ur_dict.get('ipp_value', 1.0)
         submitter = ur_dict.get('submitter', '')
@@ -833,7 +833,7 @@ class ModelBuilder(object):
                        molecules       = molecules,
                        windows         = windows,
                        constraints     = constraints,
-                       request_number  = req_dict['id'],
+                       request_number  = int(req_dict['id']),
                        state           = req_dict['state'],
                        duration        = req_dict['duration'],
                        scheduled_reservation = scheduled_reservation
