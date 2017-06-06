@@ -96,13 +96,18 @@ def merge_dicts(*args):
 
 
 def iso_string_to_datetime(iso_string):
-    '''Convert ISO datetime strings of the form '2012-03-03 09:05:00' to
+    '''Convert ISO datetime strings of the form '2012-03-03T09:05:00[.xxx]Z' to
        datetime objects. It's no coincidence that this also happens to be the string
        representation of datetime objects.'''
 
     # Set the format to the string representation of a datetime
     format = '%Y-%m-%dT%H:%M:%SZ'
-    return datetime.strptime(iso_string, format)
+    try:
+        d = datetime.strptime(iso_string, format)
+    except ValueError:
+        format_milli = '%Y-%m-%dT%H:%M:%S.%fZ'
+        d = datetime.strptime(iso_string, format_milli)
+    return d
 
 def datetime_to_epoch(dt):
     '''Convert a datetime to Unix epoch time, a continuous, integer timescale, with
