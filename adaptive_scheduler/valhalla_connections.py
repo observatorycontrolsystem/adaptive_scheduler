@@ -24,7 +24,7 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Returns all active proposals using the bulk proposals API of valhalla
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/?active=true', headers=self.headers)
+            response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers)
             response.raise_for_status()
             return response.json()['results']
         except RequestException as e:
