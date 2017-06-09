@@ -27,7 +27,7 @@ class ValhallaInterface(object, SendMetricMixin):
             response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers)
             response.raise_for_status()
             return response.json()['results']
-        except RequestException as e:
+        except (RequestException, ValueError) as e:
             raise ValhallaConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_by_id(self, proposal_id):
@@ -37,7 +37,7 @@ class ValhallaInterface(object, SendMetricMixin):
             response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers)
             response.raise_for_status()
             return response.json()
-        except RequestException as e:
+        except (RequestException, ValueError) as e:
             raise ValhallaConnectionError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
     def get_semester_details(self, date=datetime.utcnow()):
@@ -57,7 +57,7 @@ class ValhallaInterface(object, SendMetricMixin):
                                                                            '%Y-%m-%dT%H:%M:%SZ')
                 self.current_semester_details['end'] = datetime.strptime(self.current_semester_details['end'],
                                                                            '%Y-%m-%dT%H:%M:%SZ')
-            except RequestException as e:
+            except (RequestException, ValueError) as e:
                 raise ValhallaConnectionError("failed to retrieve semester info for date {}: {}".format(date, repr(e)))
         return self.current_semester_details
 
@@ -70,7 +70,7 @@ class ValhallaInterface(object, SendMetricMixin):
             response = requests.get(self.valhalla_url + '/api/isDirty/', headers=self.headers)
             response.raise_for_status()
             is_dirty = response.json()['isDirty']
-        except (RequestException) as e:
+        except (RequestException, ValueError) as e:
             raise ValhallaConnectionError("is_dirty check failed: {}".format(repr(e)))
 
         self.log.info("isDirty returned {}".format(is_dirty))
@@ -86,7 +86,7 @@ class ValhallaInterface(object, SendMetricMixin):
             response = requests.get(self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat(), headers=self.headers)
             response.raise_for_status()
             user_requests = response.json()
-        except (RequestException) as e:
+        except (RequestException, ValueError) as e:
             raise ValhallaConnectionError("get_all_user_requests failed: {}".format(repr(e)))
 
         return user_requests
