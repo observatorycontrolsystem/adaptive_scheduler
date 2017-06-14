@@ -239,7 +239,7 @@ class PondScheduleInterface(object):
             try:
                 PondBlock.save_blocks(pond_blocks, port=self.port, host=self.host)
             except BlockSaveException as e:
-                log.error(e)
+                log.error("_send_blocks_to_pond error: {}".format(repr(e)))
     
         return sent_blocks, not_sent_blocks
     
@@ -374,7 +374,8 @@ class PondScheduleInterface(object):
         try:
             PondBlock.cancel_blocks(block_ids, reason=reason, delete=delete, port=self.port, host=self.host)
         except BlockCancelException as e:
-            log.error(e)
+            log.error("_cancel_blocks error: {}".format(repr(e)))
+            raise ScheduleException(repr(e))
     
         return len(block_ids)
     
