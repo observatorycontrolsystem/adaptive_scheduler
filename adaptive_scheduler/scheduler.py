@@ -14,7 +14,7 @@ from adaptive_scheduler.event_utils      import report_scheduling_outcome
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
                                             metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE,
-                                                 get_reservation_datetimes)
+                                                 get_reservation_datetimes, time_in_capped_intervals, cap_intervals)
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing         import print_compound_reservations,summarise_urs, log_full_ur, log_windows
@@ -196,9 +196,7 @@ class Scheduler(object, SendMetricMixin):
 
 
     def scheduling_horizon(self, estimated_scheduler_end):
-        ONE_WEEK = timedelta(weeks=1)
-
-        return estimated_scheduler_end + ONE_WEEK
+        return estimated_scheduler_end + timedelta(days=self.sched_params.horizon_days)
 
 
     def apply_unschedulable_filters(self, user_reqs, estimated_scheduler_end, running_request_numbers):
@@ -255,22 +253,35 @@ class Scheduler(object, SendMetricMixin):
         pass
 
 
-    def save_schedule(self, schedule, semester_details, is_too):
+    def save_schedule(self, schedule, estimated_scheduler_end, semester_details, is_too):
         ''' Save the final schedule in a json file if save_output flag was set.
         '''
-        print("save_output = {}".format(self.sched_params.save_output))
         if self.sched_params.save_output:
             semester_start = semester_details['start']
-            schedule_data = {}
+            schedule_data = {'schedule_start': estimated_scheduler_end.isoformat(),
+                             'schedule_end': self.scheduling_horizon(estimated_scheduler_end).isoformat(),
+                             'semester_id': semester_details['id'],
+                             'horizon_days': self.sched_params.horizon_days,
+                             'resources': {}}
             for resource, reservations in schedule.items():
-                schedule_data[resource] = []
+                schedule_data['resources'][resource] = {'reservations': [], 'dark_intervals': []}
                 for reservation in reservations:
                     reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
                     res_data = {'request_number': reservation.request.request_number,
                                 'start': reservation_start.isoformat(),
                                 'end': reservation_end.isoformat(),
                                 'resource': resource}
-                    schedule_data[resource].append(res_data)
+                    schedule_data['resources'][resource]['reservations'].append(res_data)
+
+                #also store the intervals at the site that were considered
+                dark_intervals = self.visibility_cache[resource][1]()
+                # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + 7 days)
+                capped_dark_intervals = cap_intervals(dark_intervals, estimated_scheduler_end,
+                                                      self.scheduling_horizon(estimated_scheduler_end))
+                for interval in capped_dark_intervals:
+                    schedule_data['resources'][resource]['dark_intervals'].append({'start': interval[0].isoformat(),
+                                                                      'end': interval[1].isoformat()})
+
 
             if is_too:
                 schedule_type = TOO_SCHEDULE_TYPE
@@ -282,6 +293,52 @@ class Scheduler(object, SendMetricMixin):
                 json.dump(schedule_data, schedule_out)
 
 
+    def produce_schedule_metrics(self, schedule, estimated_scheduler_end, semester_details):
+        semester_start = semester_details['start']
+        horizon_days = self.sched_params.horizon_days
+        one_day_horizon = estimated_scheduler_end + timedelta(days=1)
+        for resource, reservations in schedule.items():
+            available_seconds = 0
+            if resource in self.visibility_cache:
+                dark_intervals = self.visibility_cache[resource][1]()
+                # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + horizon)
+                available_seconds = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
+                                                             self.scheduling_horizon(estimated_scheduler_end))
+
+                # get the dark intervals time for a horizon of 1 day
+                if horizon_days != 1:
+                    available_seconds_1 = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
+                                                                   one_day_horizon)
+
+            # now get the scheduled seconds for that resource
+            scheduled_seconds = 0
+            scheduled_seconds_1 = 0
+            for reservation in reservations:
+                reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
+                scheduled_seconds += (reservation_end - reservation_start).total_seconds()
+                if horizon_days != 1 and reservation_start < one_day_horizon:
+                    capped_end = min(reservation_end, one_day_horizon)
+                    scheduled_seconds_1 += (capped_end - reservation_start).total_seconds()
+
+            # log and record a metric for how full the telescope schedule is.
+            self.log.info("telescope {} filled {} / {} hours".format(
+                resource, (scheduled_seconds / 3600.0), (available_seconds / 3600.0)))
+            self._send_schedule_metrics(resource, scheduled_seconds, available_seconds, horizon_days)
+            if horizon_days != 1:
+                self._send_schedule_metrics(resource, scheduled_seconds_1, available_seconds_1, 1)
+
+    def _send_schedule_metrics(self, resource, scheduled_seconds, available_seconds, horizon_days):
+        telescope, observatory, site = resource.split('.')
+        utilization = (scheduled_seconds / available_seconds) if available_seconds > 0 else 0
+        self.send_metric('scheduled_time.available_seconds', available_seconds, telescope=telescope,
+                         observatory=observatory, site=site, horizon_days=horizon_days)
+        self.send_metric('scheduled_time.scheduled_seconds', scheduled_seconds, telescope=telescope,
+                         observatory=observatory, site=site, horizon_days=horizon_days)
+        self.send_metric('scheduled_time.utilization_percent', utilization, telescope=telescope,
+                         observatory=observatory, site=site, horizon_days=horizon_days)
+
+
+    #TODO: remove this method
     def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
         '''Remove child request from the parent user request when the
         request has no windows remaining and return a list of dropped
@@ -342,6 +399,7 @@ class Scheduler(object, SendMetricMixin):
         running_request_numbers = [r.request_number for r in running_requests if r.should_continue()]
         schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end,
                                                                               running_request_numbers)
+        #TODO: remove this line and its function definition
         self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
         self.after_unschedulable_filters(schedulable_urs)
 
@@ -392,7 +450,9 @@ class Scheduler(object, SendMetricMixin):
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
 
             # Do post scheduling stuff
-            self.save_schedule(scheduler_result.schedule, semester_details, preemption_enabled)
+            self.save_schedule(scheduler_result.schedule, estimated_scheduler_end, semester_details, preemption_enabled)
+            self.produce_schedule_metrics(scheduler_result.schedule, estimated_scheduler_end,
+                                          semester_details)
             self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")

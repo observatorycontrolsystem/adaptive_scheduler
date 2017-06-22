@@ -79,6 +79,34 @@ def convert_proper_motion(proper_motion_ra, proper_motion_dec, dec):
     return prop_motion_ra, prop_motion_dec
 
 
+def time_in_capped_intervals(intervals, min_time, max_time):
+    capped_intervals = cap_intervals(intervals, min_time, max_time)
+
+    total_time = 0
+    for interval in capped_intervals:
+        total_time += (interval[1] - interval[0]).total_seconds()
+
+    return total_time
+
+
+def cap_intervals(intervals, min_time, max_time):
+    capped_intervals = []
+    for interval in intervals:
+        if interval[1] < min_time or interval[0] > max_time:
+            continue
+        if interval[0] < min_time:
+            interval_start = min_time
+        else:
+            interval_start = interval[0]
+        if interval[1] > max_time:
+            interval_end = max_time
+        else:
+            interval_end = interval[1]
+        capped_intervals.append((interval_start, interval_end))
+
+    return capped_intervals
+
+
 def increment_dict_by_value(dictionary, key, value):
     '''Build a dictionary that tracks the total values of all provided keys.'''
     if key in dictionary:
