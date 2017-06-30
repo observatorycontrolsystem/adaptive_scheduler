@@ -300,40 +300,44 @@ class Scheduler(object, SendMetricMixin):
 
 
     def produce_schedule_metrics(self, schedule, estimated_scheduler_end, semester_details):
+        ''' Create opentsdb metrics on how full the schedule is per resource for the horizon and for the next 1 day.
+        '''
         semester_start = semester_details['start']
         horizon_days = self.sched_params.horizon_days
         one_day_horizon = estimated_scheduler_end + timedelta(days=1)
         for resource, reservations in schedule.items():
-            available_seconds = 0
+            available_seconds_for_horizon = 0
             if resource in self.visibility_cache:
                 dark_intervals = self.visibility_cache[resource][1]()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + horizon)
-                available_seconds = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
+                available_seconds_for_horizon = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
                                                              self.scheduling_horizon(estimated_scheduler_end))
 
                 # get the dark intervals time for a horizon of 1 day
                 if horizon_days != 1:
-                    available_seconds_1 = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
+                    available_seconds_for_one_day = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
                                                                    one_day_horizon)
 
             # now get the scheduled seconds for that resource
-            scheduled_seconds = 0
-            scheduled_seconds_1 = 0
+            scheduled_seconds_for_horizon = 0
+            scheduled_seconds_for_one_day = 0
             for reservation in reservations:
                 reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
-                scheduled_seconds += (reservation_end - reservation_start).total_seconds()
+                scheduled_seconds_for_horizon += (reservation_end - reservation_start).total_seconds()
                 if horizon_days != 1 and reservation_start < one_day_horizon:
                     capped_end = min(reservation_end, one_day_horizon)
-                    scheduled_seconds_1 += (capped_end - reservation_start).total_seconds()
+                    scheduled_seconds_for_one_day += (capped_end - reservation_start).total_seconds()
 
             # log and record a metric for how full the telescope schedule is.
             self.log.info("telescope {} filled {} / {} hours".format(
-                resource, (scheduled_seconds / 3600.0), (available_seconds / 3600.0)))
-            self._send_schedule_metrics(resource, scheduled_seconds, available_seconds, horizon_days)
+                resource, (scheduled_seconds_for_horizon / 3600.0), (available_seconds_for_horizon / 3600.0)))
+            self._send_schedule_metrics(resource, scheduled_seconds_for_horizon, available_seconds_for_horizon, horizon_days)
             if horizon_days != 1:
-                self._send_schedule_metrics(resource, scheduled_seconds_1, available_seconds_1, 1)
+                self._send_schedule_metrics(resource, scheduled_seconds_for_one_day, available_seconds_for_one_day, 1)
 
     def _send_schedule_metrics(self, resource, scheduled_seconds, available_seconds, horizon_days):
+        ''' Helper function to submit available, scheduled and % utilization metrics to opentsdb.
+        '''
         telescope, observatory, site = resource.split('.')
         utilization = (scheduled_seconds / available_seconds) if available_seconds > 0 else 0
         self.send_metric('scheduled_time.available_seconds', available_seconds, telescope=telescope,
@@ -342,17 +346,6 @@ class Scheduler(object, SendMetricMixin):
                          observatory=observatory, site=site, horizon_days=horizon_days)
         self.send_metric('scheduled_time.utilization_percent', utilization, telescope=telescope,
                          observatory=observatory, site=site, horizon_days=horizon_days)
-
-
-    #TODO: remove this method
-    def filter_unschedulable_child_requests(self, user_requests, running_request_numbers):
-        '''Remove child request from the parent user request when the
-        request has no windows remaining and return a list of dropped
-        request numbers
-        '''
-        windowsless_r_numbers = drop_empty_requests(user_requests)
-        # unschedulable_r_numbers = [r_number for r_number in windowsless_r_numbers if r_number not in running_request_numbers]
-        # return unschedulable_r_numbers
 
 
     def create_resource_mask(self, available_resources, resource_usage_snapshot, too_tracking_numbers, preemption_enabled):
@@ -405,8 +398,9 @@ class Scheduler(object, SendMetricMixin):
         running_request_numbers = [r.request_number for r in running_requests if r.should_continue()]
         schedulable_urs, unschedulable_urs = self.apply_unschedulable_filters(user_reqs, estimated_scheduler_end,
                                                                               running_request_numbers)
-        #TODO: remove this line and its function definition
-        self.filter_unschedulable_child_requests(schedulable_urs, running_request_numbers)
+
+        # Remove child request from the parent user request when the request has no windows remaining
+        drop_empty_requests(schedulable_urs)
         self.after_unschedulable_filters(schedulable_urs)
 
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end, semester_details)
