@@ -262,16 +262,22 @@ class Scheduler(object, SendMetricMixin):
                              'schedule_end': self.scheduling_horizon(estimated_scheduler_end).isoformat(),
                              'semester_id': semester_details['id'],
                              'horizon_days': self.sched_params.horizon_days,
-                             'resources': {}}
+                             'resources': {},
+                             'total_priority_value': 0}
             for resource, reservations in schedule.items():
                 schedule_data['resources'][resource] = {'reservations': [], 'dark_intervals': []}
+                priority_value = 0
                 for reservation in reservations:
                     reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
                     res_data = {'request_number': reservation.request.request_number,
+                                'priority': reservation.priority,
                                 'start': reservation_start.isoformat(),
                                 'end': reservation_end.isoformat(),
                                 'resource': resource}
+                    priority_value += (reservation.priority * reservation.duration)
                     schedule_data['resources'][resource]['reservations'].append(res_data)
+                schedule_data['resources'][resource]['priority_value'] = priority_value
+                schedule_data['total_priority_value'] += priority_value
 
                 #also store the intervals at the site that were considered
                 dark_intervals = self.visibility_cache[resource][1]()
