@@ -1,7 +1,18 @@
-from nose.tools import assert_equal, assert_not_equal
+from nose.tools import assert_equal, assert_not_equal, assert_false
 from random import random
+from mock import patch
 
-from adaptive_scheduler.memoize import Memoize, memoize, make_hashable
+from adaptive_scheduler.memoize import Memoize, make_hashable
+import adaptive_scheduler.memoize
+
+from dogpile.cache import make_region
+from dogpile.cache.api import NO_VALUE
+
+
+local_region = make_region().configure(
+    'dogpile.cache.memory',
+    expiration_time=86400,
+)
 
 class TestMemoizeClass(object):
 
@@ -10,95 +21,63 @@ class TestMemoizeClass(object):
             def __init__(self, name):
                 self.value = 6
 
+            def test_manipulation(self, parameter):
+                return str(parameter) + str(self.value)
+
             def target_manipulation(self, target):
                 '''I am the docstring.'''
                 return target['ra'] + random() + self.value
 
         self.target = Target('Eric')
 
+        self.test_parameter1 = 1
+        self.test_parameter2 = 'two'
+
         self.target_dict1  = { 'ra' : 4 }
         self.target_dict2  = { 'ra' : 8 }
 
-
+    @patch('adaptive_scheduler.memoize.region', local_region)
     def test_new_values_are_cached(self):
-        memoized_method = Memoize(self.target.target_manipulation)
-        assert_equal(len(memoized_method.cache), 0)
+        memoized_method = Memoize('resource1', self.target.test_manipulation)
+        hashable_args1 = str(make_hashable((self.test_parameter1,)))
+        hashable_args2 = str(make_hashable((self.test_parameter2,)))
+        key1 = memoized_method.generate_key(hashable_args1, str(make_hashable({})))
+        key2 = memoized_method.generate_key(hashable_args2, str(make_hashable({})))
 
-        received_1 = memoized_method(self.target_dict1)
-        received_2 = memoized_method(self.target_dict2)
+        cache_value = local_region.get(key1)
+        assert_equal(cache_value, NO_VALUE)
+        cache_value = local_region.get(key2)
+        assert_equal(cache_value, NO_VALUE)
 
-        assert_equal(len(memoized_method.cache), 2)
-        assert_not_equal(received_1, received_2)
+        memoized_method(self.test_parameter1)
+        memoized_method(self.test_parameter2)
 
-    def test_new_values_are_not_cached_again(self):
-        memoized_method = Memoize(self.target.target_manipulation)
-        assert_equal(len(memoized_method.cache), 0)
+        cache_value = local_region.get(key1)
+        assert_false(cache_value == NO_VALUE)
+        cache_value = local_region.get(key2)
+        assert_false(cache_value == NO_VALUE)
 
-        received_1 = memoized_method(self.target_dict1)
-        received_2 = memoized_method(self.target_dict1)
 
-        assert_equal(len(memoized_method.cache), 1)
-        assert_equal(received_1, received_2)
-
+    @patch('adaptive_scheduler.memoize.region', local_region)
     def test_caches_keyword_args(self):
-        memoized_method = Memoize(self.target.target_manipulation)
-        assert_equal(len(memoized_method.cache), 0)
+        memoized_method = Memoize('resource2', self.target.target_manipulation)
+        hashable_kwargs1 = str(make_hashable(dict(target=self.target_dict1)))
+        hashable_kwargs2 = str(make_hashable(dict(target=self.target_dict2)))
+        key1 = memoized_method.generate_key(str(make_hashable(())), hashable_kwargs1)
+        key2 = memoized_method.generate_key(str(make_hashable(())), hashable_kwargs2)
 
-        received_1 = memoized_method(target=self.target_dict1)
-        received_2 = memoized_method(target=self.target_dict2)
+        cache_value = local_region.get(key1)
+        assert_equal(cache_value, NO_VALUE)
+        cache_value = local_region.get(key2)
+        assert_equal(cache_value, NO_VALUE)
 
-        assert_equal(len(memoized_method.cache), 2)
-        assert_not_equal(received_1, received_2)
+        memoized_method(target=self.target_dict1)
+        memoized_method(target=self.target_dict2)
 
-#    def test_docstring_is_preserved_under_decoration(self):
-#        memoized_method = Memoize(self.target.target_manipulation)
-#        assert_equal(memoized_method.__doc__, 'I am the docstring.')
-
-
-
-class TestMemoizeFunction(object):
-
-    def setup(self):
-        @memoize
-        def target_manipulation(target):
-            '''I am the docstring.'''
-            return target['ra'] + random()
-
-        self.func = target_manipulation
-        self.target  = { 'ra' : 4 }
-        self.target2 = { 'ra' : 8 }
-
-
-    def test_new_values_are_cached(self):
-        assert_equal(len(self.func.cache), 0)
-
-        self.func(self.target)
-        self.func(self.target2)
-
-        assert_equal(len(self.func.cache), 2)
-
-
-    def test_new_values_are_not_cached_again(self):
-        assert_equal(len(self.func.cache), 0)
-
-        self.func(self.target)
-        self.func(self.target)
-
-        assert_equal(len(self.func.cache), 1)
-
-
-    def test_caches_keyword_args(self):
-        assert_equal(len(self.func.cache), 0)
-
-        self.func(target=self.target)
-        self.func(target=self.target)
-
-        assert_equal(len(self.func.cache), 1)
-
-
-    def test_docstring_is_preserved_under_decoration(self):
-        assert_equal(self.func.__doc__, 'I am the docstring.')
-
+        cache_value = local_region.get(key1)
+        assert_false(cache_value == NO_VALUE)
+        cache_value = local_region.get(key2)
+        assert_false(cache_value == NO_VALUE)
 
 
 class TestHashable(object):
