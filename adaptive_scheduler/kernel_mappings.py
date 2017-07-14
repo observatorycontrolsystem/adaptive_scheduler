@@ -27,16 +27,13 @@ from rise_set.visibility      import Visibility
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
-#from adaptive_scheduler.kernel.reservation_v2 import Reservation_v2 as Reservation
-#from adaptive_scheduler.kernel.reservation_v2 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
-                                          normalised_epoch_to_datetime,
-                                          epoch_to_datetime, timeit, metric_timer )
-from adaptive_scheduler.printing import print_req_summary, plural_str as pl
-from adaptive_scheduler.model2   import Window, Windows, differentiate_by_type, filter_compounds_by_type
+                                          timeit, metric_timer )
+from adaptive_scheduler.printing import plural_str as pl
+from adaptive_scheduler.model2   import Window, Windows, filter_compounds_by_type
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
@@ -44,9 +41,6 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.memoize     import Memoize
 from adaptive_scheduler.log         import UserRequestLogger
-from adaptive_scheduler.event_utils import report_visibility_outcome
-
-import math
 
 # Set up and configure a module scope logger
 import logging
@@ -438,6 +432,7 @@ def construct_resource_windows(visibility_from, semester_start, availabile_resou
 def make_empty_list(*args, **kwargs):
     return []
 
+
 def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
     '''Construct Visibility objects for each telescope.'''
 
@@ -448,10 +443,10 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                                 semester_end, tel['horizon'],
                                 twilight, tel['ha_limit_neg'],
                                 tel['ha_limit_pos'])
-        get_target = Memoize(visibility.get_target_intervals)
+        get_target = Memoize(tel_name, visibility.get_target_intervals)
         get_dark   = visibility.get_dark_intervals
-        get_ha     = Memoize(visibility.get_ha_intervals)
-        get_moon_distance = Memoize(visibility.get_moon_distance_intervals)
+        get_ha     = Memoize(tel_name, visibility.get_ha_intervals)
+        get_moon_distance = Memoize(tel_name, visibility.get_moon_distance_intervals)
 
         visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha, get_moon_distance)
 

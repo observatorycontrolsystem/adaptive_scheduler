@@ -2,6 +2,7 @@
 from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
+from mock import patch
 
 from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
                                        UserRequest, Window, Windows, MoleculeFactory, Constraints)
@@ -17,13 +18,18 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.memoize import Memoize
+import adaptive_scheduler.memoize
 from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 
 from datetime import datetime
+from dogpile.cache import make_region
 
-
+local_region = make_region().configure(
+    'dogpile.cache.memory',
+    expiration_time=86400,
+)
 
 
 class TestKernelMappings(object):
@@ -672,27 +678,28 @@ class TestVisibility(object):
                                      self.horizon, self.twilight)
 
 
+    @patch('adaptive_scheduler.memoize.region', local_region)
     def test_memoize_preserves_correct_output_no_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True)
-        memoized_func = Memoize(self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl1', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True)
 
         assert_equal(received, mem_received)
 
-
+    @patch('adaptive_scheduler.memoize.region', local_region)
     def test_memoize_preserves_correct_output_with_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True,
                                                         airmass=2.0)
-        memoized_func = Memoize(self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl2', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True, airmass=2.0)
 
         assert_equal(received, mem_received)
 
-
+    @patch('adaptive_scheduler.memoize.region', local_region)
     def test_memoize_preserves_correct_output_with_differing_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True,
                                                         airmass=2.0)
-        memoized_func = Memoize(self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl3', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True, airmass=1.0)
 
         assert_not_equal(received, mem_received)
