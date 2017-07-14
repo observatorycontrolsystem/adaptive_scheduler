@@ -37,6 +37,7 @@ class Memoize(object):
     def __init__(self, resource, function):
         self.func = function
         self.resource = resource
+        self.local_memory_cache = {}
         self.cached_func = self._memoize(function)
 
     def __call__(self, *args, **kw):
@@ -61,11 +62,16 @@ class Memoize(object):
             else:
                 hashable_kwargs = Memoize.HASH_NO_KWARGS
 
-            key = self.generate_key(hashable_args, hashable_kwargs)
-            value = region.get(key, ignore_expiration=True)
-            if not value:
-                value = obj(*args, **kwargs)
-                region.set(key, value)
+            local_memory_key = (hashable_args, hashable_kwargs)
+            if local_memory_key not in self.local_memory_cache:
+                key = self.generate_key(hashable_args, hashable_kwargs)
+                value = region.get(key, ignore_expiration=True)
+                if not value:
+                    value = obj(*args, **kwargs)
+                    region.set(key, value)
+                self.local_memory_cache[local_memory_key] = value
+            else:
+                value = self.local_memory_cache[local_memory_key]
 
             return value
         return memoizer
