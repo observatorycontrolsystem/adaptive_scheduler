@@ -29,6 +29,7 @@ from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
 
+from unidecode import unidecode
 from datetime    import datetime
 import ast
 import logging
@@ -711,9 +712,9 @@ class ModelBuilder(object):
                                     tracking_number = tracking_number,
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = ur_dict['group_id'],
+                                    group_id        = unidecode(ur_dict['group_id']),
                                     expires         = max_window_time,
-                                    submitter       = submitter,
+                                    submitter       = unidecode(submitter),
                                   )
 
         # Return only the invalid request and not the error message
@@ -752,6 +753,7 @@ class ModelBuilder(object):
 
     def build_request(self, req_dict, scheduled_reservation=None):
         target_type = req_dict['target']['type']
+        req_dict['target']['name'] = unidecode(req_dict['target']['name'])
         try:
             if target_type == 'SIDEREAL':
                 target = SiderealTarget(req_dict['target'])
