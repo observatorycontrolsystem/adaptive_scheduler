@@ -429,6 +429,7 @@ class TestModelBuilder(object):
 
     def setup(self):
         self.target = {
+                        'name' : 'MY Target',
                         'type' : 'SIDEREAL',
                       }
         self.molecules = [
@@ -526,6 +527,7 @@ class TestModelBuilder(object):
     def test_dont_accept_weird_target_types(self):
         req_dict = {
                      'target' : {
+                                  'name' : 'Potato Target',
                                   'type' : 'POTATOES',
                                 },
                      'molecules'      : self.molecules,
@@ -705,6 +707,7 @@ class TestModelBuilder(object):
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         bad_req_dict = {
                      'target' : {
+                                  'name' : 'Potato Target',
                                   'type' : 'POTATOES',
                                 },
                      'molecules'      : self.molecules,
