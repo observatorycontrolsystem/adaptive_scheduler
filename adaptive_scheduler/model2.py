@@ -19,8 +19,8 @@ from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_satellite_target)
 from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
 from rise_set.rates                           import ProperMotion, RatesConfigError
-from adaptive_scheduler.utils                 import (iso_string_to_datetime, join_location, convert_proper_motion,
-                                                      EqualityMixin)
+from adaptive_scheduler.utils                 import (iso_string_to_datetime, convert_proper_motion,
+                                                      EqualityMixin, safe_unidecode)
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.log                   import UserRequestLogger
@@ -29,7 +29,6 @@ from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
 
-from unidecode import unidecode
 from datetime    import datetime
 import ast
 import logging
@@ -712,9 +711,9 @@ class ModelBuilder(object):
                                     tracking_number = tracking_number,
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = unidecode(ur_dict['group_id']),
+                                    group_id        = safe_unidecode(ur_dict['group_id'], 50),
                                     expires         = max_window_time,
-                                    submitter       = unidecode(submitter),
+                                    submitter       = safe_unidecode(submitter, 50),
                                   )
 
         # Return only the invalid request and not the error message
@@ -753,7 +752,7 @@ class ModelBuilder(object):
 
     def build_request(self, req_dict, scheduled_reservation=None):
         target_type = req_dict['target']['type']
-        req_dict['target']['name'] = unidecode(req_dict['target']['name'])
+        req_dict['target']['name'] = safe_unidecode(req_dict['target']['name'], 50)
         try:
             if target_type == 'SIDEREAL':
                 target = SiderealTarget(req_dict['target'])
