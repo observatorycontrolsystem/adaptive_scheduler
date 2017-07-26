@@ -307,6 +307,7 @@ class Scheduler(object, SendMetricMixin):
         one_day_horizon = estimated_scheduler_end + timedelta(days=1)
         for resource, reservations in schedule.items():
             available_seconds_for_horizon = 0
+            available_seconds_for_one_day = 0
             if resource in self.visibility_cache:
                 dark_intervals = self.visibility_cache[resource][1]()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + horizon)
