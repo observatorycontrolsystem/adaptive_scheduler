@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import division
 
-from nose.tools import assert_equal
+from nose.tools import assert_equal, assert_greater, assert_not_equal, assert_true
 from datetime   import datetime, timedelta
 import calendar
 
@@ -10,7 +10,31 @@ from adaptive_scheduler.utils import (merge_dicts, normalise, unnormalise,
                                       datetime_to_epoch, epoch_to_datetime,
                                       datetime_to_normalised_epoch,
                                       normalised_epoch_to_datetime, split_location,
-                                      estimate_runtime)
+                                      estimate_runtime, safe_unidecode)
+
+
+class TestUnidecode(object):
+    def test_unidecode_limits_length(self):
+        long_str = 'this string has more than fifty characters in it......'
+        decoded_str = safe_unidecode(long_str, 50)
+
+        assert_greater(len(long_str), 50)
+        assert_equal(len(decoded_str), 50)
+        assert_equal(decoded_str, long_str[0:50])
+
+    def test_unidecode_limits_length_with_unicode(self):
+        uni_str = u'This is gr\xe6t'
+        decoded_str = safe_unidecode(uni_str, len(uni_str))
+
+        assert_equal(len(decoded_str), len(uni_str))
+        assert_not_equal(decoded_str[-1], str(uni_str[-1]))
+
+    def test_unidecode_shortens_mystery_characters(self):
+        uni_str = u"these \u2214\u220e\u2219 don't translate"
+        decoded_str = safe_unidecode(uni_str, 100)
+
+        assert_true('?' in decoded_str)
+        assert_true('[?]' not in decoded_str)
 
 
 class TestMergeDicts(object):

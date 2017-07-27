@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import time
 from math import pi, cos, radians
 import logging
+from unidecode import unidecode
 from opentsdb_python_metrics import metric_wrappers
 from opentsdb_python_metrics.metric_wrappers import metric_timer
 from opentsdb_python_metrics.metric_wrappers import metric_wrapper
@@ -33,6 +34,15 @@ metric_wrappers.project_name = 'adaptive_scheduler'
 # Constants used to denote whether we are in a normal or ToO loop currently
 NORMAL_SCHEDULE_TYPE = 'normal'
 TOO_SCHEDULE_TYPE = 'too'
+
+
+def safe_unidecode(unicode_str, max_length):
+    ''' unidecode and then replace mystery characters with a single ?'''
+    decoded_str = unidecode(unicode_str).replace('[?]', '?')
+    if len(decoded_str) > max_length:
+        decoded_str = decoded_str[:max_length]
+
+    return decoded_str
 
 
 def case_insensitive_equals(str1, str2):
