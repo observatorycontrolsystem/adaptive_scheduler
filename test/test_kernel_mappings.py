@@ -12,9 +12,11 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
                                                 make_dark_up_kernel_intervals,
+                                                intervals_to_windows,
                                                 construct_global_availability,
                                                 normalise_dt_intervals,
-                                                filter_on_scheduling_horizon)
+                                                filter_on_scheduling_horizon,
+                                                compute_intersections)
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.memoize import Memoize
@@ -145,6 +147,50 @@ class TestKernelMappings(object):
                             ]
 
         return dt_intervals_list
+
+    def test_compute_intersections_no_downtime(self):
+        request = self.make_constrained_request()
+        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {}
+
+        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
+        base_windows = intervals_to_windows(request, base_window_intervals)
+
+        output_req = compute_intersections(request, visibility_from, downtime_intervals)
+
+        assert_equal(output_req.windows, base_windows)
+
+
+    def test_compute_intersections_half_downtime(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)),]}
+
+        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
+        base_windows = intervals_to_windows(request, base_window_intervals)
+
+        output_req = compute_intersections(request, visibility_from, downtime_intervals)
+
+        assert_equal(base_windows.size(), 2)
+        assert_equal(output_req.windows.size(), 1)
+        assert_equal(output_req.windows.at(resource)[0], base_windows.at(resource)[1])
+
+
+    def test_compute_intersections_full_downtime(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {resource: [(datetime(2011, 11, 1), datetime(2011, 11, 3)),]}
+
+        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
+        base_windows = intervals_to_windows(request, base_window_intervals)
+
+        output_req = compute_intersections(request, visibility_from, downtime_intervals)
+
+        assert_equal(base_windows.size(), 2)
+        assert_equal(output_req.windows.size(), 0)
+
 
     def test_construct_compound_reservation(self):
         request           = self.make_constrained_request()
