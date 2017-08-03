@@ -27,6 +27,7 @@ from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  construct_global_availability)
 from adaptive_scheduler.request_filters  import filter_urs, drop_empty_requests, set_now
 from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
+from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInterface
 
 
 class Scheduler(object, SendMetricMixin):
@@ -516,8 +517,17 @@ class LCOGTNetworkScheduler(Scheduler):
 
         semester_end = semester_details['end']
 
-        filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache,
-                                        estimated_scheduler_end, semester_end, self.scheduling_horizon(estimated_scheduler_end))
+        downtime_interface = DowntimeInterface(self.sched_params.downtime_url)
+        try:
+            downtime_intervals = downtime_interface.get_downtime_intervals_by_resource(start=estimated_scheduler_end,
+                                                                                      end=self.scheduling_horizon(estimated_scheduler_end))
+        except DowntimeError as e:
+            self.log.warning("Problem getting downtime intervals: {}".format(repr(e)))
+            downtime_intervals = {}
+
+        filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache, downtime_intervals,
+                                                      estimated_scheduler_end, semester_end,
+                                                      self.scheduling_horizon(estimated_scheduler_end))
 
         return filtered_window_user_reqs
 

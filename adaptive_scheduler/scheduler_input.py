@@ -25,6 +25,7 @@ class SchedulerParameters(object):
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  valhalla_url='http://valhalla.lco.gtn/',
                  configdb_url='http://configdb.lco.gtn/',
+                 downtime_url='http://downtime.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -55,6 +56,7 @@ class SchedulerParameters(object):
         self.debug = debug
         self.valhalla_url = valhalla_url
         self.configdb_url = configdb_url
+        self.downtime_url = downtime_url
 
 
 class SchedulingInputFactory(object):
