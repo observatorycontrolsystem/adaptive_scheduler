@@ -24,6 +24,7 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
+from rise_set.utils           import is_satellite_target
 
 from adaptive_scheduler.kernel.timepoint      import Timepoint
 from adaptive_scheduler.kernel.intervals      import Intervals
@@ -118,13 +119,15 @@ def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
                                              target=rs_target,
                                              up=True,
                                              airmass=req.constraints.max_airmass)
+        if not is_satellite_target(rs_target):
+            # get the moon distance intervals using the target intervals and min_lunar_distance constraint
+            rs_up_intervals = visibility_from[resource_name][4](target=rs_target,
+                                                                target_intervals=rs_up_intervals,
+                                                                moon_distance=Angle(
+                                                                degrees=req.constraints.min_lunar_distance))
         # HA support only currently implemented for sidereal targets
         if 'ra' in rs_target:
             rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
-            # get the moon distance intervals using the target intervals and min_lunar_distance constraint
-            rs_up_intervals = visibility_from[resource_name][4](target=rs_target,
-                                                                       target_intervals=rs_up_intervals,
-                                                                       moon_distance=Angle(degrees=req.constraints.min_lunar_distance))
         else:
             rs_ha_intervals   = rs_up_intervals
 
