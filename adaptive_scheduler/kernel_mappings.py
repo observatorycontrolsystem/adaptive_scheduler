@@ -266,7 +266,8 @@ def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
 
 
 @timeit
-def filter_for_kernel(user_requests, visibility_from, semester_start, semester_end, scheduling_horizon):
+def filter_for_kernel(user_requests, visibility_from, downtime_intervals, semester_start, semester_end,
+                      scheduling_horizon):
     '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any URs that are now too
        small to hold their duration after this consideration, so they are not passed
@@ -278,8 +279,8 @@ def filter_for_kernel(user_requests, visibility_from, semester_start, semester_e
     # trim windows to scheduling horizon, expiry, or end of semester and filter
     urs = filter_on_scheduling_horizon(user_requests, scheduling_horizon)
 
-    # Filter on rise_set/airmass
-    urs = filter_on_visibility(urs, visibility_from)
+    # Filter on rise_set/airmass/downtime intervals
+    urs = filter_on_visibility(urs, visibility_from, downtime_intervals)
 
     # Clean up now impossible Requests
     urs = filter_on_duration(urs)
@@ -300,11 +301,11 @@ def list_available_tels(visibility_from):
 
 
 @log_windows
-def filter_on_visibility(crs, visibility_from):
+def filter_on_visibility(crs, visibility_from, downtime_intervals):
     for cr in crs:
         ur_log.info("Intersecting windows with dark/up intervals", cr.tracking_number)
         for r in cr.requests:
-            r = compute_intersections(r, visibility_from)
+            r = compute_intersections(r, visibility_from, downtime_intervals)
             if r.has_windows():
                 tag = 'RequestIsVisible'
                 msg = 'Request %s (UR %s) is visible (%d windows remaining)' % (r.request_number,
@@ -322,11 +323,17 @@ def filter_on_visibility(crs, visibility_from):
     return crs
 
 
-def compute_intersections(req, visibility_from):
+def compute_intersections(req, visibility_from, downtime_intervals):
     # Find the dark/up intervals for each Request in this CompoundRequest
     intersections_for_resource = make_dark_up_kernel_intervals(req,
                                                                visibility_from,
                                                                verbose=True)
+    # Filter the intervals by the downtime intervals
+    for resource, intersections in intersections_for_resource.items():
+        if resource in downtime_intervals and len(downtime_intervals[resource]) > 0:
+            downtime_kernel_intervals = rise_set_to_kernel_intervals(downtime_intervals[resource])
+            intersections_for_resource[resource] = intersections.subtract(downtime_kernel_intervals)
+
     req.windows = intervals_to_windows(req, intersections_for_resource)
     return req
 

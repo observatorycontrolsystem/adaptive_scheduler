@@ -104,6 +104,8 @@ def parse_args(argv):
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
                                 help="Hostname for POND communication", default=defaults.pond_host)
+    arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
+                                help="Downtime endpoint url", default=defaults.downtime_url)
     arg_parser.add_argument("--es_endpoint", type=str, dest='es_endpoint',
                                 help="Endpoint for ElasticSearch telescope events communication", default=defaults.es_endpoint)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
