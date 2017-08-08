@@ -29,8 +29,8 @@ class DowntimeInterface(object, SendMetricMixin):
         try:
             r = requests.get(self.downtime_url + '?start={}&end={}'.format(start.isoformat(), end.isoformat()))
         except requests.exceptions.RequestException as e:
-            msg = "{}: {}".format(e.__class__.__name__, "_get_downtime_json failed: {} connection down".format(
-                self.downtime_url))
+            msg = "{}: {}".format(e.__class__.__name__, "_get_downtime_json failed: {} connection down: {}".format(
+                self.downtime_url, repr(e)))
             raise DowntimeError(msg)
         r.encoding = 'UTF-8'
         if not r.status_code == 200:
