@@ -742,6 +742,8 @@ class Block(object):
         if self.min_transparency:
             block_build_args['trans'] = self.min_transparency
 
+        block_build_args['instrument_class'] = self.molecules[0].instrument_name
+
         pond_block = PondBlock.build(**block_build_args)
 
         if isinstance(self.target, SiderealTarget):
