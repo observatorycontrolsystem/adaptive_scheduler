@@ -617,13 +617,14 @@ class UserRequest(EqualityMixin):
 
 class ModelBuilder(object):
 
-    def __init__(self, valhalla_interface, configdb_interface):
+    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id={}, semester_details=None):
         self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
-        self.proposals_by_id = {}
-        self.semester_details = None
-        self._get_all_proposals()
+        self.proposals_by_id = proposals_by_id
+        self.semester_details = semester_details
+        if not self.proposals_by_id:
+            self._get_all_proposals()
 
     def _get_all_proposals(self):
         try:

@@ -275,7 +275,9 @@ class SchedulingInput(object):
                   'json_user_request_list' : self.json_user_request_list,
                   'resource_usage_snapshot' : self.resource_usage_snapshot,
                   'available_resources' : self.available_resources,
-                  'is_too_input' : self.is_too_input
+                  'is_too_input' : self.is_too_input,
+                  'proposals_by_id': self.utils.model_builder.proposals_by_id,
+                  'semester_details': self.utils.model_builder.semester_details
                   }
         outfile = open(filename, 'w')
         try:
@@ -408,7 +410,7 @@ class SchedulingInputProvider(object):
 
 class FileBasedSchedulingInputProvider(object):
 
-    def __init__(self, too_input_file, normal_input_file, is_too_mode):
+    def __init__(self, too_input_file, normal_input_file, network_interface, is_too_mode):
         self.too_input_file = too_input_file
         self.normal_input_file = normal_input_file
         self.is_too_input = is_too_mode
@@ -420,6 +422,9 @@ class FileBasedSchedulingInputProvider(object):
         self.available_resources = None
         self.resource_usage_snapshot = None
         self.last_known_state_timestamp = None
+        self.network_interface = network_interface
+        self.semester_details = None
+        self.proposals_by_id = {}
 
         self.refresh()
 
@@ -458,6 +463,8 @@ class FileBasedSchedulingInputProvider(object):
         self.json_user_request_list = pickle_input['json_user_request_list']
         self.available_resources = pickle_input['available_resources']
         self.resource_usage_snapshot = pickle_input['resource_usage_snapshot']
+        self.semester_details = pickle_input.get('semester_details')
+        self.proposals_by_id = pickle_input.get('proposals_by_id', {})
 
 
     def set_too_mode(self):
@@ -469,3 +476,13 @@ class FileBasedSchedulingInputProvider(object):
         self.is_too_input = False
         self.refresh()
 
+    def get_scheduler_now(self):
+        return self.scheduler_now
+
+    def get_model_builder(self):
+        mb = ModelBuilder(None,
+                          self.network_interface.configdb_interface,
+                          proposals_by_id=self.proposals_by_id,
+                          semester_details=self.semester_details)
+
+        return mb
