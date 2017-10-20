@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.feedback         import TimingLogger
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
-from adaptive_scheduler.kernel.intervals import Intervals
+from time_intervals.intervals import Intervals
+
 from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
                                             metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE,
                                                  get_reservation_datetimes, time_in_capped_intervals, cap_intervals)
@@ -74,7 +75,7 @@ class Scheduler(object, SendMetricMixin):
     def combine_excluded_intervals(self, excluded_intervals_1, excluded_intervals_2):
         ''' Combine two dictionaries where Intervals are the values '''
         for key in excluded_intervals_2:
-            timepoints = excluded_intervals_2[key].timepoints
+            timepoints = excluded_intervals_2[key].toDictList()
             excluded_intervals_1.setdefault(key, Intervals([])).add(timepoints)
 
         return excluded_intervals_1
@@ -364,7 +365,7 @@ class Scheduler(object, SendMetricMixin):
                     if r.should_continue():
                         masked_timepoints_for_resource.extend(r.timepoints())
             resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
-            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).timepoints)
+            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).toDictList())
             
         return resource_interval_mask 
 

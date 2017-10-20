@@ -53,8 +53,8 @@ from lcogtpond.util                    import PondError
 # Set up and configure a module scope logger
 import logging
 from adaptive_scheduler.utils            import metric_timer
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
+from time_intervals.intervals import Intervals
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
@@ -916,12 +916,11 @@ def get_network_running_intervals(running_blocks_by_telescope):
 
 def get_intervals(blocks):
     ''' Create Intervals from given blocks  '''
-    timepoints = []
+    intervals = []
     for block in blocks:
-        timepoints.append(Timepoint(block.start, 'start'))
-        timepoints.append(Timepoint(block.end, 'end'))
+        intervals.append((block.start, block.end))
 
-    return Intervals(timepoints)
+    return Intervals(intervals)
 
 
 class IncompleteBlockError(Exception):

@@ -18,8 +18,7 @@ from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 
-from adaptive_scheduler.kernel.timepoint      import Timepoint
-from adaptive_scheduler.kernel.intervals      import Intervals
+from time_intervals.intervals import Intervals
 import lcogtpond
 
 from datetime import datetime, timedelta
@@ -894,8 +893,8 @@ class TestPond(object):
         too_blocks = pond_interface._get_intervals_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
 
         expected = {
-                    '1m0a.doma.coj' : Intervals([Timepoint(too_block.start, 'start'),
-                                                 Timepoint(too_block.end, 'end')])
+                    '1m0a.doma.coj' : Intervals([{'time': too_block.start, 'type': 'start'},
+                                                 {'time': too_block.end, 'type': 'end'}])
                     }
         assert_equal(expected, too_blocks)
 

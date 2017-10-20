@@ -15,10 +15,10 @@ from adaptive_scheduler.kernel.scheduler import *
 class TestScheduler(object):
 
     def setup(self):
-        s1 = Intervals([Timepoint(1, 'start'),
-                        Timepoint(2, 'end')]) # 1-2
-        s2 = Intervals([Timepoint(2, 'start'),
-                        Timepoint(4, 'end')]) # --2--4
+        s1 = Intervals([{'time': 1, 'type': 'start'},
+                        {'time': 2, 'type': 'end'}]) # 1-2
+        s2 = Intervals([{'time': 2, 'type': 'start'},
+                        {'time': 4, 'type': 'end'}]) # --2--4
         s3 = copy.copy(s1)
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
@@ -36,11 +36,11 @@ class TestScheduler(object):
         self.cr5 = CompoundReservation_v2([self.r4, self.r5], 'oneof')
 
         self.gpw = {}
-        self.gpw['foo'] = [Timepoint(1, 'start'), Timepoint(5, 'end')]
+        self.gpw['foo'] = [{'time': 1, 'type': 'start'}, {'time': 5, 'type': 'end'}]
         
         self.gpw2 = {}
-        self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
-        self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(5, 'end')], 'free')
+        self.gpw2['foo'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 5, 'type': 'end'}], 'free')
+        self.gpw2['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 5, 'type': 'end'}], 'free')
         
         self.sched = Scheduler([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [])
@@ -61,12 +61,10 @@ class TestScheduler(object):
         assert_equal(self.sched.compound_reservation_list, [self.cr1, self.cr2, self.cr3])
         assert_equal(self.sched.globally_possible_windows_dict, self.gpw2)
         assert_equal(self.sched.contractual_obligation_list, [])
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0].time, 1)
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0].type, 
-                     'start')
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1].time, 5)
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1].type, 
-                     'end')
+        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0]['time'], 1)
+        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0]['type'], 'start')
+        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1]['time'], 5)
+        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1]['type'], 'end')
         
 
     def test_create_2(self):
@@ -95,14 +93,14 @@ class TestScheduler(object):
         self.r1.schedule(1, 1, 'foo', 'test')
         self.sched2.commit_reservation_to_schedule(self.r1)
         assert_equal(self.sched2.schedule_dict['foo'][0].scheduled_start, 1)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0].time, 1)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0].type, 'start')
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1].time, 2)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1].type, 'end')
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0].time, 2)
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0].type, 'start')
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1].time, 5)
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1].type, 'end')
+        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0]['time'], 1)
+        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0]['type'], 'start')
+        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1]['time'], 2)
+        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1]['type'], 'end')
+        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0]['time'], 2)
+        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0]['type'], 'start')
+        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1]['time'], 5)
+        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1]['type'], 'end')
 
 
     def test_uncommit_reservation_from_schedule(self):

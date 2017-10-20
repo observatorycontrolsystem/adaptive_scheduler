@@ -8,8 +8,7 @@ August 2012
 '''
 
 from nose.tools import assert_equal, nottest
-from adaptive_scheduler.kernel.timepoint import *
-from adaptive_scheduler.kernel.intervals import *
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.fullscheduler_v5 import *
 import copy
 
@@ -17,10 +16,10 @@ import copy
 class TestFullScheduler_v5(object):
 
     def setup(self):
-        s1 = Intervals([Timepoint(1, 'start'),
-                        Timepoint(2, 'end')]) # 1-2
-        s2 = Intervals([Timepoint(2, 'start'),
-                        Timepoint(4, 'end')]) # --2--4
+        s1 = Intervals([{'time': 1, 'type': 'start'},
+                        {'time': 2, 'type': 'end'}]) # 1-2
+        s2 = Intervals([{'time': 2, 'type': 'start'},
+                        {'time': 4, 'type': 'end'}]) # --2--4
         s3 = copy.copy(s1)
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
@@ -28,8 +27,8 @@ class TestFullScheduler_v5(object):
         s7 = copy.copy(s1)
         s8 = copy.copy(s1)
         s9 = copy.copy(s2)
-        s10 = Intervals([Timepoint(1, 'start'), 
-                         Timepoint(10, 'end')])
+        s10 = Intervals([{'time': 1, 'type': 'start'},
+                         {'time': 10, 'type': 'end'}])
         s11 = copy.copy(s10)
         s12 = copy.copy(s10)
         s13 = copy.copy(s10)
@@ -68,15 +67,15 @@ class TestFullScheduler_v5(object):
 
 
         self.gpw2 = {}
-        self.gpw2['foo'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
-        self.gpw2['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
+        self.gpw2['foo'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
+        self.gpw2['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
 
         self.gpw3 = {}
-        self.gpw3['foo'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
-        self.gpw3['bar'] = Intervals([Timepoint(5, 'start'), Timepoint(10, 'end')], 'free')
+        self.gpw3['foo'] = Intervals([{'time': 5, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
+        self.gpw3['bar'] = Intervals([{'time': 5, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
 
         self.gpw4 = {}
-        self.gpw4['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
+        self.gpw4['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
 
         self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3], 
                                     self.gpw2, [], 1)
@@ -163,20 +162,20 @@ class TestFullScheduler_v5(object):
         # only one should be scheduled
 
     def test_schedule_5_7_2012(self):
-        s1 = Intervals([Timepoint(93710, 'start'), 
-                        Timepoint(114484, 'end'),
-                        Timepoint(180058, 'start'), 
-                        Timepoint(200648, 'end')])
+        s1 = Intervals([{'time': 93710, 'type': 'start'},
+                        {'time': 114484, 'type': 'end'},
+                        {'time': 180058, 'type': 'start'},
+                        {'time': 200648, 'type': 'end'}])
         r1 = Reservation_v3(1, 30, {'foo': s1})
         s2 = copy.copy(s1)
         r2 = Reservation_v3(1, 30, {'goo': s2})
 
         cr = CompoundReservation_v2([r1,r2], 'oneof')
         gpw = {}
-        gpw['foo'] = Intervals([Timepoint(90000, 'start'), 
-                                Timepoint(201000, 'end')])
-        gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
-                                Timepoint(201000, 'end')])
+        gpw['foo'] = Intervals([{'time': 90000, 'type': 'start'},
+                                {'time': 201000, 'type': 'end'}])
+        gpw['goo'] = Intervals([{'time': 90000, 'type': 'start'},
+                                {'time': 201000, 'type': 'end'}])
         fs = FullScheduler_v5([cr], gpw, [], 60)
         schedule = fs.schedule_all()
 
