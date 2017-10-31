@@ -21,7 +21,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
-                 es_endpoint=None, save_output=False,
+                 es_endpoint=None, save_output=False, request_logs=False,
                  pond_port=12345, pond_host='scheduler.lco.gtn',
                  valhalla_url='http://valhalla.lco.gtn/',
                  configdb_url='http://configdb.lco.gtn/',
@@ -43,6 +43,7 @@ class SchedulerParameters(object):
         self.input_file_name = input_file_name
         self.pickle = pickle
         self.save_output = save_output
+        self.request_logs = request_logs
         self.too_run_time = too_run_time
         self.normal_run_time = normal_run_time
         self.pond_port = pond_port
