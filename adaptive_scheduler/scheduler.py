@@ -687,6 +687,9 @@ class SchedulerRunner(object):
         if self.network_interface.current_events_has_changed():
             self.log.info("Telescope network events were found.")
             network_has_changed = True
+        elif self.sched_params.no_weather:
+            self.log.info("Ignoring Telescope network events, but setting network change flag to True.")
+            network_has_changed = True
 
         # Must call this function to force the requestdb to update it's internal states
         # but don't do on a dry run because it changes the network state
