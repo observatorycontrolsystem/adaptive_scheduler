@@ -36,6 +36,7 @@ VERSION = '1.1.0'
 # logging.config.fileConfig('logging.conf')
 import logger_config
 log = logging.getLogger('adaptive_scheduler')
+ur_logger = logging.getLogger('ur_logger')
 
 # Set up signal handling for graceful shutdown
 run_flag = True
@@ -100,6 +101,8 @@ def parse_args(argv):
                                 help="Enable storing pickled files of scheduling run input")
     arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
                                 help="Enable storing scheduling run output in a json file")
+    arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
+                                help="Enable saving the per-request log files")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
@@ -127,6 +130,8 @@ def parse_args(argv):
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
+
+    ur_logger.disabled = not args.request_logs
     
     sched_params = SchedulerParameters(**vars(args))
 
@@ -193,7 +198,7 @@ def main(argv):
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
         too_infile, normal_infile = sched_params.input_file_name.split(',')
-        input_provider = FileBasedSchedulingInputProvider(too_infile, normal_infile, is_too_mode=True)
+        input_provider = FileBasedSchedulingInputProvider(too_infile, normal_infile, network_interface, is_too_mode=True)
     else:
         input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
     input_factory = SchedulingInputFactory(input_provider)

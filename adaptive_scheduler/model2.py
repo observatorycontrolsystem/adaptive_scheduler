@@ -15,6 +15,7 @@ from __future__ import division
 from rise_set.sky_coordinates                 import RightAscension, Declination
 from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_minor_planet_target,
+                                                      make_major_planet_target,
                                                       make_comet_target,
                                                       make_satellite_target)
 from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
@@ -225,10 +226,18 @@ class NonSiderealTarget(Target):
                                             self.orbinc, self.longascnode, self.argofperih,
                                             self.perihdist, self.eccentricity)
 
-        else:
+        elif self.scheme.lower() == 'mpc_minor_planet':
             target_dict = make_minor_planet_target(self.scheme, self.epochofel, self.orbinc,
-                                                    self.longascnode, self.argofperih,
-                                                    self.meandist, self.eccentricity, self.meananom)
+                                                   self.longascnode, self.argofperih,
+                                                   self.meandist, self.eccentricity, self.meananom)
+
+        elif self.scheme.lower() == 'jpl_major_planet':
+            target_dict = make_major_planet_target(self.scheme, self.epochofel, self.orbinc,
+                                                   self.longascnode, self.argofperih,
+                                                   self.meandist, self.eccentricity, self.meananom,
+                                                   self.dailymot)
+        else:
+            raise RequestError('Invalid target scheme %s', self.scheme.lower())
 
         return target_dict
 
@@ -578,7 +587,7 @@ class UserRequest(EqualityMixin):
     def get_priority_dumb(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
-        
+
         # doesn't have to be statistically random; determinism is important
         random.seed(self.requests[0].request_number)
         perturbation_size = 0.01
@@ -617,13 +626,14 @@ class UserRequest(EqualityMixin):
 
 class ModelBuilder(object):
 
-    def __init__(self, valhalla_interface, configdb_interface):
+    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id={}, semester_details=None):
         self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
-        self.proposals_by_id = {}
-        self.semester_details = None
-        self._get_all_proposals()
+        self.proposals_by_id = proposals_by_id
+        self.semester_details = semester_details
+        if not self.proposals_by_id:
+            self._get_all_proposals()
 
     def _get_all_proposals(self):
         try:
@@ -724,7 +734,7 @@ class ModelBuilder(object):
     def build_requests(self, ur_dict, scheduled_requests={}):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
-        validation errors 
+        validation errors
             ([validated_request_model1,
               valicated_request_model2,
               ...
