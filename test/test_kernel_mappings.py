@@ -727,7 +727,7 @@ class TestVisibility(object):
     @patch('adaptive_scheduler.memoize.region', local_region)
     def test_memoize_preserves_correct_output_no_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True)
-        memoized_func = Memoize('bpl1', self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl1', '2017-1-1', '2017-2-1', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True)
 
         assert_equal(received, mem_received)
@@ -736,7 +736,7 @@ class TestVisibility(object):
     def test_memoize_preserves_correct_output_with_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True,
                                                         airmass=2.0)
-        memoized_func = Memoize('bpl2', self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl2', '2017-1-1', '2017-2-1', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True, airmass=2.0)
 
         assert_equal(received, mem_received)
@@ -745,7 +745,7 @@ class TestVisibility(object):
     def test_memoize_preserves_correct_output_with_differing_airmass(self):
         received = self.visibility.get_target_intervals(self.capella, up=True,
                                                         airmass=2.0)
-        memoized_func = Memoize('bpl3', self.visibility.get_target_intervals)
+        memoized_func = Memoize('bpl3', '2017-1-1', '2017-2-1', self.visibility.get_target_intervals)
         mem_received = memoized_func(self.capella, up=True, airmass=1.0)
 
         assert_not_equal(received, mem_received)

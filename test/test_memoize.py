@@ -38,7 +38,7 @@ class TestMemoizeClass(object):
 
     @patch('adaptive_scheduler.memoize.region', local_region)
     def test_new_values_are_cached(self):
-        memoized_method = Memoize('resource1', self.target.test_manipulation)
+        memoized_method = Memoize('resource1', '2017-1-1', '2017-2-1', self.target.test_manipulation)
         hashable_args1 = str(make_hashable((self.test_parameter1,)))
         hashable_args2 = str(make_hashable((self.test_parameter2,)))
         key1 = memoized_method.generate_key(hashable_args1, str(make_hashable({})))
@@ -60,7 +60,7 @@ class TestMemoizeClass(object):
 
     @patch('adaptive_scheduler.memoize.region', local_region)
     def test_caches_keyword_args(self):
-        memoized_method = Memoize('resource2', self.target.target_manipulation)
+        memoized_method = Memoize('resource2', '2017-1-1', '2017-2-1', self.target.target_manipulation)
         hashable_kwargs1 = str(make_hashable(dict(target=self.target_dict1)))
         hashable_kwargs2 = str(make_hashable(dict(target=self.target_dict2)))
         key1 = memoized_method.generate_key(str(make_hashable(())), hashable_kwargs1)

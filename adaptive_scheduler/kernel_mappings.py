@@ -453,10 +453,10 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
                                 semester_end, tel['horizon'],
                                 twilight, tel['ha_limit_neg'],
                                 tel['ha_limit_pos'])
-        get_target = Memoize(tel_name, visibility.get_target_intervals)
+        get_target = Memoize(tel_name, semester_start, semester_end, visibility.get_target_intervals)
         get_dark   = visibility.get_dark_intervals
-        get_ha     = Memoize(tel_name, visibility.get_ha_intervals)
-        get_moon_distance = Memoize(tel_name, visibility.get_moon_distance_intervals)
+        get_ha     = Memoize(tel_name, semester_start, semester_end, visibility.get_ha_intervals)
+        get_moon_distance = Memoize(tel_name, semester_start, semester_end, visibility.get_moon_distance_intervals)
 
         visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha, get_moon_distance)
 
