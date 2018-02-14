@@ -1376,8 +1376,8 @@ class TestSchedulerRunner(object):
         cancelation_start_dates = self.scheduler_runner._determine_schedule_cancelation_start_dates(['1m0a.doma.elp', '1m0a.doma.lsc'], scheduled_reservations, resource_usage_snapshot, default_cancelation_start_date, default_cancelation_end_date)
 
         expected_cancelation_start_dates = {
-                                            '1m0a.doma.elp' : (end, default_cancelation_end_date),
-                                            '1m0a.doma.lsc' : (default_cancelation_start_date, default_cancelation_end_date)
+                                            '1m0a.doma.elp' : [(end, default_cancelation_end_date),],
+                                            '1m0a.doma.lsc' : [(default_cancelation_start_date, default_cancelation_end_date),]
                                             }
         assert_equal(expected_cancelation_start_dates, cancelation_start_dates)
 
