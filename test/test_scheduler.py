@@ -1103,7 +1103,7 @@ class TestScheduler(object):
 #             for resource in resources:
 #                 window_dict[resource] = intervals
 
-            res = Reservation(ur.get_effective_priority(i), request.duration, intervals_by_resource)
+            res = Reservation(ur.priority, request.duration, intervals_by_resource)
             res.request = request
             reservation_list.append(res)
 
