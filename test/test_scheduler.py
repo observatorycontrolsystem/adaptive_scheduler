@@ -1089,7 +1089,7 @@ class TestScheduler(object):
     def build_compound_reservation(self, ur, normalize_windows_to):
         reservation_list = []
         intervals_by_resource = {}
-        for i, request in enumerate(ur.requests):
+        for request in ur.requests:
             for resource, windows in request.windows:
                 start_end_tuples = []
                 for window in windows:
