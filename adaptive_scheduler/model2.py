@@ -600,14 +600,18 @@ class UserRequest(EqualityMixin):
     def get_priority(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
+        return self.get_effective_priority(0)
+
+    def get_effective_priority(self, request_index):
+        if request_index < 0 or request_index >= len(self.requests):
+            request_index = 0
 
         # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[0].request_number)
+        random.seed(self.requests[request_index].request_number)
         perturbation_size = 0.01
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
 
-        # Assume only 1 child Request
-        req = self.requests[0]
+        req = self.requests[request_index]
         effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
 
         effective_priority = min(effective_priority, 32000.0)*ran

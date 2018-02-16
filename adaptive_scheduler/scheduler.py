@@ -276,7 +276,7 @@ class Scheduler(object, SendMetricMixin):
                                 'start': reservation_start.isoformat(),
                                 'end': reservation_end.isoformat(),
                                 'resource': resource}
-                    priority_value += (reservation.priority * reservation.duration)
+                    priority_value += reservation.priority
                     schedule_data['resources'][resource]['reservations'].append(res_data)
                 schedule_data['resources'][resource]['priority_value'] = priority_value
                 schedule_data['total_priority_value'] += priority_value
