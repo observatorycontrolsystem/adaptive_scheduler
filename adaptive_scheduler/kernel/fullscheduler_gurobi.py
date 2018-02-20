@@ -168,12 +168,12 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
                 match = requestLocations.select(reqid,'*','*','*','*')
                 nscheduled = quicksum(isScheduled for reqid,winidx,priority,resource,isScheduled in match)
                 m.addConstr(nscheduled <= 1,'one_per_reqid_constraint_' + str(reqid))
-	
-	# Objective: Maximize the merit functions of all scheduled requests (eq 1);
-	objective = quicksum([isScheduled*(priority + 0.1/(winidx+1.0)) for req,winidx,priority,resource,isScheduled in requestLocations])
-	
-	# set the objective, and maximize it
-	m.setObjective(objective)
+
+        # Objective: Maximize the merit functions of all scheduled requests (eq 1);
+        objective = quicksum([isScheduled*(priority + 0.1/(winidx+1.0)) for req,winidx,priority,resource,isScheduled in requestLocations])
+
+        # set the objective, and maximize it
+        m.setObjective(objective)
         m.modelSense = GRB.MAXIMIZE
 
         # impose a time limit on the solve
@@ -181,6 +181,9 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
             m.params.timeLimit=timelimit
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
         m.params.MIPGap = 0.01
+
+        # Set the Method of solving the root relaxation of the MIPs model to concurrent (default is dual simplex)
+        m.params.Method = 3
 
         # add all the constraints to the model
         m.update()
