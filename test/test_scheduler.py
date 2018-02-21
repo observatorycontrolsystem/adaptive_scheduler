@@ -80,9 +80,11 @@ class TestScheduler(object):
 
         kernel_class_mock = Mock()
         scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
+        model_builder = Mock()
+        model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime,
-                                          normal_user_requests, network_snapshot_mock, SchedulingInputUtils(None),
-                                          self.network_model, False)
+                                          normal_user_requests, network_snapshot_mock,
+                                          SchedulingInputUtils(model_builder), self.network_model, False)
         estimated_scheduler_end = datetime.utcnow() + estimated_scheduler_runtime
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=False)
@@ -778,13 +780,14 @@ class TestScheduler(object):
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
                                                         [running_user_request],
                                                         {})
-
+        model_builder = Mock()
+        model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         # Setup input
         scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(None),
+                            SchedulingInputUtils(model_builder),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -864,12 +867,14 @@ class TestScheduler(object):
                                                         [low_priority_running_user_request, high_priority_running_user_request],
                                                         {})
 
+        model_builder = Mock()
+        model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         # Setup input
         scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(None),
+                            SchedulingInputUtils(model_builder),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -942,12 +947,14 @@ class TestScheduler(object):
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
                                                         [low_priority_running_user_request, high_priority_running_user_request], {})
 
+        model_builder = Mock()
+        model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         # Setup input
         scheduler_input = SchedulingInput(self.sched_params, datetime.utcnow(),
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(None),
+                            SchedulingInputUtils(model_builder),
                             self.network_model,
                             is_too_input=True,
                             )
@@ -1176,6 +1183,7 @@ def create_scheduler_input(user_requests):
     input_mock.invalid_requests = []
     input_mock.invalid_user_requests = []
     input_mock.get_scheduling_start = Mock(return_value=datetime.utcnow())
+    input_mock.get_block_schedule_by_resource = Mock(return_value={'1m0a.doma.ogg': []})
 
     return input_mock
 
@@ -1201,6 +1209,7 @@ class TestSchedulerRunner(object):
         self.network_interface_mock = Mock()
         self.network_interface_mock.cancel = Mock(return_value=0)
         self.network_interface_mock.save = Mock(return_value=0)
+        self.network_interface_mock.abort = Mock(return_value=0)
 
         self.configdb_interface_mock = Mock()
         self.configdb_interface_mock.get_telescope_info = {'1m0a.doma.lsc': {'name': '1m0a.doma.lsc',

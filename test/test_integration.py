@@ -135,6 +135,7 @@ class TestIntegration(object):
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
+        network_interface_mock.abort = Mock(return_value=0)
         network_interface_mock.get_current_events = Mock(return_value={})
 
         mock_input_factory = create_scheduler_input_factory(too_ur_list, normal_ur_list)

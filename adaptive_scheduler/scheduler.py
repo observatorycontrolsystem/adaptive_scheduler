@@ -792,9 +792,12 @@ class SchedulerRunner(object):
 
 
     def abort_running_requests(self, abort_requests):
+        n_aborted = 0
         for rr, reasons in abort_requests:
             reason = ', '.join(reasons)
-            self.network_interface.abort(rr, reason)
+            n_aborted += self.network_interface.abort(rr, reason)
+
+        return n_aborted
 
     def save_resource_schedules(self, schedule, denormalization_date):
         n_submitted = self.network_interface.save(schedule, denormalization_date, False)

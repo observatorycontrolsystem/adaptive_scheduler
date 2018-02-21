@@ -151,13 +151,13 @@ class PondScheduleInterface(object):
     
     def abort(self, pond_running_request, reason):
         ''' Abort a running request
-        ''' 
+        '''
         try:
             block_ids = [pond_running_request.block_id]
-            self._cancel_blocks(block_ids, reason, delete=False)
+            return self._cancel_blocks(block_ids, reason, delete=False)
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to abort POND block")
-    
+
     @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
         ''' Save the provided observing schedule

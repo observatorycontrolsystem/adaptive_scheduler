@@ -960,7 +960,7 @@ class TestPondInteractions(object):
         pond_interface = PondScheduleInterface()
         n_deleted = pond_interface._cancel_schedule(start_end_by_resource, 'A good reason', True)
 
-        func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel)
+        func_mock2.assert_called_with(self.start, self.end, self.site, self.obs, self.tel, True)
         func_mock1.assert_called_with([1,2,3], 'A good reason')
         assert_equal(n_deleted, len(delete_list))
 
