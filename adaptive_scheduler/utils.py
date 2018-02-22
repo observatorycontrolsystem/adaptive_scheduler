@@ -144,7 +144,7 @@ def merge_dicts_of_lists(*args):
     output = {}
     for dic in args:
         for k, v in dic.items():
-            output[k] = output.get(k, []).extend(v)
+            output[k] = output.get(k, []) + v
 
     return output
 

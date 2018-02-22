@@ -8,6 +8,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.intervals import Intervals
+from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from nose.tools import nottest
 
 from mock import Mock, patch
@@ -1545,8 +1546,8 @@ class TestSchedulerRunner(object):
 
     @patch('adaptive_scheduler.scheduler_input.SchedulingInput.user_requests')
     def test_call_scheduler_cancels_proper_resources(self, mock_prop):
-        ''' Only resources scheduled for ToO should be canceled after ToO scheduling run
-        and should not be cancelled before saving normal schedule
+        ''' Only part of resources scheduled for ToO should be canceled after ToO scheduling run
+        and normal run should not cancel toos
         '''
         network_model = {'1m0a.doma.lsc': {}, '1m0a.doma.elp': {}}
         too_input = SchedulingInput(sched_params=SchedulerParameters(), scheduler_now=datetime.utcnow(),
@@ -1570,9 +1571,14 @@ class TestSchedulerRunner(object):
 
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, network_model, self.mock_input_factory)
         scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(None)
+        too_reservation = Mock()
+        too_reservation_start = datetime(2017, 1, 10, 5)
+        too_reservation.scheduled_start = datetime_to_normalised_epoch(too_reservation_start,
+                                                                       self.valhalla_interface_mock.get_semester_details(None)['start'])
+        too_reservation.duration = 3600
         too_scheduler_result = SchedulerResult(
                                 resource_schedules_to_cancel=['1m0a.doma.lsc'],
-                                schedule={'1m0a.doma.lsc':[Mock()]}
+                                schedule={'1m0a.doma.lsc':[too_reservation]}
                                 )
         normal_scheduler_result = SchedulerResult(
                                     resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'],
@@ -1588,15 +1594,17 @@ class TestSchedulerRunner(object):
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
         assert_equal(2, self.network_interface_mock.cancel.call_count)
 
-#         assert_true('1m0a.doma.lsc' in scheduler_runner.call_args)
-#         assert_true('1m0a.doma.lsc' not in self.network_interface_mock.cancel.call_args_list[1][0][0])
-
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
-        assert_true('1m0a.doma.lsc' not in self.network_interface_mock.cancel.call_args_list[1][0][0])
-
-        non_too_resouces = [resource for resource in network_model.keys() if resource != '1m0a.doma.lsc']
-        for resource in network_model.keys():
-            assert_equal(non_too_resouces, self.network_interface_mock.cancel.call_args_list[1][0][0].keys())
+        assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
+        # too loop cancels just the time it has reserved on a resource
+        assert_equal(self.network_interface_mock.cancel.call_args_list[0][0][0]['1m0a.doma.lsc'], [(too_reservation_start, too_reservation_start + timedelta(seconds=too_reservation.duration))])
+        # cancel too flag set for too loop
+        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][2])
+        # cancel_too flag not set for normal loop
+        assert_false(self.network_interface_mock.cancel.call_args_list[1][0][2])
+        # normal loop cancels on all resources
+        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[1][0][0])
+        assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[1][0][0])
 
 
     def test_scheduler_runner_dry_run(self):
