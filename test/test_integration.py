@@ -119,8 +119,6 @@ class TestIntegration(object):
                           request_number = '0000000005',
                           duration       =1750)
 
-
-
         self.user_and_request_1 = UserRequest(operator='and', requests=[self.request_1, self.request_2],
                                               proposal=self.proposal, expires=datetime(2050, 1, 1),
                                               tracking_number='0000000001', observation_type='NORMAL',
@@ -141,6 +139,10 @@ class TestIntegration(object):
                                               proposal=self.proposal, expires=datetime(2050, 1, 1),
                                               tracking_number='0000000005', observation_type='TARGET_OF_OPPORTUNITY',
                                               ipp_value=1.5, group_id='ur 5', submitter='')
+        self.too_user_request_2 = UserRequest(operator='many', requests=[self.request_1, self.request_3],
+                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                              tracking_number='0000000006', observation_type='TARGET_OF_OPPORTUNITY',
+                                              ipp_value=1.5, group_id='ur 6', submitter='')
 
     def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time, too_loop=False, block_schedule_by_resource={}):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
@@ -303,3 +305,37 @@ class TestIntegration(object):
         assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
+
+
+    def test_multiple_too_has_correct_cancel_date_list(self):
+        scheduler_start = self.base_time - timedelta(hours=10)
+        result = self._schedule_requests([self.too_user_request_2, self.too_user_request_1], [self.user_many_request_2,],
+                                         scheduler_start, too_loop=True,
+                                         block_schedule_by_resource={})
+
+        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+        assert_true('0000000005' in scheduled_urs)
+        assert_true('0000000005' in scheduled_urs['0000000005'])
+        assert_true('0000000006' in scheduled_urs)
+        assert_true('0000000003' in scheduled_urs['0000000006'])
+        assert_true('0000000001' in scheduled_urs['0000000006'])
+
+        semester_start = scheduler_start - timedelta(days=150)
+        scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
+        scheduler_runner.semester_details = {'id': '2015A', 'start': semester_start,
+                                             'end': scheduler_start + timedelta(days=150)}
+
+        cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(result.schedule)
+        assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
+
+        dt_start, dt_end = get_reservation_datetimes(scheduled_urs['0000000006']['0000000001'], semester_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
+
+        dt_start, dt_end = get_reservation_datetimes(scheduled_urs['0000000006']['0000000003'], semester_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][0], dt_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][1], dt_end)
+
+        dt_start, dt_end = get_reservation_datetimes(scheduled_urs['0000000005']['0000000005'], semester_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][0], dt_start)
+        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][1], dt_end)
