@@ -528,7 +528,6 @@ class LCOGTNetworkScheduler(Scheduler):
             downtime_intervals = {}
 
         combined_downtime_intervals = merge_dicts_of_lists(downtime_intervals, extra_downtime_by_resource)
-
         filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache, combined_downtime_intervals,
                                                       estimated_scheduler_end, semester_end,
                                                       self.scheduling_horizon(estimated_scheduler_end))
@@ -969,12 +968,7 @@ class SchedulerRunner(object):
             too_scheduling_start = scheduler_input.get_scheduling_start()
             deadline = too_scheduling_start + self.estimated_too_run_timedelta
             too_scheduler_result = self.call_scheduler(scheduler_input, deadline)
-            # Find resource scheduled by ToO run and cancel their schedules
-            too_resources = []
-            if too_scheduler_result:
-                for too_resource, reservation_list in too_scheduler_result.schedule.iteritems():
-                    if reservation_list:
-                        too_resources.append(too_resource)
+
             try:
                 self.too_scheduled_requests_by_ur = too_scheduler_result.get_scheduled_requests_by_tracking_num()
                 self.apply_too_result(too_scheduler_result, scheduler_input, deadline)

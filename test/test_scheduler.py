@@ -1174,7 +1174,7 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     return mock_request
 
 
-def create_scheduler_input(user_requests):
+def create_scheduler_input(user_requests, block_schedule_by_resource):
     input_mock = Mock()
     input_mock.scheduler_now = datetime.utcnow()
     input_mock.estimated_scheduler_end = datetime.utcnow()
@@ -1184,14 +1184,14 @@ def create_scheduler_input(user_requests):
     input_mock.invalid_requests = []
     input_mock.invalid_user_requests = []
     input_mock.get_scheduling_start = Mock(return_value=datetime.utcnow())
-    input_mock.get_block_schedule_by_resource = Mock(return_value={'1m0a.doma.ogg': []})
+    input_mock.get_block_schedule_by_resource = Mock(return_value=block_schedule_by_resource)
 
     return input_mock
 
 
-def create_scheduler_input_factory(too_user_requests, normal_user_requests):
-    too_input_mock = create_scheduler_input(too_user_requests)
-    normal_input_mock = create_scheduler_input(normal_user_requests)
+def create_scheduler_input_factory(too_user_requests, normal_user_requests, block_schedule_by_resource={}):
+    too_input_mock = create_scheduler_input(too_user_requests, {})
+    normal_input_mock = create_scheduler_input(normal_user_requests, block_schedule_by_resource)
     mock_input_factory = Mock()
     mock_input_factory.create_too_scheduling_input = Mock(return_value=too_input_mock)
     mock_input_factory.create_normal_scheduling_input = Mock(return_value=normal_input_mock)
