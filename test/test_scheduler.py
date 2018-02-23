@@ -1174,29 +1174,39 @@ def create_request(request_number, duration, windows, possible_telescopes, is_to
     return mock_request
 
 
-def create_scheduler_input(user_requests, block_schedule_by_resource):
+def create_scheduler_input(user_requests, block_schedule_by_resource, running_user_requests, too_tracking_numbers):
     input_mock = Mock()
     input_mock.scheduler_now = datetime.utcnow()
     input_mock.estimated_scheduler_end = datetime.utcnow()
     input_mock.user_requests = user_requests
-    input_mock.resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), {}, {})
+    input_mock.resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), running_user_requests, {})
     input_mock.available_resources = ['1m0a.doma.ogg',]
     input_mock.invalid_requests = []
     input_mock.invalid_user_requests = []
     input_mock.get_scheduling_start = Mock(return_value=datetime.utcnow())
     input_mock.get_block_schedule_by_resource = Mock(return_value=block_schedule_by_resource)
+    input_mock.too_tracking_numbers = too_tracking_numbers
 
     return input_mock
 
 
-def create_scheduler_input_factory(too_user_requests, normal_user_requests, block_schedule_by_resource={}):
-    too_input_mock = create_scheduler_input(too_user_requests, {})
-    normal_input_mock = create_scheduler_input(normal_user_requests, block_schedule_by_resource)
+def create_scheduler_input_factory(too_user_requests, normal_user_requests, block_schedule_by_resource={},
+                                   running_user_requests=[], too_tracking_numbers=[]):
+    too_input_mock = create_scheduler_input(too_user_requests, {}, running_user_requests, too_tracking_numbers)
+    normal_input_mock = create_scheduler_input(normal_user_requests, block_schedule_by_resource, running_user_requests,
+                                               too_tracking_numbers)
     mock_input_factory = Mock()
     mock_input_factory.create_too_scheduling_input = Mock(return_value=too_input_mock)
     mock_input_factory.create_normal_scheduling_input = Mock(return_value=normal_input_mock)
 
     return mock_input_factory
+
+
+def create_running_user_request(tracking_number, request_number, resource, start, end):
+    running_request = (RunningRequest(resource, request_number, start, end))
+    running_ur = RunningUserRequest(tracking_number)
+    running_ur.add_running_request(running_request)
+    return running_ur
 
 
 class TestSchedulerRunner(object):
