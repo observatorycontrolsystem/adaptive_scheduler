@@ -309,7 +309,6 @@ class PondScheduleInterface(object):
         return telescope_interval
 
     #@retry_or_reraise(max_tries=6, delay=10)
-    @timeit
     @metric_timer('pond.get_schedule')
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled or aborted
