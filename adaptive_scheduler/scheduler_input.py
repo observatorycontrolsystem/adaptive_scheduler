@@ -1,6 +1,6 @@
 from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
-from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin
+from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
 from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
 
 import os
@@ -66,7 +66,8 @@ class SchedulingInputFactory(object):
         self.input_provider = input_provider
 
 
-    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, scheduled_requests_by_ur={}):
+    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, scheduled_requests_by_ur={},
+                                 block_schedule = {}):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
                         input_provider.estimated_scheduler_runtime(),
@@ -75,7 +76,8 @@ class SchedulingInputFactory(object):
                         SchedulingInputUtils(input_provider.get_model_builder()),
                         input_provider.available_resources,
                         is_too_input,
-                        scheduled_requests_by_ur=scheduled_requests_by_ur)
+                        scheduled_requests_by_ur=scheduled_requests_by_ur,
+                        block_schedule=block_schedule)
         if output_path and input_provider.sched_params.pickle:
             file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
             filename = os.path.join(output_path, 'normal_scheduling_input_%s.pickle')
@@ -109,6 +111,7 @@ class SchedulingInputFactory(object):
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
                                        scheduled_requests_by_ur={},
+                                       too_schedule={},
                                        network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
@@ -119,7 +122,9 @@ class SchedulingInputFactory(object):
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
 
-        return self._create_scheduling_input(self.input_provider, False, output_path, scheduled_requests_by_ur=scheduled_requests_by_ur)
+        return self._create_scheduling_input(self.input_provider, False, output_path,
+                                             scheduled_requests_by_ur=scheduled_requests_by_ur,
+                                             block_schedule=too_schedule)
 
 
 class SchedulingInputUtils(object, SendMetricMixin):
@@ -182,7 +187,9 @@ class SchedulingInputUtils(object, SendMetricMixin):
 
 class SchedulingInput(object):
 
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list, resource_usage_snapshot, scheduling_input_utils, available_resources, is_too_input, scheduled_requests_by_ur={}):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list,
+                 resource_usage_snapshot, scheduling_input_utils, available_resources, is_too_input,
+                 scheduled_requests_by_ur={}, block_schedule = {}):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -192,6 +199,7 @@ class SchedulingInput(object):
         self.is_too_input = is_too_input
         self.scheduled_requests_by_ur = scheduled_requests_by_ur
         self.utils = scheduling_input_utils
+        self.block_schedule = block_schedule
 
         self._scheduler_model_too_user_requests = None
         self._scheduler_model_normal_user_requests = None
@@ -218,6 +226,19 @@ class SchedulingInput(object):
         if self.sched_params.input_file_name or self.sched_params.simulate_now:
             return self.scheduler_now
         return datetime.utcnow()
+
+
+    def get_block_schedule_by_resource(self):
+        block_schedule_by_resource = {}
+        semester_start = self.utils.model_builder.semester_details['start']
+
+        for resource, reservations in self.block_schedule.items():
+            block_schedule_by_resource[resource] = []
+            for reservation in reservations:
+                reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
+                block_schedule_by_resource[resource].append((reservation_start, reservation_end))
+
+        return block_schedule_by_resource
 
 
     @property
