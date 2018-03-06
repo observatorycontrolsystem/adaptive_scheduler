@@ -697,7 +697,7 @@ class SchedulerRunner(object):
         # Must call this function to force the requestdb to update it's internal states
         # but don't do on a dry run because it changes the network state
         request_set_changed = True
-        if not self.sched_params.dry_run:
+        if (not self.sched_params.dry_run) and (not self.sched_params.no_weather):
             request_set_changed = self.network_interface.schedulable_request_set_has_changed()
 
         return network_has_changed or request_set_changed
@@ -765,7 +765,6 @@ class SchedulerRunner(object):
             # estimate should have been updated.
             pass
 
-
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
         self.log.info("Estimated scheduler run time is %.2f seconds", scheduler_input.estimated_scheduler_runtime.total_seconds())
@@ -782,13 +781,11 @@ class SchedulerRunner(object):
 
         return scheduler_result
 
-
-    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_toos):
+    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_toos, include_normals):
         n_deleted = self.network_interface.cancel(cancelation_date_list_by_resource, "Superceded by new schedule",
-                                                  include_toos)
+                                                  include_toos, include_normals)
 
         return n_deleted
-
 
     def abort_running_requests(self, abort_requests):
         n_aborted = 0
@@ -822,7 +819,6 @@ class SchedulerRunner(object):
 
         return cancelation_date_list_by_resource
 
-
     def _determine_schedule_cancelation_list_from_new_schedule(self, schedule_by_resource):
         cancelation_date_list_by_resource = {}
         semester_start = self.semester_details['start']
@@ -835,7 +831,6 @@ class SchedulerRunner(object):
                 cancelation_date_list_by_resource[resource].append((reservation_start, reservation_end))
 
         return cancelation_date_list_by_resource
-
 
     def _determine_abort_requests(self, running_user_requests, schedule_denoramlization_date, earliest_reservation):
         abort_requests = []
@@ -857,7 +852,6 @@ class SchedulerRunner(object):
 
         return abort_requests
 
-
     def _can_apply_scheduler_result(self, scheduler_result, apply_deadline):
         if self.sched_params.dry_run:
             self.log.warn("Dry run. Schedule will not be saved.")
@@ -878,7 +872,6 @@ class SchedulerRunner(object):
 
         return True
 
-
     def apply_too_result(self, scheduler_result, scheduler_input, apply_deadline):
         ''' For the too cycle, we want to clear the parts of the scheduler for which a ToO was scheduled, but leave
             the rest of the blocks intact.
@@ -890,6 +883,14 @@ class SchedulerRunner(object):
             # Find running requests that need to be aborted due to conflict with new schedule
             abort_requests = []
             semester_start = self.semester_details['start']
+            semester_end = self.semester_details['end']
+
+            all_cancelation_date_list_by_resource = self._determine_schedule_cancelation_start_dates(
+                self.network_model.keys(),
+                scheduler_result.schedule,
+                scheduler_input.resource_usage_snapshot,
+                apply_deadline,
+                semester_end)
 
             for resource in scheduler_result.resources_scheduled():
                 earliest_reservation = scheduler_result.earliest_reservation(resource)
@@ -899,7 +900,13 @@ class SchedulerRunner(object):
                     earliest_reservation)
                 abort_requests.extend(to_abort)
 
-            n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_toos=True)
+            # Cancel just the time slots under a newly scheduled ToO
+            n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_toos=True,
+                                                      include_normals=True)
+            # Cancel any remaining ToOs not under a newly scheduled ToO (needed in case weather knocks out a telescope
+            # that previously had a ToO scheduled on it)
+            n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_toos=True,
+                                                       include_normals=False)
             n_aborted = self.abort_running_requests(abort_requests)
             # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
             n_submitted = self.save_resource_schedules(scheduler_result.schedule,
@@ -909,13 +916,11 @@ class SchedulerRunner(object):
             return n_submitted
         return 0
 
-
     def apply_normal_result(self, scheduler_result, scheduler_input, resources_to_clear, apply_deadline):
         if self._can_apply_scheduler_result(scheduler_result, apply_deadline):
             semester_start = self.semester_details['start']
             semester_end = self.semester_details['end']
 
-            # TODO: make sure this cancels anything currently running in the ToO case
             cancelation_date_list_by_resource = self._determine_schedule_cancelation_start_dates(
                 resources_to_clear, scheduler_result.schedule,
                 scheduler_input.resource_usage_snapshot,
@@ -931,7 +936,8 @@ class SchedulerRunner(object):
                                                           earliest_reservation)
                 abort_requests.extend(to_abort)
 
-            n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_toos=False)
+            n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_toos=False,
+                                                      include_normals=True)
             n_aborted = self.abort_running_requests(abort_requests)
             # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
             n_submitted = self.save_resource_schedules(scheduler_result.schedule,
@@ -940,7 +946,6 @@ class SchedulerRunner(object):
 
             return n_submitted
         return 0
-
 
     def _update_summary_events(self, n_deleted, n_aborted, n_submitted):
         self.summary_events.append("In total, deleted %d previously scheduled %s" % pl(n_deleted, 'block'))
