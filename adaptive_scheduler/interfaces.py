@@ -86,7 +86,6 @@ class ResourceUsageSnapshot(object):
     def user_requests_for_resource(self, resource):
         return self.running_user_requests_by_resource.get(resource, [])
 
-
     def _running_intervals(self, resource):
         timepoint_list = []
         running_urs = self.running_user_requests_by_resource.get(resource, [])
@@ -100,14 +99,11 @@ class ResourceUsageSnapshot(object):
         
         return intervals
 
-
     def blocked_intervals(self, resource):
         return self.extra_blocked_intervals.get(resource, Intervals([]))
 
-
     def running_intervals(self, resource):
         return self._running_intervals(resource)
-
 
     def running_requests_for_resources(self, resources):
         '''Get the set of running requests for the named resource'''
@@ -149,7 +145,7 @@ class NetworkInterface(object):
         '''
         return self.valhalla_interface.get_all_user_requests(start, end)
 
-    def cancel(self, cancelation_date_list_by_resource, reason, include_toos):
+    def cancel(self, cancelation_date_list_by_resource, reason, include_toos, include_normals):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
@@ -224,7 +220,7 @@ class CachedInputNetworkInterface(object):
         '''Update the state of all the unschedulable User Requests in the DB in one go.'''
         pass
     
-    def cancel(self, cancelation_date_list_by_resource, include_toos):
+    def cancel(self, cancelation_date_list_by_resource, include_toos, include_normals):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
