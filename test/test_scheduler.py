@@ -1498,7 +1498,7 @@ class TestSchedulerRunner(object):
         assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
         # assert_equal(2, self.network_interface_mock.set_requests_to_unschedulable.call_count)
         # assert_equal(2, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_equal(3, self.network_interface_mock.cancel.call_count)
         assert_equal(2, self.network_interface_mock.save.call_count)
 
 
@@ -1550,7 +1550,7 @@ class TestSchedulerRunner(object):
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
         # assert_equal(1, self.network_interface_mock.set_requests_to_unschedulable.call_count)
         # assert_equal(1, self.network_interface_mock.set_user_requests_to_unschedulable.call_count)
-        assert_equal(1, self.network_interface_mock.cancel.call_count)
+        assert_equal(2, self.network_interface_mock.cancel.call_count)
         assert_equal(1, self.network_interface_mock.save.call_count)
 
 
@@ -1602,7 +1602,7 @@ class TestSchedulerRunner(object):
 
 
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
-        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_equal(3, self.network_interface_mock.cancel.call_count)
 
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
@@ -1610,11 +1610,15 @@ class TestSchedulerRunner(object):
         assert_equal(self.network_interface_mock.cancel.call_args_list[0][0][0]['1m0a.doma.lsc'], [(too_reservation_start, too_reservation_start + timedelta(seconds=too_reservation.duration))])
         # cancel too flag set for too loop
         assert_true(self.network_interface_mock.cancel.call_args_list[0][0][2])
+        # cancel normal flag set for first cancel of ToO loop (time based cancel)
+        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][3])
+        # cancel normal flag not set for second cancel of ToO loop (all resource ToO cancel)
+        assert_false(self.network_interface_mock.cancel.call_args_list[1][0][3])
         # cancel_too flag not set for normal loop
-        assert_false(self.network_interface_mock.cancel.call_args_list[1][0][2])
+        assert_false(self.network_interface_mock.cancel.call_args_list[2][0][2])
         # normal loop cancels on all resources
-        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[1][0][0])
-        assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[1][0][0])
+        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[2][0][0])
+        assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[2][0][0])
 
 
     def test_scheduler_runner_dry_run(self):

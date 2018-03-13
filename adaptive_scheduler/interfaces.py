@@ -149,7 +149,8 @@ class NetworkInterface(object):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
-        return self.network_schedule_interface.cancel(cancelation_date_list_by_resource, reason, include_toos)
+        return self.network_schedule_interface.cancel(cancelation_date_list_by_resource, reason, include_toos,
+                                                      include_normals)
     
     def abort(self, running_request, reason):
         return self.network_schedule_interface.abort(running_request, reason)
