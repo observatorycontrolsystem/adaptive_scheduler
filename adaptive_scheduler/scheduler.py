@@ -19,7 +19,7 @@ from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime,
 from adaptive_scheduler.printing         import pluralise as pl
 from adaptive_scheduler.printing         import plural_str
 from adaptive_scheduler.printing         import print_compound_reservations,summarise_urs, log_full_ur, log_windows
-from adaptive_scheduler.model2           import filter_out_compounds, differentiate_by_type, n_requests
+from adaptive_scheduler.model2           import filter_out_compounds, differentiate_by_type, n_requests, DataContainer
 from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  construct_resource_windows,
                                                  make_compound_reservations,
@@ -625,14 +625,12 @@ class SchedulerResult(object):
         self.schedule = schedule
         self.resource_schedules_to_cancel = resource_schedules_to_cancel
 
-
     def count_reservations(self):
         reservation_cnt = 0
         for resource, reservations in self.schedule.items():
             reservation_cnt += len(reservations)
 
         return reservation_cnt
-
 
     def get_scheduled_requests_by_tracking_num(self):
         scheduled_requests_by_tracking_num = {}
@@ -642,13 +640,16 @@ class SchedulerResult(object):
                 tracking_num = reservation.user_request.tracking_number
                 if not tracking_num in scheduled_requests_by_tracking_num:
                     scheduled_requests_by_tracking_num[tracking_num] = {}
-                scheduled_requests_by_tracking_num[tracking_num][request_num] = reservation
+                scheduled_requests_by_tracking_num[tracking_num][request_num] = DataContainer(
+                    duration=reservation.duration,
+                    scheduled_resource=reservation.scheduled_resource,
+                    scheduled=reservation.scheduled,
+                    scheduled_start=reservation.scheduled_start
+                )
         return scheduled_requests_by_tracking_num
-
 
     def resources_scheduled(self):
         return self.schedule.keys()
-
 
     def earliest_reservation(self, resource):
         earliest = None
