@@ -64,19 +64,46 @@ class SchedulingInputFactory(object):
 
     def __init__(self, input_provider):
         self.input_provider = input_provider
+        self.model_builder = None
+        self._scheduler_model_normal_user_requests = []
+        self._scheduler_model_too_user_requests = []
+        self._invalid_requests = []
+        self._invalid_user_requests = []
 
 
-    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, scheduled_requests_by_ur={},
-                                 block_schedule = {}):
+    def _convert_json_user_requests_to_scheduler_model(self, scheduled_requests_by_ur):
+        self.model_builder = self.input_provider.get_model_builder()
+        utils = SchedulingInputUtils(self.model_builder)
+        ignore_ipp = False
+        if self.input_provider.sched_params.ignore_ipp:
+            ignore_ipp = self.input_provider.sched_params.ignore_ipp
+        scheduler_model_urs, invalid_user_requests, invalid_requests = utils.json_urs_to_scheduler_model_urs(
+            self.input_provider.json_user_request_list, scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
+
+        self._invalid_user_requests = invalid_user_requests
+        self._invalid_requests = invalid_requests
+        scheduler_models_urs_by_type = utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
+        self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
+        self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
+
+
+    def _set_model_user_requests_scheduled_set(self, scheduled_requests_by_ur):
+        for ur in self._scheduler_model_normal_user_requests:
+            if ur.tracking_number in scheduled_requests_by_ur:
+                ur.set_scheduled_requests(scheduled_requests_by_ur[ur.tracking_number])
+
+
+    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, block_schedule = {}):
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
                         input_provider.estimated_scheduler_runtime(),
                         input_provider.json_user_request_list,
                         input_provider.resource_usage_snapshot,
-                        SchedulingInputUtils(input_provider.get_model_builder()),
+                        self.model_builder,
                         input_provider.available_resources,
                         is_too_input,
-                        scheduled_requests_by_ur=scheduled_requests_by_ur,
+                        normal_model_user_requests=self._scheduler_model_normal_user_requests,
+                        too_model_user_requests=self._scheduler_model_too_user_requests,
                         block_schedule=block_schedule)
         if output_path and input_provider.sched_params.pickle:
             file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
@@ -102,8 +129,9 @@ class SchedulingInputFactory(object):
         
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_too_mode()
+        self._convert_json_user_requests_to_scheduler_model(scheduled_requests_by_ur)
 
-        return self._create_scheduling_input(self.input_provider, True, output_path, scheduled_requests_by_ur=scheduled_requests_by_ur)
+        return self._create_scheduling_input(self.input_provider, True, output_path)
 
 
     @timeit
@@ -121,9 +149,9 @@ class SchedulingInputFactory(object):
             
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
+        self._set_model_user_requests_scheduled_set(scheduled_requests_by_ur)
 
         return self._create_scheduling_input(self.input_provider, False, output_path,
-                                             scheduled_requests_by_ur=scheduled_requests_by_ur,
                                              block_schedule=too_schedule)
 
 
@@ -188,8 +216,8 @@ class SchedulingInputUtils(object, SendMetricMixin):
 class SchedulingInput(object):
 
     def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list,
-                 resource_usage_snapshot, scheduling_input_utils, available_resources, is_too_input,
-                 scheduled_requests_by_ur={}, block_schedule = {}):
+                 resource_usage_snapshot, model_builder, available_resources, is_too_input,
+                 normal_model_user_requests=[], too_model_user_requests=[], block_schedule = {}):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -197,29 +225,11 @@ class SchedulingInput(object):
         self.resource_usage_snapshot = resource_usage_snapshot
         self.available_resources = available_resources
         self.is_too_input = is_too_input
-        self.scheduled_requests_by_ur = scheduled_requests_by_ur
-        self.utils = scheduling_input_utils
+        self.model_builder = model_builder
         self.block_schedule = block_schedule
 
-        self._scheduler_model_too_user_requests = None
-        self._scheduler_model_normal_user_requests = None
-        self._invalid_user_requests = []
-        self._invalid_requests = []
-        self._convert_json_user_requests_to_scheduler_model()
-
-
-    def _convert_json_user_requests_to_scheduler_model(self):
-        ignore_ipp = False
-        if self.sched_params.ignore_ipp:
-            ignore_ipp = self.sched_params.ignore_ipp
-        scheduler_model_urs, invalid_user_requests, invalid_requests = self.utils.json_urs_to_scheduler_model_urs(
-            self.json_user_request_list, self.scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
-
-        self._invalid_user_requests = invalid_user_requests
-        self._invalid_requests = invalid_requests
-        scheduler_models_urs_by_type = self.utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
-        self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
-        self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
+        self._scheduler_model_too_user_requests = too_model_user_requests
+        self._scheduler_model_normal_user_requests = normal_model_user_requests
 
 
     def get_scheduling_start(self):
@@ -230,7 +240,7 @@ class SchedulingInput(object):
 
     def get_block_schedule_by_resource(self):
         block_schedule_by_resource = {}
-        semester_start = self.utils.model_builder.semester_details['start']
+        semester_start = self.model_builder.semester_details['start']
 
         for resource, reservations in self.block_schedule.items():
             block_schedule_by_resource[resource] = []
@@ -251,42 +261,17 @@ class SchedulingInput(object):
 
     @property
     def too_user_requests(self):
-        if(self._scheduler_model_too_user_requests == None):
-            self._convert_json_user_requests_to_scheduler_model()
-
         return self._scheduler_model_too_user_requests
 
 
     @property
     def normal_user_requests(self):
-        if(self._scheduler_model_normal_user_requests == None):
-            self._convert_json_user_requests_to_scheduler_model()
-
         return self._scheduler_model_normal_user_requests
-
-
-    @property
-    def user_request_priorities(self):
-        priorities = {}
-        priorities.update(self.utils.user_request_priorities(self.too_user_requests))
-        priorities.update(self.utils.user_request_priorities(self.normal_user_requests))
-
-        return priorities
 
 
     @property
     def too_tracking_numbers(self):
         return [ur.tracking_number for ur in self.too_user_requests] 
-
-
-    @property
-    def invalid_requests(self):
-        return self._invalid_requests
-
-
-    @property
-    def invalid_user_requests(self):
-        return self._invalid_user_requests
 
 
     def write_input_to_file(self, filename):
@@ -298,8 +283,8 @@ class SchedulingInput(object):
                   'resource_usage_snapshot' : self.resource_usage_snapshot,
                   'available_resources' : self.available_resources,
                   'is_too_input' : self.is_too_input,
-                  'proposals_by_id': self.utils.model_builder.proposals_by_id,
-                  'semester_details': self.utils.model_builder.semester_details
+                  'proposals_by_id': self.model_builder.proposals_by_id,
+                  'semester_details': self.model_builder.semester_details
                   }
         outfile = open(filename, 'w')
         try:
@@ -330,7 +315,9 @@ class SchedulingInputProvider(object):
     def refresh(self):
         # The order of these is important
         self.scheduler_now = self.get_scheduler_now()
-        self.json_user_request_list = self._get_json_user_request_list()
+        if self.is_too_input:
+            # only get all the schedulable requests when we are in the too loop. re-use them for the normal loop.
+            self.json_user_request_list = self._get_json_user_request_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
 

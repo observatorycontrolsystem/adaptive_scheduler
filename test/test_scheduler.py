@@ -85,7 +85,7 @@ class TestScheduler(object):
         model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime,
                                           normal_user_requests, network_snapshot_mock,
-                                          SchedulingInputUtils(model_builder), self.network_model, False)
+                                          model_builder, self.network_model, False)
         estimated_scheduler_end = datetime.utcnow() + estimated_scheduler_runtime
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=False)
@@ -272,91 +272,6 @@ class TestScheduler(object):
         expected_combinations = [('tel1', 1), ('tel1', 2)]
 
         assert_equal(combinations, expected_combinations)
-
-
-    def test_preempt_running_blocks(self):
-        tels = [
-                '1m0a.doma.tel1',
-                '1m0a.doma.tel2',
-                '1m0a.doma.tel3'
-                ]
-
-        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
-        too_r1 = create_request(1, 60, windows, tels, is_too=True)
-        too_ur1 = create_user_request(1, 20, [too_r1], 'single')
-        too_r2 = create_request(2, 60, windows, tels, is_too=True)
-        too_ur2 = create_user_request(2, 100, [too_r2], 'single')
-        too_r3 = create_request(3, 60, windows, tels, is_too=True)
-        too_ur3 = create_user_request(3, 100, [too_r3], 'single')
-
-        normal_r1 = create_request(30, 60, windows, tels, is_too=False)
-        normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
-
-        too_urs = [too_ur1, too_ur2]
-        all_too_urs = [too_ur1, too_ur2, too_ur3]
-
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number, Mock(), Mock())
-        running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
-        running_r3 = RunningRequest('1m0a.doma.tel3', too_ur3.tracking_number, Mock(), Mock())
-        running_ur3 = RunningUserRequest(too_ur3.tracking_number, running_r3)
-        running_user_requests = [running_ur1, running_ur3]
-
-        user_request_priorities = {}
-        user_request_priorities[too_ur1.tracking_number] = too_ur1.get_priority()
-        user_request_priorities[too_ur2.tracking_number] = too_ur2.get_priority()
-        user_request_priorities[too_ur3.tracking_number] = too_ur3.get_priority()
-        user_request_priorities[normal_ur1.tracking_number] = normal_ur1.get_priority()
-
-        extra_block_intervals = {}
-        timestamp = datetime.utcnow()
-        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
-
-
-        mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
-        resurces_to_schedule = scheduler.find_resources_to_preempt(too_urs, all_too_urs, tels, resource_usage_snapshot, user_request_priorities)
-        expected_resurces_to_schedule = ['1m0a.doma.tel1', '1m0a.doma.tel2']
-        assert_equal(expected_resurces_to_schedule, resurces_to_schedule)
-
-
-    def test_preempt_running_blocks_no_preemption(self):
-        tels = [
-                '1m0a.doma.tel1',
-                '1m0a.doma.tel2',
-                '1m0a.doma.tel3'
-                ]
-
-        windows = create_user_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
-        too_r1 = create_request(1, 60, windows, tels, is_too=True)
-        too_ur1 = create_user_request(1, 20, [too_r1], 'single')
-        too_r2 = create_request(2, 60, windows, tels, is_too=True)
-        too_ur2 = create_user_request(2, 100, [too_r2], 'single')
-
-        normal_r1 = create_request(30, 60, windows, tels, is_too=False)
-        normal_ur1 = create_user_request(30, 10, [normal_r1], 'single')
-
-        too_urs = [too_ur1, too_ur2]
-        all_too_urs = [too_ur1, too_ur2]
-
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_ur1.tracking_number, Mock(), Mock())
-        running_ur1 = RunningUserRequest(normal_ur1.tracking_number, running_r1)
-        running_user_requests = [running_ur1]
-
-        user_request_priorities = {}
-        user_request_priorities[too_ur1.tracking_number] = too_ur1.get_priority()
-        user_request_priorities[too_ur2.tracking_number] = too_ur2.get_priority()
-        user_request_priorities[normal_ur1.tracking_number] = normal_ur1.get_priority()
-
-        extra_block_intervals = {}
-        timestamp = datetime.utcnow()
-        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_user_requests, extra_block_intervals)
-
-
-        mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
-        resources_to_schedule = scheduler.find_resources_to_preempt(too_urs, all_too_urs, tels, resource_usage_snapshot, user_request_priorities)
-        expected_resources_to_schedule = ['1m0a.doma.tel2', '1m0a.doma.tel3']
-        assert_equal(expected_resources_to_schedule, resources_to_schedule)
 
 
     def test_create_resource_mask_no_running_requests(self):
@@ -788,7 +703,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(model_builder),
+                            model_builder,
                             self.network_model,
                             is_too_input=True,
                             )
@@ -875,7 +790,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(model_builder),
+                            model_builder,
                             self.network_model,
                             is_too_input=True,
                             )
@@ -955,7 +870,7 @@ class TestScheduler(object):
                             timedelta(seconds=300),
                             [], 
                             resource_usage_snapshot,
-                            SchedulingInputUtils(model_builder),
+                            model_builder,
                             self.network_model,
                             is_too_input=True,
                             )
@@ -1564,7 +1479,9 @@ class TestSchedulerRunner(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300),
                                     json_user_request_list=[],
                                     resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
-                                    scheduling_input_utils=SchedulingInputUtils(None),
+                                    model_builder=None,
+                                    normal_model_user_requests=[],
+                                    too_model_user_requests=[],
                                     available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
                                     is_too_input=True)
 #         too_input.user_requests = Mock()
@@ -1573,7 +1490,9 @@ class TestSchedulerRunner(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300),
                                     json_user_request_list=[],
                                     resource_usage_snapshot=ResourceUsageSnapshot(datetime.utcnow, [], []),
-                                    scheduling_input_utils=SchedulingInputUtils(None),
+                                    model_builder=None,
+                                    normal_model_user_requests=[],
+                                    too_model_user_requests=[],
                                     available_resources=['1m0a.doma.lsc', '1m0a.doma.elp'],
                                     is_too_input=False)
 #         normal_input.user_requests = Mock()

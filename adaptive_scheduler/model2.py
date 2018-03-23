@@ -504,6 +504,15 @@ class UserRequest(EqualityMixin):
 
         return n_windows
 
+    def clear_scheduled_reservations(self):
+        for request in self.requests:
+            request.scheduled_reservation = None
+
+    def set_scheduled_reservations(self, scheduled_reservations_by_request):
+        for request in self.requests:
+            if request.request_number in scheduled_reservations_by_request:
+                request.scheduled_reservation = scheduled_reservations_by_request[request.request_number]
+
     def drop_empty_children(self):
         to_keep = []
         dropped = []
