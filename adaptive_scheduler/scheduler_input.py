@@ -121,10 +121,12 @@ class SchedulingInputFactory(object):
     @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.too_user_requests))
     def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
                                     output_path='/data/adaptive_scheduler/input_states/',
-                                    scheduled_requests_by_ur={},
+                                    scheduled_requests_by_ur=None,
                                     network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
+        if scheduled_requests_by_ur is None:
+            scheduled_requests_by_ur = {}
         
         if estimated_scheduling_seconds:
             self.input_provider.set_too_run_time(estimated_scheduling_seconds)
@@ -140,12 +142,16 @@ class SchedulingInputFactory(object):
     @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.normal_user_requests))
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
                                        output_path='/data/adaptive_scheduler/input_states/',
-                                       scheduled_requests_by_ur={},
-                                       too_schedule={},
+                                       scheduled_requests_by_ur=None,
+                                       too_schedule=None,
                                        network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
-            
+        if scheduled_requests_by_ur is None:
+            scheduled_requests_by_ur = {}
+        if too_schedule is None:
+            too_schedule = {}
+
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
             
@@ -164,7 +170,9 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.log = logging.getLogger(__name__)
 
     @timeit
-    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur={}, ignore_ipp=False):
+    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur=None, ignore_ipp=False):
+        if scheduled_requests_by_ur is None:
+            scheduled_requests_by_ur = {}
         scheduler_model_urs = []
         invalid_json_user_requests = []
         invalid_json_requests = []
@@ -219,7 +227,7 @@ class SchedulingInput(object):
 
     def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list,
                  resource_usage_snapshot, model_builder, available_resources, is_too_input,
-                 normal_model_user_requests=[], too_model_user_requests=[], block_schedule=None):
+                 normal_model_user_requests=None, too_model_user_requests=None, block_schedule=None):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -230,8 +238,8 @@ class SchedulingInput(object):
         self.model_builder = model_builder
         self.block_schedule = block_schedule if block_schedule else {}
 
-        self._scheduler_model_too_user_requests = too_model_user_requests
-        self._scheduler_model_normal_user_requests = normal_model_user_requests
+        self._scheduler_model_too_user_requests = too_model_user_requests if too_model_user_requests else []
+        self._scheduler_model_normal_user_requests = normal_model_user_requests if normal_model_user_requests else []
 
 
     def get_scheduling_start(self):
