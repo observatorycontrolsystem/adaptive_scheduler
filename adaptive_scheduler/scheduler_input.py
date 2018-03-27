@@ -93,7 +93,9 @@ class SchedulingInputFactory(object):
                 ur.set_scheduled_requests(scheduled_requests_by_ur[ur.tracking_number])
 
 
-    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, block_schedule = {}):
+    def _create_scheduling_input(self, input_provider, is_too_input, output_path=None, block_schedule = None):
+        if not block_schedule:
+            block_schedule = {}
         scheduler_input = SchedulingInput(input_provider.sched_params,
                         input_provider.scheduler_now,
                         input_provider.estimated_scheduler_runtime(),
@@ -217,7 +219,7 @@ class SchedulingInput(object):
 
     def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list,
                  resource_usage_snapshot, model_builder, available_resources, is_too_input,
-                 normal_model_user_requests=[], too_model_user_requests=[], block_schedule = {}):
+                 normal_model_user_requests=[], too_model_user_requests=[], block_schedule=None):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
@@ -226,7 +228,7 @@ class SchedulingInput(object):
         self.available_resources = available_resources
         self.is_too_input = is_too_input
         self.model_builder = model_builder
-        self.block_schedule = block_schedule
+        self.block_schedule = block_schedule if block_schedule else {}
 
         self._scheduler_model_too_user_requests = too_model_user_requests
         self._scheduler_model_normal_user_requests = normal_model_user_requests

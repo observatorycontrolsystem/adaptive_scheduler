@@ -79,7 +79,7 @@ class Scheduler(object, SendMetricMixin):
                 for resource, windows in request.windows:
                     tracking_number_to_resource_map[tracking_number].add(resource)
 
-        value_function_dict = {};
+        value_function_dict = {}
         for resource in resources:
             running_ur_list = resource_usage_snapshot.user_requests_for_resource(resource)
             # Compute the priority of the the telescopes without ToOs
