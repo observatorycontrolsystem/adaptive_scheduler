@@ -639,7 +639,7 @@ class UserRequest(EqualityMixin):
 
 class ModelBuilder(object):
 
-    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id={}, semester_details=None):
+    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id=None, semester_details=None):
         self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
@@ -678,7 +678,9 @@ class ModelBuilder(object):
         return self.semester_details
 
 
-    def build_user_request(self, ur_dict, scheduled_requests={}, ignore_ipp=False):
+    def build_user_request(self, ur_dict, scheduled_requests=None, ignore_ipp=False):
+        if scheduled_requests is None:
+            scheduled_requests = {}
         tracking_number = int(ur_dict['id'])
         operator = ur_dict['operator'].lower()
         ipp_value = ur_dict.get('ipp_value', 1.0)
@@ -744,7 +746,7 @@ class ModelBuilder(object):
         return user_request, invalid_requests
 
 
-    def build_requests(self, ur_dict, scheduled_requests={}):
+    def build_requests(self, ur_dict, scheduled_requests=None):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors
@@ -759,6 +761,8 @@ class ModelBuilder(object):
              ]
             )
         '''
+        if scheduled_requests is None:
+            scheduled_requests = {}
         requests         = []
         invalid_requests = []
         for req_dict in ur_dict['requests']:

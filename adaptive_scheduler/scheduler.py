@@ -575,15 +575,15 @@ class SchedulerResult(object):
     '''Aggregates together output of a scheduler run
     '''
 
-    def __init__(self, schedule={}, resource_schedules_to_cancel=[]):
+    def __init__(self, schedule=None, resource_schedules_to_cancel=None):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
         resource_schedules_to_cancel - List of resources to cancel schedules on - this is the list of all available 
             resources that have any request scheduled on them. Resources with no requests scheduled on them will be 
             removed from the list.
         '''
-        self.schedule = schedule
-        self.resource_schedules_to_cancel = resource_schedules_to_cancel
+        self.schedule = schedule if schedule else {}
+        self.resource_schedules_to_cancel = resource_schedules_to_cancel if resource_schedules_to_cancel else []
 
     def count_reservations(self):
         reservation_cnt = 0
