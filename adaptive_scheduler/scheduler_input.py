@@ -88,7 +88,7 @@ class SchedulingInputFactory(object):
     def _set_model_user_requests_scheduled_set(self, scheduled_requests_by_ur):
         for ur in self._scheduler_model_normal_user_requests:
             if ur.tracking_number in scheduled_requests_by_ur:
-                ur.set_scheduled_requests(scheduled_requests_by_ur[ur.tracking_number])
+                ur.set_scheduled_reservations(scheduled_requests_by_ur[ur.tracking_number])
 
     def _create_scheduling_input(self, input_provider, is_too_input, block_schedule = None):
         if not block_schedule:
