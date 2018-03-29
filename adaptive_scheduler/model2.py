@@ -643,7 +643,7 @@ class ModelBuilder(object):
         self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
-        self.proposals_by_id = proposals_by_id
+        self.proposals_by_id = proposals_by_id if proposals_by_id else {}
         self.semester_details = semester_details
         if not self.proposals_by_id:
             self._get_all_proposals()

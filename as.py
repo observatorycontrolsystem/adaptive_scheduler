@@ -197,8 +197,7 @@ def main(argv):
     network_model = configdb_interface.get_telescope_info()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
-        too_infile, normal_infile = sched_params.input_file_name.split(',')
-        input_provider = FileBasedSchedulingInputProvider(too_infile, normal_infile, network_interface, is_too_mode=True)
+        input_provider = FileBasedSchedulingInputProvider(sched_params.input_file_name, network_interface, is_too_mode=True)
     else:
         input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
     input_factory = SchedulingInputFactory(input_provider)

@@ -156,29 +156,32 @@ class TestSchedulingInputFactory(object):
         
     def test_create_too_scheduling(self):
         input_provider = Mock()
+        input_provider.sched_params = SchedulerParameters()
         input_provider.json_user_request_list = []
         with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
-            factory.create_too_scheduling_input(100, output_path=None)
+            factory.create_too_scheduling_input(100)
             assert_equal(1, input_provider.set_too_mode.call_count)
             assert_equal(1, input_provider.set_too_run_time.call_count)
             assert_equal(100, input_provider.set_too_run_time.call_args[0][0])
         
     def test_create_too_scheduling_no_estimate_provided(self):
         input_provider = Mock()
+        input_provider.sched_params = SchedulerParameters()
         input_provider.json_user_request_list = []
         with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
-            factory.create_too_scheduling_input(output_path=None)
+            factory.create_too_scheduling_input()
             assert_equal(1, input_provider.set_too_mode.call_count)
             assert_equal(0, input_provider.set_too_run_time.call_count)
         
         
     def test_create_normal_scheduling(self):
         input_provider = Mock()
+        input_provider.sched_params = SchedulerParameters()
         with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
-            factory.create_normal_scheduling_input(600, output_path=None)
+            factory.create_normal_scheduling_input(600)
             assert_equal(1, input_provider.set_normal_mode.call_count)
             assert_equal(1, input_provider.set_normal_run_time.call_count)
             assert_equal(600, input_provider.set_normal_run_time.call_args[0][0])
@@ -186,9 +189,10 @@ class TestSchedulingInputFactory(object):
         
     def test_create_normal_scheduling_no_estimate_provided(self):
         input_provider = Mock()
+        input_provider.sched_params = SchedulerParameters()
         with patch('adaptive_scheduler.scheduler_input.SchedulingInputFactory._create_scheduling_input', self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
-            factory.create_normal_scheduling_input(output_path=None)
+            factory.create_normal_scheduling_input()
             assert_equal(1, input_provider.set_normal_mode.call_count)
             assert_equal(0, input_provider.set_normal_run_time.call_count)
 
