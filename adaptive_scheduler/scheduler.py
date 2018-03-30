@@ -282,7 +282,7 @@ class Scheduler(object, SendMetricMixin):
                 schedule_data['total_priority_value'] += priority_value
 
                 #also store the intervals at the site that were considered
-                dark_intervals = self.visibility_cache[resource][1]()
+                dark_intervals = self.visibility_cache[resource].get_dark_intervals()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + 7 days)
                 capped_dark_intervals = cap_intervals(dark_intervals, estimated_scheduler_end,
                                                       self.scheduling_horizon(estimated_scheduler_end))
@@ -311,7 +311,7 @@ class Scheduler(object, SendMetricMixin):
             available_seconds_for_horizon = 0
             available_seconds_for_one_day = 0
             if resource in self.visibility_cache:
-                dark_intervals = self.visibility_cache[resource][1]()
+                dark_intervals = self.visibility_cache[resource].get_dark_intervals()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + horizon)
                 available_seconds_for_horizon = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
                                                              self.scheduling_horizon(estimated_scheduler_end))
@@ -548,10 +548,8 @@ class LCOGTNetworkScheduler(Scheduler):
         semester_start = semester_details['start']
 
         many_urs, other_urs = differentiate_by_type('many', window_adjusted_urs)
-        many_compound_reservations = make_many_type_compound_reservations(many_urs, self.visibility_cache,
-                                                                semester_start)
-        other_compound_reservations = make_compound_reservations(other_urs, self.visibility_cache,
-                                                       semester_start)
+        many_compound_reservations = make_many_type_compound_reservations(many_urs, semester_start)
+        other_compound_reservations = make_compound_reservations(other_urs, semester_start)
         all_compound_reservations = many_compound_reservations + other_compound_reservations
 
         return all_compound_reservations
