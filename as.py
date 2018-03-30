@@ -96,7 +96,7 @@ def parse_args(argv):
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
-                            help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
+                            help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
                                 help="Enable storing pickled files of scheduling run input")
     arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
