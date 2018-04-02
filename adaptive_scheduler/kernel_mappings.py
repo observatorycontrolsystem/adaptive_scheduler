@@ -52,6 +52,7 @@ multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
 
 from dogpile.cache import make_region
+from dogpile.cache.api import NO_VALUE
 
 region = make_region().configure(
     'dogpile.cache.dbm',
@@ -201,13 +202,13 @@ def construct_compound_reservation(user_request, semester_start):
        filter_on_visibility step.
     '''
     reservations = []
-    for request in user_request.requests:
+    for index, request in enumerate(user_request.requests):
         visibility_intervals_for_resources = req_windows_to_kernel_intervals(request.windows.windows_for_resource)
         kernel_intervals_for_resources = translate_request_windows_to_kernel_windows(visibility_intervals_for_resources,
                                                                                      semester_start)
 
         # Construct the kernel Reservation
-        res = Reservation(user_request.get_effective_priority(idx), request.duration, kernel_intervals_for_resources,
+        res = Reservation(user_request.get_effective_priority(index), request.duration, kernel_intervals_for_resources,
                           previous_solution_reservation=request.scheduled_reservation)
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack
@@ -407,7 +408,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals):
                                            r.constraints.min_lunar_distance)
                 if cache_key not in local_cache:
                     intersections = region.get(cache_key, ignore_expiration=True)
-                    if intersections is None:
+                    if intersections is NO_VALUE:
                         # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
                         rise_sets_to_compute_later.append((resource, rise_set_target, visibility_for_resource[resource],
                                                            r.constraints.max_airmass, r.constraints.min_lunar_distance))
@@ -416,7 +417,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals):
                         local_cache[cache_key] = intersections
 
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
-    pool = Pool(processes=8)
+    pool = Pool(processes=7)
     results = pool.map(get_rise_set_intervals, rise_sets_to_compute_later)
     for i, result in enumerate(results):
         cache_key = make_cache_key(rise_sets_to_compute_later[i][0], rise_sets_to_compute_later[i][1],
