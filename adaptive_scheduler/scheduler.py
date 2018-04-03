@@ -45,32 +45,6 @@ class Scheduler(object, SendMetricMixin):
             self.estimated_scheduler_end = datetime.utcnow()
         self.scheduler_summary_messages = []
 
-
-    def find_resources_to_preempt(self, preemtion_urs, all_urgent_urs, resources, resource_usage_snapshot, all_ur_priorities):
-        ''' Preempt running requests, if needed, to run urgent user requests'''
-
-        # make copy of resource list since it could be modified
-        copy_of_resources = list(resources)
-
-        # Don't preemt another urgent request
-        # Remove any resource with running urgent requests from resource list
-        all_urgent_tracking_numbers = [ur.tracking_number for ur in all_urgent_urs]
-        for resource in resources:
-            for running_ur in resource_usage_snapshot.user_requests_for_resource(resource):
-                if running_ur.tracking_number in all_urgent_tracking_numbers:
-                    copy_of_resources.remove(resource)
-
-        value_function_dict = self.construct_value_function_dict(preemtion_urs, copy_of_resources, resource_usage_snapshot, all_ur_priorities)
-
-        preemtion_tracking_numbers = [ur.tracking_number for ur in preemtion_urs]
-        optimal_combination = self.compute_optimal_combination(value_function_dict, preemtion_tracking_numbers, copy_of_resources)
-
-        # get resources where the cost of canceling is lowest
-        resources_to_cancel = [ combination[0] for combination in optimal_combination ]
-
-        return resources_to_cancel
-
-
     # TODO - Move to a utils library
     def combine_excluded_intervals(self, excluded_intervals_1, excluded_intervals_2):
         ''' Combine two dictionaries where Intervals are the values '''
@@ -105,7 +79,7 @@ class Scheduler(object, SendMetricMixin):
                 for resource, windows in request.windows:
                     tracking_number_to_resource_map[tracking_number].add(resource)
 
-        value_function_dict = {};
+        value_function_dict = {}
         for resource in resources:
             running_ur_list = resource_usage_snapshot.user_requests_for_resource(resource)
             # Compute the priority of the the telescopes without ToOs
@@ -385,7 +359,6 @@ class Scheduler(object, SendMetricMixin):
 
         resource_usage_snapshot = scheduler_input.resource_usage_snapshot
         available_resources = scheduler_input.available_resources
-        all_ur_priorities = scheduler_input.user_request_priorities
 
         self.estimated_scheduler_end = estimated_scheduler_end
         self.on_run_scheduler(user_reqs, semester_details)
@@ -409,19 +382,6 @@ class Scheduler(object, SendMetricMixin):
         window_adjusted_urs = self.apply_window_filters(schedulable_urs, estimated_scheduler_end, semester_details,
                                                         scheduler_input.get_block_schedule_by_resource())
         self.after_window_filters(window_adjusted_urs)
-
-# Optimization of ToO output for least impact doesn't work as planned.  See https://issues.lcogt.net/issues/7851
-#         # Pre-empt running blocks
-#         if preemption_enabled:
-#             resource_schedules_to_cancel = self.find_resources_to_preempt(window_adjusted_urs, user_reqs, resources_to_schedule, resource_usage_snapshot, all_ur_priorities)
-#             # Need a copy because the original is modified inside the loop
-#             copy_of_resources_to_schedule = list(resources_to_schedule)
-#             for resource in copy_of_resources_to_schedule:
-#                 if not resource in resource_schedules_to_cancel:
-#                     self.log.info("Removing %s from schedulable resources.  Not needed for ToO." % resource)
-#                     resources_to_schedule.remove(resource)
-#         else:
-#             resource_schedules_to_cancel = available_resources
 
         # By default, schedule on all resources
         resources_to_schedule = list(available_resources)
@@ -613,15 +573,15 @@ class SchedulerResult(object):
     '''Aggregates together output of a scheduler run
     '''
 
-    def __init__(self, schedule={}, resource_schedules_to_cancel=[]):
+    def __init__(self, schedule=None, resource_schedules_to_cancel=None):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
         resource_schedules_to_cancel - List of resources to cancel schedules on - this is the list of all available 
             resources that have any request scheduled on them. Resources with no requests scheduled on them will be 
             removed from the list.
         '''
-        self.schedule = schedule
-        self.resource_schedules_to_cancel = resource_schedules_to_cancel
+        self.schedule = schedule if schedule else {}
+        self.resource_schedules_to_cancel = resource_schedules_to_cancel if resource_schedules_to_cancel else []
 
     def count_reservations(self):
         reservation_cnt = 0
