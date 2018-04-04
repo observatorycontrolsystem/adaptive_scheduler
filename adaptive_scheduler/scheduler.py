@@ -489,7 +489,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         combined_downtime_intervals = merge_dicts_of_lists(downtime_intervals, extra_downtime_by_resource)
         filtered_window_user_reqs = filter_for_kernel(user_reqs, self.visibility_cache, combined_downtime_intervals,
-                                                      estimated_scheduler_end, semester_end,
+                                                      semester_details['start'], semester_end,
                                                       self.scheduling_horizon(estimated_scheduler_end))
 
         return filtered_window_user_reqs

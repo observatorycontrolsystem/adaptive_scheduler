@@ -12,6 +12,7 @@ lcogtpond
 
 
 pyslalib
+redis
 rise_set
 gurobipy
 lcogt-dateutils

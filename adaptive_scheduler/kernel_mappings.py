@@ -42,7 +42,9 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.log         import UserRequestLogger
 
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
+from redis import Redis
+import cPickle
 
 # Set up and configure a module scope logger
 import logging
@@ -51,16 +53,7 @@ log = logging.getLogger(__name__)
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
 
-from dogpile.cache import make_region
-from dogpile.cache.api import NO_VALUE
-
-region = make_region().configure(
-    'dogpile.cache.dbm',
-    expiration_time=86400,
-    arguments={'filename': '/data/adaptive_scheduler/rise_set_cache.dbm',
-               'rw_lockfile': False,
-               'dogpile_lockfile': False}
-)
+redis = Redis(host="redis", db=0)
 
 local_cache = {}
 
@@ -124,8 +117,9 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
 
 
 def get_rise_set_intervals(args):
-    # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
     (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
+
+    # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                       airmass=max_airmass)
@@ -145,9 +139,39 @@ def get_rise_set_intervals(args):
     # the target intervals then are then those that pass the moon distance constraint
     up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
     ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
-
+    dark_intervals = dark_intervals.intersect([up_intervals, ha_intervals])
     # Construct the intersection (dark AND up) representing actual visibility
-    return dark_intervals.intersect([up_intervals, ha_intervals])
+    cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+    redis.set(cache_key, cPickle.dumps(dark_intervals))
+
+
+# def get_rise_set_intervals(rise_set_infos):
+#     for rise_set_info in rise_set_infos:
+#         # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
+#         (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = rise_set_info
+#         rs_dark_intervals = visibility.get_dark_intervals()
+#         rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
+#                                                           airmass=max_airmass)
+#         if not is_satellite_target(rise_set_target):
+#             # get the moon distance intervals using the target intervals and min_lunar_distance constraint
+#             rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
+#                                                                      target_intervals=rs_up_intervals,
+#                                                                      moon_distance=Angle(degrees=min_lunar_distance))
+#         # HA support only currently implemented for sidereal targets
+#         if 'ra' in rise_set_target:
+#             rs_ha_intervals = visibility.get_ha_intervals(rise_set_target)
+#         else:
+#             rs_ha_intervals = rs_up_intervals
+#
+#         # Convert the rise_set intervals into kernel speak
+#         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
+#         # the target intervals then are then those that pass the moon distance constraint
+#         up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
+#         ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
+#         dark_intervals = dark_intervals.intersect([up_intervals, ha_intervals])
+#         # Construct the intersection (dark AND up) representing actual visibility
+#         cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+#         redis.set(cache_key, cPickle.dumps(dark_intervals))
 
 
 # def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
@@ -373,7 +397,7 @@ def filter_for_kernel(user_requests, visibility_for_resource, downtime_intervals
     urs = filter_on_scheduling_horizon(user_requests, scheduling_horizon)
 
     # Filter on rise_set/airmass/downtime intervals
-    urs = filter_on_visibility(urs, visibility_for_resource, downtime_intervals)
+    urs = filter_on_visibility(urs, visibility_for_resource, downtime_intervals, semester_start, semester_end)
 
     # Clean up now impossible Requests
     urs = filter_on_duration(urs)
@@ -398,8 +422,14 @@ def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
 
 
 @log_windows
-def filter_on_visibility(crs, visibility_for_resource, downtime_intervals):
-    rise_sets_to_compute_later = []
+def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semester_start, semester_end):
+    current_semester = redis.get('current_semester')
+    if current_semester is not '{}_{}'.format(semester_start, semester_end):
+        # if the current semester has changed from what redis previously knew, clear redis entirely and re-cache
+        redis.flushdb()
+        redis.set('current_semester', '{}_{}'.format(semester_start, semester_end))
+
+    rise_sets_to_compute_later = {}
     for cr in crs:
         for r in cr.requests:
             rise_set_target = r.target.in_rise_set_format()
@@ -407,24 +437,23 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals):
                 cache_key = make_cache_key(resource, rise_set_target, r.constraints.max_airmass,
                                            r.constraints.min_lunar_distance)
                 if cache_key not in local_cache:
-                    intersections = region.get(cache_key, ignore_expiration=True)
-                    if intersections is NO_VALUE:
+                    intersections = redis.get(cache_key)
+                    if not intersections:
                         # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
-                        rise_sets_to_compute_later.append((resource, rise_set_target, visibility_for_resource[resource],
+                        rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target, visibility_for_resource[resource],
                                                            r.constraints.max_airmass, r.constraints.min_lunar_distance))
                     else:
-                        # put intersections from the dogpile cache into the local cache for use later
-                        local_cache[cache_key] = intersections
+                        # put intersections from the redis cache into the local cache for use later
+                        local_cache[cache_key] = cPickle.loads(intersections)
 
+    num_processes = cpu_count() - 1
+    log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
-    pool = Pool(processes=7)
-    results = pool.map(get_rise_set_intervals, rise_sets_to_compute_later)
-    for i, result in enumerate(results):
-        cache_key = make_cache_key(rise_sets_to_compute_later[i][0], rise_sets_to_compute_later[i][1],
-                                  rise_sets_to_compute_later[i][3],
-                                  rise_sets_to_compute_later[i][4])
-        local_cache[cache_key] = result
-        region.set(cache_key, result)
+    if rise_sets_to_compute_later:
+        pool = Pool(processes=num_processes)
+        pool.map(get_rise_set_intervals, rise_sets_to_compute_later.values())
+        for cache_key in rise_sets_to_compute_later.keys():
+            local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
 
     # now that we have all the rise_set intervals in local cache, perform the visibility filter on the requests
     for cr in crs:
