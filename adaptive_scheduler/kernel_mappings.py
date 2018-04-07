@@ -116,9 +116,14 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def get_rise_set_intervals(args):
+def cache_rise_set_intervals(args):
     (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
+    intervals = get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
+    cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+    redis.set(cache_key, cPickle.dumps(intervals))
 
+
+def get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
     # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
@@ -141,83 +146,7 @@ def get_rise_set_intervals(args):
     ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
     dark_intervals = dark_intervals.intersect([up_intervals, ha_intervals])
     # Construct the intersection (dark AND up) representing actual visibility
-    cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-    redis.set(cache_key, cPickle.dumps(dark_intervals))
-
-
-# def get_rise_set_intervals(rise_set_infos):
-#     for rise_set_info in rise_set_infos:
-#         # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
-#         (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = rise_set_info
-#         rs_dark_intervals = visibility.get_dark_intervals()
-#         rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
-#                                                           airmass=max_airmass)
-#         if not is_satellite_target(rise_set_target):
-#             # get the moon distance intervals using the target intervals and min_lunar_distance constraint
-#             rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
-#                                                                      target_intervals=rs_up_intervals,
-#                                                                      moon_distance=Angle(degrees=min_lunar_distance))
-#         # HA support only currently implemented for sidereal targets
-#         if 'ra' in rise_set_target:
-#             rs_ha_intervals = visibility.get_ha_intervals(rise_set_target)
-#         else:
-#             rs_ha_intervals = rs_up_intervals
-#
-#         # Convert the rise_set intervals into kernel speak
-#         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
-#         # the target intervals then are then those that pass the moon distance constraint
-#         up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
-#         ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
-#         dark_intervals = dark_intervals.intersect([up_intervals, ha_intervals])
-#         # Construct the intersection (dark AND up) representing actual visibility
-#         cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-#         redis.set(cache_key, cPickle.dumps(dark_intervals))
-
-
-# def make_dark_up_kernel_intervals(req, visibility_from, verbose=False):
-#     '''Find the set of intervals where the target of the provided request it is both
-#        dark and up from the requested resource, and convert this into a list of
-#        kernel intervals to return.'''
-#
-#     rs_target = req.target.in_rise_set_format()
-#
-#     intersections_for_resource = {}
-#
-#         visibility        = visibility_from[resource_name][0]
-#         rs_dark_intervals = visibility_from[resource_name][1]()
-#         rs_up_intervals   = visibility_from[resource_name][2](
-#                                              target=rs_target,
-#                                              up=True,
-#                                              airmass=req.constraints.max_airmass)
-#         if not is_satellite_target(rs_target):
-#             # get the moon distance intervals using the target intervals and min_lunar_distance constraint
-#             rs_up_intervals = visibility_from[resource_name][4](target=rs_target,
-#                                                                 target_intervals=rs_up_intervals,
-#                                                                 moon_distance=Angle(
-#                                                                 degrees=req.constraints.min_lunar_distance))
-#         # HA support only currently implemented for sidereal targets
-#         if 'ra' in rs_target:
-#             rs_ha_intervals   = visibility_from[resource_name][3](rs_target)
-#         else:
-#             rs_ha_intervals   = rs_up_intervals
-#
-#         # Convert the rise_set intervals into kernel speak
-#         dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
-#         # the target intervals then are then those that pass the moon distance constraint
-#         up_intervals   = rise_set_to_kernel_intervals(rs_up_intervals)
-#         ha_intervals   = rise_set_to_kernel_intervals(rs_ha_intervals)
-#
-#         # Construct the intersection (dark AND up) reprsenting actual visibility
-#         intersection = dark_intervals.intersect([up_intervals, ha_intervals])
-#
-#         # Intersect with any window provided in the user request
-#         user_windows   = req.windows.at(resource_name)
-#         user_intervals = req_window_to_kernel_intervals(user_windows)
-#         intersection   = intersection.intersect([user_intervals])
-#         intersections_for_resource[resource_name] = intersection
-#
-#
-#     return intersections_for_resource
+    return dark_intervals
 
 
 def construct_compound_reservation(user_request, semester_start):
@@ -247,37 +176,6 @@ def construct_compound_reservation(user_request, semester_start):
 
     return compound_res
 
-#
-# def construct_compound_reservation(user_request, dt_intervals_list, sem_start):
-#     '''Convert a UserRequest into a CompoundReservation, translating datetimes
-#        to kernel epoch times.
-#     '''
-#
-#     idx = 0
-#     reservations = []
-#     for intersection_dict in dt_intervals_list:
-#
-#         request = user_request.requests[idx]
-#
-#         window_dict = translate_request_windows_to_kernel_windows(intersection_dict,
-#                                                                   sem_start)
-#
-#         # Construct the kernel Reservation
-#         res = Reservation(user_request.get_effective_priority(idx), request.duration, window_dict, previous_solution_reservation=request.scheduled_reservation)
-#         # Store the original requests for recovery after scheduling
-#         # TODO: Do this with a field provided for this purpose, not this hack
-#         res.user_request = user_request
-#         res.request          = request
-#
-#         reservations.append(res)
-#
-#         idx += 1
-#
-#     # Combine Reservations into CompoundReservations
-#     # Each CompoundReservation represents an actual request to do something
-#     compound_res = CompoundReservation(reservations, user_request.operator)
-#
-#     return compound_res
 
 def construct_many_compound_reservation(user_request, request_index, semester_start):
     request = user_request.requests[request_index]
@@ -296,29 +194,6 @@ def construct_many_compound_reservation(user_request, request_index, semester_st
     compound_res = CompoundReservation([res], 'single')
 
     return compound_res
-
-
-# def construct_many_compound_reservation(many_c_req, child_idx,
-#                                         intersection_dict, sem_start):
-#     '''Take a Request child of a CompoundRequest of type 'many', and convert it into
-#        a CompoundReservation of type 'single', translating datetimes to kernel epoch times.
-#     '''
-#
-#     request = many_c_req.requests[child_idx]
-#     window_dict = translate_request_windows_to_kernel_windows(intersection_dict,
-#                                                               sem_start)
-#
-#     # Construct the kernel Reservation
-#     res = Reservation(many_c_req.get_effective_priority(child_idx), request.duration, window_dict, previous_solution_reservation=request.scheduled_reservation)
-#     # Store the original requests for recovery after scheduling
-#     # TODO: Do this with a field provided for this purpose, not this hack
-#     res.user_request = many_c_req
-#     res.request          = request
-#
-#     # Create a CR of type 'single' for kernel scheduling
-#     compound_res = CompoundReservation([res], 'single')
-#
-#     return compound_res
 
 
 def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
@@ -407,16 +282,6 @@ def filter_for_kernel(user_requests, visibility_for_resource, downtime_intervals
     return urs
 
 
-# def list_available_tels(visibility_from):
-#     available_tels = []
-#     for tel in visibility_from.keys():
-#         n_dark_intervals = visibility_from[tel][0].dark_intervals
-#         if n_dark_intervals:
-#             available_tels.append(tel)
-#
-#     return available_tels
-
-
 def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
     return str(resource) + '_' + str(max_airmass) + '_'  + str(min_lunar_distance) + '_' + repr(sorted(rs_target.iteritems()))
 
@@ -451,7 +316,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
     if rise_sets_to_compute_later:
         pool = Pool(processes=num_processes)
-        pool.map(get_rise_set_intervals, rise_sets_to_compute_later.values())
+        pool.map(cache_rise_set_intervals, rise_sets_to_compute_later.values())
         for cache_key in rise_sets_to_compute_later.keys():
             local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
 
@@ -481,56 +346,19 @@ def process_request_visibility(tracking_number, request, target_intervals, downt
     UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
 
 
-# @log_windows
-# def filter_on_visibility(crs, visibility_from, downtime_intervals):
-#     for cr in crs:
-#         ur_log.info("Intersecting windows with dark/up intervals", cr.tracking_number)
-#         for r in cr.requests:
-#             r = compute_intersections(r, visibility_from, downtime_intervals)
-#             if r.has_windows():
-#                 tag = 'RequestIsVisible'
-#                 msg = 'Request %s (UR %s) is visible (%d windows remaining)' % (r.request_number,
-#                                                                                 cr.tracking_number,
-#                                                                                 r.n_windows())
-#             else:
-#                 tag = 'RequestIsNotVisible'
-#                 msg = 'Request %s (UR %s) is not up and dark at any available telescope' % (r.request_number,
-#                                                                                             cr.tracking_number)
-#                 tel_names = list_available_tels(visibility_from)
-#                 ur_log.info("Available telescopes are: %s" % tel_names, cr.tracking_number)
-#
-#             cr.emit_user_feedback(msg, tag)
-#
-#     return crs
-
-
 def compute_request_availability(req, target_intervals_by_resource, downtime_intervals):
+    intervals_for_resource = {}
     for resource, target_intervals in target_intervals_by_resource.items():
         # Intersect with any window provided in the user request
         user_windows = req.windows.at(resource)
         user_intervals = req_window_to_kernel_intervals(user_windows)
-        target_intervals_by_resource[resource] = target_intervals.intersect([user_intervals])
+        intervals_for_resource[resource] = target_intervals.intersect([user_intervals])
         if resource in downtime_intervals and len(downtime_intervals[resource]) > 0:
             downtime_kernel_intervals = rise_set_to_kernel_intervals(downtime_intervals[resource])
-            target_intervals_by_resource[resource] = target_intervals_by_resource[resource].subtract(downtime_kernel_intervals)
+            intervals_for_resource[resource] = intervals_for_resource[resource].subtract(downtime_kernel_intervals)
 
-    req.windows = intervals_to_windows(req, target_intervals_by_resource)
+    req.windows = intervals_to_windows(req, intervals_for_resource)
     return req
-
-
-# def compute_intersections(req, visibility_from, downtime_intervals):
-#     # Find the dark/up intervals for each Request in this CompoundRequest
-#     intersections_for_resource = make_dark_up_kernel_intervals(req,
-#                                                                visibility_from,
-#                                                                verbose=True)
-#     # Filter the intervals by the downtime intervals
-#     for resource, intersections in intersections_for_resource.items():
-#         if resource in downtime_intervals and len(downtime_intervals[resource]) > 0:
-#             downtime_kernel_intervals = rise_set_to_kernel_intervals(downtime_intervals[resource])
-#             intersections_for_resource[resource] = intersections.subtract(downtime_kernel_intervals)
-#
-#     req.windows = intervals_to_windows(req, intersections_for_resource)
-#     return req
 
 
 def intervals_to_windows(req, intersections_for_resource):
@@ -566,37 +394,6 @@ def make_compound_reservations(user_requests, semester_start):
 
     return to_schedule
 
-#
-# @timeit
-# @metric_timer('make_compound_reservations', num_requests=lambda x: len(x))
-# def make_compound_reservations(user_requests, visibility_from, semester_start):
-#     '''Parse a list of CompoundRequests, and produce a corresponding list of
-#        CompoundReservations.'''
-#
-#     # TODO: Generalise to handle arbitrary nesting.
-#     to_schedule = []
-#     for ur in user_requests:
-#
-#         dark_ups = find_dark_ups_of_children(ur, visibility_from)
-#
-#         # Make and store the CompoundReservation
-#         compound_res = construct_compound_reservation(ur, dark_ups, semester_start)
-#         to_schedule.append(compound_res)
-#
-#     return to_schedule
-
-
-# def find_dark_ups_of_children(c_req, visibility_from):
-#     # Find the dark/up intervals for each Request in this CompoundRequest
-#     dark_ups = []
-#     for req in c_req.requests:
-#         intersections_for_resource = make_dark_up_kernel_intervals(req,
-#                                                                    visibility_from,
-#                                                                    verbose=False)
-#         dark_ups.append(intersections_for_resource)
-#
-#     return dark_ups
-
 
 @timeit
 def make_many_type_compound_reservations(many_user_requests, semester_start):
@@ -613,20 +410,6 @@ def make_many_type_compound_reservations(many_user_requests, semester_start):
             to_schedule.append(compound_res)
 
     return to_schedule
-
-
-# def construct_resource_windows_orig(visibility_from, semester_start):
-#     '''Construct the set of epoch time windows for each resource, during which that
-#        resource is available.'''
-#
-#     resource_windows = {}
-#     for tel_name, visibility in visibility_from.iteritems():
-#         rs_dark_intervals = visibility.get_dark_intervals()
-#         dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
-#         ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
-#         resource_windows[tel_name] = ep_dark_intervals
-#
-#     return resource_windows
 
 
 def construct_resource_windows(visibility_for_resource, semester_start, availabile_resources):
@@ -658,25 +441,6 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         visibility_for_resource[tel_name] = visibility
 
     return visibility_for_resource
-
-# def construct_visibilities(tels, semester_start, semester_end, twilight='nautical'):
-#     '''Construct Visibility objects for each telescope.'''
-#
-#     visibility_from = {}
-#     for tel_name, tel in tels.iteritems():
-#         rs_telescope = telescope_to_rise_set_telescope(tel)
-#         visibility = Visibility(rs_telescope, semester_start,
-#                                 semester_end, tel['horizon'],
-#                                 twilight, tel['ha_limit_neg'],
-#                                 tel['ha_limit_pos'])
-#         get_target = Memoize(tel_name, semester_start, semester_end, visibility.get_target_intervals)
-#         get_dark   = visibility.get_dark_intervals
-#         get_ha     = Memoize(tel_name, semester_start, semester_end, visibility.get_ha_intervals)
-#         get_moon_distance = Memoize(tel_name, semester_start, semester_end, visibility.get_moon_distance_intervals)
-#
-#         visibility_from[tel_name] = (visibility, get_dark, get_target, get_ha, get_moon_distance)
-#
-#     return visibility_from
 
 
 def construct_global_availability(resource_interval_mask, semester_start, resource_windows):
