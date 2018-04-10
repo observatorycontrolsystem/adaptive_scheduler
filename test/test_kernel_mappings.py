@@ -19,17 +19,8 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 req_windows_to_kernel_intervals)
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
-from rise_set.sky_coordinates import RightAscension, Declination
-from rise_set.angle import Angle
-from rise_set.visibility import Visibility
 
 from datetime import datetime
-from dogpile.cache import make_region
-
-local_region = make_region().configure(
-    'dogpile.cache.memory',
-    expiration_time=86400,
-)
 
 
 class TestKernelMappings(object):

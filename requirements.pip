@@ -23,7 +23,6 @@ opentsdb_http_client
 opentsdb_python_metrics
 lcogt-logging
 
-dogpile.cache<0.7.0
 unidecode<0.5.0
 
 # 2) Testing/debugging dependencies

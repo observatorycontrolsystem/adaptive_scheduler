@@ -13,7 +13,6 @@ from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
 from adaptive_scheduler.scheduler_input import  SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.utils import get_reservation_datetimes
-from adaptive_scheduler.kernel_mappings import region
 
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
 from mock import Mock
@@ -22,7 +21,6 @@ class TestIntegration(object):
     '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
-        region.delete("current_semester")
         self.target = SiderealTarget(
                                       name  = 'deneb',
                                       #ra  = '20 41 25.91',
