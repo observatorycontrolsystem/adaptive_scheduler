@@ -57,6 +57,14 @@ redis = Redis(host="redis", db=0)
 
 local_cache = {}
 
+from dogpile.cache import make_region
+from dogpile.cache.api import NO_VALUE
+
+region = make_region().configure(
+    'dogpile.cache.dbm',
+    expiration_time=86400,
+    arguments={'filename': '/data/adaptive_scheduler/rise_set_cache.dbm',}
+)
 
 def telescope_to_rise_set_telescope(telescope):
     '''Convert scheduler Telescope to rise_set telescope dict.'''
@@ -120,7 +128,10 @@ def cache_rise_set_intervals(args):
     (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
     intervals = get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
     cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-    redis.set(cache_key, cPickle.dumps(intervals))
+    try:
+        redis.set(cache_key, cPickle.dumps(intervals))
+    except Exception:
+        region.set(cache_key, intervals)
 
 
 def get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
@@ -288,11 +299,20 @@ def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
 
 @log_windows
 def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semester_start, semester_end):
-    current_semester = redis.get('current_semester')
-    if current_semester is not '{}_{}'.format(semester_start, semester_end):
+    try:
+        current_semester = redis.get('current_semester')
+    except Exception:
+        current_semester = region.get('current_semester')
+    if str(current_semester) != '{}_{}'.format(semester_start, semester_end):
         # if the current semester has changed from what redis previously knew, clear redis entirely and re-cache
-        redis.flushdb()
-        redis.set('current_semester', '{}_{}'.format(semester_start, semester_end))
+        region.set('current_semester', '{}_{}'.format(semester_start, semester_end))
+        try:
+            redis.flushdb()
+            redis.set('current_semester', '{}_{}'.format(semester_start, semester_end))
+        except Exception:
+            if current_semester is not NO_VALUE:
+                log.error("Redis is down, and the current semester has rolled over. Please manually delete the dogpile cache file and restart the scheduler.")
+                exit(1)
 
     rise_sets_to_compute_later = {}
     for cr in crs:
@@ -302,14 +322,18 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
                 cache_key = make_cache_key(resource, rise_set_target, r.constraints.max_airmass,
                                            r.constraints.min_lunar_distance)
                 if cache_key not in local_cache:
-                    intersections = redis.get(cache_key)
+                    try:
+                        intersections = redis.get(cache_key)
+                        intersections = cPickle.loads(intersections) if intersections else None
+                    except Exception:
+                        intersections = region.get(cache_key)
                     if not intersections:
                         # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
                         rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target, visibility_for_resource[resource],
                                                            r.constraints.max_airmass, r.constraints.min_lunar_distance))
                     else:
                         # put intersections from the redis cache into the local cache for use later
-                        local_cache[cache_key] = cPickle.loads(intersections)
+                        local_cache[cache_key] = intersections
 
     num_processes = cpu_count() - 1
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
@@ -318,7 +342,10 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
         pool = Pool(processes=num_processes)
         pool.map(cache_rise_set_intervals, rise_sets_to_compute_later.values())
         for cache_key in rise_sets_to_compute_later.keys():
-            local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+            try:
+                local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+            except Exception:
+                local_cache[cache_key] = region.get(cache_key)
 
     # now that we have all the rise_set intervals in local cache, perform the visibility filter on the requests
     for cr in crs:

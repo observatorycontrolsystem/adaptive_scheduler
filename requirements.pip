@@ -12,12 +12,12 @@ lcogtpond
 
 
 pyslalib
-redis
 rise_set
 gurobipy
 lcogt-dateutils
 potsdb==1.0.3
 requests<=2.13.0
+redis
 retry<=0.10.0
 opentsdb_http_client
 opentsdb_python_metrics
