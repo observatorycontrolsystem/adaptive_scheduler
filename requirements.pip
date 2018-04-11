@@ -17,7 +17,7 @@ gurobipy
 lcogt-dateutils
 potsdb==1.0.3
 requests<=2.13.0
-redis
+redis<=3.0
 retry<=0.10.0
 opentsdb_http_client
 opentsdb_python_metrics
