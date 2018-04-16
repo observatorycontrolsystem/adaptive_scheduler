@@ -116,9 +116,9 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     return Intervals(epoch_timepoints)
 
 
-def cache_rise_set_intervals(args):
+def cache_rise_set_timepoint_intervals(args):
     (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
-    intervals = get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
+    intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
     cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
     try:
         redis.set(cache_key, cPickle.dumps(intervals))
@@ -126,7 +126,7 @@ def cache_rise_set_intervals(args):
         pass
 
 
-def get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
+def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
     # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
@@ -336,7 +336,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
     if rise_sets_to_compute_later:
         pool = Pool(processes=num_processes)
-        pool.map(cache_rise_set_intervals, rise_sets_to_compute_later.values())
+        pool.map(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values())
         for cache_key in rise_sets_to_compute_later.keys():
             try:
                 local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
@@ -344,7 +344,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
                 # failed to load this cache_key from redis, maybe redis is down. Will run synchronously.
                 log.warn('Failed to retrieve rise_set intervals from redis. Please check that redis is online.')
                 (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = rise_sets_to_compute_later[cache_key]
-                local_cache[cache_key] = get_rise_set_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
+                local_cache[cache_key] = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
 
     # now that we have all the rise_set intervals in local cache, perform the visibility filter on the requests
     for cr in crs:

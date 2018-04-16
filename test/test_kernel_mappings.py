@@ -14,7 +14,7 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 normalise_dt_intervals,
                                                 filter_on_scheduling_horizon,
                                                 compute_request_availability,
-                                                get_rise_set_intervals,
+                                                get_rise_set_timepoint_intervals,
                                                 make_cache_key,
                                                 req_windows_to_kernel_intervals)
 from adaptive_scheduler.kernel.intervals import Intervals
@@ -143,8 +143,8 @@ class TestKernelMappings(object):
         min_lunar_distance = req.constraints.min_lunar_distance
         intervals_for_resource = {}
         for resource, visibility in visibilities.items():
-            intervals_for_resource[resource] = get_rise_set_intervals(rs_target, visibility, max_airmass,
-                                                                      min_lunar_distance)
+            intervals_for_resource[resource] = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
+                                                                                min_lunar_distance)
 
         return intervals_for_resource
 
