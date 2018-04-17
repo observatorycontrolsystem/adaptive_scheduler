@@ -45,6 +45,7 @@ from adaptive_scheduler.log         import UserRequestLogger
 from multiprocessing import Pool, cpu_count
 from redis import Redis
 import cPickle
+import os
 
 # Set up and configure a module scope logger
 import logging
@@ -53,7 +54,7 @@ log = logging.getLogger(__name__)
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
 
-redis = Redis(host="redis", db=0)
+redis = Redis(host=os.getenv('REDIS_URL', 'redis'), db=0, password='schedulerpass')
 
 local_cache = {}
 

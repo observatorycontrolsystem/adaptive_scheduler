@@ -1,5 +1,4 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
---allow-all-external
 
 # 1) Core required dependencies
 distribute==0.7.3
