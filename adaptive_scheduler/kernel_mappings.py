@@ -343,6 +343,7 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
             pool.map(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values())
         except Exception:
             log.warn('Failed to save rise_set intervals into redis. Please check that redis is online. Falling back on synchronous rise_set calculations.')
+        pool.close()
         for cache_key in rise_sets_to_compute_later.keys():
             try:
                 local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
