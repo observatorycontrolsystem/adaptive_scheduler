@@ -11,10 +11,15 @@ from __future__ import division
 import collections
 
 from sqlalchemy.engine import create_engine
+from sqlalchemy.pool import NullPool
 from datetime import datetime
+import logging
 
-DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester2.lco.gtn/harvest'
-DEFAULT_ENGINE = create_engine(DEFAULT_URL)
+log = logging.getLogger('adaptive_scheduler')
+
+# DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester2.lco.gtn/harvest'
+IRA_URL        = 'mysql://scheduler:scheduler@db1.lco.gtn/scheduler'
+DEFAULT_ENGINE = create_engine(IRA_URL, poolclass=NullPool, connect_args={'read_timeout': 300, 'connect_timeout': 10}, pool_recycle=300)
 
 class ConnectionError(Exception):
     pass
@@ -24,13 +29,19 @@ def get_datum(datum, instance=None, engine=None, persistence_model=None, origina
         newest value is last). '''
 
     try:
-        engine  = engine or DEFAULT_ENGINE
-        results = _query_db(datum, originator, instance, engine, persistence_model)
+        engine2  = engine or DEFAULT_ENGINE
+        results = _query_db(datum, originator, instance, engine2, persistence_model)
         datums = [_convert_datum(datum) for datum in results]
         return datums
 
     except Exception as e:
-        raise ConnectionError(e)
+        try:
+            engine2 = engine or DEFAULT_ENGINE
+            results = _query_db(datum, originator, instance, engine2, persistence_model)
+            datums = [_convert_datum(datum) for datum in results]
+            return datums
+        except Exception as e:
+            raise ConnectionError(e)
 
 def _query_db(datum, originator, instance, engine, persistence_model=None):
     ''' Retrieve datum from database.

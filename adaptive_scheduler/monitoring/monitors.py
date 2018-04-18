@@ -135,8 +135,8 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
     def is_an_event(self, datum):
         try:
             timestamp        = dateutil.parse(datum.value)
-            ten_minute_delta = timedelta(minutes=10)
-            return datetime.utcnow() - timestamp > ten_minute_delta
+            fifteen_minute_delta = timedelta(minutes=15)
+            return datetime.utcnow() - timestamp > fifteen_minute_delta
         except dateutil.ParseException as e:
             self.reason = str(e)
             return True
