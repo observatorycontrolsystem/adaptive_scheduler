@@ -82,8 +82,10 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Get all user requests waiting for scheduling between
             start and end date
         '''
+        requests_url = self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
+        self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
-            response = requests.get(self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat(), headers=self.headers)
+            response = requests.get(requests_url, headers=self.headers)
             response.raise_for_status()
             user_requests = response.json()
         except (RequestException, ValueError) as e:
