@@ -1,3 +1,3 @@
 #!/bin/sh
 
-nosetests test
+nosetests --logging-level=WARNING test

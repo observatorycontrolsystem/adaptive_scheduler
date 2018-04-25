@@ -10,7 +10,10 @@ August 2012
 from nose.tools import assert_equal, nottest
 from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.intervals import *
-from adaptive_scheduler.kernel.fullscheduler_v5 import *
+try:
+    from adaptive_scheduler.kernel.fullscheduler_v5 import *
+except Exception:
+    pass
 import copy
 
 @nottest
@@ -28,7 +31,7 @@ class TestFullScheduler_v5(object):
         s7 = copy.copy(s1)
         s8 = copy.copy(s1)
         s9 = copy.copy(s2)
-        s10 = Intervals([Timepoint(1, 'start'), 
+        s10 = Intervals([Timepoint(1, 'start'),
                          Timepoint(10, 'end')])
         s11 = copy.copy(s10)
         s12 = copy.copy(s10)
@@ -46,7 +49,7 @@ class TestFullScheduler_v5(object):
         self.r10 = Reservation_v3(2, 2, {'bar': s9})
         self.r11 = Reservation_v3(1, 1, {'bar': s10})
         self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})        
+        self.r13 = Reservation_v3(1, 1, {'bar': s12})
         self.r14 = Reservation_v3(1, 1, {'bar': s13})
 
         self.cr1 = CompoundReservation_v2([self.r1])
@@ -78,7 +81,7 @@ class TestFullScheduler_v5(object):
         self.gpw4 = {}
         self.gpw4['bar'] = Intervals([Timepoint(1, 'start'), Timepoint(10, 'end')], 'free')
 
-        self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3], 
+        self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs2 = FullScheduler_v5([self.cr1, self.cr4],
                                     self.gpw2, [], 1)
@@ -86,9 +89,9 @@ class TestFullScheduler_v5(object):
                                     self.gpw2, [], 1)
         self.fs4 = FullScheduler_v5([self.cr8, self.cr6, self.cr7],
                                     self.gpw2, [], 1)
-        self.fs5 = FullScheduler_v5([self.cr10, self.cr2, self.cr3], 
+        self.fs5 = FullScheduler_v5([self.cr10, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
-        self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3], 
+        self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs7 = FullScheduler_v5([self.cr12],
                                     self.gpw3, [], 1)
@@ -134,7 +137,7 @@ class TestFullScheduler_v5(object):
         d = self.fs2.schedule_all()
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
-        
+
 
     def test_schedule_all_3(self):
         d = self.fs3.schedule_all()
@@ -163,9 +166,9 @@ class TestFullScheduler_v5(object):
         # only one should be scheduled
 
     def test_schedule_5_7_2012(self):
-        s1 = Intervals([Timepoint(93710, 'start'), 
+        s1 = Intervals([Timepoint(93710, 'start'),
                         Timepoint(114484, 'end'),
-                        Timepoint(180058, 'start'), 
+                        Timepoint(180058, 'start'),
                         Timepoint(200648, 'end')])
         r1 = Reservation_v3(1, 30, {'foo': s1})
         s2 = copy.copy(s1)
@@ -173,9 +176,9 @@ class TestFullScheduler_v5(object):
 
         cr = CompoundReservation_v2([r1,r2], 'oneof')
         gpw = {}
-        gpw['foo'] = Intervals([Timepoint(90000, 'start'), 
+        gpw['foo'] = Intervals([Timepoint(90000, 'start'),
                                 Timepoint(201000, 'end')])
-        gpw['goo'] = Intervals([Timepoint(90000, 'start'), 
+        gpw['goo'] = Intervals([Timepoint(90000, 'start'),
                                 Timepoint(201000, 'end')])
         fs = FullScheduler_v5([cr], gpw, [], 60)
         schedule = fs.schedule_all()
@@ -185,4 +188,4 @@ class TestFullScheduler_v5(object):
         d = self.fs7.schedule_all()
         assert_equal(self.r9.scheduled, False)
         assert_equal(self.r10.scheduled, False)
-        
+

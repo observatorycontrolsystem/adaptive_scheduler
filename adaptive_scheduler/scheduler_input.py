@@ -5,7 +5,7 @@ from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
 
 import os
 import logging
-import pickle
+import cPickle as pickle
 from datetime import datetime, timedelta
 
 

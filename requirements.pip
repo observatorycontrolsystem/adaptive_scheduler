@@ -1,5 +1,4 @@
 --extra-index-url=http://buildsba.lco.gtn/python/
---allow-all-external
 
 # 1) Core required dependencies
 distribute==0.7.3
@@ -17,12 +16,12 @@ gurobipy
 lcogt-dateutils
 potsdb==1.0.3
 requests<=2.13.0
+redis<=3.0
 retry<=0.10.0
 opentsdb_http_client
 opentsdb_python_metrics
 lcogt-logging
 
-dogpile.cache<0.7.0
 unidecode<0.5.0
 
 # 2) Testing/debugging dependencies
