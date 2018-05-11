@@ -7,8 +7,6 @@ scipy<0.20.0
 SQLAlchemy==0.8.3
 MySQL-python==1.2.5
 cvxopt>=1.1.6
-lcogtpond
-
 
 pyslalib
 rise_set
@@ -21,7 +19,7 @@ retry<=0.10.0
 opentsdb_http_client
 opentsdb_python_metrics
 lcogt-logging
-
+python-dateutil
 unidecode<0.5.0
 
 # 2) Testing/debugging dependencies

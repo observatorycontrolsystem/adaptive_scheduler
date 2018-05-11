@@ -17,8 +17,9 @@ import socket
 import re
 import json
 
-from adaptive_scheduler.monitoring.monitors       import NetworkStateMonitor, Event
+from adaptive_scheduler.monitoring.monitors import NetworkStateMonitor, Event
 from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
+
 
 class TestNetworkStatus(object):
 
@@ -26,48 +27,44 @@ class TestNetworkStatus(object):
         self.mock_monitor1 = mock.MagicMock()
         self.mock_monitor2 = mock.MagicMock()
         self.network = Network(mock.MagicMock(), [self.mock_monitor1, self.mock_monitor2])
-        self.e1= Event(
-                            type       = "NOT OK TO OPEN",
-                            reason     = "DEWPOINT",
-                            start_time = datetime.datetime(2013, 8, 14, 0, 0, 0),
-                            end_time   = datetime.datetime(2013, 8, 14, 0, 15, 0),
-                          )
+        self.e1 = Event(
+            type="NOT OK TO OPEN",
+            reason="DEWPOINT",
+            start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
+            end_time=datetime.datetime(2013, 8, 14, 0, 15, 0),
+        )
         self.e1_later = Event(
-                            type       = "NOT OK TO OPEN",
-                            reason     = "DEWPOINT",
-                            start_time = datetime.datetime(2013, 8, 14, 0, 0, 0),
-                            end_time   = datetime.datetime(2013, 8, 14, 0, 25, 0),
-                          )
+            type="NOT OK TO OPEN",
+            reason="DEWPOINT",
+            start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
+            end_time=datetime.datetime(2013, 8, 14, 0, 25, 0),
+        )
         self.e2 = Event(
-                            type       = "SITE AGENT UNRESPONSIVE",
-                            reason     = "No update since 2013-06-01T00:00:00",
-                            start_time = datetime.datetime(2013, 8, 14, 0, 0, 0),
-                            end_time   = datetime.datetime(2013, 8, 14, 0, 25, 0),
-                          )
-
+            type="SITE AGENT UNRESPONSIVE",
+            reason="No update since 2013-06-01T00:00:00",
+            start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
+            end_time=datetime.datetime(2013, 8, 14, 0, 25, 0),
+        )
 
     def test_monitor_called(self):
         self.network.update()
         assert_true(self.mock_monitor1.monitor.called)
 
-
     def test_monitor_events_sorted_by_resource(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
-        self.mock_monitor2.monitor.return_value = {'1m0a.doma.bpl':self.e2}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
+        self.mock_monitor2.monitor.return_value = {'1m0a.doma.bpl': self.e2}
 
-        events       = self.network.update()
-        eq_( events, {'1m0a.doma.bpl':[self.e1,self.e2]})
-
+        events = self.network.update()
+        eq_(events, {'1m0a.doma.bpl': [self.e1, self.e2]})
 
     def test_flag_is_dirty_if_first_time(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed())
 
-
     def test_flag_is_clean_if_no_change(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed())
@@ -75,30 +72,27 @@ class TestNetworkStatus(object):
         self.network.update()
         assert_false(self.network.has_changed())
 
-
     def test_flag_is_clean_if_no_change(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed())
 
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e2}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e2}
 
         self.network.update()
         assert_true(self.network.has_changed())
-
 
     def test_changing_timestamps_are_ignored_in_comparison(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl' : self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
 
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl' : self.e1_later}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1_later}
 
         self.network.update()
         assert_false(self.network.has_changed(), 'Expected no network change')
-
 
     def test_network_change_detected_on_new_event(self):
         self.mock_monitor1.monitor.return_value = {}
@@ -106,14 +100,13 @@ class TestNetworkStatus(object):
         self.network.update()
         assert_false(self.network.has_changed(), 'Expected no network change')
 
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl' : self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
 
-
     def test_network_change_detected_on_event_clear(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl' : self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
@@ -126,18 +119,16 @@ class TestNetworkStatus(object):
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
 
-
     def test_network_change_detected_on_second_resource_event(self):
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl' : self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
 
-        self.mock_monitor2.monitor.return_value = {'1m0a.domb.bpl' : self.e2}
+        self.mock_monitor2.monitor.return_value = {'1m0a.domb.bpl': self.e2}
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
-
 
     @responses.activate
     def test_telescope_state_event_format_correct_for_es(self):
@@ -148,24 +139,26 @@ class TestNetworkStatus(object):
         opentsdb_endpoint_re = re.compile(r'http://opentsdbdev.lco.gtn:4242/api/put.*')
         responses.add(responses.POST, opentsdb_endpoint_re, body='{"success":"yay"}', status=200)
 
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         event1_dict = {'type': self.e1.type.replace(' ', '_'),
-                      'reason': self.e1.reason,
-                      'start_time': self.e1.start_time.strftime(DATE_FORMATTER),
-                      'end_time': self.e1.end_time.strftime(DATE_FORMATTER),
-                      'name': '1m0a.doma.bpl',
-                      'telescope': '1m0a',
-                      'enclosure': 'doma',
-                      'site': 'bpl',
-                      'timestamp': '',
-                      'hostname': socket.gethostname()}
+                       'reason': self.e1.reason,
+                       'start_time': self.e1.start_time.strftime(DATE_FORMATTER),
+                       'end_time': self.e1.end_time.strftime(DATE_FORMATTER),
+                       'name': '1m0a.doma.bpl',
+                       'telescope': '1m0a',
+                       'enclosure': 'doma',
+                       'site': 'bpl',
+                       'timestamp': '',
+                       'hostname': socket.gethostname()}
 
         network_state = Network(mock.MagicMock(), [self.mock_monitor1], es_endpoint=es_endpoint)
         events = network_state.update()
 
-        event_dict = json.loads(responses.calls[0].request.body)
-        event1_dict['timestamp'] = event_dict['timestamp']
+        for call in responses.calls:
+            if 'test-es' in call.request.url:
+                event_dict = json.loads(call.request.body)
+                event1_dict['timestamp'] = event_dict['timestamp']
 
-        eq_( events, {'1m0a.doma.bpl':[self.e1]})
-        eq_(event_dict, event1_dict)
+                eq_(events, {'1m0a.doma.bpl': [self.e1]})
+                eq_(event_dict, event1_dict)

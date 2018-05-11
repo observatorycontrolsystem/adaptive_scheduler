@@ -7,19 +7,20 @@ Author: Martin Norbury
 May 2013
 '''
 import abc
-from datetime   import datetime, timedelta
+from datetime import datetime, timedelta
 import collections
 import itertools
 
-from lcogt                                   import dateutil
+from lcogt import dateutil
 from adaptive_scheduler.monitoring.telemetry import get_datum
-
-Event = collections.namedtuple('Event', ['type', 'reason', 'start_time',
-                                         'end_time'])
 
 # Set up and configure a module scope logger
 import logging
 log = logging.getLogger(__name__)
+
+Event = collections.namedtuple('Event', ['type', 'reason', 'start_time',
+                                         'end_time'])
+
 
 class NetworkStateMonitor(object):
     '''Abstract class for monitoring changes to the telescope network.'''

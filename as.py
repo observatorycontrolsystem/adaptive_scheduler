@@ -172,10 +172,6 @@ def main(argv):
     sched_params = parse_args(argv)
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
 
-    if sched_params.dry_run:
-        import lcogtpond
-        lcogtpond._service_host = 'localhost'
-
     event_bus = get_eventbus()
     user_feedback_logger = UserFeedbackLogger()
     timing_logger        = TimingLogger()
