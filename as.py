@@ -36,6 +36,7 @@ VERSION = '1.1.0'
 # logging.config.fileConfig('logging.conf')
 import logger_config
 log = logging.getLogger('adaptive_scheduler')
+ur_logger = logging.getLogger('ur_logger')
 
 # Set up signal handling for graceful shutdown
 run_flag = True
@@ -95,11 +96,13 @@ def parse_args(argv):
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
                             help="Options are v5, v6, gurobi, mock. Default is gurobi")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
-                            help="Filenames for scheduler input. Example: -f too_input.in,normal_input.in")
+                            help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
                                 help="Enable storing pickled files of scheduling run input")
     arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
                                 help="Enable storing scheduling run output in a json file")
+    arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
+                                help="Enable saving the per-request log files")
     arg_parser.add_argument("--pondport", type=int, dest='pond_port',
                                 help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
@@ -127,6 +130,8 @@ def parse_args(argv):
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
+
+    ur_logger.disabled = not args.request_logs
     
     sched_params = SchedulerParameters(**vars(args))
 
@@ -192,8 +197,7 @@ def main(argv):
     network_model = configdb_interface.get_telescope_info()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
-        too_infile, normal_infile = sched_params.input_file_name.split(',')
-        input_provider = FileBasedSchedulingInputProvider(too_infile, normal_infile, network_interface, is_too_mode=True)
+        input_provider = FileBasedSchedulingInputProvider(sched_params.input_file_name, network_interface, is_too_mode=True)
     else:
         input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
     input_factory = SchedulingInputFactory(input_provider)

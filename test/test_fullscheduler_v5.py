@@ -9,7 +9,10 @@ August 2012
 
 from nose.tools import assert_equal, nottest
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.fullscheduler_v5 import *
+try:
+    from adaptive_scheduler.kernel.fullscheduler_v5 import *
+except Exception:
+    pass
 import copy
 
 @nottest
@@ -45,7 +48,7 @@ class TestFullScheduler_v5(object):
         self.r10 = Reservation_v3(2, 2, {'bar': s9})
         self.r11 = Reservation_v3(1, 1, {'bar': s10})
         self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})        
+        self.r13 = Reservation_v3(1, 1, {'bar': s12})
         self.r14 = Reservation_v3(1, 1, {'bar': s13})
 
         self.cr1 = CompoundReservation_v2([self.r1])
@@ -77,7 +80,7 @@ class TestFullScheduler_v5(object):
         self.gpw4 = {}
         self.gpw4['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
 
-        self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3], 
+        self.fs1 = FullScheduler_v5([self.cr1, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs2 = FullScheduler_v5([self.cr1, self.cr4],
                                     self.gpw2, [], 1)
@@ -85,9 +88,9 @@ class TestFullScheduler_v5(object):
                                     self.gpw2, [], 1)
         self.fs4 = FullScheduler_v5([self.cr8, self.cr6, self.cr7],
                                     self.gpw2, [], 1)
-        self.fs5 = FullScheduler_v5([self.cr10, self.cr2, self.cr3], 
+        self.fs5 = FullScheduler_v5([self.cr10, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
-        self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3], 
+        self.fs6 = FullScheduler_v5([self.cr11, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs7 = FullScheduler_v5([self.cr12],
                                     self.gpw3, [], 1)
@@ -133,7 +136,7 @@ class TestFullScheduler_v5(object):
         d = self.fs2.schedule_all()
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
-        
+
 
     def test_schedule_all_3(self):
         d = self.fs3.schedule_all()
@@ -184,4 +187,4 @@ class TestFullScheduler_v5(object):
         d = self.fs7.schedule_all()
         assert_equal(self.r9.scheduled, False)
         assert_equal(self.r10.scheduled, False)
-        
+

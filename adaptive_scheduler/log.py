@@ -40,15 +40,15 @@ class MultiFileHandler(logging.FileHandler):
 
 class UserRequestHandler(MultiFileHandler):
     def __init__(self, tracking_number, mode='a', logdir = '.', encoding=None, delay=0):
-        filename = os.path.join(logdir, tracking_number + '.log')
+        filename = os.path.join(logdir, str(int(tracking_number)) + '.log')
         MultiFileHandler.__init__(self, filename, mode, encoding, delay)
         self.logdir = logdir
         self.tracking_number  = tracking_number
 
     def emit(self, record):
         if hasattr(record, 'tracking_number'):
-            record.file_id = os.path.join(self.logdir, str(record.tracking_number) + '.log')
-            record.tags = {'tracking_number': record.tracking_number}  # For JSON tags
+            record.file_id = os.path.join(self.logdir, str(int(record.tracking_number)) + '.log')
+            record.tags = {'tracking_number': int(record.tracking_number)}  # For JSON tags
         MultiFileHandler.emit(self, record)
 
 
@@ -58,19 +58,19 @@ class UserRequestLogger(object):
         self.logger = logger
 
     def debug(self, msg, tracking_number):
-        self.logger.debug(msg, extra={'tracking_number':tracking_number})
+        self.logger.debug(msg, extra={'tracking_number': int(tracking_number)})
 
     def info(self, msg, tracking_number):
-        self.logger.info(msg, extra={'tracking_number':tracking_number})
+        self.logger.info(msg, extra={'tracking_number': int(tracking_number)})
 
     def warn(self, msg, tracking_number):
-        self.logger.warn(msg, extra={'tracking_number':tracking_number})
+        self.logger.warn(msg, extra={'tracking_number': int(tracking_number)})
 
     def critical(self, msg, tracking_number):
-        self.logger.critical(msg, extra={'tracking_number':tracking_number})
+        self.logger.critical(msg, extra={'tracking_number': int(tracking_number)})
 
     def error(self, msg, tracking_number):
-        self.logger.error(msg, extra={'tracking_number':tracking_number})
+        self.logger.error(msg, extra={'tracking_number': int(tracking_number)})
 
 
 if __name__ == '__main__':

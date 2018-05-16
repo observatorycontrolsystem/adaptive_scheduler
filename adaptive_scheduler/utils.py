@@ -138,6 +138,17 @@ def merge_dicts(*args):
     return {k:v for d in args for k, v in d.items()}
 
 
+def merge_dicts_of_lists(*args):
+    '''Merge any number of dictionaries of lists, merging the lists of duplicate keys together 
+    '''
+    output = {}
+    for dic in args:
+        for k, v in dic.items():
+            output[k] = output.get(k, []) + v
+
+    return output
+
+
 def iso_string_to_datetime(iso_string):
     '''Convert ISO datetime strings of the form '2012-03-03T09:05:00[.xxx]Z' to
        datetime objects. It's no coincidence that this also happens to be the string

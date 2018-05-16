@@ -138,26 +138,27 @@ class PondScheduleInterface(object):
         return self.too_intervals_by_telescope
     
     @metric_timer('pond.cancel_requests', num_requests=lambda x: x, rate=lambda x: x)
-    def cancel(self, cancelation_dates_by_resource, reason):
+    def cancel(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
         ''' Cancel the current scheduler between start and end
         ''' 
         n_deleted = 0
-        if cancelation_dates_by_resource:
+        if cancelation_date_list_by_resource:
             try:
-                n_deleted = self._cancel_schedule(cancelation_dates_by_resource, reason)
+                n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, reason, cancel_toos,
+                                                  cancel_normals)
             except PondFacadeException as pfe:
                 raise ScheduleException(pfe, "Unable to cancel POND schedule")
         return n_deleted
     
     def abort(self, pond_running_request, reason):
         ''' Abort a running request
-        ''' 
+        '''
         try:
             block_ids = [pond_running_request.block_id]
-            self._cancel_blocks(block_ids, reason, delete=False)
+            return self._cancel_blocks(block_ids, reason, delete=False)
         except PondFacadeException, pfe:
             raise ScheduleException(pfe, "Unable to abort POND block")
-    
+
     @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
         ''' Save the provided observing schedule
@@ -309,6 +310,7 @@ class PondScheduleInterface(object):
         return telescope_interval
 
     #@retry_or_reraise(max_tries=6, delay=10)
+    @metric_timer('pond.get_schedule')
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled or aborted
         args = dict(start=start, end=end, site=site,
@@ -327,12 +329,20 @@ class PondScheduleInterface(object):
         return schedule
         
         
-    def _get_deletable_blocks(self, start, end, site, obs, tel):
+    def _get_deletable_blocks(self, start, end, site, obs, tel, include_too, include_normal):
         # Only retrieve blocks which have not been cancelled
         schedule = self._get_schedule(start, end, site, obs, tel)
 
         # Filter out blocks not placed by scheduler, they have not tracking number
         scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
+
+        # If we are not including ToO blocks, filter those out as well
+        if not include_too:
+            scheduler_placed_blocks = [b for b in scheduler_placed_blocks if not b.is_too]
+
+        # If we are not including normal blocks, filter those out
+        if not include_normal:
+            scheduler_placed_blocks = [b for b in scheduler_placed_blocks if b.is_too]
     
         log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
                                                                   tel, obs, site,
@@ -347,22 +357,23 @@ class PondScheduleInterface(object):
     
     # This does not need a metric because it is called by the public cancel method which is timed
     @timeit
-    def _cancel_schedule(self, cancelation_dates_by_resource, reason):
+    def _cancel_schedule(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
         all_to_delete = []
-        for full_tel_name, (start, end) in cancelation_dates_by_resource.iteritems():
-            tel, obs, site = full_tel_name.split('.')
-            log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
-                                                                 start, end)
-    
-            to_delete = self._get_deletable_blocks(start, end, site, obs, tel)
-    
-            n_to_delete = len(to_delete)
-            all_to_delete.extend(to_delete)
-    
-            _, block_str = pl(n_to_delete, 'block')
-            msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
-            msg = "Cancelled " + msg
-            log.info(msg)
+        for full_tel_name, cancel_dates in cancelation_date_list_by_resource.items():
+            for (start, end) in cancel_dates:
+                tel, obs, site = full_tel_name.split('.')
+                log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
+                                                                     start, end)
+
+                to_delete = self._get_deletable_blocks(start, end, site, obs, tel, cancel_toos, cancel_normals)
+
+                n_to_delete = len(to_delete)
+                all_to_delete.extend(to_delete)
+
+                _, block_str = pl(n_to_delete, 'block')
+                msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
+                msg = "Cancelled " + msg
+                log.info(msg)
     
         block_ids = [b.id for b in all_to_delete]
         self._cancel_blocks(block_ids, reason)

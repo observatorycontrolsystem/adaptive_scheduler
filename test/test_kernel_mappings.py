@@ -2,35 +2,23 @@
 from __future__ import division
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
-from mock import patch
 
 from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
                                        UserRequest, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
-                                                make_dark_up_kernel_intervals,
-                                                intervals_to_windows,
                                                 construct_global_availability,
                                                 normalise_dt_intervals,
                                                 filter_on_scheduling_horizon,
-                                                compute_intersections)
-from time_intervals.intervals import Intervals
-from adaptive_scheduler.memoize import Memoize
-import adaptive_scheduler.memoize
-from rise_set.sky_coordinates import RightAscension, Declination
-from rise_set.angle import Angle
-from rise_set.visibility import Visibility
-
+                                                compute_request_availability,
+                                                get_rise_set_timepoint_intervals,
+                                                make_cache_key,
+                                                req_windows_to_kernel_intervals)
 from datetime import datetime
-from dogpile.cache import make_region
-
-local_region = make_region().configure(
-    'dogpile.cache.memory',
-    expiration_time=86400,
-)
 
 
 class TestKernelMappings(object):
@@ -147,48 +135,54 @@ class TestKernelMappings(object):
 
         return dt_intervals_list
 
-    def test_compute_intersections_no_downtime(self):
-        request = self.make_constrained_request()
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {}
+    def make_rise_set_intervals(self, req, visibilities):
+        rs_target = req.target.in_rise_set_format()
+        max_airmass = req.constraints.max_airmass
+        min_lunar_distance = req.constraints.min_lunar_distance
+        intervals_for_resource = {}
+        for resource, visibility in visibilities.items():
+            intervals_for_resource[resource] = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
+                                                                                min_lunar_distance)
 
-        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
-        base_windows = intervals_to_windows(request, base_window_intervals)
+        return intervals_for_resource
 
-        output_req = compute_intersections(request, visibility_from, downtime_intervals)
+    def test_make_cache_key(self):
+        max_airmass = 2.5
+        min_lunar_distance = 30.0
+        resource = '1m0a.doma.lsc'
+        rs_target = self.make_constrained_request().target.in_rise_set_format()
 
-        assert_equal(output_req.windows, base_windows)
+        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance),
+                     '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.iteritems()))))
 
-
-    def test_compute_intersections_half_downtime(self):
+    def test_compute_request_availability_half_downtime(self):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
         downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)),]}
 
-        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
-        base_windows = intervals_to_windows(request, base_window_intervals)
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
 
-        output_req = compute_intersections(request, visibility_from, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(request.windows.size(), 1)
+        assert_equal(request.windows.at(resource)[0], base_windows[resource][1])
 
-        assert_equal(base_windows.size(), 2)
-        assert_equal(output_req.windows.size(), 1)
-        assert_equal(output_req.windows.at(resource)[0], base_windows.at(resource)[1])
-
-
-    def test_compute_intersections_full_downtime(self):
+    def test_compute_request_availability_full_downtime(self):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
         downtime_intervals = {resource: [(datetime(2011, 11, 1), datetime(2011, 11, 3)),]}
 
-        base_window_intervals = make_dark_up_kernel_intervals(request, visibility_from, verbose=True)
-        base_windows = intervals_to_windows(request, base_window_intervals)
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
 
-        output_req = compute_intersections(request, visibility_from, downtime_intervals)
-
-        assert_equal(base_windows.size(), 2)
-        assert_equal(output_req.windows.size(), 0)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(request.windows.size(), 0)
 
 
     def test_construct_compound_reservation(self):
@@ -196,14 +190,12 @@ class TestKernelMappings(object):
         requests          = [request, request]
         operator          = 'and'
         user_request  = self.make_user_request(requests, operator)
-        dt_intervals_list = self.make_dt_intervals_list()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
         user_request.proposal.tac_priority = 1
 
         received = construct_compound_reservation(user_request,
-                                                  dt_intervals_list,
                                                   sem_start)
 
         assert_equal(len(received.reservation_list), len(requests))
@@ -215,7 +207,6 @@ class TestKernelMappings(object):
         requests          = [request, request]
         operator          = 'many'
         user_request  = self.make_user_request(requests, operator)
-        intersection_dict = self.make_intersection_dict()
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
@@ -223,9 +214,8 @@ class TestKernelMappings(object):
 
         received = construct_many_compound_reservation(
                                                user_request,
-                                               child_idx=0,
-                                               intersection_dict=intersection_dict,
-                                               sem_start=sem_start)
+                                               0,
+                                               sem_start)
 
         assert_equal(len(received.reservation_list), 1)
         assert_equal(received.type, 'single')
@@ -342,7 +332,7 @@ class TestKernelMappings(object):
             assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
 
 
-    def test_make_dark_up_kernel_intervals(self):
+    def test_make_target_intervals(self):
         window_dict = {
                         'start' : self.start,
                         'end'   : self.end
@@ -364,8 +354,11 @@ class TestKernelMappings(object):
                        request_number = '1'
                       )
 
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
-        received = make_dark_up_kernel_intervals(req, visibility_from)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+
+        intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
+        compute_request_availability(req, intervals_for_resource, {})
+        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
         format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
@@ -414,9 +407,11 @@ class TestKernelMappings(object):
                         request_number = '1'
                       )
 
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, visibility_from, True)
+        intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
+        compute_request_availability(req, intervals_for_resource, {})
+        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -463,9 +458,11 @@ class TestKernelMappings(object):
                        request_number = '1'
                       )
 
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
 
-        received = make_dark_up_kernel_intervals(req, visibility_from)
+        intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
+        compute_request_availability(req, intervals_for_resource, {})
+        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
@@ -526,9 +523,11 @@ class TestKernelMappings(object):
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
-        visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, visibility_from)
+        visibilities = construct_visibilities(tels, sem_start, sem_end)
 
+        intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
+        compute_request_availability(req, intervals_for_resource, {})
+        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
         expected_tps = [
@@ -591,9 +590,11 @@ class TestKernelMappings(object):
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
         sem_end   = datetime(2013, 03, 31, 0, 0, 0)
 
-        visibility_from = construct_visibilities(tels, sem_start, sem_end)
-        received = make_dark_up_kernel_intervals(req, visibility_from)
+        visibilities = construct_visibilities(tels, sem_start, sem_end)
 
+        intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
+        compute_request_availability(req, intervals_for_resource, {})
+        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
         expected_tps = [
@@ -661,22 +662,21 @@ class TestKernelMappings(object):
         assert_equal(r3, dt1)
 
 
-
     def test_airmass_is_honoured_high_airmass(self):
         airmass = 3.0
         req_airmass3   = self.make_constrained_request(airmass)
         req_no_airmass = self.make_constrained_request()
 
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
 
-        received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            visibility_from,
-                                                            True)
+        intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
+        compute_request_availability(req_no_airmass, intervals_for_resource, {})
+        received_no_airmass = req_windows_to_kernel_intervals(req_no_airmass.windows.windows_for_resource)
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].toDictList()
 
-        received_airmass3 = make_dark_up_kernel_intervals(req_airmass3,
-                                                          visibility_from,
-                                                          True)
+        intervals_for_resource = self.make_rise_set_intervals(req_airmass3, visibilities)
+        compute_request_availability(req_airmass3, intervals_for_resource, {})
+        received_airmass3 = req_windows_to_kernel_intervals(req_airmass3.windows.windows_for_resource)
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].toDictList()
 
         assert_equal(timepoints_no_airmass, timepoints_airmass3)
@@ -687,65 +687,15 @@ class TestKernelMappings(object):
         req_airmass1   = self.make_constrained_request(airmass)
         req_no_airmass = self.make_constrained_request()
 
-        visibility_from = construct_visibilities(self.tels, self.start, self.end)
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
 
-        received_no_airmass = make_dark_up_kernel_intervals(req_no_airmass,
-                                                            visibility_from, True)
-        timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].toDictList()
+        intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
+        compute_request_availability(req_no_airmass, intervals_for_resource, {})
+        received_no_airmass = req_windows_to_kernel_intervals(req_no_airmass.windows.windows_for_resource)
 
-        received_airmass1 = make_dark_up_kernel_intervals(req_airmass1,
-                                                          visibility_from,
-                                                          True)
-        timepoints_airmass1 = received_airmass1['1m0a.doma.bpl'].toDictList()
+        intervals_for_resource = self.make_rise_set_intervals(req_airmass1, visibilities)
+        compute_request_availability(req_airmass1, intervals_for_resource, {})
+        received_airmass1 = req_windows_to_kernel_intervals(req_airmass1.windows.windows_for_resource)
 
-        assert_not_equal(timepoints_no_airmass, timepoints_airmass1)
-        assert_equal(len(timepoints_airmass1), 0)
-
-
-class TestVisibility(object):
-    '''Integration tests for rise_set - memoization interaction'''
-
-    def setup(self):
-        self.capella = {
-                     'ra'                : RightAscension('05 16 41.36'),
-                     'dec'               : Declination('+45 59 52.8'),
-                     'epoch'             : 2000,
-                   }
-        self.bpl        = {
-                          'latitude'  : Angle(degrees = 34.4332222222),
-                          'longitude' : Angle(degrees = -119.863045833)
-                          }
-        self.start_date = datetime(year=2011, month=2, day=9)
-        self.end_date   = datetime(year=2011, month=2, day=11)
-        self.horizon    = 0
-        self.twilight   = 'sunrise'
-
-        self.visibility = Visibility(self.bpl, self.start_date, self.end_date,
-                                     self.horizon, self.twilight)
-
-
-    @patch('adaptive_scheduler.memoize.region', local_region)
-    def test_memoize_preserves_correct_output_no_airmass(self):
-        received = self.visibility.get_target_intervals(self.capella, up=True)
-        memoized_func = Memoize('bpl1', self.visibility.get_target_intervals)
-        mem_received = memoized_func(self.capella, up=True)
-
-        assert_equal(received, mem_received)
-
-    @patch('adaptive_scheduler.memoize.region', local_region)
-    def test_memoize_preserves_correct_output_with_airmass(self):
-        received = self.visibility.get_target_intervals(self.capella, up=True,
-                                                        airmass=2.0)
-        memoized_func = Memoize('bpl2', self.visibility.get_target_intervals)
-        mem_received = memoized_func(self.capella, up=True, airmass=2.0)
-
-        assert_equal(received, mem_received)
-
-    @patch('adaptive_scheduler.memoize.region', local_region)
-    def test_memoize_preserves_correct_output_with_differing_airmass(self):
-        received = self.visibility.get_target_intervals(self.capella, up=True,
-                                                        airmass=2.0)
-        memoized_func = Memoize('bpl3', self.visibility.get_target_intervals)
-        mem_received = memoized_func(self.capella, up=True, airmass=1.0)
-
-        assert_not_equal(received, mem_received)
+        assert_not_equal(received_airmass1, received_no_airmass)
+        assert_equal(len(received_airmass1), 0)

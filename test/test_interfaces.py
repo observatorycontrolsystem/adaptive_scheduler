@@ -76,8 +76,9 @@ class TestNetworkInterface(object):
     def test_send_telescope_available_state_events_to_es(self):
         es_endpoint = 'http://test-es/document/'
         es_endpoint_re = re.compile(r'http://test-es/document/.*')
-        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
-                      status=200)
+        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}', status=200)
+        opentsdb_endpoint_re = re.compile(r'http://opentsdbdev.lco.gtn:4242/api/put.*')
+        responses.add(responses.POST, opentsdb_endpoint_re, body='{"success":"yay"}', status=200)
 
         network_state = Network(MagicMock(), es_endpoint=es_endpoint)
         network_interface = NetworkInterface(MagicMock(), MagicMock(), network_state, MagicMock())

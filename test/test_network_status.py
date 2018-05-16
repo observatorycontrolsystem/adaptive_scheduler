@@ -145,6 +145,8 @@ class TestNetworkStatus(object):
         es_endpoint_re = re.compile(r'http://test-es/document/.*')
         responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
                       status=200)
+        opentsdb_endpoint_re = re.compile(r'http://opentsdbdev.lco.gtn:4242/api/put.*')
+        responses.add(responses.POST, opentsdb_endpoint_re, body='{"success":"yay"}', status=200)
 
         self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl':self.e1}
 
