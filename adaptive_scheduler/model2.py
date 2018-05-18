@@ -43,6 +43,8 @@ ur_log = UserRequestLogger(multi_ur_log)
 
 event_bus = get_eventbus()
 
+POND_FIELD_DIGITS = 7
+
 
 def n_requests(user_reqs):
     n_urs  = len(user_reqs)
@@ -172,11 +174,11 @@ class Target(DataContainer):
         ''' Common pointing fields to all pointing types'''
         pointing = {}
         pointing['rot_mode'] = getattr(self, 'rot_mode', 'SKY') or 'SKY'
-        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), 7)
+        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), POND_FIELD_DIGITS)
         if hasattr(self, 'vmag') and self.vmag:
-            pointing['vmag'] = round(self.vmag, 7)
+            pointing['vmag'] = round(self.vmag, POND_FIELD_DIGITS)
         if hasattr(self, 'radvel') and self.radvel:
-            pointing['radvel'] = round(self.radvel, 7)
+            pointing['radvel'] = round(self.radvel, POND_FIELD_DIGITS)
 
         return pointing
 
@@ -226,6 +228,7 @@ class SiderealTarget(Target):
         pointing = super(SiderealTarget, self).in_pond_format()
         if hasattr(self, 'proper_motion_ra') and hasattr(self, 'proper_motion_dec'):
             # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
+            # for more info: https://issues.lco.global/issues/8723
             prop_mot_ra, prop_mot_dec = convert_proper_motion(self.proper_motion_ra,
                                                               self.proper_motion_dec,
                                                               self.dec.in_degrees())
@@ -238,12 +241,12 @@ class SiderealTarget(Target):
             'coord_sys': 'ICRS',
             'coord_type': 'RD',
             'name': self.name,
-            'ra': round(self.ra.in_degrees(), 7),
-            'dec': round(self.dec.in_degrees(), 7),
-            'pro_mot_ra': round(prop_mot_ra, 7),
-            'pro_mot_dec': round(prop_mot_dec, 7),
-            'parallax': round(getattr(self, 'parallax', 0.0) / 1000.0, 7),
-            'epoch': round(getattr(self, 'epoch', 2000.0), 7)
+            'ra': round(self.ra.in_degrees(), POND_FIELD_DIGITS),
+            'dec': round(self.dec.in_degrees(), POND_FIELD_DIGITS),
+            'pro_mot_ra': round(prop_mot_ra, POND_FIELD_DIGITS),
+            'pro_mot_dec': round(prop_mot_dec, POND_FIELD_DIGITS),
+            'parallax': round(getattr(self, 'parallax', 0.0) / 1000.0, POND_FIELD_DIGITS),  # marcsec to arcsec
+            'epoch': round(getattr(self, 'epoch', 2000.0), POND_FIELD_DIGITS)
         })
         return pointing
 
@@ -282,12 +285,13 @@ class NonSiderealTarget(Target):
         return target_dict
 
     def in_pond_format(self):
+        ''' This copies in all fields supplied from valhalla to pass through to the pond'''
         pointing = super(NonSiderealTarget, self).in_pond_format()
         pointing['type'] = 'NON_SIDEREAL'
         pointing.update({x: getattr(self, x) for x in scheme_mappings[self.scheme.upper()]})
         for key, value in pointing.items():
             if isinstance(value, numbers.Number):
-                pointing[key] = round(value, 7)
+                pointing[key] = round(value, POND_FIELD_DIGITS)
 
         return pointing
 
@@ -314,13 +318,13 @@ class SatelliteTarget(Target):
             'coord_type': 'AA',
             'coord_sys': 'AAP',
             'name': self.name,
-            'alt': round(self.altitude, 7),
-            'az': round(self.azimuth, 7),
-            'diff_alt_rate': round(self.diff_pitch_rate, 7),
-            'diff_az_rate': round(self.diff_roll_rate, 7),
-            'diff_alt_accel': round(self.diff_pitch_acceleration, 7),
-            'diff_az_accel': round(self.diff_roll_acceleration, 7),
-            'diff_epoch_rate': round(self.diff_epoch_rate, 7)
+            'alt': round(self.altitude, POND_FIELD_DIGITS),
+            'az': round(self.azimuth, POND_FIELD_DIGITS),
+            'diff_alt_rate': round(self.diff_pitch_rate, POND_FIELD_DIGITS),
+            'diff_az_rate': round(self.diff_roll_rate, POND_FIELD_DIGITS),
+            'diff_alt_accel': round(self.diff_pitch_acceleration, POND_FIELD_DIGITS),
+            'diff_az_accel': round(self.diff_roll_acceleration, POND_FIELD_DIGITS),
+            'diff_epoch_rate': round(self.diff_epoch_rate, POND_FIELD_DIGITS)
         })
         return pointing
 

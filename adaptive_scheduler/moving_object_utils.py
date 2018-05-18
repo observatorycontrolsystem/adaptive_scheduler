@@ -39,11 +39,11 @@ scheme_mappings = {
 
 
 def required_fields_from_scheme(scheme):
-    if scheme.upper() in scheme_mappings:
-        return scheme_mappings[scheme.upper()]
-    else:
+    if scheme.upper() not in scheme_mappings:
         msg = "Unknown orbital element scheme '%s'" % scheme
         raise InvalidElements(msg)
+
+    return scheme_mappings[scheme.upper()]
 
 
 class InvalidElements(Exception):

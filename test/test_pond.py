@@ -127,12 +127,12 @@ class TestPond(object):
         end = datetime(2013, 11, 3)
 
         host = os.getenv('POND_HOST', 'ponddev.lco.gtn')
-        cancel_endpoint = host + '/blocks/'
-        responses.add(responses.GET, cancel_endpoint,
+        get_endpoint = host + '/blocks/'
+        responses.add(responses.GET, get_endpoint,
                       json={"error": 'failed to get pond blocks'}, status=500)
 
         tracking_numbers = [ur1.tracking_number]
-        pond_interface = PondScheduleInterface()
+        pond_interface = PondScheduleInterface(host=host)
         too_blocks = pond_interface._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
         assert_equal({}, too_blocks)
 

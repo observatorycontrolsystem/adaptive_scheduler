@@ -37,7 +37,6 @@ from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit
 from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
-# from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
 
@@ -100,7 +99,7 @@ class PondScheduleInterface(object):
             all_running_blocks += blocks
         for block in all_running_blocks:
             msg = "UR %s has a running block (id=%d, finishing at %s)" % (
-                                                         'tracking_num' in block['molecules'][0],
+                                                         block['molecules'][0]['tracking_num'],
                                                          block['id'],
                                                          block['end']
                                                        )
@@ -238,23 +237,38 @@ class PondScheduleInterface(object):
     @metric_timer('pond.get_schedule')
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled or aborted
-        args = dict(end_after=start, start_before=end, site=site,
-                                 observatory=obs, telescope=tel,
-                                 canceled=False, aborted=False)
-        json_results = []
+        params = dict(end_after=start, start_before=end, site=site,
+                    observatory=obs, telescope=tel, limit=1000,
+                    canceled=False, aborted=False, offset=0)
         if too_blocks:
             args['too_blocks'] = too_blocks
 
-        try:
-            results = requests.get(self.host + '/blocks/', params=args)
-            json_results = results.json()['results']
-            for block in json_results:
-                block['start'] = parse(block['start'], ignoretz=True)
-                block['end'] = parse(block['end'], ignoretz=True)
-        except Exception as e:
-            raise ScheduleException(e, "Unable to retrieve Schedule from Pond")
+        base_url = self.host + '/blocks/'
 
-        return json_results
+        initial_results = self._get_block_helper(base_url, params)
+        blocks = initial_results['results']
+        count = initial_results['count']
+        total = len(blocks)
+        while total < count:
+            params['offset'] += params['limit']
+            results = self._get_block_helper(base_url, params)
+            count = results['count']
+            total += len(results['results'])
+            blocks.extend(results['results'])
+
+        for block in blocks:
+            block['start'] = parse(block['start'], ignoretz=True)
+            block['end'] = parse(block['end'], ignoretz=True)
+
+        return blocks
+
+    def _get_block_helper(self, base_url, params):
+        try:
+            results = requests.get(base_url, params=params)
+            results.raise_for_status()
+            return results.json()
+        except Exception as e:
+            raise ScheduleException(e, "Unable to retrieve Schedule from Pond: {}".format(repr(e)))
 
     @timeit
     def _cancel_schedule(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
@@ -334,7 +348,7 @@ class PondScheduleInterface(object):
                     if block['end'] > cutoff_dt:
                         cutoff_dt = block['end']
     
-        running = [b for b in schedule if b['start'] < cutoff_dt]
+        running = [b for b in schedule if b['start'] < cutoff_dt and 'tracking_num' in b['molecules'][0] and b['molecules'][0]['tracking_num']]
     
         return running
 
