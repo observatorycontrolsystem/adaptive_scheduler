@@ -103,8 +103,6 @@ def parse_args(argv):
                                 help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
                                 help="Enable saving the per-request log files")
-    arg_parser.add_argument("--pondport", type=int, dest='pond_port',
-                                help="Port for POND communication", default=defaults.pond_port)
     arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
                                 help="Hostname for POND communication", default=defaults.pond_host)
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
@@ -181,7 +179,7 @@ def main(argv):
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
     
-    schedule_interface = PondScheduleInterface(port=sched_params.pond_port, host=sched_params.pond_host)
+    schedule_interface = PondScheduleInterface(host=sched_params.pond_host)
     user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
     network_state_interface = Network(configdb_interface, es_endpoint=sched_params.es_endpoint)

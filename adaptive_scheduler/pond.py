@@ -74,9 +74,8 @@ class PondRunningRequest(RunningRequest):
 
 class PondScheduleInterface(object):
     
-    def __init__(self, host=None, port=None):
+    def __init__(self, host=None):
         self.host = host
-        self.port = port
         self.running_blocks_by_telescope = None
         self.running_intervals_by_telescope = None
         self.too_intervals_by_telescope = None
