@@ -102,9 +102,7 @@ class PondScheduleInterface(object):
                                                          block['id'],
                                                          block['end']
                                                        )
-            self.log.debug(msg)
-        # End of logging block
-        return running_blocks 
+        return running_blocks
 
     @metric_timer('pond.get_too_intervals')
     def _fetch_too_intervals(self, telescopes, end_after, start_before):
@@ -190,7 +188,6 @@ class PondScheduleInterface(object):
                 response.raise_for_status()
                 num_created = response.json()['num_created']
             except Exception as e:
-                print(pond_blocks[0])
                 log.error("_send_blocks_to_pond error: {}".format(repr(e)))
 
         return num_created
@@ -240,7 +237,7 @@ class PondScheduleInterface(object):
                     observatory=obs, telescope=tel, limit=1000,
                     canceled=False, aborted=False, offset=0)
         if too_blocks:
-            args['too_blocks'] = too_blocks
+            params['too_blocks'] = too_blocks
 
         base_url = self.host + '/blocks/'
 
