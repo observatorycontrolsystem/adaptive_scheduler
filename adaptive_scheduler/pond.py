@@ -300,7 +300,7 @@ class PondScheduleInterface(object):
 
     def _cancel_blocks(self, block_ids, reason):
         try:
-            data = {'block_ids': block_ids,
+            data = {'blocks': block_ids,
                     'cancel_reason': reason}
             results = requests.post(self.host + '/blocks/cancel/', json=data)
             results.raise_for_status()
