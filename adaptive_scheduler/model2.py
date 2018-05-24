@@ -316,7 +316,7 @@ class SatelliteTarget(Target):
         pointing.update({
             'type': 'SATELLITE',
             'coord_type': 'AA',
-            'coord_sys': 'AAP',
+            'coord_sys': 'APP',
             'name': self.name,
             'alt': round(self.altitude, POND_FIELD_DIGITS),
             'az': round(self.azimuth, POND_FIELD_DIGITS),
