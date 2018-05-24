@@ -28,6 +28,7 @@ February 2012
 from __future__ import division
 
 import time
+from datetime import timedelta
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
                                                NullTarget)
@@ -233,7 +234,7 @@ class PondScheduleInterface(object):
     @metric_timer('pond.get_schedule')
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled or aborted
-        params = dict(end_after=start, start_before=end, site=site,
+        params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
                     observatory=obs, telescope=tel, limit=1000,
                     canceled=False, aborted=False, offset=0)
         if too_blocks:
