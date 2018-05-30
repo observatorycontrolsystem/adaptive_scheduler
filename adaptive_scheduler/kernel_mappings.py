@@ -54,7 +54,8 @@ log = logging.getLogger(__name__)
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
 
-redis = Redis(host=os.getenv('REDIS_URL', 'redisdev'), db=0, password='schedulerpass')
+redis = Redis(host=os.getenv('REDIS_URL', 'redisdev'), db=0, password='schedulerpass', socket_connect_timeout=15,
+              socket_timeout=30)
 
 local_cache = {}
 

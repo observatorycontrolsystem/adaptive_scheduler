@@ -188,10 +188,20 @@ class PondScheduleInterface(object):
                 response = requests.post(self.host + '/blocks/', json=pond_blocks)
                 response.raise_for_status()
                 num_created = response.json()['num_created']
+                self._log_bad_requests(pond_blocks, response.json()['errors'] if 'errors' in response.json() else {})
             except Exception as e:
                 log.error("_send_blocks_to_pond error: {}".format(repr(e)))
 
         return num_created
+
+    def _log_bad_requests(self, block_list, errors):
+        for index, error in errors.items():
+            bad_block = block_list[int(index)]
+            log.warning('Failed to schedule block for request {}, user request {} due to reason {}'
+                        .format(bad_block['molecules'][0]['request_num'],
+                                bad_block['molecules'][0]['tracking_num'],
+                                error))
+
 
     def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         telescope_blocks = {}     
