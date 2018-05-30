@@ -121,10 +121,14 @@ def cache_rise_set_timepoint_intervals(args):
     '''Calculates the rise set timepoint interval of a target and attempts to put the result in redis. If it fails and
         throws an exception, the calling code should catch this and fall back to compute rise sets synchronously
     '''
-    (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
-    intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
-    cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-    redis.set(cache_key, cPickle.dumps(intervals))
+    try:
+        (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
+        intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
+        cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+        redis.set(cache_key, cPickle.dumps(intervals))
+    except Exception as e:
+        # Catch and reraise the exception as a base Exception to make sure it is pickleable and doesn't hang the process
+        raise Exception(repr(e))
 
 
 def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
