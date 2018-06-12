@@ -28,6 +28,7 @@ February 2012
 from __future__ import division
 
 import time
+from datetime import timedelta
 
 from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
                                                NullTarget)
@@ -37,28 +38,29 @@ from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit
 from adaptive_scheduler.printing       import pluralise as pl
 from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
-from adaptive_scheduler.moving_object_utils import pond_pointing_from_scheme
 from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
-
-from lcogtpond                         import pointing
-from lcogtpond.block                   import Block as PondBlock
-from lcogtpond.block                   import BlockSaveException, BlockCancelException
-from lcogtpond.molecule                import (Expose, Standard, Arc, LampFlat, Spectrum, Dark, NresSpectrum,
-                                               Bias, SkyFlat, ZeroPointing, AutoFocus, Triple, NresExpose, NresTest,
-                                               Engineering)
-from lcogtpond.schedule                import Schedule
-from lcogtpond.util                    import PondError
 
 # Set up and configure a module scope logger
 import logging
 from adaptive_scheduler.utils            import metric_timer
 from adaptive_scheduler.kernel.intervals import Intervals
 from adaptive_scheduler.kernel.timepoint import Timepoint
+
+import requests
+from dateutil.parser import parse
+import json
+
 log = logging.getLogger(__name__)
 
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
+
+AG_MODE_MAPPING = {
+    'OPTIONAL': 'OPT',
+    'ON': 'YES',
+    'OFF': 'NO'
+}
 
 
 class PondRunningRequest(RunningRequest):
@@ -73,9 +75,8 @@ class PondRunningRequest(RunningRequest):
 
 class PondScheduleInterface(object):
     
-    def __init__(self, host=None, port=None):
+    def __init__(self, host=None):
         self.host = host
-        self.port = port
         self.running_blocks_by_telescope = None
         self.running_intervals_by_telescope = None
         self.too_intervals_by_telescope = None
@@ -91,42 +92,36 @@ class PondScheduleInterface(object):
 
     @metric_timer('pond.get_running_blocks', num_blocks=lambda x: len(x))
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
-        try:
-            running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
-        except PondFacadeException as pfe:
-            raise ScheduleException(pfe, "Unable to get running blocks from POND")
-        
+        running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
         # This is just logging held over from when this was in the scheduling loop
         all_running_blocks = []
         for blocks in running_blocks.values():
             all_running_blocks += blocks
         for block in all_running_blocks:
             msg = "UR %s has a running block (id=%d, finishing at %s)" % (
-                                                         block.tracking_num_set()[0],
-                                                         block.id,
-                                                         block.end
+                                                         block['molecules'][0]['tracking_num'],
+                                                         block['id'],
+                                                         block['end']
                                                        )
-            self.log.debug(msg)
-        # End of logging block
-        
-        return running_blocks 
+        return running_blocks
 
     @metric_timer('pond.get_too_intervals')
     def _fetch_too_intervals(self, telescopes, end_after, start_before):
         too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
         
         return too_blocks
-    
-    
+
     def running_user_requests_by_tracking_number(self):
         running_urs = {}
         for blocks in self.running_blocks_by_telescope.values():
             for block in blocks:
-                tracking_number = int(block.tracking_num_set()[0])
+                tracking_number = int(block['molecules'][0]['tracking_num'])
                 running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
-                telescope = block.telescope + '.' +  block.observatory + '.' + block.site
-                running_request = PondRunningRequest(telescope, block.request_num_set()[0], block.id, block.start, block.end)
-                if block.any_molecules_failed():
+                telescope = block['telescope'] + '.' + block['observatory'] + '.' + block['site']
+                request_number = block['molecules'][0]['request_num'] if 'request_num' in block['molecules'][0] else ''
+                running_request = PondRunningRequest(telescope, request_number, block['id'],
+                                                     block['start'], block['end'])
+                if any([mol['failed'] for mol in block['molecules']]):
                     running_request.add_error("Block has failed molecules")
                 running_ur.add_running_request(running_request)
             
@@ -143,21 +138,15 @@ class PondScheduleInterface(object):
         ''' 
         n_deleted = 0
         if cancelation_date_list_by_resource:
-            try:
-                n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, reason, cancel_toos,
-                                                  cancel_normals)
-            except PondFacadeException as pfe:
-                raise ScheduleException(pfe, "Unable to cancel POND schedule")
+            n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, reason, cancel_toos,
+                                              cancel_normals)
         return n_deleted
     
     def abort(self, pond_running_request, reason):
         ''' Abort a running request
         '''
-        try:
-            block_ids = [pond_running_request.block_id]
-            return self._cancel_blocks(block_ids, reason, delete=False)
-        except PondFacadeException, pfe:
-            raise ScheduleException(pfe, "Unable to abort POND block")
+        block_ids = [pond_running_request.block_id]
+        return self._cancel_blocks(block_ids, reason)
 
     @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
@@ -182,113 +171,56 @@ class PondScheduleInterface(object):
                                     configdb_interface)
     
                 blocks_by_resource[resource_name].append(block)
-    
-        sent_blocks, not_sent_blocks= self._send_blocks_to_pond(blocks_by_resource, dry_run)
-    
-        # Summarise what was supposed to have been sent
-        # The sorting is just a way to iterate through the output in a human-readable way
-        n_submitted_total = 0
-        for resource_name in sorted(sent_blocks, key=lambda x: x[::-1]):
-            n_submitted = len(sent_blocks[resource_name])
-            n_not_sent  = len(not_sent_blocks[resource_name])
-            _, block_str = pl(n_submitted, 'block')
-            msg = "%d %s to %s..." % (n_submitted, block_str, resource_name)
-            if n_not_sent:
-                msg += " (%s)" % plural_str(n_not_sent, "bad block")
+            _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
+            msg = 'Sending {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
             log_info_dry_run(msg, dry_run)
-            n_submitted_total += n_submitted
-    
-    
+        n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
+
         return n_submitted_total
-    
-    
+
     def _send_blocks_to_pond(self, blocks_by_resource, dry_run=False):
-        pond_blocks     = []
-        sent_blocks     = {}
-        not_sent_blocks = {}
-        for resource_name, blocks in blocks_by_resource.items():
-            sent_blocks[resource_name]     = []
-            not_sent_blocks[resource_name] = []
-            for block in blocks:
-                try:
-                    pb = block.create_pond_block()
-                    pond_blocks.append(pb)
-                    msg = "Request %s (part of UR %s) to POND (%s.%s.%s)" % (block.request_number,
-                                                                             block.tracking_number,
-                                                                             pb.telescope,
-                                                                             pb.observatory,
-                                                                             pb.site)
-                    if dry_run:
-                        msg = "Dry-run: Would have sent " + msg
-                    else:
-                        msg = "Sent " + msg
-                    log.debug(msg)
-                    ur_log.info(msg, block.tracking_number)
-                    sent_blocks[resource_name].append(block)
-                except (IncompleteBlockError, InstrumentResolutionError) as e:
-                    msg = "Request %s (UR %s) -> POND block conversion impossible:" % (
-                                                                       block.request_number,
-                                                                       block.tracking_number)
-                    log.error(msg)
-                    ur_log.error(msg, block.tracking_number)
-                    log.error(e)
-                    ur_log.error(e, block.tracking_number)
-                    not_sent_blocks[resource_name].append(block)
-    
-    
+        pond_blocks = [block for blocks in blocks_by_resource.values() for block in blocks]
+        # with open('/data/adaptive_scheduler/pond_blocks.json', 'w') as open_file:
+        #     json.dump(pond_blocks, open_file)
+        num_created = len(pond_blocks)
         if not dry_run:
             try:
-                PondBlock.save_blocks(pond_blocks, port=self.port, host=self.host)
-            except BlockSaveException as e:
+                response = requests.post(self.host + '/blocks/', json=pond_blocks)
+                response.raise_for_status()
+                num_created = response.json()['num_created']
+                self._log_bad_requests(pond_blocks, response.json()['errors'] if 'errors' in response.json() else {})
+            except Exception as e:
                 log.error("_send_blocks_to_pond error: {}".format(repr(e)))
-    
-        return sent_blocks, not_sent_blocks
-    
-    
+
+        return num_created
+
+    def _log_bad_requests(self, block_list, errors):
+        for index, error in errors.items():
+            bad_block = block_list[int(index)]
+            log.warning('Failed to schedule block for request {}, user request {} due to reason {}'
+                        .format(bad_block['molecules'][0]['request_num'],
+                                bad_block['molecules'][0]['tracking_num'],
+                                error))
+
+
     def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
             schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name)
-            blocks = schedule.blocks
-            filtered_blocks = filter(lambda block: block.tracking_num_set() and block.tracking_num_set()[0] in tracking_numbers, blocks)
+            filtered_blocks = [block for block in schedule if block['molecules'][0]['tracking_num'] in tracking_numbers]
             telescope_blocks[full_tel_name] = filtered_blocks
             
         return telescope_blocks
-    
     
     def _get_too_blocks_by_telescope(self, tels, ends_after, starts_before):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
             schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True)
-
-            blocks = schedule.blocks
-            # Remove blocks that dont have tracking numbers
-            filtered_blocks = filter(lambda block: block.tracking_num_set(), blocks)
-            telescope_blocks[full_tel_name] = filtered_blocks
+            telescope_blocks[full_tel_name] = schedule
             
         return telescope_blocks
-    
-    # This method is only called in test code, so no need to collect metrics from it
-    @timeit
-    def _get_intervals_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
-        '''
-            Return a map of telescope name to intervals covering all intervals
-            currently scheduled for user requests in the supplied set of 
-            tracking numbers.
-        '''
-        telescope_interval = {}
-        blocks_by_telescope_for_tracking_numbers = self._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, ends_after, starts_before)
-        
-        for full_tel_name in tels:
-            blocks = blocks_by_telescope_for_tracking_numbers.get(full_tel_name, [])
-    
-            intervals = get_intervals(blocks)
-            if not intervals.is_empty():
-                telescope_interval[full_tel_name] = intervals
-    
-        return telescope_interval
 
     # Already timed by the fetch_too_intervals method
     @timeit
@@ -309,87 +241,85 @@ class PondScheduleInterface(object):
     
         return telescope_interval
 
-    #@retry_or_reraise(max_tries=6, delay=10)
     @metric_timer('pond.get_schedule')
     def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
         # Only retrieve blocks which have not been cancelled or aborted
-        args = dict(start=start, end=end, site=site,
-                                 observatory=obs, telescope=tel,
-                                 canceled_blocks=False, aborted_blocks=False, 
-                                 use_master_db=True,
-                                 port=self.port, host=self.host)
+        params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
+                    observatory=obs, telescope=tel, limit=1000,
+                    canceled=False, aborted=False, offset=0)
         if too_blocks:
-            args['too_blocks'] = too_blocks
+            params['too_blocks'] = too_blocks
 
+        base_url = self.host + '/blocks/'
+
+        initial_results = self._get_block_helper(base_url, params)
+        blocks = initial_results['results']
+        count = initial_results['count']
+        total = len(blocks)
+        while total < count:
+            params['offset'] += params['limit']
+            results = self._get_block_helper(base_url, params)
+            count = results['count']
+            total += len(results['results'])
+            blocks.extend(results['results'])
+
+        for block in blocks:
+            block['start'] = parse(block['start'], ignoretz=True)
+            block['end'] = parse(block['end'], ignoretz=True)
+
+        return blocks
+
+    def _get_block_helper(self, base_url, params):
         try:
-            schedule = Schedule.get(**args)
-        except PondError as pe:
-            raise ScheduleException(pe, "Unable to retrieve Schedule from Pond")
+            results = requests.get(base_url, params=params)
+            results.raise_for_status()
+            return results.json()
+        except Exception as e:
+            raise ScheduleException(e, "Unable to retrieve Schedule from Pond: {}".format(repr(e)))
 
-        return schedule
-        
-        
-    def _get_deletable_blocks(self, start, end, site, obs, tel, include_too, include_normal):
-        # Only retrieve blocks which have not been cancelled
-        schedule = self._get_schedule(start, end, site, obs, tel)
-
-        # Filter out blocks not placed by scheduler, they have not tracking number
-        scheduler_placed_blocks = [b for b in schedule.blocks if b.tracking_num_set()]
-
-        # If we are not including ToO blocks, filter those out as well
-        if not include_too:
-            scheduler_placed_blocks = [b for b in scheduler_placed_blocks if not b.is_too]
-
-        # If we are not including normal blocks, filter those out
-        if not include_normal:
-            scheduler_placed_blocks = [b for b in scheduler_placed_blocks if b.is_too]
-    
-        log.info("Retrieved %d blocks from %s.%s.%s (%s <-> %s)", len(schedule.blocks),
-                                                                  tel, obs, site,
-                                                                  start, end)
-        log.info("%d/%d were placed by the scheduler and will be deleted", len(scheduler_placed_blocks),
-                                                                           len(schedule.blocks))
-        if scheduler_placed_blocks:
-            to_delete_nums = [b.tracking_num_set() for b in scheduler_placed_blocks]
-            log.debug("Deleting: %s", to_delete_nums)
-    
-        return scheduler_placed_blocks
-    
-    # This does not need a metric because it is called by the public cancel method which is timed
     @timeit
     def _cancel_schedule(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
-        all_to_delete = []
+        total_num_canceled = 0
         for full_tel_name, cancel_dates in cancelation_date_list_by_resource.items():
             for (start, end) in cancel_dates:
                 tel, obs, site = full_tel_name.split('.')
                 log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
-                                                                     start, end)
+                         start, end)
 
-                to_delete = self._get_deletable_blocks(start, end, site, obs, tel, cancel_toos, cancel_normals)
+                data = {
+                    'start': start.isoformat(),
+                    'end': end.isoformat(),
+                    'site': site,
+                    'observatory': obs,
+                    'telescope': tel,
+                    'cancel_reason': reason
+                }
+                if cancel_toos != cancel_normals:
+                    data['is_too'] = cancel_toos
 
-                n_to_delete = len(to_delete)
-                all_to_delete.extend(to_delete)
+                try:
+                    results = requests.post(self.host + '/blocks/cancel/', json=data)
+                    results.raise_for_status()
+                    num_canceled = int(results.json()['canceled'])
+                    total_num_canceled += num_canceled
+                    msg = 'Cancelled {} blocks at {}'.format(num_canceled, full_tel_name)
+                    log.info(msg)
+                except Exception as e:
+                    raise ScheduleException("Failed to cancel blocks in pond: {}".format(repr(e)))
 
-                _, block_str = pl(n_to_delete, 'block')
-                msg = "%d %s at %s" % (n_to_delete, block_str, full_tel_name)
-                msg = "Cancelled " + msg
-                log.info(msg)
-    
-        block_ids = [b.id for b in all_to_delete]
-        self._cancel_blocks(block_ids, reason)
-    
-        return len(all_to_delete)
+        return total_num_canceled
 
-
-    def _cancel_blocks(self, block_ids, reason, delete=True):
+    def _cancel_blocks(self, block_ids, reason):
         try:
-            PondBlock.cancel_blocks(block_ids, reason=reason, delete=delete, port=self.port, host=self.host)
-        except BlockCancelException as e:
-            log.error("_cancel_blocks error: {}".format(repr(e)))
-            raise ScheduleException(repr(e))
+            data = {'blocks': block_ids,
+                    'cancel_reason': reason}
+            results = requests.post(self.host + '/blocks/cancel/', json=data)
+            results.raise_for_status()
+            num_canceled = results.json()['canceled']
+        except Exception as e:
+            raise ScheduleException("Failed to abort blocks in pond: {}".format(repr(e)))
     
-        return len(block_ids)
-    
+        return num_canceled
     
     def _get_network_running_blocks(self, tels, ends_after, starts_before):
         n_running_total = 0
@@ -414,14 +344,18 @@ class PondScheduleInterface(object):
     
         return running_at_tel
     
-    
     def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
         schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
 
-        cutoff_dt = schedule.end_of_overlap(starts_before)
+        cutoff_dt = starts_before
+        for block in schedule:
+            if block['start'] < starts_before < block['end']:
+                if (len(block['molecules']) > 0 and 'tracking_num' in block['molecules'][0]
+                        and block['molecules'][0]['tracking_num']):
+                    if block['end'] > cutoff_dt:
+                        cutoff_dt = block['end']
     
-        running = [b for b in schedule.blocks if b.start < cutoff_dt and
-                                                 b.tracking_num_set()]
+        running = [b for b in schedule if b['start'] < cutoff_dt and 'tracking_num' in b['molecules'][0] and b['molecules'][0]['tracking_num']]
     
         return running
 
@@ -430,39 +364,6 @@ def log_info_dry_run(msg, dry_run):
     if dry_run:
         msg = "DRY-RUN: " + msg
     log.info(msg)
-
-
-def retry_or_reraise(max_tries=6, delay=10):
-    '''Decorator to retry a POND operation several times, intended for sporadic
-       outages. If max_tries is reached, we give up and raise a PondFacadeException.'''
-    def wrapper(fn):
-        def inner_func(*args, **kwargs):
-            retries_available = max_tries
-            while(retries_available):
-                try:
-                    result = fn(*args, **kwargs)
-                    retries_available = 0
-
-                # TODO: This throws a protobuf.socketrpc.error.RpcError - fix POND client to
-                # TODO: return a POND client error instead
-                # TODO: See #6578
-                except Exception as e:
-                    log.warn("POND RPC Error: %s", repr(e))
-
-                    retries_available -= 1
-                    if not retries_available:
-                        log.warn("Retries exhausted - aborting current scheduler run")
-                        raise PondFacadeException(str(e))
-                    else:
-                        log.warn("Sleeping for %s seconds" % delay)
-                        time.sleep(delay)
-                        log.warn("Will try %d more times" % retries_available)
-
-            return result
-
-        return inner_func
-
-    return wrapper
 
 
 def resolve_instrument(instrument_name, site, obs, tel, configdb_interface):
@@ -492,428 +393,82 @@ def resolve_autoguider(ag_name, specific_camera, site, obs, tel, configdb_interf
     return ag_match
 
 
-class PondMoleculeFactory(object):
-
-    def __init__(self, tracking_number, request_number, proposal, group_id, submitter):
-        self.tracking_number = tracking_number
-        self.request_number  = request_number
-        self.submitter = submitter
-        self.proposal        = proposal
-        self.group_id        = group_id
-        self.molecule_classes = {
-                                  'EXPOSE'    : Expose,
-                                  'STANDARD'  : Standard,
-                                  'ARC'       : Arc,
-                                  'LAMP_FLAT' : LampFlat,
-                                  'SPECTRUM'  : Spectrum,
-                                  'BIAS'      : Bias,
-                                  'DARK'      : Dark,
-                                  'SKY_FLAT'  : SkyFlat,
-                                  'AUTO_FOCUS' : AutoFocus,
-                                  'ZERO_POINTING' : ZeroPointing,
-                                  'TRIPLE'        : Triple,
-                                  'NRES_EXPOSE'   : NresExpose,
-                                  'NRES_TEST'     : NresTest,
-                                  'NRES_SPECTRUM' : NresSpectrum,
-                                  'ENGINEERING' : Engineering,
-                                }
-
-
-    def build(self, molecule, pond_pointing):
-
-        mol_type = self._determine_molecule_class(molecule, self.tracking_number)
-
-        molecule_fields = {
-                            'EXPOSE'    : (self._common, self._imaging, self._targeting),
-                            'STANDARD'  : (self._common, self._imaging, self._targeting),
-                            'SPECTRUM'  : (self._common, self._spectro, self._spectro_slit, self._targeting),
-                            'ARC'       : (self._common, self._spectro_slit, self._pointing),
-                            'LAMP_FLAT' : (self._common, self._spectro_slit, self._pointing),
-                            'BIAS'      : (self._no_time_common,),
-                            'DARK'      : (self._common,),
-                            'SKY_FLAT'  : (self._no_time_common, self._imaging),
-                            'ZERO_POINTING' : (self._common, self._imaging, self._targeting),
-                            'AUTO_FOCUS' : (self._common, self._imaging, self._targeting),
-                            'TRIPLE': (self._common, self._pointing),
-                            'NRES_EXPOSE': (self._common, self._spectro, self._nres, self._targeting),
-                            'NRES_TEST': (self._common, self._spectro, self._nres, self._targeting),
-                            'NRES_SPECTRUM': (self._common, self._spectro, self._nres, self._targeting),
-                            'ENGINEERING': (self._common, self._targeting, self._nres, self._spectro)
-                          }
-
-        param_dicts = [params(molecule, pond_pointing) for params in molecule_fields[molecule.type.upper()]]
-        combined_params = merge_dicts(*param_dicts)
-
-        return self._build_molecule(mol_type, combined_params)
-
-
-    def _build_molecule(self, mol_type, fields):
-        return mol_type.build(**fields)
-
-
-    def _determine_molecule_class(self, molecule, tracking_number):
-        ''' Validate the provided molecule type against supported POND molecule classes.
-            Default to EXPOSE if the provided type is unknown.
-        '''
-        mol_type_incoming = molecule.type.upper()
-        mol_class = None
-        if mol_type_incoming in self.molecule_classes:
-            msg = "Creating a %s molecule" % mol_type_incoming
-            ur_log.debug(msg, tracking_number)
-            mol_class = self.molecule_classes[mol_type_incoming]
-        else:
-            msg = "Unsupported molecule type %s provided; defaulting to EXPOSE" % mol_type_incoming
-            log.warn(msg)
-            ur_log.warn(msg, tracking_number)
-            mol_class = self.molecule_classes['EXPOSE']
-
-        return mol_class
-
-
-    def _common(self, molecule, pond_pointing=None):
-        fields = self._no_time_common(molecule, pond_pointing)
-        fields['exp_time'] = molecule.exposure_time
-        return fields
-
-    def _no_time_common(self, molecule, pond_pointing=None):
-        return {
-                 # Meta data
-                 'tracking_num' : self.tracking_number,
-                 'request_num'  : self.request_number,
-                 'tag'          : self.proposal.tag,
-                 'user'         : self.submitter,
-                 'proposal'     : self.proposal.id,
-                 'group'        : self.group_id,
-                 # Observation details
-                 'exp_cnt'      : molecule.exposure_count,
-                 'bin'          : molecule.bin_x,
-                 'inst_name'    : molecule.instrument_name,
-                 'priority'     : molecule.priority,
-               }
-
-    def _imaging(self, molecule, pond_pointing=None):
-        return {
-                 'filters' : molecule.filter,
-               }
-
-    def _targeting(self, molecule, pond_pointing=None):
-        ag_mode_pond_mapping = {
-                                 'ON'       : 0,
-                                 'OFF'      : 1,
-                                 'OPTIONAL' : 2,
-                               }
-        return {
-                 'pointing' : pond_pointing,
-                 'defocus'  : getattr(molecule, 'defocus', None) or 0.0,
-                 # Autoguider name might not exist if autoguiding disabled by ag_type
-                 'ag_name'  : getattr(molecule, 'ag_name', None) or '',
-                 'ag_mode'  : ag_mode_pond_mapping[molecule.ag_mode.upper()],
-               }
-
-    def _pointing(self, molecule, pond_pointing=None):
-        return {'pointing': pond_pointing}
-
-    def _spectro(self, molecule, pond_pointing=None):
-        acquire_mode_pond_mapping = {
-                                      'WCS'       : 0,
-                                      'BRIGHTEST' : 1,
-                                      'OFF'       : 2,
-                                    }
-
-        return {
-                 'acquire_mode' : acquire_mode_pond_mapping[molecule.acquire_mode.upper()],
-                 'acquire_radius_arcsec' : molecule.acquire_radius_arcsec,
-               }
-
-    def _nres(self, molecule, pond_pointing=None):
-        exp_meter_pond_mapping = {
-            'OFF': 0,
-            'EXPMETER_OFF': 0,
-            'EXPMETER_WATCH': 1,
-            'EXPMETER_TRUNCATE': 2,
-        }
-
-        return {
-                 'ag_strategy' : getattr(molecule, 'ag_strategy', None) or '',
-                 'acquire_strategy' : getattr(molecule, 'acquire_strategy', None) or '',
-                 'expmeter_mode' : exp_meter_pond_mapping[getattr(molecule, 'expmeter_mode', None) or 'EXPMETER_OFF'],
-                 'expmeter_snr'  : getattr(molecule, 'expmeter_snr', None) or 0.0,
-               }
-
-    def _spectro_slit(self, molecule, pond_pointing=None):
-        return {
-                 'spectra_slit' : molecule.spectra_slit,
-               }
-
-
-
-class Block(object):
-
-    def __init__(self, location, start, end, group_id, tracking_number, submitter,
-                 request_number, configdb_interface, priority=0, is_too=False,
-                 max_airmass=None, min_lunar_distance=None, max_lunar_phase=None,
-                 max_seeing=None, min_transparency=None):
-        # TODO: Extend to allow datetimes or epoch times (and convert transparently)
-        self.location           = location
-        self.start              = start
-        self.end                = end
-        self.group_id           = group_id
-        self.submitter          = submitter
-        self.tracking_number    = str(tracking_number).zfill(10)
-        self.request_number     = str(request_number).zfill(10)
-        self.priority           = priority
-        self.is_too             = is_too
-
-        self.configdb_interface = configdb_interface
-
-        self.max_airmass        = max_airmass
-        self.min_lunar_distance = min_lunar_distance
-        self.max_lunar_phase    = max_lunar_phase
-        self.max_seeing         = max_seeing
-        self.min_transparency   = min_transparency
-
-        self.proposal  = Proposal()
-        self.molecules = []
-        self.target    = NullTarget()
-
-        self.pond_block = None
-
-
-    def list_missing_fields(self):
-        # Find the list of missing proposal fields
-        proposal_missing = self.proposal.list_missing_fields()
-
-        # Find the list of missing molecule fields
-        molecule_missing = ['[No molecules specified]']
-        if len(self.molecules) > 0:
-            molecule_missing = []
-            for molecule in self.molecules:
-                molecule_missing.extend(molecule.list_missing_fields())
-
-        # Find the list of missing target fields
-        target_missing = self.target.list_missing_fields()
-
-        # Aggregate the missing fields to return
-        missing_fields = {}
-
-        if len(proposal_missing) > 0:
-            missing_fields['proposal'] = proposal_missing
-
-        if len(molecule_missing) > 0:
-            missing_fields['molecule'] = molecule_missing
-
-        if len(target_missing) > 0:
-            missing_fields['target'] = target_missing
-
-
-        return missing_fields
-
-
-    def add_proposal(self, proposal):
-        self.proposal = proposal
-
-    def add_molecule(self, molecule):
-        # TODO: Handle molecule priorities
-        self.molecules.append(molecule)
-
-    def add_target(self, target):
-        self.target = target
-
-    def create_pond_block(self):
-        if self.pond_block:
-            return self.pond_block
-
-        # Check we have everything we need
-        missing_fields = self.list_missing_fields()
-        if len(missing_fields) > 0:
-            raise IncompleteBlockError(missing_fields)
-
-        # Construct the POND objects...
-        # 1) Create a POND ScheduledBlock
-        telescope, observatory, site = split_location(self.location)
-        block_build_args = dict(
-                                start=self.start,
-                                end=self.end,
-                                site=site,
-                                observatory=observatory,
-                                telescope=telescope,
-                                priority=self.priority,
-                                is_too=self.is_too
-                                )
-
-        # If constraints are provided, include them in the block
-        if self.max_airmass:
-            block_build_args['airmass'] = self.max_airmass
-        if self.min_lunar_distance:
-            block_build_args['lunar_dist'] = self.min_lunar_distance
-        if self.max_lunar_phase:
-            block_build_args['lunar_phase'] = self.max_lunar_phase
-        if self.max_seeing:
-            block_build_args['seeing'] = self.max_seeing
-        if self.min_transparency:
-            block_build_args['trans'] = self.min_transparency
-
-        block_build_args['instrument_class'] = self.molecules[0].instrument_name
-
-        pond_block = PondBlock.build(**block_build_args)
-
-        if isinstance(self.target, SiderealTarget):
-            # check if there is proper motion or not
-            if hasattr(self.target, 'proper_motion_ra') and hasattr(self.target, 'proper_motion_dec'):
-                # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
-                prop_mot_ra, prop_mot_dec = convert_proper_motion(getattr(self.target, 'proper_motion_ra'),
-                                                                  getattr(self.target, 'proper_motion_dec'),
-                                                                  self.target.dec.in_degrees())
-            else:
-                prop_mot_dec = 0.0
-                prop_mot_ra = 0.0
-
-            # 2a) Construct the Pointing Coordinate
-            coord = pointing.ra_dec(
-                                     ra=self.target.ra.in_degrees(),
-                                     dec=self.target.dec.in_degrees(),
-                                     pro_mot_ra=prop_mot_ra,
-                                     pro_mot_dec=prop_mot_dec,
-                                    # convert parallax from marcsec to arcsec
-                                     parallax=getattr(self.target, 'parallax', 0.0) / 1000.0,
-                                     epoch=getattr(self.target, 'epoch', 2000.0)
-                                   )
-            # 2b) Construct the Pointing
-            pond_pointing = pointing.sidereal(
-                                               name=self.target.name,
-                                               coord=coord,
-                                             )
-
-        elif isinstance(self.target, NonSiderealTarget):
-            pond_pointing = pond_pointing_from_scheme(self.target)
-
-        elif isinstance(self.target, SatelliteTarget):
-            alt_az_pointing_params = {
-                'alt'           : self.target.altitude,
-                'az'            : self.target.azimuth,
-                'diff_alt_rate' : self.target.diff_pitch_rate,
-                'diff_az_rate'  : self.target.diff_roll_rate,
-                'diff_alt_accel': self.target.diff_pitch_acceleration,
-                'diff_az_accel' : self.target.diff_roll_acceleration,
-                'diff_ref_epoch': self.target.diff_epoch_rate
-                }
-
-            alt_az_coord = pointing.alt_az(**alt_az_pointing_params)
-            pond_pointing = pointing.static(name=self.target.name, coord=alt_az_coord)
-
-        elif isinstance(self.target, NullTarget):
-            pond_pointing = None
-        else:
-            raise Exception("No mapping to POND pointing for type %s" % str(type(self.target)))
-
-        if pond_pointing:
-            # Set default rotator parameters if none provided
-            if hasattr(self.target, 'rot_mode') and self.target.rot_mode:
-                pond_pointing.rot_mode = self.target.rot_mode
-            else:
-                pond_pointing.rot_mode  = 'SKY'
-
-            if hasattr(self.target, 'rot_angle') and self.target.rot_angle:
-                pond_pointing.rot_angle = self.target.rot_angle
-            else:
-                pond_pointing.rot_angle = 0.0
-
-            # fill in NRES fields if they exist in input
-            if hasattr(self.target, 'vmag') and self.target.vmag:
-                pond_pointing.target_vmag = self.target.vmag
-            if hasattr(self.target, 'radvel') and self.target.radvel:
-                pond_pointing.target_radvel = self.target.radvel
-
-
-        # 3) Construct the Observations
-        observations = []
-
-
-        for i, molecule in enumerate(self.molecules):
-            filter_or_slit = 'Unknown'
-            if molecule.type.upper() in ('EXPOSE', 'STANDARD', 'AUTO_FOCUS', 'ZERO_POINTING', 'BIAS', 'DARK', 'SKY_FLAT'):
-                filter_or_slit = molecule.filter
-            else:
-                filter_or_slit = molecule.spectra_slit
-            mol_summary_msg = "Building %s molecule %d/%d (%dx%.03d %s)" % (
-                                                                             molecule.type,
-                                                                             i + 1,
-                                                                             len(self.molecules),
-                                                                             molecule.exposure_count,
-                                                                             molecule.exposure_time,
-                                                                             filter_or_slit,
-                                                                             )
-            log.debug(mol_summary_msg)
-            ur_log.debug(mol_summary_msg, self.tracking_number)
-
-            specific_camera = resolve_instrument(molecule.instrument_name, site,
-                                                 observatory, telescope, self.configdb_interface)
-
-            molecule.instrument_name = specific_camera
-
-            msg = "Instrument resolved as '%s'" % specific_camera
-            log.debug(msg)
-            ur_log.debug(msg, self.tracking_number)
-
-            if molecule.ag_mode != 'OFF':
-                ag_name = getattr(molecule, 'ag_name', None) or ''
-                specific_ag = resolve_autoguider(ag_name, specific_camera,
-                                                 site, observatory, telescope,
-                                                 self.configdb_interface)
-                molecule.ag_name = specific_ag
-
-                msg = "Autoguider resolved as '%s'" % specific_ag
-                log.debug(msg)
-                ur_log.debug(msg, self.tracking_number)
-
-
-            pond_molecule_factory = PondMoleculeFactory(self.tracking_number, self.request_number,
-                                                        self.proposal, self.group_id, self.submitter)
-            obs = pond_molecule_factory.build(molecule, pond_pointing)
-
-            observations.append(obs)
-
-        # 4) Add the Observations to the Block
-        for obs in observations:
-            pond_block.add_molecule(obs)
-
-        self.pond_block = pond_block
-
-        return pond_block
-
-
 def build_block(reservation, request, user_request, semester_start, configdb_interface):
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
     is_too = user_request.observation_type == 'TARGET_OF_OPPORTUNITY'
-    block = Block(
-                   location=reservation.scheduled_resource,
-                   start=res_start,
-                   end=res_end,
-                   group_id=user_request.group_id,
-                   tracking_number=user_request.tracking_number,
-                   submitter=user_request.submitter,
-                   request_number=request.request_number,
-                   configdb_interface=configdb_interface,
-                   # Hard-code all scheduler output to a highish number, for now
-                   priority=30,
-                   is_too=is_too,
-                   max_airmass=request.constraints.max_airmass,
-                   min_lunar_distance=request.constraints.min_lunar_distance,
-                   max_lunar_phase=request.constraints.max_lunar_phase,
-                   max_seeing=request.constraints.max_seeing,
-                   min_transparency=request.constraints.min_transparency,
-                 )
+    telescope, observatory, site = split_location(reservation.scheduled_resource)
 
-    block.add_proposal(user_request.proposal)
-    for molecule in request.molecules:
-        block.add_molecule(molecule)
-    block.add_target(request.target)
+    block = {
+        'telescope': telescope,
+        'observatory': observatory,
+        'site': site,
+        'start': res_start.isoformat(),
+        'end': res_end.isoformat(),
+        # Hard-code all scheduler output to a highish number, for now
+        'priority': 30,
+        'is_too': is_too,
+        'max_airmass': request.constraints.max_airmass,
+        'min_lunar_dist': request.constraints.min_lunar_distance,
+        'max_lunar_phase': request.constraints.max_lunar_phase,
+        'max_seeing': request.constraints.max_seeing,
+        'min_transparency': request.constraints.min_transparency,
+        'instrument_class': request.molecules[0].instrument_name,
+        'molecules': []
+    }
 
+    pointing = request.target.in_pond_format()
+
+    for i, molecule in enumerate(request.molecules):
+        specific_camera = resolve_instrument(molecule.instrument_name, site,
+                                             observatory, telescope, configdb_interface)
+        # copy all of the fields already in the molecule (passed through from valhalla)
+        mol_dict = molecule.mol_dict.copy()
+        mol_dict['prop_id'] = user_request.proposal.id
+        mol_dict['tag_id'] = user_request.proposal.tag
+        mol_dict['user_id'] = user_request.submitter
+        mol_dict['group'] = user_request.group_id
+        mol_dict['tracking_num'] = str(user_request.tracking_number).zfill(10)
+        mol_dict['request_num'] = str(request.request_number).zfill(10)
+        # Add the pointing into the molecule
+        mol_dict['pointing'] = pointing
+        # Set the specific instrument as resolved with configdb
+        mol_dict['inst_name'] = specific_camera
+        # Set the autoguider name if needed
+        if molecule.ag_mode != 'OFF':
+            ag_name = getattr(molecule, 'ag_name', None) or ''
+            specific_ag = resolve_autoguider(ag_name, specific_camera,
+                                             site, observatory, telescope,
+                                             configdb_interface)
+            mol_dict['ag_name'] = specific_ag
+
+            msg = "Autoguider resolved as {}".format(specific_ag)
+            log.debug(msg)
+            ur_log.debug(msg, user_request.tracking_number)
+
+        # Need to map the ag_mode values
+        mol_dict['ag_mode'] = AG_MODE_MAPPING[mol_dict['ag_mode'].upper()]
+        # Need to map the expmeter_mode
+        if mol_dict['expmeter_mode'] == 'OFF':
+            mol_dict['expmeter_mode'] = 'EXPMETER_OFF'
+        mol_dict['expmeter_snr'] = mol_dict['expmeter_snr'] or 0.0
+
+        mol_summary_msg = "Building {} molecule {}/{} ({} x {:.3f}s)".format(
+            molecule.type,
+            i + 1,
+            len(request.molecules),
+            molecule.exposure_count,
+            molecule.exposure_time,
+        )
+        log.debug(mol_summary_msg)
+        ur_log.debug(mol_summary_msg, user_request.tracking_number)
+
+        block['molecules'].append(mol_dict)
     log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
-                                     block.request_number, block.tracking_number,
-                                     block.start, block.end, block.priority)
+                                     block['molecules'][0]['request_num'], block['molecules'][0]['tracking_num'],
+                                     block['start'], block['end'], block['priority'])
 
     return block
+
 
 @metric_timer('pond.get_network_running_interavls')
 def get_network_running_intervals(running_blocks_by_telescope):
@@ -929,20 +484,12 @@ def get_intervals(blocks):
     ''' Create Intervals from given blocks  '''
     timepoints = []
     for block in blocks:
-        timepoints.append(Timepoint(block.start, 'start'))
-        timepoints.append(Timepoint(block.end, 'end'))
+        timepoints.append(Timepoint(block['start'], 'start'))
+        timepoints.append(Timepoint(block['end'], 'end'))
 
     return Intervals(timepoints)
 
 
-class IncompleteBlockError(Exception):
-    '''Raised when a block is missing required parameters.'''
-    pass
-
 class InstrumentResolutionError(Exception):
     '''Raised when no instrument can be determined for a given resource.'''
-    pass
-
-class PondFacadeException(Exception):
-    '''Placeholder until POND client raises this exception on our behalf.'''
     pass

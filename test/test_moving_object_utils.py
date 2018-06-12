@@ -9,36 +9,34 @@ Author: Eric Saunders
 December 2013
 '''
 
-from adaptive_scheduler.moving_object_utils import (pond_pointing_from_scheme,
-                                                    InvalidElements)
-from adaptive_scheduler.model2              import NonSiderealTarget
+from adaptive_scheduler.moving_object_utils import InvalidElements, required_fields_from_scheme
+from adaptive_scheduler.model2 import NonSiderealTarget
 
 from nose.tools import assert_equal, raises
+
 
 class TestMovingObjectUtils(object):
 
     def setup(self):
         self.elements = {
-                          'name'         : 'Kilia',
-                          'epochofel'    : 56600.0,
-                          'orbinc'       : 7.22565,
-                          'longascnode'  : 173.25052,
-                          'argofperih'   : 47.60658,
-                          'meandist'     : 2.4050925,
-                          'eccentricity' : 0.0943494,
-                          'meananom'     : 54.47380,
-                          'scheme'       : 'MPC_MINOR_PLANET',
-                        }
+            'name': 'Kilia',
+            'epochofel': 56600.0,
+            'orbinc': 7.22565,
+            'longascnode': 173.25052,
+            'argofperih': 47.60658,
+            'meandist': 2.4050925,
+            'eccentricity': 0.0943494,
+            'meananom': 54.47380,
+            'scheme': 'MPC_MINOR_PLANET',
+        }
 
-    def test_minor_planet_pond_pointing_has_expected_field(self):
-
+    def test_minor_planet_pond_pointing_requires_expected_fields(self):
         target = NonSiderealTarget(self.elements)
 
-        pointing = pond_pointing_from_scheme(target)
+        pointing_required_fields = required_fields_from_scheme(target.scheme)
 
-        assert_equal(pointing.meandist, self.elements['meandist'])
-        assert_equal(pointing.perihdist, 0.0)
-
+        for field in pointing_required_fields:
+            assert field in self.elements.keys()
 
     @raises(InvalidElements)
     def test_invalid_scheme_raises_exception(self):
@@ -46,5 +44,3 @@ class TestMovingObjectUtils(object):
         target = NonSiderealTarget(self.elements)
 
         pointing = pond_pointing_from_scheme(target)
-
-
