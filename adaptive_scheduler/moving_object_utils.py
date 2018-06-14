@@ -13,8 +13,6 @@ Author: Eric Saunders
 December 2013
 '''
 
-from lcogtpond import pointing
-
 scheme_mappings = {
                     'ASA_MAJOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
                                          'longascnode', 'longofperih', 'meandist',
@@ -41,32 +39,11 @@ scheme_mappings = {
 
 
 def required_fields_from_scheme(scheme):
-    if scheme.upper() in scheme_mappings:
-        return scheme_mappings[scheme.upper()]
-    else:
+    if scheme.upper() not in scheme_mappings:
         msg = "Unknown orbital element scheme '%s'" % scheme
         raise InvalidElements(msg)
 
-    return required_fields
-
-
-def pond_pointing_from_scheme(target):
-    '''The target scheme is lower-cased and used to find the corresponding POND
-       method.
-
-       Example: 'MPC_MINOR_PLANET' -> pointing.nonsidereal_mpc_minor_planet()
-    '''
-    try:
-        fn = getattr(pointing, 'nonsidereal_%s' % target.scheme.lower())
-    except AttributeError as e:
-        raise InvalidElements("Unknown orbital element scheme '%s'" % target.scheme)
-
-    args = [ (x, getattr(target, x)) for x in scheme_mappings[target.scheme.upper()] if x != 'scheme' ]
-    pointing_kwargs = dict(args)
-
-    pond_pointing = fn(**pointing_kwargs)
-
-    return pond_pointing
+    return scheme_mappings[scheme.upper()]
 
 
 class InvalidElements(Exception):

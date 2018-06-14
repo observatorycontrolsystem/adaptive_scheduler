@@ -22,10 +22,10 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
                  es_endpoint=None, save_output=False, request_logs=False,
-                 pond_port=12345, pond_host='scheduler.lco.gtn',
-                 valhalla_url='http://valhalla.lco.gtn/',
-                 configdb_url='http://configdb.lco.gtn/',
-                 downtime_url='http://downtime.lco.gtn',
+                 pond_host='lakedev.lco.gtn',
+                 valhalla_url='http://valhalladev.lco.gtn/',
+                 configdb_url='http://configdbdev.lco.gtn/',
+                 downtime_url='http://downtimedev.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -46,7 +46,6 @@ class SchedulerParameters(object):
         self.request_logs = request_logs
         self.too_run_time = too_run_time
         self.normal_run_time = normal_run_time
-        self.pond_port = pond_port
         self.pond_host = pond_host
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds

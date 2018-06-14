@@ -41,7 +41,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.log         import UserRequestLogger
 
-from multiprocessing import Pool, cpu_count
+from multiprocessing import Pool, cpu_count, current_process, TimeoutError
 from redis import Redis
 import cPickle
 import os
@@ -53,7 +53,8 @@ log = logging.getLogger(__name__)
 multi_ur_log = logging.getLogger('ur_logger')
 ur_log = UserRequestLogger(multi_ur_log)
 
-redis = Redis(host=os.getenv('REDIS_URL', 'redisdev'), db=0, password='schedulerpass')
+redis = Redis(host=os.getenv('REDIS_URL', 'redisdev'), db=0, password='schedulerpass', socket_connect_timeout=15,
+              socket_timeout=30)
 
 local_cache = {}
 
@@ -113,10 +114,17 @@ def cache_rise_set_timepoint_intervals(args):
     '''Calculates the rise set timepoint interval of a target and attempts to put the result in redis. If it fails and
         throws an exception, the calling code should catch this and fall back to compute rise sets synchronously
     '''
-    (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
-    intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
-    cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-    redis.set(cache_key, cPickle.dumps(intervals))
+    try:
+	log.info('process {} is calculating a rise set'.format(current_process().pid))
+        (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
+        intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
+        cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+        redis.set(cache_key, cPickle.dumps(intervals))
+	log.info('process {} finished calculating rise set'.format(current_process().pid))
+    except Exception as e:
+	log.warn('received an error when trying to cache rise set value {}'.format(repr(e)))
+        # Catch and reraise the exception as a base Exception to make sure it is pickleable and doesn't hang the process
+        raise Exception(repr(e))
 
 
 def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
@@ -332,10 +340,16 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
     if rise_sets_to_compute_later:
         pool = Pool(processes=num_processes)
         try:
-            pool.map(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values())
+            pool.map_async(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values()).get(300)
+        except TimeoutError as te:
+	    pool.terminate()
+	    log.warn('300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
         except Exception:
             log.warn('Failed to save rise_set intervals into redis. Please check that redis is online. Falling back on synchronous rise_set calculations.')
-        pool.close()
+        log.info("finished computing rise_sets")
+	pool.close()
+	pool.join()
+	log.info("finished closing thread pool")
         for cache_key in rise_sets_to_compute_later.keys():
             try:
                 local_cache[cache_key] = cPickle.loads(redis.get(cache_key))

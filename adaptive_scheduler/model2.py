@@ -27,13 +27,14 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.log                   import UserRequestLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
-from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
+from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme, scheme_mappings
 from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
 
 from datetime    import datetime
 import ast
 import logging
 import random
+import numbers
 
 log = logging.getLogger(__name__)
 
@@ -42,6 +43,8 @@ ur_log = UserRequestLogger(multi_ur_log)
 
 event_bus = get_eventbus()
 
+POND_FIELD_DIGITS = 7
+
 
 def n_requests(user_reqs):
     n_urs  = len(user_reqs)
@@ -49,8 +52,10 @@ def n_requests(user_reqs):
 
     return n_urs, n_rs
 
+
 def n_base_requests(user_reqs):
     return sum([ur.n_requests() for ur in user_reqs])
+
 
 def filter_out_compounds(user_reqs):
     '''Given a list of UserRequests, return a list containing only UserRequests of
@@ -165,6 +170,18 @@ class Target(DataContainer):
         fields_as_str = '({})'.format(', '.join(fields_as_str))
         return "{} {}".format(self.__class__.__name__, fields_as_str)
 
+    def in_pond_format(self):
+        ''' Common pointing fields to all pointing types'''
+        pointing = {}
+        pointing['rot_mode'] = getattr(self, 'rot_mode', 'SKY') or 'SKY'
+        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), POND_FIELD_DIGITS)
+        if hasattr(self, 'vmag') and self.vmag:
+            pointing['vmag'] = round(self.vmag, POND_FIELD_DIGITS)
+        if hasattr(self, 'radvel') and self.radvel:
+            pointing['radvel'] = round(self.radvel, POND_FIELD_DIGITS)
+
+        return pointing
+
 
 class NullTarget(Target):
     def __init__(self, *initial_data, **kwargs):
@@ -207,7 +224,33 @@ class SiderealTarget(Target):
 
         return target_dict
 
-    ra  = property(get_ra, set_ra)
+    def in_pond_format(self):
+        pointing = super(SiderealTarget, self).in_pond_format()
+        if hasattr(self, 'proper_motion_ra') and hasattr(self, 'proper_motion_dec'):
+            # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
+            # for more info: https://issues.lco.global/issues/8723
+            prop_mot_ra, prop_mot_dec = convert_proper_motion(self.proper_motion_ra,
+                                                              self.proper_motion_dec,
+                                                              self.dec.in_degrees())
+        else:
+            prop_mot_dec = 0.0
+            prop_mot_ra = 0.0
+
+        pointing.update({
+            'type': 'SIDEREAL',
+            'coord_sys': 'ICRS',
+            'coord_type': 'RD',
+            'name': self.name,
+            'ra': round(self.ra.in_degrees(), POND_FIELD_DIGITS),
+            'dec': round(self.dec.in_degrees(), POND_FIELD_DIGITS),
+            'pro_mot_ra': round(prop_mot_ra, POND_FIELD_DIGITS),
+            'pro_mot_dec': round(prop_mot_dec, POND_FIELD_DIGITS),
+            'parallax': round(getattr(self, 'parallax', 0.0) / 1000.0, POND_FIELD_DIGITS),  # marcsec to arcsec
+            'epoch': round(getattr(self, 'epoch', 2000.0), POND_FIELD_DIGITS)
+        })
+        return pointing
+
+    ra = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
 
@@ -241,6 +284,17 @@ class NonSiderealTarget(Target):
 
         return target_dict
 
+    def in_pond_format(self):
+        ''' This copies in all fields supplied from valhalla to pass through to the pond'''
+        pointing = super(NonSiderealTarget, self).in_pond_format()
+        pointing['type'] = 'NON_SIDEREAL'
+        pointing.update({x: getattr(self, x) for x in scheme_mappings[self.scheme.upper()]})
+        for key, value in pointing.items():
+            if isinstance(value, numbers.Number):
+                pointing[key] = round(value, POND_FIELD_DIGITS)
+
+        return pointing
+
 
 class SatelliteTarget(Target):
     ''' SatelliteTarget for targets with satellite parameters and fixed windows. Rise-set just returns the
@@ -257,6 +311,23 @@ class SatelliteTarget(Target):
 
         return target_dict
 
+    def in_pond_format(self):
+        pointing = super(SatelliteTarget, self).in_pond_format()
+        pointing.update({
+            'type': 'SATELLITE',
+            'coord_type': 'AA',
+            'coord_sys': 'APP',
+            'name': self.name,
+            'alt': round(self.altitude, POND_FIELD_DIGITS),
+            'az': round(self.azimuth, POND_FIELD_DIGITS),
+            'diff_alt_rate': round(self.diff_pitch_rate, POND_FIELD_DIGITS),
+            'diff_az_rate': round(self.diff_roll_rate, POND_FIELD_DIGITS),
+            'diff_alt_accel': round(self.diff_pitch_acceleration, POND_FIELD_DIGITS),
+            'diff_az_accel': round(self.diff_roll_acceleration, POND_FIELD_DIGITS),
+            'diff_epoch_rate': round(self.diff_epoch_rate, POND_FIELD_DIGITS)
+        })
+        return pointing
+
 
 class Constraints(DataContainer):
     #TODO: Make this a named tuple
@@ -269,12 +340,13 @@ class Constraints(DataContainer):
         self.min_transparency   = None
         DataContainer.__init__(self, *args, **kwargs)
 
-
     def __repr__(self):
         return "Constraints(airmass={}, min_lunar_distance={})".format(self.max_airmass, self.min_lunar_distance)
 
+
 class Molecule(DataContainer):
     def __init__(self, required_fields, *initial_data, **kwargs):
+        self.mol_dict = initial_data[0]
         self.ag_name = None
         DataContainer.__init__(self, *initial_data, **kwargs)
         self.required_fields = required_fields
@@ -289,7 +361,6 @@ class Molecule(DataContainer):
                 missing_fields.append(field)
 
         return missing_fields
-
 
 
 class MoleculeFactory(object):
@@ -345,7 +416,6 @@ class MoleculeFactory(object):
         return Molecule(required_fields, mol_dict)
 
 
-
 class Window(EqualityMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
     def __init__(self, window_dict, resource):
@@ -363,7 +433,6 @@ class Window(EqualityMixin):
 
     def __repr__(self):
         return "Window (%s, %s)" % (self.start, self.end)
-
 
 
 class Windows(EqualityMixin):
@@ -394,7 +463,6 @@ class Windows(EqualityMixin):
     def __iter__(self):
         for resource_name, windows in self.windows_for_resource.iteritems():
             yield resource_name, windows
-
 
 
 class Proposal(DataContainer):
@@ -548,19 +616,19 @@ class UserRequest(EqualityMixin):
         return self._is_schedulable_easy(running_request_numbers)
 
     def _is_schedulable_easy(self, running_request_numbers):
-            if self.operator == 'and':
-                is_ok_to_return = True
-                for r in self.requests:
-                    if not r.has_windows() and not r.request_number in running_request_numbers:
-                        return False
+        if self.operator == 'and':
+            is_ok_to_return = True
+            for r in self.requests:
+                if not r.has_windows() and not r.request_number in running_request_numbers:
+                    return False
 
-            elif self.operator in ('oneof', 'single', 'many'):
-                is_ok_to_return = False
-                for r in self.requests:
-                    if r.has_windows() or r.request_number in running_request_numbers:
-                        return True
+        elif self.operator in ('oneof', 'single', 'many'):
+            is_ok_to_return = False
+            for r in self.requests:
+                if r.has_windows() or r.request_number in running_request_numbers:
+                    return True
 
-            return is_ok_to_return
+        return is_ok_to_return
 
     def _is_schedulable_hard(self, running_request_numbers):
         is_ok_to_return = {
@@ -667,7 +735,6 @@ class ModelBuilder(object):
 
         return self.proposals_by_id[proposal_id]
 
-
     def get_semester_details(self, date):
         if not self.semester_details:
             try:
@@ -676,7 +743,6 @@ class ModelBuilder(object):
                 raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
 
         return self.semester_details
-
 
     def build_user_request(self, ur_dict, scheduled_requests=None, ignore_ipp=False):
         if scheduled_requests is None:
@@ -745,7 +811,6 @@ class ModelBuilder(object):
         invalid_requests = [ir[0] for ir in invalid_requests]
         return user_request, invalid_requests
 
-
     def build_requests(self, ur_dict, scheduled_requests=None):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
@@ -775,7 +840,6 @@ class ModelBuilder(object):
                 invalid_requests.append((req_dict, e.message))
 
         return requests, invalid_requests
-
 
     def build_request(self, req_dict, scheduled_reservation=None):
         target_type = req_dict['target']['type']
@@ -868,7 +932,6 @@ class ModelBuilder(object):
                      )
 
         return req
-
 
     def have_same_instrument(self, molecules):
         instrument_names = []
