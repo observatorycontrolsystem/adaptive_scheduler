@@ -477,7 +477,7 @@ def get_intervals(blocks):
     ''' Create Intervals from given blocks  '''
     intervals = []
     for block in blocks:
-        intervals.append((block.start, block.end))
+        intervals.append((block['start'], block['end']))
 
     return Intervals(intervals)
 
