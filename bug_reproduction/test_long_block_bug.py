@@ -11,8 +11,7 @@ March 2014
 
 from nose.tools import assert_equal
 
-from adaptive_scheduler.kernel.intervals        import Intervals
-from adaptive_scheduler.kernel.timepoint        import Timepoint
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3   import Reservation_v3, CompoundReservation_v2
 #from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6 as FullScheduler
@@ -23,10 +22,10 @@ class TestLongBlockBug(object):
 
 
     def setup(self):
-        self.pw1     = Intervals([Timepoint(0,     'start'),
-                             Timepoint(22765, 'end')])
-        self.pw2     = Intervals([Timepoint(0,     'start'),
-                             Timepoint(22765, 'end')])
+        self.pw1     = Intervals([{'time': 0, 'type': 'start'},
+                                  {'time': 22765, 'type': 'end'}])
+        self.pw2     = Intervals([{'time': 0, 'type': 'start'},
+                                  {'time': 22765, 'type': 'end'}])
 
         # A short duration
         self.r1 = Reservation_v3(
@@ -40,9 +39,9 @@ class TestLongBlockBug(object):
 
         self.globally_possible_windows = {}
         self.globally_possible_windows['foo'] = Intervals([
-                                                  Timepoint(0, 'start'),
-                                                  Timepoint(50000, 'end'),
-                                                ])
+            {'time': 0, 'type': 'start'},
+            {'time': 50000, 'type': 'end'},
+        ])
         self.contractual_obligations = []
         self.time_slicing_dict       = {'foo': [0, 300]}
 

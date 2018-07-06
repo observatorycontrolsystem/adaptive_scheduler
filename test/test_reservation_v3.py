@@ -9,16 +9,15 @@ November 2011
 
 from nose.tools import assert_equal
 
-from adaptive_scheduler.kernel.timepoint import *
-from adaptive_scheduler.kernel.intervals import *
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import *
 
 class TestReservation_v3(object):
     
     def setup(self):
-        s1 = Intervals([Timepoint(1, 'start'), Timepoint(2, 'end')]) 
-        s2 = Intervals([Timepoint(2, 'start'), Timepoint(4, 'end')]) 
-        s3 = Intervals([Timepoint(2, 'start'), Timepoint(6, 'end')]) 
+        s1 = Intervals([{'time': 1, 'type': 'start'}, {'time': 2, 'type': 'end'}])
+        s2 = Intervals([{'time': 2, 'type': 'start'}, {'time': 4, 'type': 'end'}])
+        s3 = Intervals([{'time': 2, 'type': 'start'}, {'time': 6, 'type': 'end'}])
         self.r1 = Reservation_v3(1, 1, {'foo': s1})
         self.r2 = Reservation_v3(1, 2, {'bar': s2})
         self.r3 = Reservation_v3(2, 1, {'foo': s3})
@@ -48,22 +47,22 @@ class TestReservation_v3(object):
 
 
     def test_remove_from_free_windows_1(self):
-        self.r1.remove_from_free_windows(Intervals([Timepoint(1, 'start'), Timepoint(2, 'end')]), 'foo')
+        self.r1.remove_from_free_windows(Intervals([{'time': 1, 'type': 'start'}, {'time': 2, 'type': 'end'}]), 'foo')
         assert_equal(self.r1.free_windows_dict['foo'].timepoints, [])
 
 
     def test_remove_from_free_windows_2(self):
-        self.r2.remove_from_free_windows(Intervals([Timepoint(3, 'start'), Timepoint(4, 'end')]), 'bar')
+        self.r2.remove_from_free_windows(Intervals([{'time': 3, 'type': 'start'}, {'time': 4, 'type': 'end'}]), 'bar')
         assert_equal(self.r2.free_windows_dict['bar'].timepoints, [])
 
 
 
     def test_remove_from_free_windows_3(self):
-        self.r3.remove_from_free_windows(Intervals([Timepoint(2, 'start'), Timepoint(3, 'end')]), 'foo')
-        assert_equal(self.r3.free_windows_dict['foo'].timepoints[0].time, 3)
-        assert_equal(self.r3.free_windows_dict['foo'].timepoints[0].type, 'start')
-        assert_equal(self.r3.free_windows_dict['foo'].timepoints[1].time, 6)
-        assert_equal(self.r3.free_windows_dict['foo'].timepoints[1].type, 'end')
+        self.r3.remove_from_free_windows(Intervals([{'time': 2, 'type': 'start'}, {'time': 3, 'type': 'end'}]), 'foo')
+        assert_equal(self.r3.free_windows_dict['foo'].timepoints[0]['time'], 3)
+        assert_equal(self.r3.free_windows_dict['foo'].timepoints[0]['type'], 'start')
+        assert_equal(self.r3.free_windows_dict['foo'].timepoints[1]['time'], 6)
+        assert_equal(self.r3.free_windows_dict['foo'].timepoints[1]['type'], 'end')
 
 
     def test_lt(self):
@@ -76,10 +75,10 @@ class TestReservation_v3(object):
         assert_equal(self.r1.scheduled_start, 1)
         assert_equal(self.r1.scheduled_quantum, 1)
         assert_equal(self.r1.scheduled, True)
-        assert_equal(self.r1.scheduled_timepoints[0].time, 1)
-        assert_equal(self.r1.scheduled_timepoints[0].type, 'start')
-        assert_equal(self.r1.scheduled_timepoints[1].time, 2)
-        assert_equal(self.r1.scheduled_timepoints[1].type, 'end')
+        assert_equal(self.r1.scheduled_timepoints[0]['time'], 1)
+        assert_equal(self.r1.scheduled_timepoints[0]['type'], 'start')
+        assert_equal(self.r1.scheduled_timepoints[1]['time'], 2)
+        assert_equal(self.r1.scheduled_timepoints[1]['type'], 'end')
 
 
     def test_schedule_anywhere(self):
@@ -87,10 +86,10 @@ class TestReservation_v3(object):
         assert_equal(self.r1.scheduled_start, 1)
         assert_equal(self.r1.scheduled_quantum, 1)
         assert_equal(self.r1.scheduled, True)
-        assert_equal(self.r1.scheduled_timepoints[0].time, 1)
-        assert_equal(self.r1.scheduled_timepoints[0].type, 'start')
-        assert_equal(self.r1.scheduled_timepoints[1].time, 2)
-        assert_equal(self.r1.scheduled_timepoints[1].type, 'end')
+        assert_equal(self.r1.scheduled_timepoints[0]['time'], 1)
+        assert_equal(self.r1.scheduled_timepoints[0]['type'], 'start')
+        assert_equal(self.r1.scheduled_timepoints[1]['time'], 2)
+        assert_equal(self.r1.scheduled_timepoints[1]['type'], 'end')
         assert_equal(self.r1.scheduled_by, 'reservation_v3.schedule_anywhere()')
         
 

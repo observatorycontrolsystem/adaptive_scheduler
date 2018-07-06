@@ -27,16 +27,11 @@ February 2012
 '''
 from __future__ import division
 
-import time
 from datetime import timedelta
 
-from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
-                                               NullTarget)
-from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
-                                               split_location, merge_dicts, convert_proper_motion)
+from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
 
 from adaptive_scheduler.printing       import pluralise as pl
-from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
@@ -44,12 +39,10 @@ from adaptive_scheduler.configdb_connections import ConfigDBError
 # Set up and configure a module scope logger
 import logging
 from adaptive_scheduler.utils            import metric_timer
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
+from time_intervals.intervals import Intervals
 
 import requests
 from dateutil.parser import parse
-import json
 
 log = logging.getLogger(__name__)
 
@@ -482,12 +475,11 @@ def get_network_running_intervals(running_blocks_by_telescope):
 
 def get_intervals(blocks):
     ''' Create Intervals from given blocks  '''
-    timepoints = []
+    intervals = []
     for block in blocks:
-        timepoints.append(Timepoint(block['start'], 'start'))
-        timepoints.append(Timepoint(block['end'], 'end'))
+        intervals.append((block['start'], block['end']))
 
-    return Intervals(timepoints)
+    return Intervals(intervals)
 
 
 class InstrumentResolutionError(Exception):
