@@ -159,13 +159,18 @@ class PondScheduleInterface(object):
         for resource_name, reservations in schedule.items():
             blocks_by_resource[resource_name] = []
             for reservation in reservations:
-                block = build_block(reservation, reservation.request,
-                                    reservation.user_request, semester_start,
-                                    configdb_interface)
-    
+                try:
+                    block = build_block(reservation, reservation.request,
+                                        reservation.user_request, semester_start,
+                                        configdb_interface)
+                except Exception:
+                    log.exception('Unable to build block from reservation for request number {}'.format(
+                        self._get_request_num_from_reservation(reservation)
+                    ))
+                    continue
                 blocks_by_resource[resource_name].append(block)
             _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
-            msg = 'Sending {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
+            msg = 'Will send {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
             log_info_dry_run(msg, dry_run)
         n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
 
@@ -195,6 +200,13 @@ class PondScheduleInterface(object):
                                 bad_block['molecules'][0]['tracking_num'],
                                 error))
 
+    def _get_request_num_from_reservation(self, reservation):
+        request_num = 'unknown'
+        try:
+            request_num = reservation.request.request_number
+        except AttributeError:
+            pass
+        return request_num
 
     def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         telescope_blocks = {}     
