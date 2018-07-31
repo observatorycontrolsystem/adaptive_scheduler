@@ -174,7 +174,7 @@ class Target(DataContainer):
         ''' Common pointing fields to all pointing types'''
         pointing = {}
         pointing['rot_mode'] = getattr(self, 'rot_mode', 'SKY') or 'SKY'
-        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), POND_FIELD_DIGITS)
+        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), 3)  # rot_angle is limited to 3 digits in pond
         if hasattr(self, 'vmag') and self.vmag:
             pointing['vmag'] = round(self.vmag, POND_FIELD_DIGITS)
         if hasattr(self, 'radvel') and self.radvel:
