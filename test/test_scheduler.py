@@ -1278,8 +1278,8 @@ class TestSchedulerRunner(object):
         scheduler_runner.run()
 
         assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(3, self.network_interface_mock.cancel.call_count)
-        assert_equal(2, self.network_interface_mock.save.call_count)
+        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_equal(1, self.network_interface_mock.save.call_count)
 
 
     def test_scheduler_runner_no_too_requests(self):
@@ -1302,8 +1302,8 @@ class TestSchedulerRunner(object):
         scheduler_runner.run()
 
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, self.network_interface_mock.cancel.call_count)
-        assert_equal(1, self.network_interface_mock.save.call_count)
+        assert_equal(0, self.network_interface_mock.cancel.call_count)
+        assert_equal(0, self.network_interface_mock.save.call_count)
 
 
     def test_scheduler_runner_no_normal_requests(self):
@@ -1382,7 +1382,7 @@ class TestSchedulerRunner(object):
 
 
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
-        assert_equal(3, self.network_interface_mock.cancel.call_count)
+        assert_equal(4, self.network_interface_mock.cancel.call_count)
 
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
@@ -1397,8 +1397,8 @@ class TestSchedulerRunner(object):
         # cancel_too flag not set for normal loop
         assert_false(self.network_interface_mock.cancel.call_args_list[2][0][2])
         # normal loop cancels on all resources
-        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[2][0][0])
         assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[2][0][0])
+        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[3][0][0])
 
 
     def test_scheduler_runner_dry_run(self):
