@@ -17,6 +17,7 @@ from reservation_v3 import *
 #from contracts_v2 import *
 import copy
 import numpy
+import math
 from scheduler import *
 
 class PossibleStart(object):
@@ -149,22 +150,21 @@ class SlicedIPScheduler_v2(Scheduler):
             slice_length = self.time_slicing_dict[resource][1]
             slices = []
             internal_starts = []
-            intervals.timepoints.sort()
-            for t in intervals.timepoints:
-                if t.type == 'start':
-                    if t.time <= slice_alignment:
+            for t in intervals.toDictList():
+                if t['type'] == 'start':
+                    if t['time'] <= slice_alignment:
                         start = slice_alignment
                         internal_start = slice_alignment
                     else:
                         # figure out start so it aligns with slice_alignment 
-                        start = int(slice_alignment + math.floor(float(t.time - slice_alignment)/float(slice_length))*slice_length)
+                        start = int(slice_alignment + math.floor(float(t['time'] - slice_alignment)/float(slice_length))*slice_length)
                         # use the actual start as an internal start (may or may not align w/ slice_alignment)
-                        internal_start = t.time
+                        internal_start = t['time']
                     end_time = internal_start + duration
-                elif t.type == 'end': 
-                    if t.time < slice_alignment:
+                elif t['type'] == 'end':
+                    if t['time'] < slice_alignment:
                         continue
-                    while t.time - start >= duration:
+                    while t['time'] - start >= duration:
                         tmp = range(start, internal_start+duration, slice_length)
                         slices.append(tmp)
                         internal_starts.append(internal_start)

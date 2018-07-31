@@ -7,6 +7,7 @@ from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
                                        UserRequest, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
@@ -17,9 +18,6 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 get_rise_set_timepoint_intervals,
                                                 make_cache_key,
                                                 req_windows_to_kernel_intervals)
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
-
 from datetime import datetime
 
 
@@ -111,15 +109,15 @@ class TestKernelMappings(object):
 
     def make_intersection_dict(self):
         timepoints = [
-                       Timepoint(
-                                  time= datetime(2011, 11, 1, 6, 0, 0),
-                                  type='start'
-                                ),
-                       Timepoint(
-                                  time= datetime(2011, 11, 1, 7, 0, 0),
-                                  type='end'
-                                ),
-                     ]
+            {
+                'time': datetime(2011, 11, 1, 6, 0, 0),
+                'type': 'start'
+            },
+            {
+                'time': datetime(2011, 11, 1, 7, 0, 0),
+                'type': 'end'
+            },
+        ]
         intervals = Intervals(timepoints)
 
         intersection_dict = {
@@ -372,8 +370,8 @@ class TestKernelMappings(object):
 
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.iteritems():
-            for i, received_tp in enumerate(received_intervals.timepoints):
-                assert_equal(received_tp.time, rise_set_dark_intervals[i])
+            for i, received_tp in enumerate(received_intervals.toDictList()):
+                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
 
     def test_proper_motion_in_rise_set(self):
@@ -428,8 +426,8 @@ class TestKernelMappings(object):
 
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.iteritems():
-            for i, received_tp in enumerate(received_intervals.timepoints):
-                assert_equal(received_tp.time, rise_set_dark_intervals[i])
+            for i, received_tp in enumerate(received_intervals.toDictList()):
+                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
 
 
@@ -478,8 +476,8 @@ class TestKernelMappings(object):
 
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.iteritems():
-            for i, received_tp in enumerate(received_intervals.timepoints):
-                assert_equal(received_tp.time, rise_set_dark_intervals[i])
+            for i, received_tp in enumerate(received_intervals.toDictList()):
+                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
 
     def test_visibility_intervals_are_limited_by_hour_angle(self):
@@ -535,7 +533,7 @@ class TestKernelMappings(object):
         expected_tps = [
                          {
                            'type': 'start',
-                           'time': datetime(2013, 3, 22, 18, 7, 32, 169190)
+                           'time': datetime(2013, 3, 22, 18, 8, 34, 287629)
                          },
                          {
                            'type': 'end',
@@ -543,9 +541,9 @@ class TestKernelMappings(object):
                          },
                        ]
 
-        for received_tp, expected_tp in zip(received[tel_name].timepoints, expected_tps):
-            assert_equal(received_tp.type, expected_tp['type'])
-            assert_equal(received_tp.time, expected_tp['time'])
+        for received_tp, expected_tp in zip(received[tel_name].toDictList(), expected_tps):
+            assert_equal(received_tp['type'], expected_tp['type'])
+            assert_equal(received_tp['time'], expected_tp['time'])
 
 
     def test_visibility_intervals_at_low_horizon_are_allowed_by_hour_angle(self):
@@ -602,7 +600,7 @@ class TestKernelMappings(object):
         expected_tps = [
                          {
                            'type': 'start',
-                           'time': datetime(2013, 3, 22, 13, 8, 21, 316996)
+                           'time': datetime(2013, 3, 22, 13, 9, 28, 988253)
                          },
                          {
                            'type': 'end',
@@ -611,9 +609,9 @@ class TestKernelMappings(object):
                        ]
 
 
-        for received_tp, expected_tp in zip(received[tel_name].timepoints, expected_tps):
-            assert_equal(received_tp.type, expected_tp['type'])
-            assert_equal(received_tp.time, expected_tp['time'])
+        for received_tp, expected_tp in zip(received[tel_name].toDictList(), expected_tps):
+            assert_equal(received_tp['type'], expected_tp['type'])
+            assert_equal(received_tp['time'], expected_tp['time'])
 
 
     def test_construct_global_availability(self):
@@ -627,8 +625,8 @@ class TestKernelMappings(object):
 
         dt_resource_int = Intervals(
                             [
-                              Timepoint(dt0, 'start'),
-                              Timepoint(dt1, 'end'),
+                                {'time': dt0, 'type': 'start'},
+                                {'time': dt1, 'type': 'end'},
                             ]
                           )
         epoch_resource_int = normalise_dt_intervals(dt_resource_int, sem_start)
@@ -640,8 +638,8 @@ class TestKernelMappings(object):
         dt2 = datetime(2013, 3, 22, 4)
         dt3 = datetime(2013, 3, 22, 5)
         masked_inervals = {
-                           '1m0a.doma.lsc' : Intervals([Timepoint(dt2, 'start'),
-                                                        Timepoint(dt3, 'end')])
+                           '1m0a.doma.lsc' : Intervals([{'time': dt2, 'type': 'start'},
+                                                        {'time': dt3, 'type': 'end'}])
                            }
 
         # Expected available intervals after masking are
@@ -649,14 +647,15 @@ class TestKernelMappings(object):
         received = construct_global_availability(masked_inervals, sem_start,
                                                  resource_windows)
         received_int = received[tel_name]
-        assert_equal(len(received_int.timepoints), 4)
-        r0 = normalised_epoch_to_datetime(received_int.timepoints[0].time,
+        timepoints = received_int.toDictList()
+        assert_equal(len(timepoints), 4)
+        r0 = normalised_epoch_to_datetime(timepoints[0]['time'],
                                           datetime_to_epoch(sem_start))
-        r1 = normalised_epoch_to_datetime(received_int.timepoints[1].time,
+        r1 = normalised_epoch_to_datetime(timepoints[1]['time'],
                                           datetime_to_epoch(sem_start))
-        r2 = normalised_epoch_to_datetime(received_int.timepoints[2].time,
+        r2 = normalised_epoch_to_datetime(timepoints[2]['time'],
                                           datetime_to_epoch(sem_start))
-        r3 = normalised_epoch_to_datetime(received_int.timepoints[3].time,
+        r3 = normalised_epoch_to_datetime(timepoints[3]['time'],
                                           datetime_to_epoch(sem_start))
         assert_equal(r0, dt0)
         assert_equal(r1, dt2)
@@ -673,14 +672,12 @@ class TestKernelMappings(object):
         intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
         compute_request_availability(req_no_airmass, intervals_for_resource, {})
         received_no_airmass = req_windows_to_kernel_intervals(req_no_airmass.windows.windows_for_resource)
-
-        timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].timepoints
+        timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].toDictList()
 
         intervals_for_resource = self.make_rise_set_intervals(req_airmass3, visibilities)
         compute_request_availability(req_airmass3, intervals_for_resource, {})
         received_airmass3 = req_windows_to_kernel_intervals(req_airmass3.windows.windows_for_resource)
-
-        timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].timepoints
+        timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].toDictList()
 
         assert_equal(timepoints_no_airmass, timepoints_airmass3)
 

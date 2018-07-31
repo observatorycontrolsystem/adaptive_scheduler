@@ -15,8 +15,7 @@ Additionally, it is allowed to explicitly specify the resID, so as to
 keep a uniform ID space between this and other parts of the scheduler.
 '''
 
-from timepoint import *
-from intervals import *
+from time_intervals.intervals import Intervals
 import copy
 
 class Reservation_v3(object):
@@ -71,8 +70,7 @@ class Reservation_v3(object):
         self.scheduled_start    = start
         self.scheduled_quantum  = quantum
         self.scheduled_resource = resource
-        self.scheduled_timepoints = [Timepoint(start, 'start'), 
-                                     Timepoint(start+self.duration, 'end')]
+        self.scheduled_timepoints = [{'time': start, 'type': 'start'}, {'time': start+self.duration, 'type': 'end'}]
         self.scheduled_by       = scheduler_description
         if self.compound_reservation_parent:
             self.compound_reservation_parent.schedule()

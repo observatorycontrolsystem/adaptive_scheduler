@@ -32,7 +32,6 @@ class Scheduler(object):
         # possible windows are empty. Do the iteration over keys, because
         # we're modifying the dict as we go.
         for r in globally_possible_windows_dict.keys():
-            globally_possible_windows_dict[r].clean_up()
             if globally_possible_windows_dict[r].is_empty():
                 del globally_possible_windows_dict[r]
         # resource_list holds the schedulable resources.

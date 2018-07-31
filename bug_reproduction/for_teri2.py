@@ -2,14 +2,13 @@
 
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5 as FullScheduler
 from adaptive_scheduler.printing import print_schedule
 
 window_dict = {
-        '1m0a.domb.lsc' : Intervals([Timepoint(1225800, 'start'),
-                                    Timepoint(1233000, 'end')])
+        '1m0a.domb.lsc' : Intervals([{'time': 1225800, 'type': 'start'},
+                                     {'time': 1233000, 'type': 'end'}])
         }
 
 r = Reservation(1, 200, window_dict)
@@ -22,8 +21,8 @@ cr = CompoundReservation([r])
 
 to_schedule = [cr]
 resource_windows = {}
-resource_windows['1m0a.domb.lsc'] = Intervals([Timepoint(1, 'start'),
-                                               Timepoint(2000000, 'end')],
+resource_windows['1m0a.domb.lsc'] = Intervals([{'time': 1, 'type': 'start'},
+                                               {'time': 2000000, 'type': 'end'}],
                                               'free')
 contractual_obs = []
 time_slicing_dict = {
