@@ -428,6 +428,7 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
                                              observatory, telescope, configdb_interface)
         # copy all of the fields already in the molecule (passed through from valhalla)
         mol_dict = molecule.mol_dict.copy()
+        mol_dict['exposure_time'] = round(mol_dict['exposure_time'], 7)
         mol_dict['prop_id'] = user_request.proposal.id
         mol_dict['tag_id'] = user_request.proposal.tag
         mol_dict['user_id'] = user_request.submitter
