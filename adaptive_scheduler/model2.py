@@ -408,6 +408,8 @@ class MoleculeFactory(object):
                                                  'instrument_name', 'priority', 'acquire_mode',
                                                  'acquire_radius_arcsec'),
                                   'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
+                                                 'exposure_time', 'priority'),
+                                  'SCRIPT': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
                                                  'exposure_time', 'priority')
                                 }
 
@@ -875,7 +877,7 @@ class ModelBuilder(object):
         filters = []
 
         molecule_types_without_filter = ['dark', 'bias', 'engineering', 'triple', 'nres_test', 'nres_spectrum',
-                                         'nres_expose']
+                                         'nres_expose', 'script']
 
         for molecule in molecules:
             if hasattr(molecule, 'filter') and molecule.filter:
