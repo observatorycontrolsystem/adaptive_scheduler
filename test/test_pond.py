@@ -15,11 +15,9 @@ from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 
-from adaptive_scheduler.kernel.timepoint import Timepoint
-from adaptive_scheduler.kernel.intervals import Intervals
+from time_intervals.intervals import Intervals
 
-from datetime import datetime, timedelta
-import collections
+from datetime import datetime
 import responses
 import os
 

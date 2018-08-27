@@ -8,16 +8,15 @@ August 2012
 '''
 
 from nose.tools import assert_equal
-from adaptive_scheduler.kernel.timepoint import *
-from adaptive_scheduler.kernel.intervals import *
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.fullscheduler_v5 import *
 import copy
 
 class Test_23032013(object):
 
     def setup(self):
-        s1 = Intervals([Timepoint(15010113, 'start'),
-                        Timepoint(15028389, 'end')])
+        s1 = Intervals([{'time': 15010113, 'type': 'start'},
+                        {'time': 15028389, 'type': 'end'}])
         s2 = copy.copy(s1)
         s3 = copy.copy(s1)
 
@@ -30,28 +29,28 @@ class Test_23032013(object):
         self.cr3 = CompoundReservation_v2([self.r3])
 
         self.gpw = {}
-#        self.gpw['foo'] = Intervals([Timepoint(0, 'start'), Timepoint(15724800, 'end')])
+#        self.gpw['foo'] = Intervals([{'time': 0, 'type': 'start'}, {'time': 15724800, 'type' :'end'}])
         self.gpw['foo'] = Intervals([
-                                        Timepoint(14947200, 'start'),
-                                        Timepoint(14960949, 'end'),
-                                        Timepoint(15010609, 'start'),
-                                        Timepoint(15047392, 'end'),
-                                        Timepoint(15096930, 'start'),
-                                        Timepoint(15133834, 'end'),
-                                        Timepoint(15183251, 'start'),
-                                        Timepoint(15220276, 'end'),
-                                        Timepoint(15269573, 'start'),
-                                        Timepoint(15306718, 'end'),
-                                        Timepoint(15355895, 'start'),
-                                        Timepoint(15393160, 'end'),
-                                        Timepoint(15442217, 'start'),
-                                        Timepoint(15479602, 'end'),
-                                        Timepoint(15528539, 'start'),
-                                        Timepoint(15566043, 'end'),
-                                        Timepoint(15614862, 'start'),
-                                        Timepoint(15652484, 'end'),
-                                        Timepoint(15701186, 'start'),
-                                        Timepoint(15724800, 'end')
+                                        {'time': 14947200, 'type': 'start'},
+                                        {'time': 14960949, 'type': 'end'},
+                                        {'time': 15010609, 'type': 'start'},
+                                        {'time': 15047392, 'type': 'end'},
+                                        {'time': 15096930, 'type': 'start'},
+                                        {'time': 15133834, 'type': 'end'},
+                                        {'time': 15183251, 'type': 'start'},
+                                        {'time': 15220276, 'type': 'end'},
+                                        {'time': 15269573, 'type': 'start'},
+                                        {'time': 15306718, 'type': 'end'},
+                                        {'time': 15355895, 'type': 'start'},
+                                        {'time': 15393160, 'type': 'end'},
+                                        {'time': 15442217, 'type': 'start'},
+                                        {'time': 15479602, 'type': 'end'},
+                                        {'time': 15528539, 'type': 'start'},
+                                        {'time': 15566043, 'type': 'end'},
+                                        {'time': 15614862, 'type': 'start'},
+                                        {'time': 15652484, 'type': 'end'},
+                                        {'time': 15701186, 'type': 'start'},
+                                        {'time': 15724800, 'type': 'end'}
                                       ])
 
         slice_dict = {}

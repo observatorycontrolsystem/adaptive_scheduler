@@ -11,7 +11,8 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.feedback         import TimingLogger
 from adaptive_scheduler.interfaces       import ScheduleException
 from adaptive_scheduler.event_utils      import report_scheduling_outcome
-from adaptive_scheduler.kernel.intervals import Intervals
+from time_intervals.intervals import Intervals
+
 from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
                                             metric_timer, set_schedule_type, NORMAL_SCHEDULE_TYPE, TOO_SCHEDULE_TYPE,
                                                  get_reservation_datetimes, time_in_capped_intervals, cap_intervals,
@@ -49,7 +50,7 @@ class Scheduler(object, SendMetricMixin):
     def combine_excluded_intervals(self, excluded_intervals_1, excluded_intervals_2):
         ''' Combine two dictionaries where Intervals are the values '''
         for key in excluded_intervals_2:
-            timepoints = excluded_intervals_2[key].timepoints
+            timepoints = excluded_intervals_2[key].toDictList()
             excluded_intervals_1.setdefault(key, Intervals([])).add(timepoints)
 
         return excluded_intervals_1
@@ -339,7 +340,7 @@ class Scheduler(object, SendMetricMixin):
                     if r.should_continue():
                         masked_timepoints_for_resource.extend(r.timepoints())
             resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
-            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).timepoints)
+            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).toDictList())
             
         return resource_interval_mask 
 
@@ -879,6 +880,7 @@ class SchedulerRunner(object):
         if self._can_apply_scheduler_result(scheduler_result, apply_deadline):
             semester_start = self.semester_details['start']
             semester_end = self.semester_details['end']
+            new_schedule_resources = scheduler_result.resources_scheduled()
 
             cancelation_date_list_by_resource = self._determine_schedule_cancelation_start_dates(
                 resources_to_clear, scheduler_result.schedule,
@@ -887,20 +889,31 @@ class SchedulerRunner(object):
                 semester_end)
 
             # Find running requests that need to be aborted due to conflict with new schedule
-            abort_requests = []
-            for resource in scheduler_result.resources_scheduled():
+            abort_requests_by_resource = {}
+            for resource in new_schedule_resources:
                 earliest_reservation = scheduler_result.earliest_reservation(resource)
                 to_abort = self._determine_abort_requests(scheduler_input.resource_usage_snapshot.user_requests_for_resource(resource),
                                                           semester_start,
                                                           earliest_reservation)
-                abort_requests.extend(to_abort)
+                abort_requests_by_resource[resource] = to_abort
 
-            n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_toos=False,
-                                                      include_normals=True)
-            n_aborted = self.abort_running_requests(abort_requests)
-            # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
-            n_submitted = self.save_resource_schedules(scheduler_result.schedule,
-                                                       semester_start)
+            n_deleted, n_aborted, n_submitted = 0, 0, 0
+            for resource in set(new_schedule_resources + resources_to_clear):
+                # These are resources at which the schedule must be updated in some way. Save and abort will
+                # have the same resources. Cancel might be different, for example if a resource just became
+                # unavailable, the schedule there would need to be canceled but no new schedule submitted. For this
+                # reason, check if an action has the resource before doing it.
+                if resource in cancelation_date_list_by_resource:
+                    n_deleted += self.clear_resource_schedules({resource: cancelation_date_list_by_resource[resource]},
+                                                               include_toos=False,
+                                                               include_normals=True)
+                if resource in abort_requests_by_resource:
+                    n_aborted += self.abort_running_requests(abort_requests_by_resource[resource])
+
+                if resource in scheduler_result.schedule:
+                    # TODO: Shouldn't need to pass semester start, should denormalize reservations before calling save
+                    n_submitted += self.save_resource_schedules({resource: scheduler_result.schedule[resource]},
+                                                                semester_start)
             self._update_summary_events(n_deleted, n_aborted, n_submitted)
 
             return n_submitted

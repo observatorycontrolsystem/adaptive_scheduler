@@ -1,5 +1,4 @@
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
+from time_intervals.intervals import Intervals
 
 import pickle
 # import logging
@@ -51,8 +50,8 @@ class RunningRequest(object):
 
     def timepoints(self):
         timepoint_list = []
-        timepoint_list.append(Timepoint(self.start, 'start'))
-        timepoint_list.append(Timepoint(self.end, 'end'))
+        timepoint_list.append({'time': self.start, 'type': 'start'})
+        timepoint_list.append({'time': self.end, 'type': 'end'})
         
         return timepoint_list
 
@@ -87,15 +86,14 @@ class ResourceUsageSnapshot(object):
         return self.running_user_requests_by_resource.get(resource, [])
 
     def _running_intervals(self, resource):
-        timepoint_list = []
+        intervals_list = []
         running_urs = self.running_user_requests_by_resource.get(resource, [])
         for running_ur in running_urs:
             for running_r in running_ur.running_requests:
                 # Only consider the interval running if the request should continue running 
                 if running_r.should_continue():
-                    timepoint_list.append(Timepoint(running_r.start, 'start'))
-                    timepoint_list.append(Timepoint(running_r.end, 'end'))
-        intervals = Intervals(timepoint_list)
+                    intervals_list.append((running_r.start, running_r.end))
+        intervals = Intervals(intervals_list)
         
         return intervals
 

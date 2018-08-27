@@ -7,7 +7,6 @@ May 2012
 '''
 
 
-from adaptive_scheduler.kernel.timepoint import *
 from adaptive_scheduler.kernel.reservation_v3 import *
 
 class Util(object):

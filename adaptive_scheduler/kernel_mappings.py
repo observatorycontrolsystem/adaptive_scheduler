@@ -26,8 +26,7 @@ from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
 from rise_set.utils           import is_satellite_target
 
-from adaptive_scheduler.kernel.timepoint      import Timepoint
-from adaptive_scheduler.kernel.intervals      import Intervals
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
@@ -78,13 +77,7 @@ def telescope_to_rise_set_telescope(telescope):
 def rise_set_to_kernel_intervals(intervals):
     '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
        kernel Intervals (an object that stores Timepoints).'''
-
-    timepoints = []
-    for dt_start, dt_end in intervals:
-        timepoints.append(Timepoint(dt_start, 'start'))
-        timepoints.append(Timepoint(dt_end, 'end'))
-
-    return Intervals(timepoints)
+    return Intervals(intervals)
 
 
 def req_windows_to_kernel_intervals(windows_for_resource):
@@ -97,12 +90,11 @@ def req_window_to_kernel_intervals(windows):
     '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
        kernel Intervals (an object that stores Timepoints).'''
 
-    timepoints = []
+    intervals = []
     for window in windows:
-        timepoints.append(Timepoint(window.start, 'start'))
-        timepoints.append(Timepoint(window.end, 'end'))
+        intervals.append((window.start, window.end))
 
-    return Intervals(timepoints)
+    return Intervals(intervals)
 
 
 def normalise_dt_intervals(dt_intervals, dt_earliest):
@@ -111,9 +103,9 @@ def normalise_dt_intervals(dt_intervals, dt_earliest):
     epoch_earliest = datetime_to_epoch(dt_earliest)
 
     epoch_timepoints = []
-    for tp in dt_intervals.timepoints:
-        epoch_time = normalise(datetime_to_epoch(tp.time), epoch_earliest)
-        epoch_timepoints.append(Timepoint(epoch_time, tp.type))
+    for tp in dt_intervals.toDictList():
+        epoch_time = normalise(datetime_to_epoch(tp['time']), epoch_earliest)
+        epoch_timepoints.append({'time': epoch_time, 'type': tp['type']})
 
     return Intervals(epoch_timepoints)
 
@@ -418,10 +410,8 @@ def intervals_to_windows(req, intersections_for_resource):
         if(len(windows_for_resource) > 0):
             resource = windows_for_resource[0].resource
 
-            while intervals.timepoints:
-                tp1 = intervals.timepoints.pop(0)
-                tp2 = intervals.timepoints.pop(0)
-                w   = Window( { 'start' : tp1.time, 'end' : tp2.time }, resource )
+            for (start, end) in intervals.toTupleList():
+                w = Window( { 'start' : start, 'end' : end }, resource )
                 windows.append(w)
 
     return windows

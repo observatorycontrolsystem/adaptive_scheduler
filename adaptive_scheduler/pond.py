@@ -27,16 +27,11 @@ February 2012
 '''
 from __future__ import division
 
-import time
 from datetime import timedelta
 
-from adaptive_scheduler.model2         import (Proposal, SiderealTarget, NonSiderealTarget, SatelliteTarget,
-                                               NullTarget)
-from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit,
-                                               split_location, merge_dicts, convert_proper_motion)
+from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
 
 from adaptive_scheduler.printing       import pluralise as pl
-from adaptive_scheduler.printing       import plural_str
 from adaptive_scheduler.log            import UserRequestLogger
 from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
@@ -44,12 +39,10 @@ from adaptive_scheduler.configdb_connections import ConfigDBError
 # Set up and configure a module scope logger
 import logging
 from adaptive_scheduler.utils            import metric_timer
-from adaptive_scheduler.kernel.intervals import Intervals
-from adaptive_scheduler.kernel.timepoint import Timepoint
+from time_intervals.intervals import Intervals
 
 import requests
 from dateutil.parser import parse
-import json
 
 log = logging.getLogger(__name__)
 
@@ -166,13 +159,18 @@ class PondScheduleInterface(object):
         for resource_name, reservations in schedule.items():
             blocks_by_resource[resource_name] = []
             for reservation in reservations:
-                block = build_block(reservation, reservation.request,
-                                    reservation.user_request, semester_start,
-                                    configdb_interface)
-    
+                try:
+                    block = build_block(reservation, reservation.request,
+                                        reservation.user_request, semester_start,
+                                        configdb_interface)
+                except Exception:
+                    log.exception('Unable to build block from reservation for request number {}'.format(
+                        self._get_request_num_from_reservation(reservation)
+                    ))
+                    continue
                 blocks_by_resource[resource_name].append(block)
             _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
-            msg = 'Sending {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
+            msg = 'Will send {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
             log_info_dry_run(msg, dry_run)
         n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
 
@@ -202,6 +200,13 @@ class PondScheduleInterface(object):
                                 bad_block['molecules'][0]['tracking_num'],
                                 error))
 
+    def _get_request_num_from_reservation(self, reservation):
+        request_num = 'unknown'
+        try:
+            request_num = reservation.request.request_number
+        except AttributeError:
+            pass
+        return request_num
 
     def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
         telescope_blocks = {}     
@@ -423,6 +428,7 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
                                              observatory, telescope, configdb_interface)
         # copy all of the fields already in the molecule (passed through from valhalla)
         mol_dict = molecule.mol_dict.copy()
+        mol_dict['exposure_time'] = round(mol_dict['exposure_time'], 7)
         mol_dict['prop_id'] = user_request.proposal.id
         mol_dict['tag_id'] = user_request.proposal.tag
         mol_dict['user_id'] = user_request.submitter
@@ -482,12 +488,11 @@ def get_network_running_intervals(running_blocks_by_telescope):
 
 def get_intervals(blocks):
     ''' Create Intervals from given blocks  '''
-    timepoints = []
+    intervals = []
     for block in blocks:
-        timepoints.append(Timepoint(block['start'], 'start'))
-        timepoints.append(Timepoint(block['end'], 'end'))
+        intervals.append((block['start'], block['end']))
 
-    return Intervals(timepoints)
+    return Intervals(intervals)
 
 
 class InstrumentResolutionError(Exception):

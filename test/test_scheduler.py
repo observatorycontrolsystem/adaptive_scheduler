@@ -2,12 +2,11 @@ from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerRe
 from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput, SchedulingInputUtils
 from adaptive_scheduler.model2 import UserRequest, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningUserRequest, ResourceUsageSnapshot
-from adaptive_scheduler.kernel.timepoint import Timepoint
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
 from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
-from adaptive_scheduler.kernel.intervals import Intervals
+from time_intervals.intervals import Intervals
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from nose.tools import nottest
 
@@ -38,8 +37,7 @@ class TestScheduler(object):
         self.event_bus_mock = Mock()
         self.network_snapshot_mock = Mock()
         self.network_snapshot_mock.running_tracking_numbers = Mock(return_value=[])
-        self.intervals_mock = Mock(timepoints=[])
-        self.network_snapshot_mock.blocked_intervals = Mock(return_value=self.intervals_mock)
+        self.network_snapshot_mock.blocked_intervals = Mock(return_value=Intervals())
         self.fake_semester = {'id': '2015A',
                               'start': (datetime.utcnow() - timedelta(days=30)),
                               'end': (datetime.utcnow() + timedelta(days=30))}
@@ -71,9 +69,8 @@ class TestScheduler(object):
 
         network_snapshot_mock = Mock()
         network_snapshot_mock.running_tracking_numbers = Mock(return_value=[])
-        intervals_mock = Mock()
-        intervals_mock.timepoints = []
-        network_snapshot_mock.blocked_intervals = Mock(return_value=intervals_mock)
+
+        network_snapshot_mock.blocked_intervals = Mock(return_value=Intervals())
         network_snapshot_mock.running_requests_for_resources = Mock(return_value=[])
         network_snapshot_mock.user_requests_for_resource = Mock(return_value=[])
         network_model = ['',]
@@ -135,10 +132,10 @@ class TestScheduler(object):
         start = datetime(2012, 1, 1, 0, 0, 0)
         end = datetime(2012, 1, 2, 0, 0, 0)
         running = {
-                   '0m4a.aqwb.coj' : Intervals([Timepoint(start, 'start'), Timepoint(end, 'end')])
+                   '0m4a.aqwb.coj' : Intervals([{'time': start, 'type': 'start'}, {'time': end, 'type': 'end'}])
                   }
         too = {
-               '0m4a.aqwb.coj' : Intervals([Timepoint(start + timedelta(seconds=10), 'start'), Timepoint(end + timedelta(seconds=10), 'end')])
+               '0m4a.aqwb.coj' : Intervals([{'time': start + timedelta(seconds=10), 'type': 'start'}, {'time': end + timedelta(seconds=10), 'type': 'end'}])
                }
 
         mock_kernel_class = Mock()
@@ -146,7 +143,7 @@ class TestScheduler(object):
         combined = scheduler.combine_excluded_intervals(running, too)
 
         expected = {
-                    '0m4a.aqwb.coj' : Intervals([Timepoint(start, 'start'), Timepoint(end + timedelta(seconds=10), 'end')])
+                    '0m4a.aqwb.coj' : Intervals([{'time': start, 'type': 'start'}, {'time': end + timedelta(seconds=10), 'type': 'end'}])
                     }
 
         assert_equal(expected, combined)
@@ -908,8 +905,8 @@ class TestScheduler(object):
     def build_intervals(self, start_end_tuples, normalize_to=None):
         timepoints = []
         for start, end in start_end_tuples:
-            start_timepoint = Timepoint(time=start, type='start')
-            end_timepoint = Timepoint(time=end, type='end')
+            start_timepoint = {'time': start, 'type': 'start'}
+            end_timepoint = {'time': end, 'type': 'end'}
             timepoints.append(start_timepoint)
             timepoints.append(end_timepoint)
 
@@ -1281,8 +1278,8 @@ class TestSchedulerRunner(object):
         scheduler_runner.run()
 
         assert_equal(2, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(3, self.network_interface_mock.cancel.call_count)
-        assert_equal(2, self.network_interface_mock.save.call_count)
+        assert_equal(2, self.network_interface_mock.cancel.call_count)
+        assert_equal(1, self.network_interface_mock.save.call_count)
 
 
     def test_scheduler_runner_no_too_requests(self):
@@ -1305,8 +1302,8 @@ class TestSchedulerRunner(object):
         scheduler_runner.run()
 
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
-        assert_equal(1, self.network_interface_mock.cancel.call_count)
-        assert_equal(1, self.network_interface_mock.save.call_count)
+        assert_equal(0, self.network_interface_mock.cancel.call_count)
+        assert_equal(0, self.network_interface_mock.save.call_count)
 
 
     def test_scheduler_runner_no_normal_requests(self):
@@ -1385,7 +1382,7 @@ class TestSchedulerRunner(object):
 
 
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
-        assert_equal(3, self.network_interface_mock.cancel.call_count)
+        assert_equal(4, self.network_interface_mock.cancel.call_count)
 
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
@@ -1400,8 +1397,8 @@ class TestSchedulerRunner(object):
         # cancel_too flag not set for normal loop
         assert_false(self.network_interface_mock.cancel.call_args_list[2][0][2])
         # normal loop cancels on all resources
-        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[2][0][0])
         assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[2][0][0])
+        assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[3][0][0])
 
 
     def test_scheduler_runner_dry_run(self):
