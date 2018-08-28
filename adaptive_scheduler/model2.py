@@ -410,7 +410,7 @@ class MoleculeFactory(object):
                                   'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
                                                  'exposure_time', 'priority'),
                                   'SCRIPT': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority')
+                                                 'exposure_time', 'priority', 'args')
                                 }
 
     def build(self, mol_dict):
