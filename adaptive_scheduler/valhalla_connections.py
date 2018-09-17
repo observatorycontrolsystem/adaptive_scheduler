@@ -4,7 +4,7 @@ import logging
 import requests
 import os
 from datetime import datetime
-from requests.exceptions import RequestException
+from requests.exceptions import RequestException, Timeout
 
 
 class ValhallaConnectionError(Exception):
@@ -24,20 +24,22 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Returns all active proposals using the bulk proposals API of valhalla
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers)
+            response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers,
+                                    timeout=120)
             response.raise_for_status()
             return response.json()['results']
-        except (RequestException, ValueError) as e:
+        except (RequestException, ValueError, Timeout) as e:
             raise ValhallaConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_by_id(self, proposal_id):
         ''' Returns the proposal details for the proposal_id given from the valhalla proposal API
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers)
+            response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
+                                    timeout=15)
             response.raise_for_status()
             return response.json()
-        except (RequestException, ValueError) as e:
+        except (RequestException, ValueError, Timeout) as e:
             raise ValhallaConnectionError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
     def get_semester_details(self, date=datetime.utcnow()):
@@ -50,14 +52,15 @@ class ValhallaInterface(object, SendMetricMixin):
                 or self.current_semester_details['end'] < date):
             try:
                 response = requests.get(self.valhalla_url + '/api/semesters/' +
-                                        '?semester_contains={}'.format(date.isoformat()), headers=self.headers)
+                                        '?semester_contains={}'.format(date.isoformat()), headers=self.headers,
+                                        timeout=15)
                 response.raise_for_status()
                 self.current_semester_details = response.json()['results'][0]
                 self.current_semester_details['start'] = datetime.strptime(self.current_semester_details['start'],
                                                                            '%Y-%m-%dT%H:%M:%SZ')
                 self.current_semester_details['end'] = datetime.strptime(self.current_semester_details['end'],
                                                                            '%Y-%m-%dT%H:%M:%SZ')
-            except (RequestException, ValueError) as e:
+            except (RequestException, ValueError, Timeout) as e:
                 raise ValhallaConnectionError("failed to retrieve semester info for date {}: {}".format(date, repr(e)))
         return self.current_semester_details
 
@@ -67,10 +70,10 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Triggers valhalla to update request states from recent pond blocks, and report back if any states were updated
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/isDirty/', headers=self.headers)
+            response = requests.get(self.valhalla_url + '/api/isDirty/', headers=self.headers, timeout=180)
             response.raise_for_status()
             is_dirty = response.json()['isDirty']
-        except (RequestException, ValueError) as e:
+        except (RequestException, ValueError, Timeout) as e:
             raise ValhallaConnectionError("is_dirty check failed: {}".format(repr(e)))
 
         self.log.info("isDirty returned {}".format(is_dirty))
@@ -85,10 +88,10 @@ class ValhallaInterface(object, SendMetricMixin):
         requests_url = self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
         self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
-            response = requests.get(requests_url, headers=self.headers)
+            response = requests.get(requests_url, headers=self.headers, timeout=180)
             response.raise_for_status()
             user_requests = response.json()
-        except (RequestException, ValueError) as e:
+        except (RequestException, ValueError, Timeout) as e:
             raise ValhallaConnectionError("get_all_user_requests failed: {}".format(repr(e)))
 
         return user_requests

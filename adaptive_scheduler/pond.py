@@ -183,7 +183,7 @@ class PondScheduleInterface(object):
         num_created = len(pond_blocks)
         if not dry_run:
             try:
-                response = requests.post(self.host + '/blocks/', json=pond_blocks)
+                response = requests.post(self.host + '/blocks/', json=pond_blocks, timeout=120)
                 response.raise_for_status()
                 num_created = response.json()['num_created']
                 self._log_bad_requests(pond_blocks, response.json()['errors'] if 'errors' in response.json() else {})
@@ -276,7 +276,7 @@ class PondScheduleInterface(object):
 
     def _get_block_helper(self, base_url, params):
         try:
-            results = requests.get(base_url, params=params)
+            results = requests.get(base_url, params=params, timeout=120)
             results.raise_for_status()
             return results.json()
         except Exception as e:
@@ -303,7 +303,7 @@ class PondScheduleInterface(object):
                     data['is_too'] = cancel_toos
 
                 try:
-                    results = requests.post(self.host + '/blocks/cancel/', json=data)
+                    results = requests.post(self.host + '/blocks/cancel/', json=data, timeout=120)
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
@@ -318,7 +318,7 @@ class PondScheduleInterface(object):
         try:
             data = {'blocks': block_ids,
                     'cancel_reason': reason}
-            results = requests.post(self.host + '/blocks/cancel/', json=data)
+            results = requests.post(self.host + '/blocks/cancel/', json=data, timeout=120)
             results.raise_for_status()
             num_canceled = results.json()['canceled']
         except Exception as e:
