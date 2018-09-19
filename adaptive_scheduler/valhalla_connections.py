@@ -25,7 +25,7 @@ class ValhallaInterface(object, SendMetricMixin):
         '''
         try:
             response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers,
-                                    timeout=120)
+                                    timeout=150)
             response.raise_for_status()
             return response.json()['results']
         except (RequestException, ValueError, Timeout) as e:
@@ -36,7 +36,7 @@ class ValhallaInterface(object, SendMetricMixin):
         '''
         try:
             response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
-                                    timeout=15)
+                                    timeout=30)
             response.raise_for_status()
             return response.json()
         except (RequestException, ValueError, Timeout) as e:
