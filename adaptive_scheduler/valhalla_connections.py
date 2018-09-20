@@ -24,8 +24,8 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Returns all active proposals using the bulk proposals API of valhalla
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/?active=True', headers=self.headers,
-                                    timeout=150)
+            response = requests.get(self.valhalla_url + '/api/proposals/?active=True&limit=500', headers=self.headers,
+                                    timeout=120)
             response.raise_for_status()
             return response.json()['results']
         except (RequestException, ValueError, Timeout) as e:
@@ -36,7 +36,7 @@ class ValhallaInterface(object, SendMetricMixin):
         '''
         try:
             response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
-                                    timeout=30)
+                                    timeout=15)
             response.raise_for_status()
             return response.json()
         except (RequestException, ValueError, Timeout) as e:
