@@ -299,7 +299,8 @@ class TestPondInteractions(object):
         molecule = Mock()
         molecule.ag_mode = 'OFF'
         molecule.type = 'EXPOSE'
-        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0}
+        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0, 'exposure_time': 30,
+                             'exposure_count': 1}
         molecule.exposure_count = 1
         molecule.exposure_time = 30
         molecule.instrument_name = 'xx01'
@@ -352,7 +353,8 @@ class TestPondInteractions(object):
         molecule = Mock()
         molecule.ag_mode = 'OFF'
         molecule.type = 'EXPOSE'
-        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0}
+        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0, 'exposure_time': 30,
+                             'exposure_count': 1}
         molecule.exposure_count = 1
         molecule.exposure_time = 30
         molecule.instrument_name = 'xx01'

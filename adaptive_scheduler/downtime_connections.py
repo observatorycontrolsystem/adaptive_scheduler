@@ -27,10 +27,15 @@ class DowntimeInterface(object, SendMetricMixin):
         ''' Function calls the downtime endpoint and returns the json list of downtime intervals back.
         '''
         try:
-            r = requests.get(self.downtime_url + '?start={}&end={}'.format(start.isoformat(), end.isoformat()))
+            r = requests.get(self.downtime_url + '?start={}&end={}'.format(start.isoformat(), end.isoformat()),
+                             timeout=120)
         except requests.exceptions.RequestException as e:
             msg = "{}: {}".format(e.__class__.__name__, "_get_downtime_json failed: {} connection down: {}".format(
                 self.downtime_url, repr(e)))
+            raise DowntimeError(msg)
+        except requests.exceptions.Timeout as te:
+            msg = "{}: {}".format(te.__class__.__name__, "_get_downtime_json failed: {} connection timeout: {}".format(
+                self.downtime_url, repr(te)))
             raise DowntimeError(msg)
         r.encoding = 'UTF-8'
         if not r.status_code == 200:

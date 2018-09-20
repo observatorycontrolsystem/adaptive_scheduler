@@ -72,9 +72,12 @@ class ConfigDBInterface(object, SendMetricMixin):
         :return: json list of instruments
         '''
         try:
-            r = requests.get(self.configdb_url + 'instruments/?state=SCHEDULABLE')
+            r = requests.get(self.configdb_url + 'instruments/?state=SCHEDULABLE', timeout=120)
         except requests.exceptions.RequestException as e:
             msg = "{}: {}".format(e.__class__.__name__, "get_all_active_instruments failed: ConfigDB connection down")
+            raise ConfigDBError(msg)
+        except requests.exceptions.Timeout as te:
+            msg = "{}: {}".format(te.__class__.__name__, "get_all_active_instruments failed: Timeout connecting to Configdb")
             raise ConfigDBError(msg)
         r.encoding = 'UTF-8'
         if not r.status_code == 200:
@@ -152,9 +155,12 @@ class ConfigDBInterface(object, SendMetricMixin):
             Function returns the current structure of sites we can use for telescope info
         '''
         try:
-            r = requests.get(self.configdb_url + 'sites/')
+            r = requests.get(self.configdb_url + 'sites/', timeout=120)
         except requests.exceptions.RequestException as e:
             msg = "{}: {}".format(e.__class__.__name__, 'get_all_sites failed: ConfigDB connection down')
+            raise ConfigDBError(msg)
+        except requests.exceptions.Timeout as te:
+            msg = "{}: {}".format(te.__class__.__name__, 'get_all_sites failed: ConfigDB connection timed out')
             raise ConfigDBError(msg)
         r.encoding = 'UTF-8'
         if not r.status_code == 200:

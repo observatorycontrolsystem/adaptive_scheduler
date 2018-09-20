@@ -185,4 +185,4 @@ class Network(object):
     def send_to_es(self, event_dict):
         sanitized_timestamp = event_dict['timestamp'].replace(' ', '_').replace(':', '_')
         requests.post(self.es_endpoint + event_dict['name'] + '_' + event_dict['type'] + '_' + sanitized_timestamp,
-                      json=event_dict).raise_for_status()
+                      json=event_dict, timeout=120).raise_for_status()
