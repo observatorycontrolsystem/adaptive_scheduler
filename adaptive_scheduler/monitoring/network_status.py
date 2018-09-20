@@ -175,10 +175,10 @@ class Network(object):
         resource = '{}.{}.{}'.format(event_dict['telescope'], event_dict['enclosure'], event_dict['site'])
         if resource not in self.event_updates_sent:
             return True
-        elif (dt.datetime.utcnow() - self.event_updates_sent['timestamp']) > dt.timedelta(minutes=30):
+        elif (dt.datetime.utcnow() - self.event_updates_sent[resource]['timestamp']) > dt.timedelta(minutes=30):
             return True
-        elif (self.event_updates_sent['event']['type'] != event_dict['type']
-              or self.event_updates_sent['event']['reason'] != event_dict['reason']):
+        elif (self.event_updates_sent[resource]['event']['type'] != event_dict['type']
+              or self.event_updates_sent[resource]['event']['reason'] != event_dict['reason']):
             return True
         return False
 
