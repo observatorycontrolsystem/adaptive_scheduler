@@ -32,6 +32,9 @@ import socket
 import requests
 from retry import retry
 import collections
+import logging
+
+log = logging.getLogger(__name__)
 
 DEFAULT_MONITORS = [ScheduleTimestampMonitor,
                     NotOkToOpenMonitor,
@@ -42,8 +45,6 @@ DEFAULT_MONITORS = [ScheduleTimestampMonitor,
 
 DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
 
-import logging
-log = logging.getLogger(__name__)
 
 def _log_event_differences(current_events, previous_events):
     cur_set  = set(flatten(current_events))
@@ -92,8 +93,9 @@ class Network(object):
                 self.monitors.append(monitor(configdb_interface))
         self.current_events  = {}
         self.previous_events = {}
-        self.es_endpoint = es_endpoint
+        self.event_updates_sent = {}
 
+        self.es_endpoint = es_endpoint
 
     def update(self):
         ''' Try and get the current network state. If we can't, return the
@@ -122,7 +124,6 @@ class Network(object):
         _log_event_differences(self.current_events, self.previous_events)
         return True
 
-
     def _status(self):
         ''' Retrieve the network status by querying and collating each monitor.
             Return a list of monitoring.monitors.Events.
@@ -138,7 +139,6 @@ class Network(object):
                 self.send_event_to_es(event_dict)
 
         return events
-
 
     def _construct_event_dict(self, telescope_name, event):
         split_name = telescope_name.split('.')
@@ -158,7 +158,6 @@ class Network(object):
 
         return event_dict
 
-
     def _construct_available_event_dict(self, telescope_name):
         event = collections.namedtuple('Event',['type', 'reason', 'start_time', 'end_time'])(type= 'AVAILABLE',
                       reason= 'Available for scheduling',
@@ -167,17 +166,28 @@ class Network(object):
 
         return self._construct_event_dict(telescope_name, event)
 
-
     def send_telescope_available_state_events(self, telescope_name_list):
         for telescope_name in telescope_name_list:
             event_dict = self._construct_available_event_dict(telescope_name)
             self.send_event_to_es(event_dict)
 
+    def should_send_event(self, event_dict):
+        resource = '{}.{}.{}'.format(event_dict['telescope'], event_dict['enclosure'], event_dict['site'])
+        if resource not in self.event_updates_sent:
+            return True
+        elif (dt.datetime.utcnow() - self.event_updates_sent['timestamp']) > dt.timedelta(minutes=30):
+            return True
+        elif (self.event_updates_sent['event']['type'] != event_dict['type']
+              or self.event_updates_sent['event']['reason'] != event_dict['reason']):
+            return True
+        return False
 
     def send_event_to_es(self, event_dict):
-        if self.es_endpoint:
+        if self.es_endpoint and self.should_send_event(event_dict):
             try:
                 self.send_to_es(event_dict)
+                resource = '{}.{}.{}'.format(event_dict['telescope'], event_dict['enclosure'], event_dict['site'])
+                self.event_updates_sent[resource] = {'event': event_dict, 'timestamp': dt.datetime.utcnow()}
             except Exception as e:
                 log.error('Exception storing telescope status event in elasticsearch: {}'.format(repr(e)))
 
