@@ -1,94 +1,97 @@
-'''
-telemetry.py - Module for retrieving data from telemetry database.
-
-description
-
-Author: Martin Norbury
-May 2013
-'''
-from __future__ import division
-
+from datetime import datetime
 import collections
 
-from sqlalchemy.engine import create_engine
-from sqlalchemy.pool import NullPool
-from datetime import datetime
+from elasticsearch import Elasticsearch
 import logging
 
 log = logging.getLogger('adaptive_scheduler')
 
-# DEFAULT_URL    = 'mysql://hibernate:hibernate@harvester2.lco.gtn/harvest'
-IRA_URL        = 'mysql://scheduler:scheduler@db1.lco.gtn/scheduler'
-DEFAULT_ENGINE = create_engine(IRA_URL, poolclass=NullPool, connect_args={'read_timeout': 300, 'connect_timeout': 10}, pool_recycle=300)
+ES_HOSTS = [
+    'http://es1.lco.gtn:9200',
+    'http://es2.lco.gtn:9200',
+    'http://es3.lco.gtn:9200',
+    'http://es4.lco.gtn:9200'
+]
+
+ES_TELEMETRY_INDEX = 'live-telemetry'
+
 
 class ConnectionError(Exception):
     pass
 
-def get_datum(datum, instance=None, engine=None, persistence_model=None, originator=None):
-    ''' Get data from telemetry database, ordered by timestamp ascending (i.e.
+
+def get_datum(datum, instance=None, originator=None):
+    ''' Get data from live telemetry index in ES, ordered by timestamp ascending (i.e.
         newest value is last). '''
+    es = Elasticsearch(ES_HOSTS)
+
+    datum_query = _get_datum_query(datum, instance, originator)
 
     try:
-        engine2  = engine or DEFAULT_ENGINE
-        results = _query_db(datum, originator, instance, engine2, persistence_model)
-        datums = [_convert_datum(datum) for datum in results]
-        return datums
-
+        results = es.search(index=ES_TELEMETRY_INDEX, request_timeout=60, body=datum_query, size=1000)
     except Exception as e:
+        # retry one time in case this was a momentary outage
         try:
-            engine2 = engine or DEFAULT_ENGINE
-            results = _query_db(datum, originator, instance, engine2, persistence_model)
-            datums = [_convert_datum(datum) for datum in results]
-            return datums
-        except Exception as e:
-            raise ConnectionError(e)
+            results = es.search(index=ES_TELEMETRY_INDEX, request_timeout=60, body=datum_query, size=1000)
+        except Exception as e2:
+            raise ConnectionError("Failed to get datum {} from ES after 2 attempts: {}".format(datum, repr(e2)))
 
-def _query_db(datum, originator, instance, engine, persistence_model=None):
-    ''' Retrieve datum from database.
+    return [_convert_datum(dat['_source']) for dat in results['hits']['hits']]
 
-        This query uses a table populated from the SCRAPEVALUE table at each site.
-    '''
-    query = """SELECT * from PROPERTY as P
-               join SCRAPEVALUE as SV on P.IDENTIFIER=SV.IDENTIFIER
-               where P.ADDRESS_DATUM='{datum}' and P.ADDRESS_SITE!='tst'
-            """
+
+def _get_datum_query(datumname, datuminstance=None, originator=None):
+    datum_query = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {
+                        "match": {
+                            "datumname": datumname
+                        }
+                    },
+                ]
+            }
+        }
+    }
+    if datuminstance:
+        datum_query['query']['bool']['filter'].append({
+            "match": {
+                "datuminstance": datuminstance
+            }
+        })
     if originator:
-        query += "and P.ADDRESS_ORIGINATOR='{originator}'"
-    if instance:
-        query += "and P.ADDRESS_DATUMINSTANCE='{instance}'"
-    if persistence_model:
-        query += "and P.ADDRESS_PERSISTENCEMODEL='{persistence_model}'"
+        datum_query['query']['bool']['filter'].append({
+            "match": {
+                "originator": originator
+            }
+        })
 
-    query += "order by SV.TIMESTAMP_"
-    connection   = engine.connect()
-    query_string = query.format(datum=datum, originator=originator, instance=instance, persistence_model=persistence_model)
-    results      = connection.execute(query_string).fetchall()
-    connection.close()
-    return results
+    return datum_query
+
 
 def _convert_datum(datum):
-    ''' Convert datum keys and values using the MAPPING file. '''
+    ''' Convert datum keys and values using the MAPPING dict '''
     new_datum = {}
     for key in MAPPING:
         name, conversion_function = MAPPING[key]
         new_datum[name] = conversion_function(datum[key])
-    #return new_datum
+
     return Datum(**new_datum)
+
 
 def _timestamp(value):
     ''' Convert time (s) to datetime instance. '''
-    return datetime.utcfromtimestamp(value/1000.0)
+    return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
 
-NULL_CONVERSION = lambda x: x
+NULL_CONVERSION = lambda x: str(x)
 MAPPING = {
-             'ADDRESS_PERSISTENCEMODEL':('persistence_model',NULL_CONVERSION),
-             'ADDRESS_DATUMINSTANCE':('instance'          ,NULL_CONVERSION),
-             'ADDRESS_SITE'         :('site'              ,NULL_CONVERSION),
-             'ADDRESS_OBSERVATORY'  :('observatory'       ,NULL_CONVERSION),
-             'ADDRESS_TELESCOPE'    :('telescope'         ,NULL_CONVERSION),
-             'TIMESTAMP_'           :('timestamp_changed' ,_timestamp),
-             'TIMESTAMPMEASURED'    :('timestamp_measured',_timestamp),
-             'VALUE_'               :('value'             ,NULL_CONVERSION)
+             'datuminstance':('instance'          ,NULL_CONVERSION),
+             'site'         :('site'              ,NULL_CONVERSION),
+             'observatory'  :('observatory'       ,NULL_CONVERSION),
+             'telescope'    :('telescope'         ,NULL_CONVERSION),
+             'timestamp'           :('timestamp_changed' ,_timestamp),
+             'timestampmeasured'    :('timestamp_measured',_timestamp),
+             'value_string'               :('value'             ,NULL_CONVERSION)
           }
 
 Datum = collections.namedtuple('Datum', [ key for key,_ in MAPPING.values() ] )

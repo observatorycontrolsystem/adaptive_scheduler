@@ -109,7 +109,7 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 
 
     def retrieve_data(self):
-        return get_datum("Site Agent Schedule Timestamp", originator="SiteAgent", persistence_model='STATUS')
+        return get_datum("Site Agent Schedule Timestamp", originator="SiteAgent")
 
 
     def create_event(self, datum):
@@ -152,10 +152,10 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         self._overridden_observatories = []
 
     def retrieve_data(self):
-        ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
-        countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
-        interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
-        overridden = get_datum('Enclosure Weather Override Active', 1, persistence_model='STATUS')
+        ok_to_open = get_datum('Weather Ok To Open', instance=1)
+        countdown  = get_datum('Weather Count Down To Open', instance=1)
+        interlock  = get_datum('Weather Failure Reason', instance=1)
+        overridden = get_datum('Enclosure Weather Override Active', instance=1)
 
         # Sort by site
         site_sorter= lambda x: x.site
@@ -317,7 +317,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
 
     def _flatten_data(self, datum_names):
         for datum_name in datum_names:
-            for datum in get_datum(datum_name, "1", persistence_model="Status"):
+            for datum in get_datum(datum_name, instance=1):
                 yield self._datum_name_to_key(datum_name), datum
 
         return
@@ -326,7 +326,7 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
 class AvailableForScheduling(NetworkStateMonitor):
 
     def retrieve_data(self):
-        return get_datum("Available For Scheduling", "1", persistence_model="Status")
+        return get_datum("Available For Scheduling", instance=1)
 
     def create_event(self, datum):
         event  = Event(
