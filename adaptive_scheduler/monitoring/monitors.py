@@ -67,6 +67,7 @@ class NetworkStateMonitor(object):
         ''' Return true if this datum means a resource unuseable. '''
         pass
 
+
 class SequencerEnableMonitor(NetworkStateMonitor):
     ''' Monitor the sequencer enable state. '''
 
@@ -261,18 +262,36 @@ class OfflineResourceMonitor(NetworkStateMonitor):
         return datum['status'].lower() == 'offline'
 
 
-
-class EnclosureInterlockMonitor(NetworkStateMonitor):
-
+class FlattenDataMonitor(NetworkStateMonitor):
     @staticmethod
     def _sort_by_site_and_observatory(datum_tuple):
         datum_name, datum = datum_tuple
         return datum.site, datum.observatory
 
     @staticmethod
+    def _sort_by_telescope(datum_tuple):
+        datum_name, datum = datum_tuple
+        return datum.telescope
+
+    @staticmethod
+    def _sort_by_site_and_observatory_and_telescope(datum_tuple):
+        datum_name, datum = datum_tuple
+        return datum.site, datum.observatory, datum.telescope
+
+
+    @staticmethod
     def _datum_name_to_key(datum_name):
         return datum_name.lower().replace(' ', '_')
 
+    def _flatten_data(self, datum_names):
+        for datum_name in datum_names:
+            for datum in get_datum(datum_name, instance=1):
+                yield self._datum_name_to_key(datum_name), datum
+
+        return
+
+
+class EnclosureInterlockMonitor(FlattenDataMonitor):
     def is_an_event(self, datum):
         result = True
         if datum['enclosure_interlocked'].value.lower() == 'true':
@@ -315,31 +334,42 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         telescopes = self.configdb_interface.get_telescope_info()
         return [tel for tel in telescopes.keys() if '.'.join([observatory, site]) in tel]
 
-    def _flatten_data(self, datum_names):
-        for datum_name in datum_names:
-            for datum in get_datum(datum_name, instance=1):
-                yield self._datum_name_to_key(datum_name), datum
 
-        return
-
-
-class AvailableForScheduling(NetworkStateMonitor):
+class AvailableForScheduling(FlattenDataMonitor):
 
     def retrieve_data(self):
-        return get_datum("Available For Scheduling", instance=1)
+        datum_names = "Available For Scheduling", "Available For Scheduling Reason"
+
+        sorted_by_observatory = sorted(self._flatten_data(datum_names),
+                                       key=self._sort_by_site_and_observatory_and_telescope)
+
+        return [dict(value) for key, value
+                in itertools.groupby(sorted_by_observatory, key=self._sort_by_site_and_observatory_and_telescope)]
 
     def create_event(self, datum):
-        event  = Event(
-                        type       = "SEQUENCER UNAVAILABLE",
-                        reason     = "Sequencer unavailable for scheduling",
-                        start_time = datum.timestamp_changed,
-                        end_time   = datum.timestamp_measured
+        start_time = datetime.utcnow()
+        end_time = None
+        if 'available_for_scheduling' in datum:
+            start_time = datum['available_for_scheduling'].timestamp_changed
+            end_time = datum['available_for_scheduling'].timestamp_measured
+
+        reason = 'No Reason Found'
+        if 'available_for_scheduling_reason' in datum:
+            reason = datum['available_for_scheduling_reason'].value
+
+        event = Event(
+                        type       = "NOT AVAILABLE",
+                        reason     = reason,
+                        start_time = start_time,
+                        end_time   = end_time
                       )
 
         return event
 
     def create_resource(self, datum):
-        return '.'.join((datum.telescope, datum.observatory, datum.site))
+        dat = datum['available_for_scheduling']
+        return '.'.join((dat.telescope, dat.observatory, dat.site))
 
     def is_an_event(self, datum):
-        return 'false'.lower() == datum.value
+        dat = datum['available_for_scheduling']
+        return 'false'.lower() == dat.value
