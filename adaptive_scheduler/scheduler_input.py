@@ -22,7 +22,7 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
                  es_endpoint=None, save_output=False, request_logs=False,
-                 pond_host='lakedev.lco.gtn',
+                 pond_host='http://lakedev.lco.gtn',
                  valhalla_url='http://valhalladev.lco.gtn/',
                  configdb_url='http://configdbdev.lco.gtn/',
                  downtime_url='http://downtimedev.lco.gtn',

@@ -166,11 +166,10 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                  instance='1',
                  timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                  timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
-                 value=value,
-                 persistence_model='STATUS')
+                 value=value)
 
 
-def _mocked_get_datum_inconsistent_sizes(datum, instance=None, engine=None, persistence_model=None):
+def _mocked_get_datum_inconsistent_sizes(datum, instance=None):
     if datum == 'Weather Ok To Open':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]
@@ -183,7 +182,7 @@ def _mocked_get_datum_inconsistent_sizes(datum, instance=None, engine=None, pers
                 _create_event(object, 'None', site='elp')]
 
 
-def _mocked_get_datum_inconsistent_sites(datum, instance=None, engine=None, persistence_model=None):
+def _mocked_get_datum_inconsistent_sites(datum, instance=None):
     if datum == 'Weather Ok To Open':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]
@@ -197,7 +196,7 @@ def _mocked_get_datum_inconsistent_sites(datum, instance=None, engine=None, pers
                 _create_event(object, 'None', site='elp')]
 
 
-def _mocked_get_datum_consistent(datum, instance=None, engine=None, persistence_model=None):
+def _mocked_get_datum_consistent(datum, instance=None):
     if datum == 'Weather Ok To Open':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]
@@ -253,8 +252,7 @@ class TestScheduleTimestampMonitor(object):
                      instance='1m0a.doma',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
-                     value=dt_value,
-                     persistence_model='STATUS')
+                     value=dt_value)
 
 
 class TestSequencerEnableMonitor(object):
@@ -295,8 +293,7 @@ class TestSequencerEnableMonitor(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
-                     value=value,
-                     persistence_model='STATUS')
+                     value=value)
 
 
 class TestEnclosureInterlockMonitor(object):
@@ -353,8 +350,7 @@ class TestEnclosureInterlockMonitor(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
-                     value=value,
-                     persistence_model='STATUS')
+                     value=value)
 
 
 class TestAvailableForScheduling(object):
@@ -395,5 +391,4 @@ class TestAvailableForScheduling(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
-                     value=value,
-                     persistence_model='STATUS')
+                     value=value)
