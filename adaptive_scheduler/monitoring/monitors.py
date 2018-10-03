@@ -335,7 +335,7 @@ class AvailableForScheduling(FlattenDataMonitor):
         if 'available_for_scheduling_reason' in datum:
             reason = datum['available_for_scheduling_reason'].value
             if (datetime.utcnow() - datum['available_for_scheduling_reason'].timestamp_recorded) > timedelta(minutes=15):
-                reason += ". Telemetry out of date"
+                reason += ". Telemetry: Out of date"
 
         event = Event(
             type="NOT AVAILABLE",
