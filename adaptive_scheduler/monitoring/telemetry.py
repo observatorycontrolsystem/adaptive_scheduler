@@ -92,13 +92,14 @@ def _timestamp(value):
 
 NULL_CONVERSION = lambda x: str(x)
 MAPPING = {
-             'datuminstance':('instance'          ,NULL_CONVERSION),
-             'site'         :('site'              ,NULL_CONVERSION),
-             'observatory'  :('observatory'       ,NULL_CONVERSION),
-             'telescope'    :('telescope'         ,NULL_CONVERSION),
-             'timestamp'           :('timestamp_changed' ,_timestamp),
-             'timestampmeasured'    :('timestamp_measured',_timestamp),
-             'value_string'               :('value'             ,NULL_CONVERSION)
-          }
+    'datuminstance': ('instance', NULL_CONVERSION),
+    'site': ('site', NULL_CONVERSION),
+    'observatory': ('observatory', NULL_CONVERSION),
+    'telescope': ('telescope', NULL_CONVERSION),
+    'timestamp': ('timestamp_changed', _timestamp),
+    'timestampmeasured': ('timestamp_measured', _timestamp),
+    '@timestamp': ('timestamp_recorded', _timestamp),
+    'value_string': ('value', NULL_CONVERSION)
+}
 
 Datum = collections.namedtuple('Datum', [ key for key,_ in MAPPING.values() ] )
