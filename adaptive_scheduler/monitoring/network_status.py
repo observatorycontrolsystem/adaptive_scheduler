@@ -43,13 +43,15 @@ DEFAULT_MONITORS = [ScheduleTimestampMonitor,
 DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
 
 import logging
+
 log = logging.getLogger(__name__)
 
+
 def _log_event_differences(current_events, previous_events):
-    cur_set  = set(flatten(current_events))
+    cur_set = set(flatten(current_events))
     prev_set = set(flatten(previous_events))
 
-    new_events     = cur_set - prev_set
+    new_events = cur_set - prev_set
     cleared_events = prev_set - cur_set
 
     if new_events:
@@ -90,10 +92,9 @@ class Network(object):
             self.monitors = []
             for monitor in DEFAULT_MONITORS:
                 self.monitors.append(monitor(configdb_interface))
-        self.current_events  = {}
+        self.current_events = {}
         self.previous_events = {}
         self.es_endpoint = es_endpoint
-
 
     def update(self):
         ''' Try and get the current network state. If we can't, return the
@@ -103,7 +104,7 @@ class Network(object):
         self.previous_events = self.current_events
 
         try:
-            self.current_events  = self._status()
+            self.current_events = self._status()
         except ConnectionError as e:
             msg = "Unable to retrieve current network status: %s" % e
             log.warn(msg)
@@ -122,23 +123,25 @@ class Network(object):
         _log_event_differences(self.current_events, self.previous_events)
         return True
 
-
     def _status(self):
         ''' Retrieve the network status by querying and collating each monitor.
             Return a list of monitoring.monitors.Events.
         '''
-
         events = {}
         for monitor in self.monitors:
             new_events = monitor.monitor()
+
             for resource, event in new_events.iteritems():
-                events.setdefault(resource, []).append(event)
-                # send the event to ES for indexing and storing
-                event_dict = self._construct_event_dict(resource, event)
-                self.send_event_to_es(event_dict)
+                if isinstance(monitor, AvailableForScheduling):
+                    # Only log AvailableForScheduling datums for now, to compare against other datums
+                    log.warning("Event {} on {} with reason {}".format(event.type, resource, event.reason))
+                else:
+                    events.setdefault(resource, []).append(event)
+                    # send the event to ES for indexing and storing
+                    event_dict = self._construct_event_dict(resource, event)
+                    self.send_event_to_es(event_dict)
 
         return events
-
 
     def _construct_event_dict(self, telescope_name, event):
         split_name = telescope_name.split('.')
@@ -158,21 +161,18 @@ class Network(object):
 
         return event_dict
 
-
     def _construct_available_event_dict(self, telescope_name):
-        event = collections.namedtuple('Event',['type', 'reason', 'start_time', 'end_time'])(type= 'AVAILABLE',
-                      reason= 'Available for scheduling',
-                      start_time= dt.datetime.utcnow(),
-                      end_time= dt.datetime.utcnow())
+        event = collections.namedtuple('Event', ['type', 'reason', 'start_time', 'end_time'])(type='AVAILABLE',
+                                                                                              reason='Available for scheduling',
+                                                                                              start_time=dt.datetime.utcnow(),
+                                                                                              end_time=dt.datetime.utcnow())
 
         return self._construct_event_dict(telescope_name, event)
-
 
     def send_telescope_available_state_events(self, telescope_name_list):
         for telescope_name in telescope_name_list:
             event_dict = self._construct_available_event_dict(telescope_name)
             self.send_event_to_es(event_dict)
-
 
     def send_event_to_es(self, event_dict):
         if self.es_endpoint:

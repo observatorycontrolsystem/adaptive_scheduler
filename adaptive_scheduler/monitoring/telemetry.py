@@ -14,7 +14,7 @@ ES_HOSTS = [
 ]
 
 ES_TELEMETRY_INDEX = 'live-telemetry'
-
+EXCLUDED_OBSERVATORIES = ['igla']
 
 class ConnectionError(Exception):
     pass
@@ -36,7 +36,7 @@ def get_datum(datum, instance=None, originator=None):
         except Exception as e2:
             raise ConnectionError("Failed to get datum {} from ES after 2 attempts: {}".format(datum, repr(e2)))
 
-    return [_convert_datum(dat['_source']) for dat in results['hits']['hits']]
+    return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if dat['_source']['observatory'] not in EXCLUDED_OBSERVATORIES]
 
 
 def _get_datum_query(datumname, datuminstance=None, originator=None):
@@ -92,13 +92,14 @@ def _timestamp(value):
 
 NULL_CONVERSION = lambda x: str(x)
 MAPPING = {
-             'datuminstance':('instance'          ,NULL_CONVERSION),
-             'site'         :('site'              ,NULL_CONVERSION),
-             'observatory'  :('observatory'       ,NULL_CONVERSION),
-             'telescope'    :('telescope'         ,NULL_CONVERSION),
-             'timestamp'           :('timestamp_changed' ,_timestamp),
-             'timestampmeasured'    :('timestamp_measured',_timestamp),
-             'value_string'               :('value'             ,NULL_CONVERSION)
-          }
+    'datuminstance': ('instance', NULL_CONVERSION),
+    'site': ('site', NULL_CONVERSION),
+    'observatory': ('observatory', NULL_CONVERSION),
+    'telescope': ('telescope', NULL_CONVERSION),
+    'timestamp': ('timestamp_changed', _timestamp),
+    'timestampmeasured': ('timestamp_measured', _timestamp),
+    '@timestamp': ('timestamp_recorded', _timestamp),
+    'value_string': ('value', NULL_CONVERSION)
+}
 
 Datum = collections.namedtuple('Datum', [ key for key,_ in MAPPING.values() ] )
