@@ -3,7 +3,7 @@ from mock import Mock, MagicMock, patch
 from adaptive_scheduler.valhalla_connections import ValhallaInterface
 from adaptive_scheduler.interfaces import RunningUserRequest, RunningRequest, ResourceUsageSnapshot, NetworkInterface
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
+from adaptive_scheduler.monitoring.network_status import Network
 
 import responses
 import re
@@ -62,41 +62,3 @@ class TestResourceUsageSnapshot(object):
         assert_equal(2, len(running_requests))
         assert_true(running_request1 in running_requests)
         assert_true(running_request2 in running_requests)
-        
-        
-#     def test_blacklist_running_sub_requests_only(self):
-#         '''Test that the not running children of a MANY user request are not prevented
-#         from being scheduled by another child request that is running
-#         '''
-#         self.assert_equal(True, False)
-
-class TestNetworkInterface(object):
-
-    @responses.activate
-    def test_send_telescope_available_state_events_to_es(self):
-        es_endpoint = 'http://test-es/document/'
-        es_endpoint_re = re.compile(r'http://test-es/document/.*')
-        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}', status=200)
-        opentsdb_endpoint_re = re.compile(r'http://opentsdbdev.lco.gtn:4242/api/put.*')
-        responses.add(responses.POST, opentsdb_endpoint_re, body='{"success":"yay"}', status=200)
-
-        network_state = Network(MagicMock(), es_endpoint=es_endpoint)
-        network_interface = NetworkInterface(MagicMock(), MagicMock(), network_state, MagicMock())
-
-        telescope_name_list = ['1m0a.doma.tst']
-        network_interface.send_available_telescope_state_events(telescope_name_list)
-
-        event_dict = json.loads(responses.calls[0].request.body)
-
-        event1_dict = {'type': 'AVAILABLE',
-                      'reason': 'Available for scheduling',
-                      'start_time': event_dict['start_time'],
-                      'end_time': event_dict['end_time'],
-                      'name': '1m0a.doma.tst',
-                      'telescope': '1m0a',
-                      'enclosure': 'doma',
-                      'site': 'tst',
-                      'timestamp': event_dict['timestamp'],
-                      'hostname': socket.gethostname()}
-
-        assert_equal(event_dict, event1_dict)

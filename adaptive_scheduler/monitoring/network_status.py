@@ -40,8 +40,6 @@ DEFAULT_MONITORS = [ScheduleTimestampMonitor,
                     EnclosureInterlockMonitor,
                     AvailableForScheduling]
 
-DATE_FORMATTER = '%Y-%m-%d %H:%M:%S'
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -80,7 +78,7 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, configdb_interface, monitors=None, es_endpoint=None):
+    def __init__(self, configdb_interface, monitors=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
@@ -94,7 +92,6 @@ class Network(object):
                 self.monitors.append(monitor(configdb_interface))
         self.current_events = {}
         self.previous_events = {}
-        self.es_endpoint = es_endpoint
 
     def update(self):
         ''' Try and get the current network state. If we can't, return the
@@ -137,52 +134,5 @@ class Network(object):
                     log.warning("Event {} on {} with reason {}".format(event.type, resource, event.reason))
                 else:
                     events.setdefault(resource, []).append(event)
-                    # send the event to ES for indexing and storing
-                    event_dict = self._construct_event_dict(resource, event)
-                    self.send_event_to_es(event_dict)
 
         return events
-
-    def _construct_event_dict(self, telescope_name, event):
-        split_name = telescope_name.split('.')
-        event_dict = {'type': event.type.replace(' ', '_'),
-                      'reason': event.reason,
-                      'name': telescope_name,
-                      'telescope': split_name[0],
-                      'enclosure': split_name[1],
-                      'site': split_name[2],
-                      'timestamp': dt.datetime.utcnow().strftime(DATE_FORMATTER),
-                      'hostname': socket.gethostname()}
-        if event.start_time:
-            event_dict['start_time'] = event.start_time.strftime(DATE_FORMATTER)
-
-        if event.end_time:
-            event_dict['end_time'] = event.end_time.strftime(DATE_FORMATTER)
-
-        return event_dict
-
-    def _construct_available_event_dict(self, telescope_name):
-        event = collections.namedtuple('Event', ['type', 'reason', 'start_time', 'end_time'])(type='AVAILABLE',
-                                                                                              reason='Available for scheduling',
-                                                                                              start_time=dt.datetime.utcnow(),
-                                                                                              end_time=dt.datetime.utcnow())
-
-        return self._construct_event_dict(telescope_name, event)
-
-    def send_telescope_available_state_events(self, telescope_name_list):
-        for telescope_name in telescope_name_list:
-            event_dict = self._construct_available_event_dict(telescope_name)
-            self.send_event_to_es(event_dict)
-
-    def send_event_to_es(self, event_dict):
-        if self.es_endpoint:
-            try:
-                self.send_to_es(event_dict)
-            except Exception as e:
-                log.error('Exception storing telescope status event in elasticsearch: {}'.format(repr(e)))
-
-    @retry(tries=4)
-    def send_to_es(self, event_dict):
-        sanitized_timestamp = event_dict['timestamp'].replace(' ', '_').replace(':', '_')
-        requests.post(self.es_endpoint + event_dict['name'] + '_' + event_dict['type'] + '_' + sanitized_timestamp,
-                      json=event_dict, timeout=120).raise_for_status()

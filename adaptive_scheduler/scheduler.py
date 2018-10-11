@@ -678,7 +678,6 @@ class SchedulerRunner(object):
             else:
                 available_telescopes.append(telescope_name)
                 telescope['events'] = []
-        self.network_interface.send_available_telescope_state_events(available_telescopes)
         return
 
     def get_semester_details(self, date):

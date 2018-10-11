@@ -21,7 +21,7 @@ class SchedulerParameters(object):
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
                  too_run_time=120, normal_run_time=360,
-                 es_endpoint=None, save_output=False, request_logs=False,
+                 save_output=False, request_logs=False,
                  pond_host='http://lakedev.lco.gtn',
                  valhalla_url='http://valhalladev.lco.gtn/',
                  configdb_url='http://configdbdev.lco.gtn/',
@@ -52,7 +52,6 @@ class SchedulerParameters(object):
         self.normal_runtime_seconds = normal_runtime_seconds
         self.too_runtime_seconds = too_runtime_seconds
         self.ignore_ipp = ignore_ipp
-        self.es_endpoint = es_endpoint
         self.debug = debug
         self.valhalla_url = valhalla_url
         self.configdb_url = configdb_url

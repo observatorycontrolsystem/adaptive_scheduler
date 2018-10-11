@@ -18,7 +18,7 @@ import re
 import json
 
 from adaptive_scheduler.monitoring.monitors import NetworkStateMonitor, Event
-from adaptive_scheduler.monitoring.network_status import Network, DATE_FORMATTER
+from adaptive_scheduler.monitoring.network_status import Network
 
 
 class TestNetworkStatus(object):
@@ -129,36 +129,3 @@ class TestNetworkStatus(object):
 
         self.network.update()
         assert_true(self.network.has_changed(), 'Expected a network change')
-
-    @responses.activate
-    def test_telescope_state_event_format_correct_for_es(self):
-        es_endpoint = 'http://test-es/document/'
-        es_endpoint_re = re.compile(r'http://test-es/document/.*')
-        responses.add(responses.POST, es_endpoint_re, body='{"success":"yay"}',
-                      status=200)
-        opentsdb_endpoint_re = re.compile(r'http://opentsdbdev.lco.gtn:4242/api/put.*')
-        responses.add(responses.POST, opentsdb_endpoint_re, body='{"success":"yay"}', status=200)
-
-        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
-
-        event1_dict = {'type': self.e1.type.replace(' ', '_'),
-                       'reason': self.e1.reason,
-                       'start_time': self.e1.start_time.strftime(DATE_FORMATTER),
-                       'end_time': self.e1.end_time.strftime(DATE_FORMATTER),
-                       'name': '1m0a.doma.bpl',
-                       'telescope': '1m0a',
-                       'enclosure': 'doma',
-                       'site': 'bpl',
-                       'timestamp': '',
-                       'hostname': socket.gethostname()}
-
-        network_state = Network(mock.MagicMock(), [self.mock_monitor1], es_endpoint=es_endpoint)
-        events = network_state.update()
-
-        for call in responses.calls:
-            if 'test-es' in call.request.url:
-                event_dict = json.loads(call.request.body)
-                event1_dict['timestamp'] = event_dict['timestamp']
-
-                eq_(events, {'1m0a.doma.bpl': [self.e1]})
-                eq_(event_dict, event1_dict)

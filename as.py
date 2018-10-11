@@ -107,8 +107,6 @@ def parse_args(argv):
                                 help="Hostname for POND communication", default=defaults.pond_host)
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                                 help="Downtime endpoint url", default=defaults.downtime_url)
-    arg_parser.add_argument("--es_endpoint", type=str, dest='es_endpoint',
-                                help="Endpoint for ElasticSearch telescope events communication", default=defaults.es_endpoint)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                                 help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
@@ -182,7 +180,7 @@ def main(argv):
     schedule_interface = PondScheduleInterface(host=sched_params.pond_host)
     user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
-    network_state_interface = Network(configdb_interface, es_endpoint=sched_params.es_endpoint)
+    network_state_interface = Network(configdb_interface)
     network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface,
                                          configdb_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
