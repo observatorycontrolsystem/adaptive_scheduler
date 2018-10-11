@@ -33,12 +33,7 @@ import requests
 from retry import retry
 import collections
 
-DEFAULT_MONITORS = [ScheduleTimestampMonitor,
-                    NotOkToOpenMonitor,
-                    OfflineResourceMonitor,
-                    SequencerEnableMonitor,
-                    EnclosureInterlockMonitor,
-                    AvailableForScheduling]
+DEFAULT_MONITORS = [OfflineResourceMonitor, AvailableForScheduling]
 
 import logging
 
@@ -129,10 +124,6 @@ class Network(object):
             new_events = monitor.monitor()
 
             for resource, event in new_events.iteritems():
-                if isinstance(monitor, AvailableForScheduling):
-                    # Only log AvailableForScheduling datums for now, to compare against other datums
-                    log.warning("Event {} on {} with reason {}".format(event.type, resource, event.reason))
-                else:
-                    events.setdefault(resource, []).append(event)
+                events.setdefault(resource, []).append(event)
 
         return events

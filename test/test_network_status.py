@@ -28,20 +28,20 @@ class TestNetworkStatus(object):
         self.mock_monitor2 = mock.MagicMock()
         self.network = Network(mock.MagicMock(), [self.mock_monitor1, self.mock_monitor2])
         self.e1 = Event(
-            type="NOT OK TO OPEN",
-            reason="DEWPOINT",
+            type="NOT AVAILABLE",
+            reason="Weather: DEWPOINT",
             start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
             end_time=datetime.datetime(2013, 8, 14, 0, 15, 0),
         )
         self.e1_later = Event(
-            type="NOT OK TO OPEN",
-            reason="DEWPOINT",
+            type="NOT AVAILABLE",
+            reason="Weather: DEWPOINT",
             start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
             end_time=datetime.datetime(2013, 8, 14, 0, 25, 0),
         )
         self.e2 = Event(
-            type="SITE AGENT UNRESPONSIVE",
-            reason="No update since 2013-06-01T00:00:00",
+            type="NOT AVAILABLE",
+            reason="Site Agent: No update since 2013-06-01T00:00:00",
             start_time=datetime.datetime(2013, 8, 14, 0, 0, 0),
             end_time=datetime.datetime(2013, 8, 14, 0, 25, 0),
         )

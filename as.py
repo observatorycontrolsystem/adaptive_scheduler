@@ -56,9 +56,6 @@ def kill_handler(signal, frame):
 #signal.signal(signal.SIGTERM, kill_handler)
 
 # TODO: Write unit tests for these methods
-    
-        
-
 
 
 def parse_args(argv):
@@ -134,7 +131,6 @@ def parse_args(argv):
     return sched_params
 
 
-
 def get_kernel_class(sched_params):
     kernel_class = None
     if sched_params.kernel == 'v5':
@@ -161,7 +157,6 @@ def get_kernel_class(sched_params):
         raise Exception("Unknown kernel version %s" % sched_params.kernel)
     
     return kernel_class
-
 
 
 def main(argv):
