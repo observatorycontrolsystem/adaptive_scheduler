@@ -16,6 +16,7 @@ from adaptive_scheduler.monitoring.telemetry import get_datum
 
 # Set up and configure a module scope logger
 import logging
+
 log = logging.getLogger(__name__)
 
 Event = collections.namedtuple('Event', ['type', 'reason', 'start_time',
@@ -36,7 +37,7 @@ class NetworkStateMonitor(object):
         events = []
         for datum in data:
             if self.is_an_event(datum):
-                event         = self.create_event(datum)
+                event = self.create_event(datum)
                 resource_list = self.create_resource(datum)
 
                 if isinstance(resource_list, basestring):
@@ -60,12 +61,13 @@ class NetworkStateMonitor(object):
     def create_resource(self, datum):
         ''' Create resource from data source. '''
         columns = ['telescope', 'observatory', 'site']
-        return '.'.join([ datum[col] for col in columns ])
+        return '.'.join([datum[col] for col in columns])
 
     @abc.abstractmethod
     def is_an_event(self, datum):
         ''' Return true if this datum means a resource unuseable. '''
         pass
+
 
 class SequencerEnableMonitor(NetworkStateMonitor):
     ''' Monitor the sequencer enable state. '''
@@ -74,30 +76,25 @@ class SequencerEnableMonitor(NetworkStateMonitor):
         super(SequencerEnableMonitor, self).__init__(configdb_interface=configdb_interface)
         self.reason = None
 
-
     def retrieve_data(self):
         return get_datum("Sequencer Enable State")
 
-
     def create_event(self, datum):
         reason = self.reason or "Sequencer in %s state" % datum.value
-        event  = Event(
-                        type       = "SEQUENCER DISABLED",
-                        reason     = reason,
-                        start_time = datum.timestamp_changed,
-                        end_time   = datum.timestamp_measured
-                      )
+        event = Event(
+            type="SEQUENCER DISABLED",
+            reason=reason,
+            start_time=datum.timestamp_changed,
+            end_time=datum.timestamp_measured
+        )
 
         return event
 
-
     def create_resource(self, datum):
-        return '.'.join((datum.telescope,datum.observatory,datum.site))
-
+        return '.'.join((datum.telescope, datum.observatory, datum.site))
 
     def is_an_event(self, datum):
         return datum.value != 'AUTOMATIC'
-
 
 
 class ScheduleTimestampMonitor(NetworkStateMonitor):
@@ -107,22 +104,19 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
         super(ScheduleTimestampMonitor, self).__init__(configdb_interface=configdb_interface)
         self.reason = None
 
-
     def retrieve_data(self):
-        return get_datum("Site Agent Schedule Timestamp", originator="SiteAgent", persistence_model='STATUS')
-
+        return get_datum("Site Agent Schedule Timestamp", originator="SiteAgent")
 
     def create_event(self, datum):
         reason = self.reason or "No update since %s" % datum.value
         event = Event(
-                      type       = "SITE AGENT UNRESPONSIVE",
-                      reason     = reason,
-                      start_time = datum.timestamp_changed,
-                      end_time   = datum.timestamp_measured
-                     )
+            type="SITE AGENT UNRESPONSIVE",
+            reason=reason,
+            start_time=datum.timestamp_changed,
+            end_time=datum.timestamp_measured
+        )
 
         return event
-
 
     def create_resource(self, datum):
         site = datum.site
@@ -132,16 +126,14 @@ class ScheduleTimestampMonitor(NetworkStateMonitor):
 
         return resource
 
-
     def is_an_event(self, datum):
         try:
-            timestamp        = dateutil.parse(datum.value)
+            timestamp = dateutil.parse(datum.value)
             fifteen_minute_delta = timedelta(minutes=15)
             return datetime.utcnow() - timestamp > fifteen_minute_delta
         except dateutil.ParseException as e:
             self.reason = str(e)
             return True
-
 
 
 class NotOkToOpenMonitor(NetworkStateMonitor):
@@ -152,37 +144,36 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         self._overridden_observatories = []
 
     def retrieve_data(self):
-        ok_to_open = get_datum('Weather Ok To Open', 1, persistence_model='STATUS')
-        countdown  = get_datum('Weather Count Down To Open', 1, persistence_model='TEN_SEC')
-        interlock  = get_datum('Weather Failure Reason', 1, persistence_model='COUNT')
-        overridden = get_datum('Enclosure Weather Override Active', 1, persistence_model='STATUS')
+        ok_to_open = get_datum('Weather Ok To Open', instance=1)
+        countdown = get_datum('Weather Count Down To Open', instance=1)
+        interlock = get_datum('Weather Failure Reason', instance=1)
+        overridden = get_datum('Enclosure Weather Override Active', instance=1)
 
         # Sort by site
-        site_sorter= lambda x: x.site
+        site_sorter = lambda x: x.site
         ok_to_open.sort(key=site_sorter)
         countdown.sort(key=site_sorter)
         interlock.sort(key=site_sorter)
 
         self._overridden_observatories = ['%s.%s' % (x.observatory.lower(), x.site.lower())
-                                         for x in overridden if x.value.lower() == 'true']
+                                          for x in overridden if x.value.lower() == 'true']
 
         # Check datum lists have same size
         if not (len(ok_to_open) == len(countdown) == len(interlock)):
-             log.error('Telemetry query returns different number of sites')
-             return []
+            log.error('Telemetry query returns different number of sites')
+            return []
 
         # Check that the sites agree for each list
         site_sorted_data_list = zip(ok_to_open, countdown, interlock)
         for ok_entry, countdown_entry, interlock_entry in site_sorted_data_list:
-            if not(ok_entry.site == countdown_entry.site == interlock_entry.site):
-                 log.error('Telemetry query returns inconsistent site names')
-                 return []
+            if not (ok_entry.site == countdown_entry.site == interlock_entry.site):
+                log.error('Telemetry query returns inconsistent site names')
+                return []
 
         WeatherInterlock = collections.namedtuple('WeatherInterlock',
-                                            ['ok_to_open', 'countdown', 'interlock'])
+                                                  ['ok_to_open', 'countdown', 'interlock'])
 
-        return [ WeatherInterlock(*datum) for datum in site_sorted_data_list ]
-
+        return [WeatherInterlock(*datum) for datum in site_sorted_data_list]
 
     def create_event(self, datum):
         ok_to_open, countdown, interlock = datum
@@ -196,14 +187,13 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
 
         end_time = timestamp_measured + delta_time
         event = Event(
-                       type       = "NOT OK TO OPEN",
-                       reason     = interlock.value,
-                       start_time = ok_to_open.timestamp_changed,
-                       end_time   = end_time,
-                     )
+            type="NOT OK TO OPEN",
+            reason=interlock.value,
+            start_time=ok_to_open.timestamp_changed,
+            end_time=end_time,
+        )
 
         return event
-
 
     def create_resource(self, datum):
         '''
@@ -216,11 +206,10 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         site_resources = [tel for tel in telescopes.keys() if datum.ok_to_open.site in tel]
         return [resource for resource in site_resources if not self._is_resource_overridden(resource)]
 
-
     def is_an_event(self, datum):
         ok_to_open, countdown, interlock = datum
         unable_to_open = ok_to_open.value.lower() == 'false'
-        night          = interlock.value.lower() != 'Sun Up'.lower()
+        night = interlock.value.lower() != 'Sun Up'.lower()
         return unable_to_open and night
 
     def _is_resource_overridden(self, resource):
@@ -229,7 +218,6 @@ class NotOkToOpenMonitor(NetworkStateMonitor):
         :return: True if telescope resource is in an observatory that has it weather overridden.
         '''
         return any([observatory for observatory in self._overridden_observatories if observatory in resource])
-
 
 
 class OfflineResourceMonitor(NetworkStateMonitor):
@@ -241,38 +229,47 @@ class OfflineResourceMonitor(NetworkStateMonitor):
     def retrieve_data(self):
         return self.configdb_interface.get_telescope_info().values()
 
-
     def create_event(self, datum):
         event = Event(
-                        type       = "OFFLINE",
-                        reason     = "Telescope not available",
-                        start_time = None,
-                        end_time   = None,
-                     )
+            type="OFFLINE",
+            reason="Telescope not available",
+            start_time=None,
+            end_time=None,
+        )
 
         return event
 
-
     def create_resource(self, datum):
         return datum['name']
-
 
     def is_an_event(self, datum):
         return datum['status'].lower() == 'offline'
 
 
-
-class EnclosureInterlockMonitor(NetworkStateMonitor):
-
+class FlattenDataMonitor(NetworkStateMonitor):
     @staticmethod
     def _sort_by_site_and_observatory(datum_tuple):
         datum_name, datum = datum_tuple
         return datum.site, datum.observatory
 
     @staticmethod
+    def _sort_by_site_and_observatory_and_telescope(datum_tuple):
+        datum_name, datum = datum_tuple
+        return datum.site, datum.observatory, datum.telescope
+
+    @staticmethod
     def _datum_name_to_key(datum_name):
         return datum_name.lower().replace(' ', '_')
 
+    def _flatten_data(self, datum_names):
+        for datum_name in datum_names:
+            for datum in get_datum(datum_name, instance=1):
+                yield self._datum_name_to_key(datum_name), datum
+
+        return
+
+
+class EnclosureInterlockMonitor(FlattenDataMonitor):
     def is_an_event(self, datum):
         result = True
         if datum['enclosure_interlocked'].value.lower() == 'true':
@@ -280,7 +277,8 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
                 return result
 
         if 'enclosure_interlocked_reason' in datum:
-            result = any([x in datum['enclosure_interlocked_reason'].value.lower() for x in ('enclosure_flapping', 'power')])
+            result = any(
+                [x in datum['enclosure_interlocked_reason'].value.lower() for x in ('enclosure_flapping', 'power')])
         return result
 
     def retrieve_data(self):
@@ -301,45 +299,57 @@ class EnclosureInterlockMonitor(NetworkStateMonitor):
         if 'enclosure_interlocked_reason' in datum and datum['enclosure_interlocked_reason'].value:
             reason = datum['enclosure_interlocked_reason'].value
 
-        event = Event(type       = 'ENCLOSURE INTERLOCK',
-                      reason     = reason,
-                      start_time = start_time,
-                      end_time   = None)
+        event = Event(type='ENCLOSURE INTERLOCK',
+                      reason=reason,
+                      start_time=start_time,
+                      end_time=None)
 
         return event
 
     def create_resource(self, datum):
         interlocked = datum['enclosure_interlocked']
-        site        = interlocked.site
+        site = interlocked.site
         observatory = interlocked.observatory
         telescopes = self.configdb_interface.get_telescope_info()
         return [tel for tel in telescopes.keys() if '.'.join([observatory, site]) in tel]
 
-    def _flatten_data(self, datum_names):
-        for datum_name in datum_names:
-            for datum in get_datum(datum_name, "1", persistence_model="Status"):
-                yield self._datum_name_to_key(datum_name), datum
 
-        return
-
-
-class AvailableForScheduling(NetworkStateMonitor):
-
+class AvailableForScheduling(FlattenDataMonitor):
     def retrieve_data(self):
-        return get_datum("Available For Scheduling", "1", persistence_model="Status")
+        datum_names = "Available For Scheduling", "Available For Scheduling Reason"
+
+        sorted_by_observatory = sorted(self._flatten_data(datum_names),
+                                       key=self._sort_by_site_and_observatory_and_telescope)
+
+        return [dict(value) for key, value
+                in itertools.groupby(sorted_by_observatory, key=self._sort_by_site_and_observatory_and_telescope)]
 
     def create_event(self, datum):
-        event  = Event(
-                        type       = "SEQUENCER UNAVAILABLE",
-                        reason     = "Sequencer unavailable for scheduling",
-                        start_time = datum.timestamp_changed,
-                        end_time   = datum.timestamp_measured
-                      )
+        start_time = datetime.utcnow()
+        end_time = None
+        if 'available_for_scheduling' in datum:
+            start_time = datum['available_for_scheduling'].timestamp_changed
+            end_time = datum['available_for_scheduling'].timestamp_measured
+
+        reason = 'No Reason Found'
+        if 'available_for_scheduling_reason' in datum:
+            reason = datum['available_for_scheduling_reason'].value
+            if (datetime.utcnow() - datum['available_for_scheduling_reason'].timestamp_recorded) > timedelta(minutes=15):
+                reason += ". Telemetry: Out of date"
+
+        event = Event(
+            type="NOT AVAILABLE",
+            reason=reason,
+            start_time=start_time,
+            end_time=end_time
+        )
 
         return event
 
     def create_resource(self, datum):
-        return '.'.join((datum.telescope, datum.observatory, datum.site))
+        dat = datum['available_for_scheduling']
+        return '.'.join((dat.telescope, dat.observatory, dat.site))
 
     def is_an_event(self, datum):
-        return 'false'.lower() == datum.value
+        dat = datum['available_for_scheduling']
+        return 'false'.lower() == dat.value
