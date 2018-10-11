@@ -19,12 +19,7 @@ Author: Martin Norbury
         Eric Saunders
 May 2013
 '''
-from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
-                                                    NotOkToOpenMonitor,
-                                                    OfflineResourceMonitor,
-                                                    SequencerEnableMonitor,
-                                                    EnclosureInterlockMonitor,
-                                                    AvailableForScheduling)
+from adaptive_scheduler.monitoring.monitors import OfflineResourceMonitor, AvailableForScheduling
 from adaptive_scheduler.monitoring.telemetry import ConnectionError
 
 import datetime as dt
@@ -63,7 +58,7 @@ def flatten(events_dict):
 
     for resource, events in events_dict.iteritems():
         for event in events:
-            flattened_list.append((resource, event.type))
+            flattened_list.append((resource, event.reason))
 
     return flattened_list
 

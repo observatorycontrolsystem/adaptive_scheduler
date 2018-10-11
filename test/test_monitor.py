@@ -70,32 +70,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        eq_(event['1m0a.doma.lsc'].reason, 'There is a reason')
-
-
-    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
-    def test_no_event_if_availability_flag_uppercase(self, mock_get_datum):
-        mock_get_datum.side_effect = self._create_events('FaLsE', 'There is a reason')
-
-        event = self.monitor.monitor()
-
-        assert_true(event)
-
-    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
-    def test_no_events_if_inconsistent_size_data_lists(self, mock_get_datum):
-        mock_get_datum.side_effect = _mocked_get_datum_inconsistent_sizes
-
-        event = self.monitor.monitor()
-
-        eq_(0, len(event))
-
-    @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
-    def test_no_events_if_inconsistent_sites_in_data_lists(self, mock_get_datum):
-        mock_get_datum.side_effect = _mocked_get_datum_inconsistent_sites
-
-        event = self.monitor.monitor()
-
-        eq_(0, len(event))
+        eq_(event['lsc.lsc.lsc'].reason, 'There is a reason')
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_if_consistent_sites_in_data_lists(self, mock_get_datum):
@@ -103,7 +78,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        eq_('NOT AVAILABLE', event.get('1m0a.doma.elp').type)
+        eq_('NOT AVAILABLE', event.get('elp.elp.elp').type)
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_events_when_available_for_scheduling(self, mock_get_datum):
@@ -143,35 +118,8 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                  'instance':'1',
                  'timestamp_changed':datetime(2013, 04, 26, 0, 0, 0),
                  'timestamp_measured':datetime(2013, 04, 26, 0, 0, 0),
-                 '@timestamp':datetime.utcnow(),
+                 'timestamp_recorded':datetime.utcnow(),
                  'value':value})
-
-
-def _mocked_get_datum_inconsistent_sizes(datum, instance=None):
-    if datum == 'Available For Scheduling':
-        return [_create_event(object, 'true', site='lsc'),
-                _create_event(object, 'false', site='elp')]
-
-    elif datum == 'Available For Scheduling Reason':
-        return [_create_event(object, "", site='lsc')]
-
-    else:  # Reason
-        return [_create_event(object, 'None', site='lsc'),
-                _create_event(object, 'None', site='elp')]
-
-
-def _mocked_get_datum_inconsistent_sites(datum, instance=None):
-    if datum == 'Available For Scheduling':
-        return [_create_event(object, 'true', site='lsc'),
-                _create_event(object, 'false', site='elp')]
-
-    elif datum == 'Available For Scheduling Reason':
-        return [_create_event(object, 'There is a reason', site='lsc'),
-                _create_event(object, '', site='coj')]
-
-    else:  # Reason
-        return [_create_event(object, 'None', site='lsc'),
-                _create_event(object, 'None', site='elp')]
 
 
 def _mocked_get_datum_consistent(datum, instance=None):
