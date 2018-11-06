@@ -27,12 +27,6 @@ from adaptive_scheduler.monitoring.monitors import (ScheduleTimestampMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.monitoring.telemetry import ConnectionError
 
-import datetime as dt
-import socket
-import requests
-from retry import retry
-import collections
-
 DEFAULT_MONITORS = [ScheduleTimestampMonitor,
                     NotOkToOpenMonitor,
                     OfflineResourceMonitor,
