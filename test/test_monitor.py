@@ -166,6 +166,7 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                  instance='1',
                  timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                  timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
+                 timestamp_recorded=datetime(2013, 04, 26, 0, 0, 0),
                  value=value)
 
 
@@ -252,6 +253,7 @@ class TestScheduleTimestampMonitor(object):
                      instance='1m0a.doma',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
+                     timestamp_recorded=datetime(2013, 04, 26, 0, 0, 0),
                      value=dt_value)
 
 
@@ -293,6 +295,7 @@ class TestSequencerEnableMonitor(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
+                     timestamp_recorded=datetime(2013, 04, 26, 0, 0, 0),
                      value=value)
 
 
@@ -350,6 +353,7 @@ class TestEnclosureInterlockMonitor(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
+                     timestamp_recorded=datetime(2013, 04, 26, 0, 0, 0),
                      value=value)
 
 
@@ -391,4 +395,5 @@ class TestAvailableForScheduling(object):
                      instance='1',
                      timestamp_changed=datetime(2013, 04, 26, 0, 0, 0),
                      timestamp_measured=datetime(2013, 04, 26, 0, 0, 0),
+                     timestamp_recorded=datetime(2013, 04, 26, 0, 0, 0),
                      value=value)
