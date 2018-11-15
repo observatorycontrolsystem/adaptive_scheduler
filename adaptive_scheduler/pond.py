@@ -457,6 +457,9 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
         if mol_dict['expmeter_mode'] == 'OFF':
             mol_dict['expmeter_mode'] = 'EXPMETER_OFF'
         mol_dict['expmeter_snr'] = mol_dict['expmeter_snr'] or 0.0
+        # replace '*' with ',' in filter if necessary
+        if 'filter' in mol_dict and '*' in mol_dict['filter']:
+            mol_dict['filter'] = mol_dict['filter'].replace('*', ',')
 
         mol_summary_msg = "Building {} molecule {}/{} ({} x {:.3f}s)".format(
             molecule.type,
