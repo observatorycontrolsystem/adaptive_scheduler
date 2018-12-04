@@ -541,7 +541,7 @@ class LCOGTNetworkScheduler(Scheduler):
         # Clear the visibility cache if the semester has changed
         if semester_details['start'] != self.saved_semester['start'] or semester_details['end'] != self.saved_semester['end']:
             self.visibility_cache = {}
-        self.saved_semester = semester_details
+        self.saved_semester = semester_details.copy()
 
         # Construct visibility objects for each telescope if it is not cached
         if not self.visibility_cache:
