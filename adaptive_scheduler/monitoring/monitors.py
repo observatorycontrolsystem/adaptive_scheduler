@@ -272,8 +272,8 @@ class FlattenDataMonitor(NetworkStateMonitor):
 class EnclosureInterlockMonitor(FlattenDataMonitor):
     def is_an_event(self, datum):
         result = True
-        if datum['enclosure_interlocked'].value.lower() == 'true':
-            if not datum['enclosure_interlocked_reason'].value:
+        if 'enclosure_interlocked' in datum and datum['enclosure_interlocked'].value.lower() == 'true':
+            if not ('enclosure_interlocked_reason' in datum or datum['enclosure_interlocked_reason'].value):
                 return result
 
         if 'enclosure_interlocked_reason' in datum:
@@ -307,6 +307,8 @@ class EnclosureInterlockMonitor(FlattenDataMonitor):
         return event
 
     def create_resource(self, datum):
+        if 'enclosure_interlocked' not in datum:
+            return 'NA'
         interlocked = datum['enclosure_interlocked']
         site = interlocked.site
         observatory = interlocked.observatory
@@ -347,9 +349,13 @@ class AvailableForScheduling(FlattenDataMonitor):
         return event
 
     def create_resource(self, datum):
+        if 'available_for_scheduling' not in datum:
+            return 'NA'
         dat = datum['available_for_scheduling']
         return '.'.join((dat.telescope, dat.observatory, dat.site))
 
     def is_an_event(self, datum):
+        if 'available_for_scheduling' not in datum:
+            return False
         dat = datum['available_for_scheduling']
         return 'false'.lower() == dat.value
