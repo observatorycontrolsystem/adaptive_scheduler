@@ -37,6 +37,7 @@ class Scheduler(object, SendMetricMixin):
     def __init__(self, kernel_class, sched_params, event_bus):
         self.kernel_class = kernel_class
         self.visibility_cache = {}
+        self.saved_semester = {'start': None, 'end': None}
         self.sched_params = sched_params
         self.event_bus = event_bus
         self.log = logging.getLogger(__name__)
@@ -537,10 +538,14 @@ class LCOGTNetworkScheduler(Scheduler):
 
         semester_start = semester_details['start']
         semester_end = semester_details['end']
+        # Clear the visibility cache if the semester has changed
+        if semester_details['start'] != self.saved_semester['start'] or semester_details['end'] != self.saved_semester['end']:
+            self.visibility_cache = {}
+        self.saved_semester = semester_details.copy()
 
-        # Construct visibility objects for each telescope
-        self.log.info("Constructing telescope visibilities")
+        # Construct visibility objects for each telescope if it is not cached
         if not self.visibility_cache:
+            self.log.info("Constructing telescope visibilities")
             self.visibility_cache = construct_visibilities(self.network_model, semester_start, semester_end)
 
 
