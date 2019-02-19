@@ -52,7 +52,7 @@ def _get_datum_query(datumname, datuminstance=None, originator=None):
                     {
                         "range": {
                             "timestampmeasured": {
-                                "gte": "now-7d/d"
+                                "gte": "now-60d/d"
                             }
                         }
                     }
