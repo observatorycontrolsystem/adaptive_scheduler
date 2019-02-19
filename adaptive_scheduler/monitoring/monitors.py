@@ -355,7 +355,8 @@ class AvailableForScheduling(FlattenDataMonitor):
         return '.'.join((dat.telescope, dat.observatory, dat.site))
 
     def is_an_event(self, datum):
-        if 'available_for_scheduling' not in datum:
+        if ('available_for_scheduling' not in datum or
+                (datetime.utcnow() - datum['available_for_scheduling'].timestamp_recorded) > timedelta(minutes=15)):
             return False
         dat = datum['available_for_scheduling']
         return 'false'.lower() == dat.value
