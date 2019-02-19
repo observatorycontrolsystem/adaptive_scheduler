@@ -362,4 +362,4 @@ class AvailableForScheduling(FlattenDataMonitor):
         elif (datetime.utcnow() - datum['available_for_scheduling'].timestamp_recorded) > timedelta(minutes=15):
             return True
         dat = datum['available_for_scheduling']
-        return 'false'.lower() == dat.value
+        return 'false' == dat.value.lower()
