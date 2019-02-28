@@ -145,7 +145,8 @@ class TestIntegration(object):
                                               ipp_value=1.5, group_id='ur 6', submitter='')
 
     def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time, too_loop=False,
-                           block_schedule_by_resource={}, running_user_requests=[], too_tracking_numbers=[]):
+                           block_schedule_by_resource={}, running_user_requests=[], too_tracking_numbers=[],
+                           semester_details={}):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
@@ -164,14 +165,43 @@ class TestIntegration(object):
             scheduler_input = mock_input_factory.create_normal_scheduling_input()
         scheduler_input.scheduler_now = scheduler_time
         scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
-        fake_semester = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
-                         'end': scheduler_time + timedelta(days=150)}
+        if not semester_details:
+            semester_details = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
+                             'end': scheduler_time + timedelta(days=150)}
 
-        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), fake_semester,
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
                                          preemption_enabled=too_loop)
 
         return result
 
+    def test_changing_semester_details_clears_visibility_cache(self):
+        scheduler_time = self.base_time - timedelta(hours=10)
+        sched_params = SchedulerParameters(run_once=True, dry_run=True)
+        event_bus_mock = Mock()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
+        network_interface_mock = Mock()
+        network_interface_mock.cancel = Mock(return_value=0)
+        network_interface_mock.save = Mock(return_value=0)
+        network_interface_mock.abort = Mock(return_value=0)
+        network_interface_mock.get_current_events = Mock(return_value={})
+        normal_ur_list = [self.user_and_request_1, self.user_and_request_2]
+        mock_input_factory = create_scheduler_input_factory([], normal_ur_list, {}, [], [])
+        scheduler_input = mock_input_factory.create_normal_scheduling_input()
+        scheduler_input.scheduler_now = scheduler_time
+        scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
+        semester_details = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
+                                'end': scheduler_time + timedelta(days=150)}
+
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
+                                         preemption_enabled=False)
+        assert scheduler.visibility_cache != {}
+        saved_visibility_cache = scheduler.visibility_cache
+        # Now run again with a different semester to clear visibility cache
+        semester_details['start'] = scheduler_time - timedelta(days=149)
+        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
+                                         preemption_enabled=False)
+        assert scheduler.visibility_cache != {}
+        assert scheduler.visibility_cache != saved_visibility_cache
 
     def test_competing_and_requests(self):
         result = self._schedule_requests([], [self.user_and_request_1, self.user_and_request_2],

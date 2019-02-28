@@ -139,7 +139,9 @@ class AvailableForScheduling(FlattenDataMonitor):
         if 'available_for_scheduling_reason' in datum:
             reason = datum['available_for_scheduling_reason'].value
             if (datetime.utcnow() - datum['available_for_scheduling_reason'].timestamp_recorded) > timedelta(minutes=15):
-                reason += ". Telemetry: Out of date"
+                if reason:
+                    reason += ". "
+                reason += "Telemetry: Out of date"
 
         event = Event(
             type="NOT AVAILABLE",
@@ -151,11 +153,15 @@ class AvailableForScheduling(FlattenDataMonitor):
         return event
 
     def create_resource(self, datum):
+        if 'available_for_scheduling' not in datum:
+            return 'NA'
         dat = datum['available_for_scheduling']
         return '.'.join((dat.telescope, dat.observatory, dat.site))
 
     def is_an_event(self, datum):
         if 'available_for_scheduling' not in datum:
             return False
+        elif (datetime.utcnow() - datum['available_for_scheduling'].timestamp_recorded) > timedelta(minutes=15):
+            return True
         dat = datum['available_for_scheduling']
-        return 'false'.lower() == dat.value
+        return 'false' == dat.value.lower()
