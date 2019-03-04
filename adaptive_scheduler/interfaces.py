@@ -163,11 +163,6 @@ class NetworkInterface(object):
         ''' Get the current network events
         '''
         return self.network_state_interface.update()
-
-    def send_available_telescope_state_events(self, telescope_name_list):
-        ''' Send the available telescope state events
-        '''
-        return self.network_state_interface.send_telescope_available_state_events(telescope_name_list)
     
     def current_events_has_changed(self):
         ''' Return True if the current network state is different from
@@ -182,7 +177,6 @@ class NetworkInterface(object):
         return ResourceUsageSnapshot(now,
                               self._running_user_requests_by_tracking_number().values(),
                               {})
-        
 
 
 class CachedInputNetworkInterface(object):
