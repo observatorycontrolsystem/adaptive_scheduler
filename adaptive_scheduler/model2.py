@@ -888,8 +888,31 @@ class ModelBuilder(object):
             elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_name, filters,
-                                                                           req_dict['location'])
+        # TODO: Update from filters to the optical elements of the instrument configs and the guiding configs.
+        # TODO: Update the configdb method call below- the guider and imager elements will be something like:
+        # from collections import defaultdict
+        # imager_elements = defaultdict(set)
+        # guider_elements = defaultdict(set)
+        # for configuration in configurations:
+        #     for instrument_config in configuration.instrument_configs:
+        #         for oe_type in instrument_config.optical_elements:
+        #             oe_type_plural = oe_type + 's'
+        #             imager_elements[oe_type_plural].add(instrument_config.optical_elements[oe_type])
+        #
+        #     for oe_type in configuration.guiding_config.optical_elements:
+        #         oe_type_plural = oe_type + 's'
+        #         guider_elements[oe_type_plural].add(configuration.guiding_config.optical_elements[oe_type])
+
+        filters = {'filters': set(filters)}
+
+        if hasattr(molecule, 'ag_name') and instrument_name.lower() == str(molecules[0].ag_name).lower():
+            self_guide = True
+        else:
+            self_guide = False
+
+        telescopes = self.configdb_interface.get_telescopes_for_instrument(
+            instrument_name, filters, {}, self_guide, req_dict['location']
+        )
 
         if not telescopes:
             # Complain

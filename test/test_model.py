@@ -412,26 +412,29 @@ class TestModelBuilder(object):
                      set(request.windows.windows_for_resource.keys()))
 
     def test_build_request_fl03_resolves_to_lsc_telescope(self):
+        location = {
+            'telescope_class': '1m0',
+            'enclosure': 'domb',
+            'site': 'lsc'
+        }
         req_dict = {
             'target': self.target,
             'molecules': [
                 {
-                    'instrument_name': 'fl03',
+                    'instrument_name': '1m0-SciCam-Sinistro',
                     'type': 'expose',
                     'filter': 'B',
                 },
             ],
-            'location': self.location,
+            'location': location,
             'windows': self.windows,
             'constraints': self.constraints,
             'id': self.request_number,
             'duration': 10,
             'state': self.state,
         }
-
         request = self.mb.build_request(req_dict)
-        assert_equal(set(['1m0a.domb.lsc']),
-                     set(request.windows.windows_for_resource.keys()))
+        assert_equal({'1m0a.domb.lsc'}, set(request.windows.windows_for_resource.keys()))
 
     def test_build_request_slit_2as_resolves_to_coj_telescope(self):
         req_dict = {

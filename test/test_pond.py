@@ -134,63 +134,38 @@ class TestPond(object):
         too_blocks = pond_interface._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
         assert_equal({}, too_blocks)
 
-    def test_resolve_instrument_pass_through_if_camera_specified(self):
-        instrument_name = 'kb12'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-
-        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
-
-        assert_equal(received, 'kb12')
-
     def test_scicam_instrument_resolves_to_a_specific_camera(self):
-        instrument_name = '1M0-SCICAM-SINISTRO'
+        instrument_type = '1M0-SCICAM-SINISTRO'
         site, obs, tel = ('lsc', 'doma', '1m0a')
-
-        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
-
+        received = resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
         assert_equal(received, 'fl15')
 
     @raises(InstrumentResolutionError)
     def test_no_matching_instrument_raises_an_exception(self):
-        instrument_name = '1M0-SCICAM-SINISTRO'
+        instrument_type = '1M0-SCICAM-SINISTRO'
         site, obs, tel = ('looloo', 'doma', '1m0a')
-
-        received = resolve_instrument(instrument_name, site, obs, tel, self.configdb_interface)
-
-    def test_resolve_autoguider_pass_through_if_camera_specified(self):
-        ag_name = 'ef06'
-        inst_name = 'fl15'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
-
-        assert_equal(received, 'ef06')
+        resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
 
     def test_scicam_autoguider_resolves_to_primary_instrument(self):
-        ag_name = '1M0-SCICAM-SINISTRO'
+        self_guide = True
         specific_inst_name = 'fl15'
         site, obs, tel = ('lsc', 'doma', '1m0a')
-
-        received = resolve_autoguider(ag_name, specific_inst_name, site, obs, tel, self.configdb_interface)
-
+        received = resolve_autoguider(self_guide, specific_inst_name, site, obs, tel, self.configdb_interface)
         assert_equal(received, 'fl15')
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
-        ag_name = ''
+        self_guide = False
         inst_name = 'fl15'
         site, obs, tel = ('lsc', 'doma', '1m0a')
-
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
-
+        received = resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
         assert_equal(received, 'ef06')
 
     @raises(InstrumentResolutionError)
     def test_no_matching_autoguider_raises_an_exception(self):
-        ag_name = ''
+        self_guide = True
         inst_name = 'abcd'
         site, obs, tel = ('looloo', 'doma', '1m0a')
-
-        received = resolve_autoguider(ag_name, inst_name, site, obs, tel, self.configdb_interface)
+        resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
 
 
 class TestPondInteractions(object):

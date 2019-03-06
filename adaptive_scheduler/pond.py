@@ -371,28 +371,32 @@ def log_info_dry_run(msg, dry_run):
     log.info(msg)
 
 
-def resolve_instrument(instrument_name, site, obs, tel, configdb_interface):
-    '''Determine the specific camera name for a given site.
-       If a non-generic name is provided, we just pass it through and assume it's ok.'''
+def resolve_instrument(instrument_type, site, obs, tel, configdb_interface):
+    """Determine the specific camera name for a given site.
+
+    If a non-generic name is provided, we just pass it through and assume it's ok.
+    """
     try:
-        specific_camera = configdb_interface.get_specific_instrument(instrument_name, site, obs, tel)
-    except ConfigDBError as e:
-        msg = "Couldn't find any instrument for '{}' at {}.{}.{}".format(instrument_name, tel, obs, site)
+        specific_camera = configdb_interface.get_specific_instrument(instrument_type, site, obs, tel)
+    except ConfigDBError:
+        msg = "Couldn't find any instrument for '{}' at {}.{}.{}".format(instrument_type, tel, obs, site)
         raise InstrumentResolutionError(msg)
 
     return specific_camera
 
 
-def resolve_autoguider(ag_name, specific_camera, site, obs, tel, configdb_interface):
-    '''Determine the specific autoguider for a given site.
-       If a specific name is provided, pass through and return it.
-       If a generic name (SCICAM-*) is provided, resolve for self-guiding.
-       If nothing is specified, resolve to the preferred autoguider.'''
+def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_interface):
+    """Determine the specific autoguider for a given site.
+
+    If a specific name is provided, pass through and return it.
+    If a generic name (SCICAM-*) is provided, resolve for self-guiding.
+    If nothing is specified, resolve to the preferred autoguider.
+    """
 
     try:
-        ag_match = configdb_interface.get_autoguider_for_instrument(specific_camera, ag_name)
-    except ConfigDBError as e:
-        msg = "Couldn't find any autoguider {} for '{}' at {}.{}.{}".format(ag_name, specific_camera, tel, obs, site)
+        ag_match = configdb_interface.get_autoguider_for_instrument(instrument_name, self_guide)
+    except ConfigDBError:
+        msg = "Couldn't find any autoguider for '{}' at {}.{}.{}".format(instrument_name, tel, enc, site)
         raise InstrumentResolutionError(msg)
 
     return ag_match
@@ -442,6 +446,8 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
         # Set the autoguider name if needed
         if molecule.ag_mode != 'OFF':
             ag_name = getattr(molecule, 'ag_name', None) or ''
+            # TODO: Don't pass in an ag_name (as there will no longer be one...) Instead pass if self_guide is set to
+            # TODO: true in the extra params of the configuration
             specific_ag = resolve_autoguider(ag_name, specific_camera,
                                              site, observatory, telescope,
                                              configdb_interface)
