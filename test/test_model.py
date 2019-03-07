@@ -8,7 +8,7 @@ from datetime import datetime
 # Import the modules to test
 from adaptive_scheduler.model2 import (SiderealTarget, NonSiderealTarget,
                                        Proposal, MoleculeFactory,
-                                       Request, UserRequest,
+                                       Request, RequestGroup,
                                        Windows, Window, Constraints,
                                        ModelBuilder,
                                        RequestError)
@@ -63,7 +63,7 @@ class TestRequest(object):
         self.windows = [(self.semester_start, self.semester_end)]
 
         self.duration = 60
-        self.request_number = '0000000001'
+        self.id = 1
 
     @raises(RequestError)
     def test_invalid_request_type_raises_exception(self):
@@ -72,11 +72,11 @@ class TestRequest(object):
                           molecules=[self.molecule],
                           windows=self.windows,
                           constraints=self.constraints,
-                          request_number=self.request_number,
+                          id=self.id,
                           )
-        user_request = UserRequest(operator=junk_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
-                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
-                                   expires=datetime(2999, 1, 1), submitter='')
+        request_group = RequestGroup(operator=junk_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                    id=1, observation_type='NORMAL', ipp_value=1.0,
+                                    expires=datetime(2999, 1, 1), submitter='')
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
@@ -84,29 +84,29 @@ class TestRequest(object):
                           molecules=[self.molecule],
                           windows=self.windows,
                           constraints=self.constraints,
-                          request_number=self.request_number,
+                          id=self.id,
                           )
-        user_request = UserRequest(operator=valid_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
-                                   tracking_number=1, observation_type='NORMAL', ipp_value=1.0,
-                                   expires=datetime(2999, 1, 1), submitter='')
+        request_group = RequestGroup(operator=valid_res_type, requests=[request], group_id='Group 1', proposal=Proposal(),
+                                    id=1, observation_type='NORMAL', ipp_value=1.0,
+                                    expires=datetime(2999, 1, 1), submitter='')
 
 
-class TestUserRequest(object):
-    '''Unit tests for the adaptive scheduler UserRequest object.'''
+class TestRequestGroup(object):
+    '''Unit tests for the adaptive scheduler RequestGroup object.'''
 
     def setup(self):
         pass
 
     @mock.patch('adaptive_scheduler.model2.event_bus.fire_event')
     def test_emit_user_feedback(self, mock_func):
-        tracking_number = '0000000005'
+        request_group_id = 5
         operator = 'single'
-        ur = UserRequest(
+        ur = RequestGroup(
             operator=operator,
             requests=[],
             proposal=None,
             expires=None,
-            tracking_number=tracking_number,
+            id=request_group_id,
             group_id=None,
             ipp_value=1.0,
             observation_type='NORMAL',
@@ -116,12 +116,11 @@ class TestUserRequest(object):
         msg = 'Yo dude'
         tag = 'MeTag'
         timestamp = datetime(2013, 10, 15, 1, 1, 1)
-        ur.emit_user_feedback(msg, tag, timestamp)
+        ur.emit_rg_feedback(msg, tag, timestamp)
 
         assert_equal(mock_func.called, True)
 
-    def _build_user_request(self, base_priority=1.0, ipp_value=1.0):
-        tracking_number = '0000000005'
+    def _build_request_group(self, base_priority=1.0, ipp_value=1.0):
         operator = 'single'
 
         proposal = Proposal(
@@ -166,26 +165,26 @@ class TestUserRequest(object):
             molecules=[molecule1],
             windows=windows,
             constraints=None,
-            request_number='0000000003',
+            id='0000000003',
             duration=10
         )
 
-        ur = UserRequest(
+        rg = RequestGroup(
             operator=operator,
             requests=[r],
             proposal=proposal,
             expires=None,
-            tracking_number='000000004',
+            id=4,
             ipp_value=ipp_value,
             observation_type='NORMAL',
             group_id=None,
             submitter='Eric Saunders'
         )
 
-        return ur
+        return rg
 
     def _test_priority(self, base_priority, ipp_value):
-        ur = self._build_user_request(base_priority=base_priority, ipp_value=ipp_value)
+        ur = self._build_request_group(base_priority=base_priority, ipp_value=ipp_value)
         assert_almost_equal(base_priority * ipp_value * ur.requests[0].get_duration() / 60.0, ur.get_priority(),
                             delta=(base_priority * ipp_value * ur.requests[0].get_duration() / 60.0) * 0.005)
         assert_equal(base_priority, ur.get_base_priority())
@@ -204,9 +203,9 @@ class TestUserRequest(object):
         r_mock2 = mock.MagicMock()
         r_mock2.has_windows.return_value = False
 
-        ur = UserRequest(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1', proposal=Proposal(),
-                         tracking_number=1, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
-                         submitter='')
+        ur = RequestGroup(operator='many', requests=[r_mock1, r_mock2], group_id='Group 1', proposal=Proposal(),
+                          id=1, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
+                          submitter='')
 
         ur.drop_empty_children()
 
@@ -386,7 +385,7 @@ class TestModelBuilder(object):
             },
         ]
         self.constraints = {}
-        self.request_number = '0000000002'
+        self.id = 2
         self.state = 'PENDING'
 
         self.mb = ModelBuilder(mock.MagicMock(), ConfigDBInterface(configdb_url='',
@@ -402,7 +401,7 @@ class TestModelBuilder(object):
             'location': location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -424,7 +423,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -448,7 +447,7 @@ class TestModelBuilder(object):
             },
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -468,7 +467,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -492,7 +491,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -513,7 +512,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -534,7 +533,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -552,7 +551,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -568,12 +567,12 @@ class TestModelBuilder(object):
             'observation_type': 'NORMAL',
         }
 
-        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
-        assert_equal(user_request_model.observation_type, 'NORMAL')
+        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
+        assert_equal(request_group_model.observation_type, 'NORMAL')
 
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
-    def test_build_request_observation_type_target_of_opportunity(self, mock_proposal, mock_semester):
+    def test_build_request_observation_type_rapid_response(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         req_dict = {
@@ -582,7 +581,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10,
             'state': self.state,
         }
@@ -595,11 +594,11 @@ class TestModelBuilder(object):
             'ipp_value': '1.0',
             'operator': 'many',
             'requests': [req_dict, ],
-            'observation_type': 'TARGET_OF_OPPORTUNITY',
+            'observation_type': 'RAPID_RESPONSE',
         }
 
-        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
-        assert_equal(user_request_model.observation_type, 'TARGET_OF_OPPORTUNITY')
+        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
+        assert_equal(request_group_model.observation_type, 'RAPID_RESPONSE')
 
     @raises(RequestError)
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
@@ -613,7 +612,7 @@ class TestModelBuilder(object):
             'location': self.location,
             'windows': self.windows,
             'constraints': self.constraints,
-            'id': self.request_number,
+            'id': self.id,
             'duration': 10.0,
             'state': self.state,
         }
@@ -629,11 +628,11 @@ class TestModelBuilder(object):
             'observation_type': 'ABNORMAL',
         }
 
-        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
 
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
-    def test_build_user_request_returns_invalid_user_requests(self, mock_proposal, mock_semester):
+    def test_build_request_group_returns_invalid_request_groups(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
         bad_req_dict = {
@@ -679,8 +678,8 @@ class TestModelBuilder(object):
             'requests': [bad_req_dict, good_req_dict]
         }
 
-        user_request_model, invalid_requests = self.mb.build_user_request(cr_dict)
+        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
 
-        assert_equal(1, len(user_request_model.requests))
+        assert_equal(1, len(request_group_model.requests))
         assert_equal(1, len(invalid_requests))
         assert_equal(bad_req_dict, invalid_requests[0])

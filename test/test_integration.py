@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 # Import the modules to test
 from adaptive_scheduler.model2      import (SiderealTarget, Proposal, MoleculeFactory,
-                                            Request, UserRequest,
+                                            Request, RequestGroup,
                                             Windows, Window, Constraints)
 
-from test_scheduler import create_scheduler_input_factory, create_running_user_request
+from test_scheduler import create_scheduler_input_factory, create_running_request_group
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
 from adaptive_scheduler.scheduler_input import  SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
@@ -16,6 +16,7 @@ from adaptive_scheduler.utils import get_reservation_datetimes
 
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
 from mock import Mock
+
 
 class TestIntegration(object):
     '''Unit tests for the adaptive scheduler Request object.'''
@@ -85,67 +86,67 @@ class TestIntegration(object):
         self.windows_3.append(self.window_3)
 
         self.request_1 = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows_1,
-                          constraints    = self.constraints,
-                          request_number = 1,
-                          duration       = 1750)
+                                 molecules      = [self.molecule],
+                                 windows        = self.windows_1,
+                                 constraints    = self.constraints,
+                                 id= 1,
+                                 duration       = 1750)
 
         self.request_2 = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows_2,
-                          constraints    = self.constraints,
-                          request_number = 2,
-                          duration       =1750)
+                                 molecules      = [self.molecule],
+                                 windows        = self.windows_2,
+                                 constraints    = self.constraints,
+                                 id= 2,
+                                 duration       =1750)
 
         self.request_3 = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows_2,
-                          constraints    = self.constraints,
-                          request_number = 3,
-                          duration       =1750)
+                                 molecules      = [self.molecule],
+                                 windows        = self.windows_2,
+                                 constraints    = self.constraints,
+                                 id= 3,
+                                 duration       =1750)
 
         self.request_4 = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows_3,
-                          constraints    = self.constraints,
-                          request_number = 4,
-                          duration       =1750)
+                                 molecules      = [self.molecule],
+                                 windows        = self.windows_3,
+                                 constraints    = self.constraints,
+                                 id= 4,
+                                 duration       =1750)
 
         self.request_5 = Request(target         = self.target,
-                          molecules      = [self.molecule],
-                          windows        = self.windows_3,
-                          constraints    = self.constraints,
-                          request_number = 5,
-                          duration       =1750)
+                                 molecules      = [self.molecule],
+                                 windows        = self.windows_3,
+                                 constraints    = self.constraints,
+                                 id= 5,
+                                 duration       =1750)
 
-        self.user_and_request_1 = UserRequest(operator='and', requests=[self.request_1, self.request_2],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=1, observation_type='NORMAL',
-                                              ipp_value=1.0, group_id='ur 1', submitter='')
-        self.user_and_request_2 = UserRequest(operator='and', requests=[self.request_3, self.request_4],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=2, observation_type='NORMAL',
-                                              ipp_value=1.0, group_id='ur 2', submitter='')
-        self.user_many_request_1 = UserRequest(operator='many', requests=[self.request_1, self.request_2],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=3, observation_type='NORMAL',
-                                              ipp_value=1.5, group_id='ur 3', submitter='')
-        self.user_many_request_2 = UserRequest(operator='many', requests=[self.request_3, self.request_4],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=4, observation_type='NORMAL',
-                                              ipp_value=1.5, group_id='ur 4', submitter='')
-        self.too_user_request_1 = UserRequest(operator='many', requests=[self.request_5],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=5, observation_type='TARGET_OF_OPPORTUNITY',
-                                              ipp_value=1.5, group_id='ur 5', submitter='')
-        self.too_user_request_2 = UserRequest(operator='many', requests=[self.request_1, self.request_3],
-                                              proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                              tracking_number=6, observation_type='TARGET_OF_OPPORTUNITY',
-                                              ipp_value=1.5, group_id='ur 6', submitter='')
+        self.and_request_group_1 = RequestGroup(operator='and', requests=[self.request_1, self.request_2],
+                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                id=1, observation_type='NORMAL',
+                                                ipp_value=1.0, group_id='ur 1', submitter='')
+        self.and_request_group_2 = RequestGroup(operator='and', requests=[self.request_3, self.request_4],
+                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                id=2, observation_type='NORMAL',
+                                                ipp_value=1.0, group_id='ur 2', submitter='')
+        self.many_request_group_1 = RequestGroup(operator='many', requests=[self.request_1, self.request_2],
+                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                 id=3, observation_type='NORMAL',
+                                                 ipp_value=1.5, group_id='ur 3', submitter='')
+        self.many_request_group_2 = RequestGroup(operator='many', requests=[self.request_3, self.request_4],
+                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                 id=4, observation_type='NORMAL',
+                                                 ipp_value=1.5, group_id='ur 4', submitter='')
+        self.rr_request_group_1 = RequestGroup(operator='many', requests=[self.request_5],
+                                               proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                               id=5, observation_type='RAPID_RESPONSE',
+                                               ipp_value=1.5, group_id='ur 5', submitter='')
+        self.rr_request_group_2 = RequestGroup(operator='many', requests=[self.request_1, self.request_3],
+                                               proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                               id=6, observation_type='RAPID_RESPONSE',
+                                               ipp_value=1.5, group_id='ur 6', submitter='')
 
-    def _schedule_requests(self, too_ur_list, normal_ur_list, scheduler_time, too_loop=False,
-                           block_schedule_by_resource={}, running_user_requests=[], too_tracking_numbers=[],
+    def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
+                           block_schedule_by_resource={}, running_request_groups=[], rapid_response_ids=[],
                            semester_details={}):
         sched_params = SchedulerParameters(run_once=True, dry_run=True)
         event_bus_mock = Mock()
@@ -156,11 +157,11 @@ class TestIntegration(object):
         network_interface_mock.abort = Mock(return_value=0)
         network_interface_mock.get_current_events = Mock(return_value={})
 
-        mock_input_factory = create_scheduler_input_factory(too_ur_list, normal_ur_list, block_schedule_by_resource,
-                                                            running_user_requests, too_tracking_numbers)
+        mock_input_factory = create_scheduler_input_factory(rr_rg_list, normal_rg_list, block_schedule_by_resource,
+                                                            running_request_groups, rapid_response_ids)
 
-        if too_loop:
-            scheduler_input = mock_input_factory.create_too_scheduling_input()
+        if rr_loop:
+            scheduler_input = mock_input_factory.create_rr_scheduling_input()
         else:
             scheduler_input = mock_input_factory.create_normal_scheduling_input()
         scheduler_input.scheduler_now = scheduler_time
@@ -170,7 +171,7 @@ class TestIntegration(object):
                              'end': scheduler_time + timedelta(days=150)}
 
         result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
-                                         preemption_enabled=too_loop)
+                                         preemption_enabled=rr_loop)
 
         return result
 
@@ -184,7 +185,7 @@ class TestIntegration(object):
         network_interface_mock.save = Mock(return_value=0)
         network_interface_mock.abort = Mock(return_value=0)
         network_interface_mock.get_current_events = Mock(return_value={})
-        normal_ur_list = [self.user_and_request_1, self.user_and_request_2]
+        normal_ur_list = [self.and_request_group_1, self.and_request_group_2]
         mock_input_factory = create_scheduler_input_factory([], normal_ur_list, {}, [], [])
         scheduler_input = mock_input_factory.create_normal_scheduling_input()
         scheduler_input.scheduler_now = scheduler_time
@@ -204,52 +205,52 @@ class TestIntegration(object):
         assert scheduler.visibility_cache != saved_visibility_cache
 
     def test_competing_and_requests(self):
-        result = self._schedule_requests([], [self.user_and_request_1, self.user_and_request_2],
+        result = self._schedule_requests([], [self.and_request_group_1, self.and_request_group_2],
                                          self.base_time - timedelta(hours=10))
 
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
 
         # assert that either user request 1 or user request 2 were scheduled in full, with the other not being scheduled
-        if 1 in scheduled_urs:
+        if 1 in scheduled_rgs:
             # check that ur 1s requests are scheduled
-            assert 1 in scheduled_urs[1]
-            assert 2 in scheduled_urs[1]
+            assert 1 in scheduled_rgs[1]
+            assert 2 in scheduled_rgs[1]
             # and check that ur 2 is not scheduled
-            assert 2 not in scheduled_urs
+            assert 2 not in scheduled_rgs
         else:
-            assert 4 in scheduled_urs[2]
-            assert 3 in scheduled_urs[2]
-            assert 1 not in scheduled_urs
+            assert 4 in scheduled_rgs[2]
+            assert 3 in scheduled_rgs[2]
+            assert 1 not in scheduled_rgs
 
     def test_competing_many_requests(self):
-        result = self._schedule_requests([], [self.user_many_request_1, self.user_many_request_2],
+        result = self._schedule_requests([], [self.many_request_group_1, self.many_request_group_2],
                                          self.base_time - timedelta(hours=10))
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
 
         # assert that user request 3 request 1 and user request 4 request 4 were scheduled ,
         # along with one of either 3-2 or 4-3.
-        assert 3 in scheduled_urs
-        assert 4 in scheduled_urs
-        assert 1 in scheduled_urs[3]
-        assert 4 in scheduled_urs[4]
-        if 2 in scheduled_urs[3]:
-            assert 3 not in scheduled_urs[4]
+        assert 3 in scheduled_rgs
+        assert 4 in scheduled_rgs
+        assert 1 in scheduled_rgs[3]
+        assert 4 in scheduled_rgs[4]
+        if 2 in scheduled_rgs[3]:
+            assert 3 not in scheduled_rgs[4]
         else:
-            assert 2 not in scheduled_urs[3]
+            assert 2 not in scheduled_rgs[3]
 
     def test_competing_many_and_requests(self):
-        normal_request_list = [self.user_and_request_1, self.user_many_request_2]
+        normal_request_list = [self.and_request_group_1, self.many_request_group_2]
         result = self._schedule_requests([], normal_request_list, self.base_time - timedelta(hours=10))
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
 
         # assert the and request was taken in full, and the remaining many ur 4 request 2 was scheduled
-        assert 1 in scheduled_urs
-        assert 1 in scheduled_urs[1]
-        assert 2 in scheduled_urs[1]
-        assert 4 in scheduled_urs
+        assert 1 in scheduled_rgs
+        assert 1 in scheduled_rgs[1]
+        assert 2 in scheduled_rgs[1]
+        assert 4 in scheduled_rgs
         # the second request from the many was scheduled but the first was not
-        assert 4 in scheduled_urs[4]
-        assert 3 not in scheduled_urs[4]
+        assert 4 in scheduled_rgs[4]
+        assert 3 not in scheduled_rgs[4]
 
     def test_large_and_requests(self):
         days_out = 0
@@ -263,200 +264,191 @@ class TestIntegration(object):
             windows = Windows()
             windows.append(window)
             request = Request(target=self.target,
-                                molecules=[self.molecule],
-                                windows=windows,
-                                constraints=self.constraints,
-                                request_number=int("11{}".format(days_out).rjust(10, '0')),
-                                duration=1750)
+                              molecules=[self.molecule],
+                              windows=windows,
+                              constraints=self.constraints,
+                              id=int("11{}".format(days_out).rjust(10, '0')),
+                              duration=1750)
             request_list.append(request)
             days_out += 1
 
-        user_request = UserRequest(operator='and', requests=request_list, proposal=self.proposal,
-                                    expires=datetime(2050, 1, 1), tracking_number=100,
-                                   ipp_value=1.0, group_id='large ur', submitter='', observation_type='NORMAL')
+        request_group = RequestGroup(operator='and', requests=request_list, proposal=self.proposal,
+                                    expires=datetime(2050, 1, 1), id=100,
+                                    ipp_value=1.0, group_id='large ur', submitter='', observation_type='NORMAL')
 
-        normal_request_list = [user_request,]
+        normal_request_list = [request_group,]
         result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
 
         # assert that none of the and is scheduled (since it has an unschedulable request in it)
         # assert that both of the manys are scheduled
-        assert 100 in scheduled_urs
+        assert 100 in scheduled_rgs
         for req in request_list:
             # assert each child request is in the schedule (scheduler schedules past horizon for ands)
-            assert req.request_number in scheduled_urs[100]
+            assert req.id in scheduled_rgs[100]
 
-
-    def test_normal_requests_dont_schedule_over_too(self):
-        ''' Verifies that a normal request will not schedule over a just scheduled too request
+    def test_normal_requests_dont_schedule_over_rr(self):
+        ''' Verifies that a normal request will not schedule over a just scheduled RR request
         '''
-        too_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
+        rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
                                           self.base_time + timedelta(hours=1, minutes=25)),]}
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         self.base_time - timedelta(hours=10), too_loop=False,
-                                         block_schedule_by_resource=too_schedule)
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled too
-        assert_true(4 in scheduled_urs)
-        assert_true(4 not in scheduled_urs[4])
-        assert_true(3 in scheduled_urs[4])
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         self.base_time - timedelta(hours=10), rr_loop=False,
+                                         block_schedule_by_resource=rr_schedule)
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
+        assert_true(4 in scheduled_rgs)
+        assert_true(4 not in scheduled_rgs[4])
+        assert_true(3 in scheduled_rgs[4])
 
-
-    def test_too_requests_dont_schedule_over_running_too(self):
-        ''' Verifies that a too will not preempt a currently running too if it overlaps with its window completely 
+    def test_rr_requests_dont_schedule_over_running_rr(self):
+        ''' Verifies that a RR will not preempt a currently running RR if it overlaps with its window completely
         '''
-        too_tracking_number = 99
-        running_user_request = create_running_user_request(tracking_number=too_tracking_number,
-                                                            request_number=99,
+        rapid_response_id = 99
+        running_request_group = create_running_request_group(request_group_id=rapid_response_id,
+                                                            request_id=99,
                                                             resource=self.resource_3,
                                                             start=self.base_time,
                                                             end=self.base_time + timedelta(hours=2))
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         self.base_time - timedelta(hours=10), too_loop=True,
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         self.base_time - timedelta(hours=10), rr_loop=True,
                                          block_schedule_by_resource={},
-                                         running_user_requests=[running_user_request,],
-                                         too_tracking_numbers=[too_tracking_number,])
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure no too was scheduled because the running user request was over it's time
-        assert_false(5 in scheduled_urs)
-        assert_equal(scheduled_urs, {})
+                                         running_request_groups=[running_request_group, ],
+                                         rapid_response_ids=[rapid_response_id, ])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure no RR was scheduled because the running request group was over it's time
+        assert_false(5 in scheduled_rgs)
+        assert_equal(scheduled_rgs, {})
 
-
-    def test_too_requests_do_schedule_over_running_normal(self):
-        ''' Verifies that a too will preempt a currently running normal request and be scheduled over it at its
+    def test_rr_requests_do_schedule_over_running_normal(self):
+        ''' Verifies that a RR will preempt a currently running normal request and be scheduled over it at its
             earliest time possible
         '''
-        too_tracking_number = 777
-        running_user_request = create_running_user_request(tracking_number=99,
-                                                            request_number=99,
+        rapid_response_id = 777
+        running_request_group = create_running_request_group(request_group_id=99,
+                                                            request_id=99,
                                                             resource=self.resource_3,
                                                             start=self.base_time,
                                                             end=self.base_time + timedelta(hours=2))
         scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=True,
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=True,
                                          block_schedule_by_resource={},
-                                         running_user_requests=[running_user_request,],
-                                         too_tracking_numbers=[too_tracking_number,])
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure too was scheduled at its first time even though it overlaps with the currently running normal request
-        assert_true(5 in scheduled_urs)
-        assert_true(5 in scheduled_urs[5])
+                                         running_request_groups=[running_request_group, ],
+                                         rapid_response_ids=[rapid_response_id, ])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure RR was scheduled at its first time even though it overlaps with the currently running normal request
+        assert_true(5 in scheduled_rgs)
+        assert_true(5 in scheduled_rgs[5])
         semester_start = scheduler_start - timedelta(days=150)
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[5][5], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
         assert_equal(dt_start, self.window_3.start)
         assert_equal(dt_end, self.window_3.start + timedelta(seconds=1750))
 
-
-    def test_too_requests_schedule_after_running_too(self):
-        ''' Verifies that a too will be scheduled after a currently running too if it is able
+    def test_rr_requests_schedule_after_running_rr(self):
+        ''' Verifies that a RR will be scheduled after a currently running RR if it is able
         '''
-        too_tracking_number = 99
-        running_user_request = create_running_user_request(tracking_number=too_tracking_number,
-                                                            request_number=99,
+        rapid_response_id = 99
+        running_request_group = create_running_request_group(request_group_id=rapid_response_id,
+                                                             request_id=99,
+                                                             resource=self.resource_3,
+                                                             start=self.base_time,
+                                                             end=self.base_time + timedelta(hours=1, minutes=0, seconds=30))
+        scheduler_start = self.base_time - timedelta(hours=10)
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=True,
+                                         block_schedule_by_resource={},
+                                         running_request_groups=[running_request_group, ],
+                                         rapid_response_ids=[rapid_response_id, ])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure RR was scheduled after the running RR since there was still time
+        assert_true(5 in scheduled_rgs)
+        assert_true(5 in scheduled_rgs[5])
+        semester_start = scheduler_start - timedelta(days=150)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
+        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
+        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
+
+    def test_normal_requests_dont_schedule_over_running_rr(self):
+        ''' Verifies that a normal request will be blocked by a currently running RR
+        '''
+        rr_request_group_id = 99
+        running_request_group = create_running_request_group(request_group_id=rr_request_group_id,
+                                                            request_id=99,
+                                                            resource=self.resource_3,
+                                                            start=self.base_time,
+                                                            end=self.base_time + timedelta(hours=2))
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         self.base_time - timedelta(hours=10), rr_loop=False,
+                                         block_schedule_by_resource={},
+                                         running_request_groups=[running_request_group, ],
+                                         rapid_response_ids=[rr_request_group_id, ])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
+        assert_false(4 in scheduled_rgs)
+        assert_false(3 in scheduled_rgs)
+        assert_equal(scheduled_rgs, {})
+
+    def test_normal_requests_can_schedule_after_rr(self):
+        ''' Verifies that a normal request will respect a previously scheduled RR whose time overlaps with it's window.
+            Ensures that the normal request starts after the end of the RR.
+        '''
+        rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
+                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)),]}
+        scheduler_start = self.base_time - timedelta(hours=10)
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=False,
+                                         block_schedule_by_resource=rr_schedule)
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure both requests can get scheduled, but request 4 is after the RR reservation in its window
+        assert_true(4 in scheduled_rgs)
+        assert_true(4 in scheduled_rgs[4])
+        assert_true(3 in scheduled_rgs[4])
+        semester_start = scheduler_start - timedelta(days=150)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
+        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
+        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
+
+    def test_normal_requests_can_schedule_after_running_rr(self):
+        ''' Verifies that a normal request will respect a already running RR whose time overlaps with it's window.
+            Ensures that the normal request starts after the end of the RR.
+        '''
+        rr_request_group_id = 99
+        running_request_group = create_running_request_group(request_group_id=rr_request_group_id,
+                                                            request_id=99,
                                                             resource=self.resource_3,
                                                             start=self.base_time,
                                                             end=self.base_time + timedelta(hours=1, minutes=0, seconds=30))
         scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=True,
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=False,
                                          block_schedule_by_resource={},
-                                         running_user_requests=[running_user_request,],
-                                         too_tracking_numbers=[too_tracking_number,])
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure ToO was scheduled after the running ToO since there was still time
-        assert_true(5 in scheduled_urs)
-        assert_true(5 in scheduled_urs[5])
+                                         running_request_groups=[running_request_group, ],
+                                         rapid_response_ids=[rr_request_group_id, ])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        # Ensure request 4 is after the RR running request in its window, and request 3 is blocked by the running RR
+        assert_true(4 in scheduled_rgs)
+        assert_true(4 in scheduled_rgs[4])
+        assert_false(3 in scheduled_rgs[4])
         semester_start = scheduler_start - timedelta(days=150)
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[5][5], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
         assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
         assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
 
-
-    def test_normal_requests_dont_schedule_over_running_too(self):
-        ''' Verifies that a normal request will be blocked by a currently running too
-        '''
-        too_tracking_number = 99
-        running_user_request = create_running_user_request(tracking_number=too_tracking_number,
-                                                            request_number=99,
-                                                            resource=self.resource_3,
-                                                            start=self.base_time,
-                                                            end=self.base_time + timedelta(hours=2))
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         self.base_time - timedelta(hours=10), too_loop=False,
-                                         block_schedule_by_resource={},
-                                         running_user_requests=[running_user_request,],
-                                         too_tracking_numbers=[too_tracking_number,])
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled too
-        assert_false(4 in scheduled_urs)
-        assert_false(3 in scheduled_urs)
-        assert_equal(scheduled_urs, {})
-
-
-    def test_normal_requests_can_schedule_after_too(self):
-        ''' Verifies that a normal request will respect a previously scheduled ToO whose time overlaps with it's window.
-            Ensures that the normal request starts after the end of the ToO.
-        '''
-        too_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
-                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)),]}
-        scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=False,
-                                         block_schedule_by_resource=too_schedule)
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure both requests can get scheduled, but request 4 is after the too reservation in its window
-        assert_true(4 in scheduled_urs)
-        assert_true(4 in scheduled_urs[4])
-        assert_true(3 in scheduled_urs[4])
-        semester_start = scheduler_start - timedelta(days=150)
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[4][4], semester_start)
-        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
-
-
-    def test_normal_requests_can_schedule_after_running_too(self):
-        ''' Verifies that a normal request will respect a already running ToO whose time overlaps with it's window.
-            Ensures that the normal request starts after the end of the ToO.
-        '''
-        too_tracking_number = 99
-        running_user_request = create_running_user_request(tracking_number=too_tracking_number,
-                                                           request_number=99,
-                                                           resource=self.resource_3,
-                                                           start=self.base_time,
-                                                           end=self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=False,
-                                         block_schedule_by_resource={},
-                                         running_user_requests=[running_user_request,],
-                                         too_tracking_numbers=[too_tracking_number,])
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        # Ensure request 4 is after the too running request in its window, and request 3 is blocked by the running too
-        assert_true(4 in scheduled_urs)
-        assert_true(4 in scheduled_urs[4])
-        assert_false(3 in scheduled_urs[4])
-        semester_start = scheduler_start - timedelta(days=150)
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[4][4], semester_start)
-        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
-
-
-
-    def test_one_too_has_correct_cancel_date_list(self):
-        ''' Schedules a single ToO and verifies it's time appears in the cancellation date list on the resource
+    def test_one_rr_has_correct_cancel_date_list(self):
+        ''' Schedules a single RR and verifies it's time appears in the cancellation date list on the resource
         '''
         scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_1,], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=True,
+        result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=True,
                                          block_schedule_by_resource={})
 
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        assert_true(5 in scheduled_urs)
-        assert_true(5 in scheduled_urs[5])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        assert_true(5 in scheduled_rgs)
+        assert_true(5 in scheduled_rgs[5])
 
         semester_start = scheduler_start - timedelta(days=150)
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[5][5], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
         scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
         scheduler_runner.semester_details = {'id': '2015A', 'start': semester_start,
                                              'end': scheduler_start + timedelta(days=150)}
@@ -467,40 +459,38 @@ class TestIntegration(object):
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
 
-
-    def test_multiple_too_has_correct_cancel_date_list(self):
-        ''' Schedules three nearly back to back ToOs. Checks that each of their scheduled time appears in the date list
+    def test_multiple_rr_has_correct_cancel_date_list(self):
+        ''' Schedules three nearly back to back RRs. Checks that each of their scheduled time appears in the date list
             for the resource they are scheduled in when getting dates to cancel.
         '''
         scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.too_user_request_2, self.too_user_request_1], [self.user_many_request_2,],
-                                         scheduler_start, too_loop=True,
+        result = self._schedule_requests([self.rr_request_group_2, self.rr_request_group_1], [self.many_request_group_2, ],
+                                         scheduler_start, rr_loop=True,
                                          block_schedule_by_resource={})
 
-        scheduled_urs = result.get_scheduled_requests_by_tracking_num()
-        assert_true(5 in scheduled_urs)
-        assert_true(5 in scheduled_urs[5])
-        assert_true(6 in scheduled_urs)
-        assert_true(3 in scheduled_urs[6])
-        assert_true(1 in scheduled_urs[6])
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        assert_true(5 in scheduled_rgs)
+        assert_true(5 in scheduled_rgs[5])
+        assert_true(6 in scheduled_rgs)
+        assert_true(3 in scheduled_rgs[6])
+        assert_true(1 in scheduled_rgs[6])
 
         semester_start = scheduler_start - timedelta(days=150)
         scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
         scheduler_runner.semester_details = {'id': '2015A', 'start': semester_start,
                                              'end': scheduler_start + timedelta(days=150)}
-
         cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(result.schedule)
         assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
         assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
 
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[6][1], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[6][1], semester_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
 
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[6][3], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[6][3], semester_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][0], dt_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][1], dt_end)
 
-        dt_start, dt_end = get_reservation_datetimes(scheduled_urs[5][5], semester_start)
+        dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][0], dt_start)
         assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][1], dt_end)

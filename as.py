@@ -18,8 +18,8 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface
-from adaptive_scheduler.pond             import PondScheduleInterface
-from adaptive_scheduler.valhalla_connections import ValhallaInterface
+from adaptive_scheduler.pond             import ObservationScheduleInterface
+from adaptive_scheduler.valhalla_connections import ObservationPortalInterface
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, SchedulerParameters
@@ -36,7 +36,7 @@ VERSION = '1.1.0'
 # logging.config.fileConfig('logging.conf')
 import logger_config
 log = logging.getLogger('adaptive_scheduler')
-ur_logger = logging.getLogger('ur_logger')
+rg_logger = logging.getLogger('rg_logger')
 
 # Set up signal handling for graceful shutdown
 run_flag = True
@@ -86,8 +86,8 @@ def parse_args(argv):
                                 help="Ignore the 'single' Request type")
     arg_parser.add_argument("--nocompounds", action="store_true", dest='no_compounds',
                                 help="Ignore the 'and', 'oneof' and 'many' Request types")
-    arg_parser.add_argument("--notoo", action="store_true", dest='no_too',
-                                help="Treat Target of Opportunity Requests like Normal Requests")
+    arg_parser.add_argument("--no_rr", action="store_true", dest='no_rr',
+                                help="Treat Rapid Response Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
@@ -110,8 +110,8 @@ def parse_args(argv):
                                 help="Initial estimate for time needed to save a new scheduler reservation", default=defaults.avg_reservation_save_time_seconds)
     arg_parser.add_argument("--normal_runtime_seconds", type=float, dest='normal_runtime_seconds',
                                 help="Initial estimate for the normal loop runtime", default=defaults.normal_runtime_seconds)
-    arg_parser.add_argument("--too_runtime_seconds", type=float, dest='too_runtime_seconds',
-                                help="Initial estimate for the ToO loop runtime", default=defaults.too_runtime_seconds)
+    arg_parser.add_argument("--rr_runtime_seconds", type=float, dest='rr_runtime_seconds',
+                            help="Initial estimate for the Rapid Response loop runtime", default=defaults.rr_runtime_seconds)
     arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
                                 help="Ignore intra-proposal priority when computing request priority", default=defaults.ignore_ipp)
     arg_parser.add_argument("--debug", action="store_true", dest='debug',
@@ -124,7 +124,7 @@ def parse_args(argv):
         log.info("Running in simulation mode - no DB changes will be made")
     log.info("Sleep period between scheduling runs set at %ds" % args.sleep_seconds)
 
-    ur_logger.disabled = not args.request_logs
+    rg_logger.disabled = not args.request_logs
     
     sched_params = SchedulerParameters(**vars(args))
 
@@ -172,11 +172,11 @@ def main(argv):
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
     
-    schedule_interface = PondScheduleInterface(host=sched_params.pond_host)
-    user_request_interface = ValhallaInterface(sched_params.valhalla_url, debug=sched_params.debug)
+    schedule_interface = ObservationScheduleInterface(host=sched_params.pond_host)
+    observation_portal_interface = ObservationPortalInterface(sched_params.valhalla_url, debug=sched_params.debug)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
     network_state_interface = Network(configdb_interface)
-    network_interface = NetworkInterface(schedule_interface, user_request_interface, network_state_interface,
+    network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
                                          configdb_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')
     
@@ -184,9 +184,9 @@ def main(argv):
     network_model = configdb_interface.get_telescope_info()
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     if sched_params.input_file_name:
-        input_provider = FileBasedSchedulingInputProvider(sched_params.input_file_name, network_interface, is_too_mode=True)
+        input_provider = FileBasedSchedulingInputProvider(sched_params.input_file_name, network_interface, is_rr_mode=True)
     else:
-        input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_too_input=True)
+        input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_rr_input=True)
     input_factory = SchedulingInputFactory(input_provider)
     scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model, input_factory)
     scheduler_runner.run()

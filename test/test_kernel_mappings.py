@@ -4,7 +4,7 @@ from __future__ import division
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
-                                       UserRequest, Window, Windows, MoleculeFactory, Constraints)
+                                       RequestGroup, Window, Windows, MoleculeFactory, Constraints)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
 from time_intervals.intervals import Intervals
@@ -91,20 +91,20 @@ class TestKernelMappings(object):
                         molecules      = [self.mol],
                         windows        = dt_windows,
                         constraints    = constraints,
-                        request_number = '1',
+                        id=1,
                         duration       = 10
                       )
 
         return req
 
 
-    def make_user_request(self, requests, operator='single'):
+    def make_request_group(self, requests, operator='single'):
         proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
-        ur = UserRequest(operator=operator, requests=requests, proposal=proposal, submitter='',
-                         expires=datetime(2999, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0,
-                         observation_type='NORMAL')
+        rg = RequestGroup(operator=operator, requests=requests, proposal=proposal, submitter='',
+                          expires=datetime(2999, 1, 1), id=1, group_id='test group id', ipp_value=1.0,
+                          observation_type='NORMAL')
         
-        return ur
+        return rg
 
 
     def make_intersection_dict(self):
@@ -189,13 +189,13 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'and'
-        user_request  = self.make_user_request(requests, operator)
+        request_group  = self.make_request_group(requests, operator)
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.proposal.tac_priority = 1
+        request_group.proposal.tac_priority = 1
 
-        received = construct_compound_reservation(user_request,
+        received = construct_compound_reservation(request_group,
                                                   sem_start)
 
         assert_equal(len(received.reservation_list), len(requests))
@@ -206,14 +206,14 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'many'
-        user_request  = self.make_user_request(requests, operator)
+        request_group  = self.make_request_group(requests, operator)
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.proposal.tac_priority = 1
+        request_group.proposal.tac_priority = 1
 
         received = construct_many_compound_reservation(
-                                               user_request,
+                                               request_group,
                                                0,
                                                sem_start)
 
@@ -227,10 +227,10 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request(start=start, end=end)
         operator          = 'single'
         requests          = [request]
-        user_request      = self.make_user_request(requests, operator)
-        user_requests     = [user_request]
+        request_group      = self.make_request_group(requests, operator)
+        request_groups     = [request_group]
         scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-        filtered_urs = filter_on_scheduling_horizon(user_requests,
+        filtered_urs = filter_on_scheduling_horizon(request_groups,
                                                     scheduling_horizon)
         
         expected_window_start = start
@@ -252,10 +252,10 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'many'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_urs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
@@ -281,10 +281,10 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'oneof'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_urs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
@@ -310,10 +310,10 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'and'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_urs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
@@ -351,7 +351,7 @@ class TestKernelMappings(object):
                        molecules      = [self.mol],
                        windows        = dt_windows,
                        constraints    = constraints,
-                       request_number = '1'
+                       id='1'
                       )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -404,7 +404,7 @@ class TestKernelMappings(object):
                         molecules  = [self.mol],
                         windows    = dt_windows,
                         constraints = constraints,
-                        request_number = '1'
+                        id='1'
                       )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -455,7 +455,7 @@ class TestKernelMappings(object):
                        molecules  = [self.mol],
                        windows    = dt_windows,
                        constraints = constraints,
-                       request_number = '1'
+                       id='1'
                       )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -517,7 +517,7 @@ class TestKernelMappings(object):
                        molecules       = [self.mol],
                        windows         = dt_windows,
                        constraints     = constraints,
-                       request_number  = '1',
+                       id='1',
                        duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
@@ -584,7 +584,7 @@ class TestKernelMappings(object):
                        molecules       = [self.mol],
                        windows         = dt_windows,
                        constraints     = constraints,
-                       request_number  = '1',
+                       id='1',
                        duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)

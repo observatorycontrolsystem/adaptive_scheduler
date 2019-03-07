@@ -5,8 +5,8 @@ logging.py - Scheduler-specific logging classes
 
 This module provides
     * MultiFileHandler   - write to multiple files using a single logger
-    * UserRequestHandler - write information specific to URs to individual files
-    * UserRequestLogger  - convenience wrapper for logging specific URs
+    * RequestGroupHandler - write information specific to RGs to individual files
+    * RequestGroupLogger  - convenience wrapper for logging specific RGs
 
 Author: Eric Saunders
 April 2013
@@ -38,39 +38,39 @@ class MultiFileHandler(logging.FileHandler):
         self.stream = self._open()
 
 
-class UserRequestHandler(MultiFileHandler):
-    def __init__(self, tracking_number, mode='a', logdir = '.', encoding=None, delay=0):
-        filename = os.path.join(logdir, str(int(tracking_number)) + '.log')
+class RequestGroupHandler(MultiFileHandler):
+    def __init__(self, request_group_id, mode='a', logdir = '.', encoding=None, delay=0):
+        filename = os.path.join(logdir, str(int(request_group_id)) + '.log')
         MultiFileHandler.__init__(self, filename, mode, encoding, delay)
         self.logdir = logdir
-        self.tracking_number  = tracking_number
+        self.request_group_id  = request_group_id
 
     def emit(self, record):
-        if hasattr(record, 'tracking_number'):
-            record.file_id = os.path.join(self.logdir, str(int(record.tracking_number)) + '.log')
-            record.tags = {'tracking_number': int(record.tracking_number)}  # For JSON tags
+        if hasattr(record, 'id'):
+            record.file_id = os.path.join(self.logdir, str(int(record.id)) + '.log')
+            record.tags = {'request_group_id': int(record.id)}  # For JSON tags
         MultiFileHandler.emit(self, record)
 
 
-class UserRequestLogger(object):
+class RequestGroupLogger(object):
 
     def __init__(self, logger):
         self.logger = logger
 
-    def debug(self, msg, tracking_number):
-        self.logger.debug(msg, extra={'tracking_number': int(tracking_number)})
+    def debug(self, msg, request_group_id):
+        self.logger.debug(msg, extra={'request_group_id': int(request_group_id)})
 
-    def info(self, msg, tracking_number):
-        self.logger.info(msg, extra={'tracking_number': int(tracking_number)})
+    def info(self, msg, request_group_id):
+        self.logger.info(msg, extra={'request_group_id': int(request_group_id)})
 
-    def warn(self, msg, tracking_number):
-        self.logger.warn(msg, extra={'tracking_number': int(tracking_number)})
+    def warn(self, msg, request_group_id):
+        self.logger.warn(msg, extra={'request_group_id': int(request_group_id)})
 
-    def critical(self, msg, tracking_number):
-        self.logger.critical(msg, extra={'tracking_number': int(tracking_number)})
+    def critical(self, msg, request_group_id):
+        self.logger.critical(msg, extra={'request_group_id': int(request_group_id)})
 
-    def error(self, msg, tracking_number):
-        self.logger.error(msg, extra={'tracking_number': int(tracking_number)})
+    def error(self, msg, request_group_id):
+        self.logger.error(msg, extra={'request_group_id': int(request_group_id)})
 
 
 if __name__ == '__main__':
@@ -78,7 +78,7 @@ if __name__ == '__main__':
     logger = logging.getLogger('request_logger')
     logger.setLevel(logging.DEBUG)
 
-    handler = UserRequestHandler(tracking_number='0000000244', mode='a')
+    handler = RequestGroupHandler(request_group_id=24, mode='a')
     handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
 
@@ -87,12 +87,12 @@ if __name__ == '__main__':
     logger.info('info message')
 
     # These messages are logged to a different UR tracking number
-    logger.debug('debug message',       extra={'tracking_number':'0000000300'})
-    logger.info('info message',         extra={'tracking_number':'0000000300'})
-    logger.warn('warn message',         extra={'tracking_number':'0000000300'})
-    logger.error('error message',       extra={'tracking_number':'0000000300'})
-    logger.critical('critical message', extra={'tracking_number':'0000000300'})
+    logger.debug('debug message',       extra={'request_group_id':'300'})
+    logger.info('info message',         extra={'request_group_id':'300'})
+    logger.warn('warn message',         extra={'request_group_id':'300'})
+    logger.error('error message',       extra={'request_group_id':'300'})
+    logger.critical('critical message', extra={'request_group_id':'300'})
 
-    ur_logger = UserRequestLogger(logger)
-    ur_logger.critical('critical message 2', '0000000300')
+    rg_logger = RequestGroupLogger(logger)
+    rg_logger.critical('critical message 2', '300')
 

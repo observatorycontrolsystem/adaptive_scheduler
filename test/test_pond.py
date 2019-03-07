@@ -5,10 +5,10 @@ from nose import SkipTest
 from mock import patch, Mock, MagicMock
 
 from adaptive_scheduler.pond import (InstrumentResolutionError, build_block, resolve_instrument, resolve_autoguider,
-                                     PondScheduleInterface)
+                                     ObservationScheduleInterface)
 from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
                                        SiderealTarget, Request,
-                                       UserRequest, Constraints,
+                                       RequestGroup, Constraints,
                                        MoleculeFactory)
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
@@ -64,9 +64,10 @@ class TestPond(object):
             defocus=0.0,
         )
 
+    # TODO: delete this if not used
     def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
                           end=datetime(2012, 1, 2, 0, 0, 0), group_id='group', submitter='mysubmitter',
-                          tracking_number='0000000001', request_number='0000000001'):
+                          request_group_id=1, request_id=1):
         reservation = Mock()
         reservation.scheduled_resource = location
         semester_start = datetime(2012, 1, 1)
@@ -80,17 +81,17 @@ class TestPond(object):
         request.constraints.max_lunar_phase = 0
         request.constraints.max_seeing = 0
         request.constraints.min_transparency = 0
-        request.request_number = request_number
+        request.id = request_id
         request.target = self.valid_target
         request.molecules = [self.valid_expose_mol, ]
 
-        user_request = Mock()
-        user_request.proposal = self.valid_proposal
-        user_request.submitter = submitter
-        user_request.group_id = group_id,
-        user_request.tracking_number = tracking_number
+        request_group = Mock()
+        request_group.proposal = self.valid_proposal
+        request_group.submitter = submitter
+        request_group.group_id = group_id,
+        request_group.id = request_group_id
 
-        scheduled_block = build_block(reservation, request, user_request, semester_start, self.configdb_interface)
+        scheduled_block = build_block(reservation, request, request_group, semester_start, self.configdb_interface)
 
         return scheduled_block
 
@@ -105,15 +106,15 @@ class TestPond(object):
     @raises(ScheduleException)
     @responses.activate
     def test_no_pond_connection_okay(self):
-        ur1 = UserRequest(
+        ur1 = RequestGroup(
             operator='single',
             requests=None,
             proposal=None,
-            tracking_number='0000000001',
+            id='0000000001',
             group_id=None,
             expires=None,
             ipp_value=1.0,
-            observation_type="TARGET_OF_OPPORTUNITY",
+            observation_type="RAPID_RESPONSE",
             submitter=''
         )
 
@@ -129,10 +130,10 @@ class TestPond(object):
         responses.add(responses.GET, get_endpoint,
                       json={"error": 'failed to get pond blocks'}, status=500)
 
-        tracking_numbers = [ur1.tracking_number]
-        pond_interface = PondScheduleInterface(host=host)
-        too_blocks = pond_interface._get_blocks_by_telescope_for_tracking_numbers(tracking_numbers, tels, start, end)
-        assert_equal({}, too_blocks)
+        request_group_ids = [ur1.id]
+        observation_schedule_interface = ObservationScheduleInterface(host=host)
+        rr_blocks = observation_schedule_interface._get_blocks_by_telescope_for_request_group_ids(request_group_ids, tels, start, end)
+        assert_equal({}, rr_blocks)
 
     def test_resolve_instrument_pass_through_if_camera_specified(self):
         instrument_name = 'kb12'
@@ -202,19 +203,19 @@ class TestPondInteractions(object):
         self.tel = '1m0a'
         self.configdb_interface = Mock()
 
-    def make_fake_block(self, start_dt, tracking_num_set):
+    def make_fake_block(self, start_dt, request_group_id_set):
         class FakeBlock(object):
-            def __init__(self, start_dt, tracking_num_set):
+            def __init__(self, start_dt, request_group_id_set):
                 self.start = start_dt
-                self._tracking_num_set = tracking_num_set
+                self._request_group_id_set = request_group_id_set
 
-            def tracking_num_set(self):
-                return self._tracking_num_set
+            def request_group_id_set(self):
+                return self._request_group_id_set
 
             def __repr__(self):
-                return "FakeBlock (%s, %s)" % (self.start, self.tracking_num_set())
+                return "FakeBlock (%s, %s)" % (self.start, self.request_group_id_set())
 
-        return FakeBlock(start_dt, tracking_num_set)
+        return FakeBlock(start_dt, request_group_id_set)
 
     @responses.activate
     def test_cancel_blocks_called_when_dry_run_not_set(self):
@@ -224,7 +225,7 @@ class TestPondInteractions(object):
         cancel_endpoint = host + '/blocks/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)
 
-        pond_interface = PondScheduleInterface(host=host)
+        pond_interface = ObservationScheduleInterface(host=host)
         pond_interface._cancel_blocks(ids, reason)
 
     @responses.activate
@@ -237,7 +238,7 @@ class TestPondInteractions(object):
         responses.add(responses.POST, cancel_endpoint,
                       json={"canceled": len(delete_list)}, status=200)
 
-        pond_interface = PondScheduleInterface(host=host)
+        pond_interface = ObservationScheduleInterface(host=host)
         n_deleted = pond_interface._cancel_schedule(start_end_by_resource, 'A good reason', True, True)
 
         assert_equal(n_deleted, len(delete_list))
@@ -258,7 +259,7 @@ class TestPondInteractions(object):
         mock_func1.return_value = {'1m0a.doma.lsc': ['block 1', 'block 2'],
                                    '1m0a.domb.lsc': ['block 3']}
 
-        pond_interface = PondScheduleInterface()
+        pond_interface = ObservationScheduleInterface()
         n_submitted_total = pond_interface._send_schedule_to_pond(schedule, self.start,
                                                                   self.configdb_interface, dry_run)
 
@@ -276,12 +277,12 @@ class TestPondInteractions(object):
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = SiderealTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
-        user_request = UserRequest(
+        request_group = RequestGroup(
             operator='single',
             requests=None,
             proposal=proposal,
             expires=None,
-            tracking_number=333333,
+            id=333333,
             group_id=None,
             ipp_value=1.0,
             observation_type="NORMAL",
@@ -310,10 +311,10 @@ class TestPondInteractions(object):
             molecules=[molecule],
             windows=None,
             constraints=constraints,
-            request_number=22222
+            id=22222
         )
 
-        received = build_block(reservation, request, user_request, self.start,
+        received = build_block(reservation, request, request_group, self.start,
                                self.configdb_interface)
 
         assert_equal(received['is_too'], False, "Should not be a ToO block")
@@ -330,15 +331,15 @@ class TestPondInteractions(object):
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = SiderealTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
-        user_request = UserRequest(
+        request_group = RequestGroup(
             operator='single',
             requests=None,
             proposal=proposal,
             expires=None,
-            tracking_number=333333,
+            id=333333,
             group_id=None,
             ipp_value=1.0,
-            observation_type="TARGET_OF_OPPORTUNITY",
+            observation_type="RAPID_RESPONSE",
             submitter=''
         )
 
@@ -364,10 +365,10 @@ class TestPondInteractions(object):
             molecules=[molecule],
             windows=None,
             constraints=constraints,
-            request_number=22222,
+            id=22222,
         )
 
-        received = build_block(reservation, request, user_request, self.start,
+        received = build_block(reservation, request, request_group, self.start,
                                self.configdb_interface)
 
         assert_equal(received['is_too'], True, "Should be a ToO block")
