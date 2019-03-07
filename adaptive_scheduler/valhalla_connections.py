@@ -4,17 +4,18 @@ import logging
 import requests
 import os
 from datetime import datetime
+from dateutil.parser import parse
 from requests.exceptions import RequestException, Timeout
 
 
-class ValhallaConnectionError(Exception):
+class ObservationPortalConnectionError(Exception):
     pass
 
 
-class ValhallaInterface(object, SendMetricMixin):
+class ObservationPortalInterface(object, SendMetricMixin):
     
-    def __init__(self, valhalla_url, debug=False):
-        self.valhalla_url = valhalla_url
+    def __init__(self, obs_portal_url, debug=False):
+        self.obs_portal_url = obs_portal_url
         self.debug = debug
         self.log = logging.getLogger(__name__)
         self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
@@ -24,23 +25,23 @@ class ValhallaInterface(object, SendMetricMixin):
         ''' Returns all active proposals using the bulk proposals API of valhalla
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/?active=True&limit=1000', headers=self.headers,
+            response = requests.get(self.obs_portal_url + '/api/proposals/?active=True&limit=1000', headers=self.headers,
                                     timeout=120)
             response.raise_for_status()
             return response.json()['results']
         except (RequestException, ValueError, Timeout) as e:
-            raise ValhallaConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
+            raise ObservationPortalConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_by_id(self, proposal_id):
         ''' Returns the proposal details for the proposal_id given from the valhalla proposal API
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
+            response = requests.get(self.obs_portal_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
                                     timeout=15)
             response.raise_for_status()
             return response.json()
         except (RequestException, ValueError, Timeout) as e:
-            raise ValhallaConnectionError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
+            raise ObservationPortalConnectionError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
     def get_semester_details(self, date=datetime.utcnow()):
         ''' Return the previously cached semester details unless date specified is not within that semesters range.
@@ -51,7 +52,7 @@ class ValhallaInterface(object, SendMetricMixin):
                 or self.current_semester_details['start'] > date
                 or self.current_semester_details['end'] < date):
             try:
-                response = requests.get(self.valhalla_url + '/api/semesters/' +
+                response = requests.get(self.obs_portal_url + '/api/semesters/' +
                                         '?semester_contains={}'.format(date.isoformat()), headers=self.headers,
                                         timeout=15)
                 response.raise_for_status()
@@ -61,37 +62,38 @@ class ValhallaInterface(object, SendMetricMixin):
                 self.current_semester_details['end'] = datetime.strptime(self.current_semester_details['end'],
                                                                            '%Y-%m-%dT%H:%M:%SZ')
             except (RequestException, ValueError, Timeout) as e:
-                raise ValhallaConnectionError("failed to retrieve semester info for date {}: {}".format(date, repr(e)))
+                raise ObservationPortalConnectionError("failed to retrieve semester info for date {}: {}".format(date, repr(e)))
         return self.current_semester_details
 
     @timeit
-    @metric_timer('requestdb.is_dirty')
-    def is_dirty(self):
-        ''' Triggers valhalla to update request states from recent pond blocks, and report back if any states were updated
+    @metric_timer('requestdb.get_last_changed')
+    def get_last_changed(self):
+        ''' Queries the observation portal for the time the last change was made to request or observation state
+        :return: The datetime for the last change in observation portals models
         '''
         try:
-            response = requests.get(self.valhalla_url + '/api/isDirty/', headers=self.headers, timeout=180)
+            response = requests.get(self.obs_portal_url + '/api/last_changed/', headers=self.headers, timeout=180)
             response.raise_for_status()
-            is_dirty = response.json()['isDirty']
+            last_changed = parse(response.json()['last_change_time'])
         except (RequestException, ValueError, Timeout) as e:
-            raise ValhallaConnectionError("is_dirty check failed: {}".format(repr(e)))
+            raise ObservationPortalConnectionError("last_changed check failed: {}".format(repr(e)))
 
-        self.log.info("isDirty returned {}".format(is_dirty))
-        return is_dirty
+        self.log.info("last_changed time returned {}".format(last_changed.isoformat()))
+        return last_changed
 
     @timeit
     @metric_timer('requestdb.get_requests', num_requests=lambda x: len(x))
-    def get_all_user_requests(self, start, end):
+    def get_all_request_groups(self, start, end):
         ''' Get all user requests waiting for scheduling between
             start and end date
         '''
-        requests_url = self.valhalla_url + '/api/userrequests/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
+        requests_url = self.obs_portal_url + '/api/requestgroups/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
         self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
             response = requests.get(requests_url, headers=self.headers, timeout=180)
             response.raise_for_status()
-            user_requests = response.json()
+            request_groups = response.json()
         except (RequestException, ValueError, Timeout) as e:
-            raise ValhallaConnectionError("get_all_user_requests failed: {}".format(repr(e)))
+            raise ObservationPortalConnectionError("get_all_request_groups failed: {}".format(repr(e)))
 
-        return user_requests
+        return request_groups

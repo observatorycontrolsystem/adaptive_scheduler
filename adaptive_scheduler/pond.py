@@ -32,8 +32,8 @@ from datetime import timedelta
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
 
 from adaptive_scheduler.printing       import pluralise as pl
-from adaptive_scheduler.log            import UserRequestLogger
-from adaptive_scheduler.interfaces     import RunningRequest, RunningUserRequest, ScheduleException
+from adaptive_scheduler.log            import RequestGroupLogger
+from adaptive_scheduler.interfaces     import RunningRequest, RunningRequestGroup, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
 
 # Set up and configure a module scope logger
@@ -46,8 +46,8 @@ from dateutil.parser import parse
 
 log = logging.getLogger(__name__)
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
+multi_rg_log = logging.getLogger('rg_logger')
+rg_log = RequestGroupLogger(multi_rg_log)
 
 AG_MODE_MAPPING = {
     'OPTIONAL': 'OPT',
@@ -56,41 +56,41 @@ AG_MODE_MAPPING = {
 }
 
 
-class PondRunningRequest(RunningRequest):
+class ObservationRunningRequest(RunningRequest):
     
-    def __init__(self, telescope, request_number, block_id, start, end):
-        RunningRequest.__init__(self, telescope, request_number, start, end)
-        self.block_id = block_id
+    def __init__(self, telescope, id, observation_id, start, end):
+        RunningRequest.__init__(self, telescope, id, start, end)
+        self.observation_id = observation_id
 
     def __str__(self):
-        return RunningRequest.__str__(self) + ", block_id: %s" % (self.block_id)
+        return RunningRequest.__str__(self) + ", observation_id: {}".format(self.observation_id)
 
 
-class PondScheduleInterface(object):
+class ObservationScheduleInterface(object):
     
     def __init__(self, host=None):
         self.host = host
-        self.running_blocks_by_telescope = None
+        self.running_observations_by_telescope = None
         self.running_intervals_by_telescope = None
-        self.too_intervals_by_telescope = None
+        self.rr_intervals_by_telescope = None
         
         self.log = logging.getLogger(__name__)
     
     def fetch_data(self, telescopes, running_window_start, running_window_end):
         #Fetch the data
-        self.running_blocks_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
-        self.running_intervals_by_telescope = get_network_running_intervals(self.running_blocks_by_telescope)
+        self.running_observations_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
+        self.running_intervals_by_telescope = get_network_running_intervals(self.running_observations_by_telescope)
         # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
-        self.too_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
+        self.rr_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
 
     @metric_timer('pond.get_running_blocks', num_blocks=lambda x: len(x))
     def _fetch_running_blocks(self, telescopes, end_after, start_before):
-        running_blocks = self._get_network_running_blocks(telescopes, end_after, start_before)
+        running_blocks = self._get_network_running_observations(telescopes, end_after, start_before)
         # This is just logging held over from when this was in the scheduling loop
-        all_running_blocks = []
+        all_running_observations = []
         for blocks in running_blocks.values():
-            all_running_blocks += blocks
-        for block in all_running_blocks:
+            all_running_observations += blocks
+        for block in all_running_observations:
             msg = "UR %s has a running block (id=%d, finishing at %s)" % (
                                                          block['molecules'][0]['tracking_num'],
                                                          block['id'],
@@ -104,26 +104,26 @@ class PondScheduleInterface(object):
         
         return too_blocks
 
-    def running_user_requests_by_tracking_number(self):
-        running_urs = {}
-        for blocks in self.running_blocks_by_telescope.values():
+    def running_request_groups_by_id(self):
+        running_rgs = {}
+        for blocks in self.running_observations_by_telescope.values():
             for block in blocks:
-                tracking_number = int(block['molecules'][0]['tracking_num'])
-                running_ur = running_urs.setdefault(tracking_number, RunningUserRequest(tracking_number))
+                request_group_id = int(block['molecules'][0]['tracking_num'])
+                running_rg = running_rgs.setdefault(request_group_id, RunningRequestGroup(request_group_id))
                 telescope = block['telescope'] + '.' + block['observatory'] + '.' + block['site']
                 request_number = block['molecules'][0]['request_num'] if 'request_num' in block['molecules'][0] else ''
-                running_request = PondRunningRequest(telescope, request_number, block['id'],
-                                                     block['start'], block['end'])
+                running_request = ObservationRunningRequest(telescope, request_number, block['id'],
+                                                            block['start'], block['end'])
                 if any([mol['failed'] for mol in block['molecules']]):
                     running_request.add_error("Block has failed molecules")
-                running_ur.add_running_request(running_request)
+                running_rg.add_running_request(running_request)
             
-        return running_urs
+        return running_rgs
         
-    def too_user_request_intervals_by_telescope(self):
+    def rr_request_group_intervals_by_telescope(self):
         ''' Return the schedule ToO intervals for the supplied telescope
         '''
-        return self.too_intervals_by_telescope
+        return self.rr_intervals_by_telescope
     
     @metric_timer('pond.cancel_requests', num_requests=lambda x: x, rate=lambda x: x)
     def cancel(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
@@ -161,11 +161,11 @@ class PondScheduleInterface(object):
             for reservation in reservations:
                 try:
                     block = build_block(reservation, reservation.request,
-                                        reservation.user_request, semester_start,
+                                        reservation.request_group, semester_start,
                                         configdb_interface)
                 except Exception:
                     log.exception('Unable to build block from reservation for request number {}'.format(
-                        self._get_request_num_from_reservation(reservation)
+                        self._get_request_id_from_reservation(reservation)
                     ))
                     continue
                 blocks_by_resource[resource_name].append(block)
@@ -200,20 +200,20 @@ class PondScheduleInterface(object):
                                 bad_block['molecules'][0]['tracking_num'],
                                 error))
 
-    def _get_request_num_from_reservation(self, reservation):
-        request_num = 'unknown'
+    def _get_request_id_from_reservation(self, reservation):
+        request_id = 0
         try:
-            request_num = reservation.request.request_number
+            request_id = reservation.request.id
         except AttributeError:
             pass
-        return request_num
+        return request_id
 
-    def _get_blocks_by_telescope_for_tracking_numbers(self, tracking_numbers, tels, ends_after, starts_before):
+    def _get_blocks_by_telescope_for_request_group_ids(self, request_group_ids, tels, ends_after, starts_before):
         telescope_blocks = {}     
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
             schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name)
-            filtered_blocks = [block for block in schedule if block['molecules'][0]['tracking_num'] in tracking_numbers]
+            filtered_blocks = [block for block in schedule if block['molecules'][0]['tracking_num'] in request_group_ids]
             telescope_blocks[full_tel_name] = filtered_blocks
             
         return telescope_blocks
@@ -326,15 +326,15 @@ class PondScheduleInterface(object):
     
         return num_canceled
     
-    def _get_network_running_blocks(self, tels, ends_after, starts_before):
+    def _get_network_running_observations(self, tels, ends_after, starts_before):
         n_running_total = 0
         running_at_tel = {}
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            log.debug("Acquiring running blocks and first availability at %s",
+            log.debug("Acquiring running observations and first availability at %s",
                                                               full_tel_name)
     
-            running = self._get_running_blocks(ends_after, starts_before,
+            running = self._get_running_observations(ends_after, starts_before,
                                                      site_name, obs_name, tel_name)
     
             running_at_tel[full_tel_name] = running
@@ -349,16 +349,16 @@ class PondScheduleInterface(object):
     
         return running_at_tel
     
-    def _get_running_blocks(self, ends_after, starts_before, site, obs, tel):
+    def _get_running_observations(self, ends_after, starts_before, site, obs, tel):
         schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
 
         cutoff_dt = starts_before
-        for block in schedule:
-            if block['start'] < starts_before < block['end']:
-                if (len(block['molecules']) > 0 and 'tracking_num' in block['molecules'][0]
-                        and block['molecules'][0]['tracking_num']):
-                    if block['end'] > cutoff_dt:
-                        cutoff_dt = block['end']
+        for observation in schedule:
+            if observation['start'] < starts_before < observation['end']:
+                if (len(observation['molecules']) > 0 and 'tracking_num' in observation['molecules'][0]
+                        and observation['molecules'][0]['tracking_num']):
+                    if observation['end'] > cutoff_dt:
+                        cutoff_dt = observation['end']
     
         running = [b for b in schedule if b['start'] < cutoff_dt and 'tracking_num' in b['molecules'][0] and b['molecules'][0]['tracking_num']]
     
@@ -402,9 +402,9 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
     return ag_match
 
 
-def build_block(reservation, request, user_request, semester_start, configdb_interface):
+def build_block(reservation, request, request_group, semester_start, configdb_interface):
     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
-    is_too = user_request.observation_type == 'TARGET_OF_OPPORTUNITY'
+    is_too = request_group.observation_type == 'RAPID_RESPONSE'
     telescope, observatory, site = split_location(reservation.scheduled_resource)
 
     block = {
@@ -433,12 +433,12 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
         # copy all of the fields already in the molecule (passed through from valhalla)
         mol_dict = molecule.mol_dict.copy()
         mol_dict['exposure_time'] = round(mol_dict['exposure_time'], 7)
-        mol_dict['prop_id'] = user_request.proposal.id
-        mol_dict['tag_id'] = user_request.proposal.tag
-        mol_dict['user_id'] = user_request.submitter
-        mol_dict['group'] = user_request.group_id
-        mol_dict['tracking_num'] = str(user_request.tracking_number).zfill(10)
-        mol_dict['request_num'] = str(request.request_number).zfill(10)
+        mol_dict['prop_id'] = request_group.proposal.id
+        mol_dict['tag_id'] = request_group.proposal.tag
+        mol_dict['user_id'] = request_group.submitter
+        mol_dict['group'] = request_group.group_id
+        mol_dict['tracking_num'] = request_group.id
+        mol_dict['request_num'] = request.id
         # Add the pointing into the molecule
         mol_dict['pointing'] = pointing
         # Set the specific instrument as resolved with configdb
@@ -455,7 +455,7 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
 
             msg = "Autoguider resolved as {}".format(specific_ag)
             log.debug(msg)
-            ur_log.debug(msg, user_request.tracking_number)
+            rg_log.debug(msg, request_group.id)
 
         # Need to map the ag_mode values
         mol_dict['ag_mode'] = AG_MODE_MAPPING[mol_dict['ag_mode'].upper()]
@@ -475,7 +475,7 @@ def build_block(reservation, request, user_request, semester_start, configdb_int
             molecule.exposure_time,
         )
         log.debug(mol_summary_msg)
-        ur_log.debug(mol_summary_msg, user_request.tracking_number)
+        rg_log.debug(mol_summary_msg, request_group.id)
 
         block['molecules'].append(mol_dict)
     log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",

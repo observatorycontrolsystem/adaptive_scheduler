@@ -4,7 +4,7 @@
 # is that logging levels are the responsibility of the client.
 
 import logging
-from adaptive_scheduler.log import UserRequestHandler, UserRequestLogger
+from adaptive_scheduler.log import RequestGroupHandler, RequestGroupLogger
 from lcogt_logging import LCOGTFormatter
 
 log = logging.getLogger('adaptive_scheduler')
@@ -20,13 +20,13 @@ sh.setFormatter(formatter)
 log.addHandler(sh)
 
 
-multi_ur_log = logging.getLogger('ur_logger')
-multi_ur_log.setLevel(logging.DEBUG)
-multi_ur_log.propagate=False
+multi_rg_log = logging.getLogger('rg_logger')
+multi_rg_log.setLevel(logging.DEBUG)
+multi_rg_log.propagate=False
 
-uh = UserRequestHandler(tracking_number='0000000001', logdir='logs')
+uh = RequestGroupHandler(request_group_id=1, logdir='logs')
 uh.setLevel(logging.DEBUG)
 
 uh.setFormatter(formatter)
-multi_ur_log.addHandler(uh)
+multi_rg_log.addHandler(uh)
 

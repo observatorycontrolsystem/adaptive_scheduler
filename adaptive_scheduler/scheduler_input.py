@@ -1,7 +1,7 @@
 from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
-from adaptive_scheduler.valhalla_connections import ValhallaConnectionError
+from adaptive_scheduler.valhalla_connections import ObservationPortalConnectionError
 
 import os
 import logging
@@ -16,23 +16,23 @@ class SchedulingInputException(Exception):
 class SchedulerParameters(object):
 
     def __init__(self, dry_run=False, run_once=False, no_weather=False,
-                 no_singles=False, no_compounds=False, no_too=False,
+                 no_singles=False, no_compounds=False, no_rr=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
                  kernel='gurobi', input_file_name=None, pickle=False,
-                 too_run_time=120, normal_run_time=360,
+                 rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
                  pond_host='http://lakedev.lco.gtn',
                  valhalla_url='http://valhalladev.lco.gtn/',
                  configdb_url='http://configdbdev.lco.gtn/',
                  downtime_url='http://downtimedev.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
-                 normal_runtime_seconds=360.0, too_runtime_seconds=120, debug=False):
+                 normal_runtime_seconds=360.0, rr_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
         self.no_weather = no_weather
         self.no_singles = no_singles
         self.no_compounds = no_compounds
-        self.no_too = no_too
+        self.no_rr = no_rr
         self.timelimit_seconds = timelimit_seconds
         self.slicesize_seconds = slicesize_seconds
         self.horizon_days = horizon_days
@@ -44,13 +44,13 @@ class SchedulerParameters(object):
         self.pickle = pickle
         self.save_output = save_output
         self.request_logs = request_logs
-        self.too_run_time = too_run_time
+        self.rr_run_time = rr_run_time
         self.normal_run_time = normal_run_time
         self.pond_host = pond_host
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
-        self.too_runtime_seconds = too_runtime_seconds
+        self.rr_runtime_seconds = rr_runtime_seconds
         self.ignore_ipp = ignore_ipp
         self.debug = debug
         self.valhalla_url = valhalla_url
@@ -63,98 +63,98 @@ class SchedulingInputFactory(object):
     def __init__(self, input_provider):
         self.input_provider = input_provider
         self.model_builder = None
-        self._scheduler_model_normal_user_requests = []
-        self._scheduler_model_too_user_requests = []
+        self._scheduler_model_normal_request_groups = []
+        self._scheduler_model_rr_request_groups = []
         self._invalid_requests = []
-        self._invalid_user_requests = []
+        self._invalid_request_groups = []
 
-    def _convert_json_user_requests_to_scheduler_model(self, scheduled_requests_by_ur):
+    def _convert_json_request_groups_to_scheduler_model(self, scheduled_requests_by_rg):
         self.model_builder = self.input_provider.get_model_builder()
         utils = SchedulingInputUtils(self.model_builder)
         ignore_ipp = False
         if self.input_provider.sched_params.ignore_ipp:
             ignore_ipp = self.input_provider.sched_params.ignore_ipp
-        scheduler_model_urs, invalid_user_requests, invalid_requests = utils.json_urs_to_scheduler_model_urs(
-            self.input_provider.json_user_request_list, scheduled_requests_by_ur, ignore_ipp=ignore_ipp)
+        scheduler_model_rgs, invalid_request_groups, invalid_requests = utils.json_rgs_to_scheduler_model_rgs(
+            self.input_provider.json_request_group_list, scheduled_requests_by_rg, ignore_ipp=ignore_ipp)
 
-        self._invalid_user_requests = invalid_user_requests
+        self._invalid_request_groups = invalid_request_groups
         self._invalid_requests = invalid_requests
-        scheduler_models_urs_by_type = utils.sort_scheduler_models_urs_by_type(scheduler_model_urs)
-        self._scheduler_model_too_user_requests = scheduler_models_urs_by_type['too']
-        self._scheduler_model_normal_user_requests = scheduler_models_urs_by_type['normal']
+        scheduler_models_rgs_by_type = utils.sort_scheduler_models_rgs_by_type(scheduler_model_rgs)
+        self._scheduler_model_rr_request_groups = scheduler_models_rgs_by_type['rr']
+        self._scheduler_model_normal_request_groups = scheduler_models_rgs_by_type['normal']
 
-    def _set_model_user_requests_scheduled_set(self, scheduled_requests_by_ur):
-        for ur in self._scheduler_model_normal_user_requests:
-            if ur.tracking_number in scheduled_requests_by_ur:
-                ur.set_scheduled_reservations(scheduled_requests_by_ur[ur.tracking_number])
+    def _set_model_request_groups_scheduled_set(self, scheduled_requests_by_rg):
+        for rg in self._scheduler_model_normal_request_groups:
+            if rg.id in scheduled_requests_by_rg:
+                rg.set_scheduled_reservations(scheduled_requests_by_rg[rg.id])
 
-    def _create_scheduling_input(self, input_provider, is_too_input, block_schedule = None):
+    def _create_scheduling_input(self, input_provider, is_rr_input, block_schedule = None):
         if not block_schedule:
             block_schedule = {}
         scheduler_input = SchedulingInput(input_provider.sched_params,
-                        input_provider.scheduler_now,
-                        input_provider.estimated_scheduler_runtime(),
-                        input_provider.json_user_request_list,
-                        input_provider.resource_usage_snapshot,
-                        self.model_builder,
-                        input_provider.available_resources,
-                        is_too_input,
-                        normal_model_user_requests=self._scheduler_model_normal_user_requests,
-                        too_model_user_requests=self._scheduler_model_too_user_requests,
-                        block_schedule=block_schedule)
+                                          input_provider.scheduler_now,
+                                          input_provider.estimated_scheduler_runtime(),
+                                          input_provider.json_request_group_list,
+                                          input_provider.resource_usage_snapshot,
+                                          self.model_builder,
+                                          input_provider.available_resources,
+                                          is_rr_input,
+                                          normal_model_request_groups=self._scheduler_model_normal_request_groups,
+                                          rr_model_request_groups=self._scheduler_model_rr_request_groups,
+                                          block_schedule=block_schedule)
 
         return scheduler_input
 
     @timeit
-    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.too_user_requests))
-    def create_too_scheduling_input(self, estimated_scheduling_seconds=None,
-                                    scheduled_requests_by_ur=None,
-                                    network_state_timestamp=None):
+    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.rr_request_groups))
+    def create_rr_scheduling_input(self, estimated_scheduling_seconds=None,
+                                   scheduled_requests_by_rg=None,
+                                   network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
-        if scheduled_requests_by_ur is None:
-            scheduled_requests_by_ur = {}
+        if scheduled_requests_by_rg is None:
+            scheduled_requests_by_rg = {}
         
         if estimated_scheduling_seconds:
-            self.input_provider.set_too_run_time(estimated_scheduling_seconds)
+            self.input_provider.set_rr_run_time(estimated_scheduling_seconds)
         
         self.input_provider.set_last_known_state(network_state_timestamp)
-        self.input_provider.set_too_mode()
-        self._convert_json_user_requests_to_scheduler_model(scheduled_requests_by_ur)
+        self.input_provider.set_rr_mode()
+        self._convert_json_request_groups_to_scheduler_model(scheduled_requests_by_rg)
 
         return self._create_scheduling_input(self.input_provider, True)
 
     @timeit
-    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.normal_user_requests))
+    @metric_timer('create_scheduling_input', num_requests=lambda x: n_base_requests(x.normal_request_groups))
     def create_normal_scheduling_input(self, estimated_scheduling_seconds=None,
-                                       scheduled_requests_by_ur=None,
-                                       too_schedule=None,
+                                       scheduled_requests_by_rg=None,
+                                       rr_schedule=None,
                                        network_state_timestamp=None):
         if network_state_timestamp is None:
             network_state_timestamp = datetime.utcnow()
-        if scheduled_requests_by_ur is None:
-            scheduled_requests_by_ur = {}
-        if too_schedule is None:
-            too_schedule = {}
+        if scheduled_requests_by_rg is None:
+            scheduled_requests_by_rg = {}
+        if rr_schedule is None:
+            rr_schedule = {}
 
-        # Save off the too parameters to save in the input file
-        too_scheduler_now = self.input_provider.scheduler_now
-        too_resource_usage_snapshot = self.input_provider.resource_usage_snapshot
-        too_estimated_runtime = self.input_provider.estimated_scheduler_runtime()
+        # Save off the rr parameters to save in the input file
+        rr_scheduler_now = self.input_provider.scheduler_now
+        rr_resource_usage_snapshot = self.input_provider.resource_usage_snapshot
+        rr_estimated_runtime = self.input_provider.estimated_scheduler_runtime()
 
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
             
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
-        self._set_model_user_requests_scheduled_set(scheduled_requests_by_ur)
+        self._set_model_request_groups_scheduled_set(scheduled_requests_by_rg)
 
         if self.input_provider.sched_params.pickle:
-            SchedulingInputUtils.write_input_to_file(self.input_provider, too_scheduler_now,
-                                                     too_resource_usage_snapshot, too_estimated_runtime,
+            SchedulingInputUtils.write_input_to_file(self.input_provider, rr_scheduler_now,
+                                                     rr_resource_usage_snapshot, rr_estimated_runtime,
                                                      self.model_builder)
 
-        return self._create_scheduling_input(self.input_provider, False, block_schedule=too_schedule)
+        return self._create_scheduling_input(self.input_provider, False, block_schedule=rr_schedule)
 
 
 class SchedulingInputUtils(object, SendMetricMixin):
@@ -164,57 +164,57 @@ class SchedulingInputUtils(object, SendMetricMixin):
         self.log = logging.getLogger(__name__)
 
     @timeit
-    def json_urs_to_scheduler_model_urs(self, json_user_request_list, scheduled_requests_by_ur=None, ignore_ipp=False):
-        if scheduled_requests_by_ur is None:
-            scheduled_requests_by_ur = {}
-        scheduler_model_urs = []
-        invalid_json_user_requests = []
+    def json_rgs_to_scheduler_model_rgs(self, json_request_group_list, scheduled_requests_by_rg=None, ignore_ipp=False):
+        if scheduled_requests_by_rg is None:
+            scheduled_requests_by_rg = {}
+        scheduler_model_rgs = []
+        invalid_json_request_groups = []
         invalid_json_requests = []
-        for json_ur in json_user_request_list:
+        for json_rg in json_request_group_list:
             try:
                 scheduled_requests = {}
-                if json_ur['id'] in scheduled_requests_by_ur:
-                    scheduled_requests = scheduled_requests_by_ur[json_ur['id']]
-                scheduler_model_ur, invalid_children = self.model_builder.build_user_request(json_ur, scheduled_requests, ignore_ipp=ignore_ipp)
+                if json_rg['id'] in scheduled_requests_by_rg:
+                    scheduled_requests = scheduled_requests_by_rg[json_rg['id']]
+                scheduler_model_rg, invalid_children = self.model_builder.build_request_group(json_rg, scheduled_requests, ignore_ipp=ignore_ipp)
 
-                scheduler_model_urs.append(scheduler_model_ur)
+                scheduler_model_rgs.append(scheduler_model_rg)
                 invalid_json_requests.extend(invalid_children)
             except RequestError as e:
                 self.log.warn(e)
-                invalid_json_user_requests.append(json_ur)
+                invalid_json_request_groups.append(json_rg)
 
         self.send_metric('invalid_child_requests.num_requests', len(invalid_json_requests))
-        self.send_metric('invalid_user_requests.num_requests', len(invalid_json_user_requests))
+        self.send_metric('invalid_request_groups.num_requests', len(invalid_json_request_groups))
 
-        return scheduler_model_urs, invalid_json_user_requests, invalid_json_requests
+        return scheduler_model_rgs, invalid_json_request_groups, invalid_json_requests
 
-    def sort_scheduler_models_urs_by_type(self, scheduler_model_user_requests):
-        scheduler_models_urs_by_type = {
-                                        'too' : [],
-                                        'normal' : []
+    def sort_scheduler_models_rgs_by_type(self, scheduler_model_request_groups):
+        scheduler_models_rgs_by_type = {
+                                        'rr': [],
+                                        'normal': []
                                         }
-        for scheduler_model_ur in scheduler_model_user_requests:
-            if scheduler_model_ur.is_target_of_opportunity():
-                scheduler_models_urs_by_type['too'].append(scheduler_model_ur)
+        for scheduler_model_rg in scheduler_model_request_groups:
+            if scheduler_model_rg.is_rapid_response():
+                scheduler_models_rgs_by_type['rr'].append(scheduler_model_rg)
             else:
-                scheduler_models_urs_by_type['normal'].append(scheduler_model_ur)
+                scheduler_models_rgs_by_type['normal'].append(scheduler_model_rg)
 
-        return scheduler_models_urs_by_type
+        return scheduler_models_rgs_by_type
 
-    def user_request_priorities(self, scheduler_model_user_requests):
-        priorities_map = {ur.tracking_number : ur.get_priority() for ur in scheduler_model_user_requests}
+    def request_group_priorities(self, scheduler_model_request_groups):
+        priorities_map = {rg.id: rg.get_priority() for rg in scheduler_model_request_groups}
 
         return priorities_map
 
-    def too_tracking_numbers(self, scheduler_model_user_requests):
-        scheduler_models_urs_by_type = self.sort_scheduler_models_urs_by_type(scheduler_model_user_requests)
-        too_tracking_numbers = [ur.tracking_number for ur in scheduler_models_urs_by_type['too']]
+    def rapid_response_ids(self, scheduler_model_request_groups):
+        scheduler_models_rgs_by_type = self.sort_scheduler_models_rgs_by_type(scheduler_model_request_groups)
+        rapid_response_ids = [rg.id for rg in scheduler_models_rgs_by_type['rr']]
 
-        return too_tracking_numbers
+        return rapid_response_ids
 
     @staticmethod
-    def write_input_to_file(normal_input_provider, too_scheduler_now, too_resource_usage_snapshot,
-                            too_estimated_scheduler_runtime, model_builder,
+    def write_input_to_file(normal_input_provider, rr_scheduler_now, rr_resource_usage_snapshot,
+                            rr_estimated_scheduler_runtime, model_builder,
                             output_path='/data/adaptive_scheduler/input_states/'):
         output = {
             'sched_params': normal_input_provider.sched_params,
@@ -223,12 +223,12 @@ class SchedulingInputUtils(object, SendMetricMixin):
                 'estimated_scheduler_runtime': normal_input_provider.estimated_scheduler_runtime(),
                 'resource_usage_snapshot': normal_input_provider.resource_usage_snapshot,
             },
-            'too': {
-                'scheduler_now': too_scheduler_now,
-                'estimated_scheduler_runtime': too_estimated_scheduler_runtime,
-                'resource_usage_snapshot': too_resource_usage_snapshot,
+            'rr': {
+                'scheduler_now': rr_scheduler_now,
+                'estimated_scheduler_runtime': rr_estimated_scheduler_runtime,
+                'resource_usage_snapshot': rr_resource_usage_snapshot,
             },
-            'json_user_request_list': normal_input_provider.json_user_request_list,
+            'json_request_group_list': normal_input_provider.json_request_group_list,
             'available_resources': normal_input_provider.available_resources,
             'proposals_by_id': model_builder.proposals_by_id,
             'semester_details': model_builder.semester_details
@@ -246,21 +246,21 @@ class SchedulingInputUtils(object, SendMetricMixin):
 
 class SchedulingInput(object):
 
-    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_user_request_list,
-                 resource_usage_snapshot, model_builder, available_resources, is_too_input,
-                 normal_model_user_requests=None, too_model_user_requests=None, block_schedule=None):
+    def __init__(self, sched_params, scheduler_now, estimated_scheduler_runtime, json_request_group_list,
+                 resource_usage_snapshot, model_builder, available_resources, is_rr_input,
+                 normal_model_request_groups=None, rr_model_request_groups=None, block_schedule=None):
         self.sched_params = sched_params
         self.scheduler_now = scheduler_now
         self.estimated_scheduler_runtime = estimated_scheduler_runtime
-        self.json_user_request_list = json_user_request_list
+        self.json_request_group_list = json_request_group_list
         self.resource_usage_snapshot = resource_usage_snapshot
         self.available_resources = available_resources
-        self.is_too_input = is_too_input
+        self.is_rr_input = is_rr_input
         self.model_builder = model_builder
         self.block_schedule = block_schedule if block_schedule else {}
 
-        self._scheduler_model_too_user_requests = too_model_user_requests if too_model_user_requests else []
-        self._scheduler_model_normal_user_requests = normal_model_user_requests if normal_model_user_requests else []
+        self._scheduler_model_rr_request_groups = rr_model_request_groups if rr_model_request_groups else []
+        self._scheduler_model_normal_request_groups = normal_model_request_groups if normal_model_request_groups else []
 
     def get_scheduling_start(self):
         if self.sched_params.input_file_name or self.sched_params.simulate_now:
@@ -280,38 +280,38 @@ class SchedulingInput(object):
         return block_schedule_by_resource
 
     @property
-    def user_requests(self):
-        if self.is_too_input:
-            return self.too_user_requests
+    def request_groups(self):
+        if self.is_rr_input:
+            return self.rr_request_groups
         else:
-            return self.normal_user_requests
+            return self.normal_request_groups
 
     @property
-    def too_user_requests(self):
-        return self._scheduler_model_too_user_requests
+    def rr_request_groups(self):
+        return self._scheduler_model_rr_request_groups
 
     @property
-    def normal_user_requests(self):
-        return self._scheduler_model_normal_user_requests
+    def normal_request_groups(self):
+        return self._scheduler_model_normal_request_groups
 
     @property
-    def too_tracking_numbers(self):
-        return [ur.tracking_number for ur in self.too_user_requests] 
+    def rr_request_group_ids(self):
+        return [rg.id for rg in self.rr_request_groups]
 
 
 class SchedulingInputProvider(object):
 
-    def __init__(self, sched_params, network_interface, network_model, is_too_input=False):
+    def __init__(self, sched_params, network_interface, network_model, is_rr_input=False):
         self.sched_params = sched_params
         self.network_interface = network_interface
         self.network_model = network_model
-        self.is_too_input = is_too_input
-        self.estimated_too_run_time = timedelta(seconds=self.sched_params.too_run_time)
+        self.is_rr_input = is_rr_input
+        self.estimated_rr_run_time = timedelta(seconds=self.sched_params.rr_run_time)
         self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
 
         # TODO: Hide these behind read only properties
         self.scheduler_now = None
-        self.json_user_request_list = None
+        self.json_request_group_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
         self.last_known_state_timestamp = None
@@ -319,32 +319,32 @@ class SchedulingInputProvider(object):
     def refresh(self):
         # The order of these is important
         self.scheduler_now = self.get_scheduler_now()
-        if self.is_too_input:
-            # only get all the schedulable requests when we are in the too loop. re-use them for the normal loop.
-            self.json_user_request_list = self._get_json_user_request_list()
+        if self.is_rr_input:
+            # only get all the schedulable requests when we are in the rr loop. re-use them for the normal loop.
+            self.json_request_group_list = self._get_json_request_group_list()
         self.available_resources = self._get_available_resources()
         self.resource_usage_snapshot = self._get_resource_usage_snapshot()
 
-    def set_too_run_time(self, seconds):
-        self.estimated_too_run_time = timedelta(seconds=seconds)
+    def set_rr_run_time(self, seconds):
+        self.estimated_rr_run_time = timedelta(seconds=seconds)
 
     def set_normal_run_time(self, seconds):
         self.estimated_normal_run_time = timedelta(seconds=seconds)
 
-    def set_too_mode(self):
-        self.is_too_input = True
+    def set_rr_mode(self):
+        self.is_rr_input = True
         self.refresh()
 
     def set_normal_mode(self):
-        self.is_too_input = False
+        self.is_rr_input = False
         self.refresh()
 
     def set_last_known_state(self, timestamp):
         self.last_known_state_timestamp = timestamp
 
     def estimated_scheduler_runtime(self):
-        if self.is_too_input:
-            return self.estimated_too_run_time
+        if self.is_rr_input:
+            return self.estimated_rr_run_time
         else:
             return self.estimated_normal_run_time
 
@@ -363,25 +363,25 @@ class SchedulingInputProvider(object):
 
     def _get_estimated_scheduler_end(self):
         now = self.get_scheduler_now()
-        if self.is_too_input:
+        if self.is_rr_input:
             # TODO: Might Add a pad to account for time between now and when scheduling actually starts
-            return now + self.estimated_too_run_time
+            return now + self.estimated_rr_run_time
         else:
             # TODO: Might Add a pad to account for time between now and when scheduling actually starts
             return now + self.estimated_normal_run_time
 
-    def _get_json_user_request_list(self):
+    def _get_json_request_group_list(self):
         now = self.get_scheduler_now()
         try:
             semester_details = self.network_interface.valhalla_interface.get_semester_details(self._get_estimated_scheduler_end())
-        except ValhallaConnectionError as e:
-            raise SchedulingInputException("Can't retrieve current semester to get user requests.")
-        ur_list = self.network_interface.get_all_user_requests(semester_details['start'],
+        except ObservationPortalConnectionError as e:
+            raise SchedulingInputException("Can't retrieve current semester to get request groups.")
+        rg_list = self.network_interface.get_all_request_groups(semester_details['start'],
                                                                min(now + timedelta(days=self.sched_params.horizon_days),
                                                                semester_details['end']))
-        logging.getLogger(__name__).warning("_get_json_user_request_list got {} urs".format(len(ur_list)))
+        logging.getLogger(__name__).warning("_get_json_request_group_list got {} rgs".format(len(rg_list)))
 
-        return ur_list
+        return rg_list
 
     def _get_available_resources(self):
         resources = []
@@ -409,19 +409,19 @@ class SchedulingInputProvider(object):
 
 class FileBasedSchedulingInputProvider(object):
 
-    def __init__(self, input_file, network_interface, is_too_mode):
+    def __init__(self, input_file, network_interface, is_rr_mode):
         self.compatibility_mode = False
         if ',' in input_file:
             self.compatibility_mode = True
-            too_infile, normal_infile = input_file.split(',')
-            self.too_input_file = too_infile
+            rr_infile, normal_infile = input_file.split(',')
+            self.rr_input_file = rr_infile
             self.normal_input_file = normal_infile
         self.input_file = input_file
-        self.is_too_input = is_too_mode
+        self.is_rr_input = is_rr_mode
         self.sched_params = None
         self.scheduler_now = None
         self._estimated_scheduler_runtime = None
-        self.json_user_request_list = None
+        self.json_request_group_list = None
         self.available_resources = None
         self.resource_usage_snapshot = None
         self.last_known_state_timestamp = None
@@ -429,15 +429,13 @@ class FileBasedSchedulingInputProvider(object):
         self.semester_details = None
         self.proposals_by_id = {}
         self.normal = {}
-        self.too = {}
+        self.rr = {}
 
         self.refresh()
 
-
-    def set_too_run_time(self, seconds):
+    def set_rr_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
-
 
     def set_normal_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
@@ -460,8 +458,8 @@ class FileBasedSchedulingInputProvider(object):
     def refresh(self):
         if self.compatibility_mode:
             input_filename = self.normal_input_file
-            if self.is_too_input:
-                input_filename = self.too_input_file
+            if self.is_rr_input:
+                input_filename = self.rr_input_file
             pickle_input = self._get_pickled_input(input_filename)
 
             self.sched_params = pickle_input['sched_params']
@@ -470,37 +468,37 @@ class FileBasedSchedulingInputProvider(object):
             self.sched_params.input_file_name = input_filename
             self.scheduler_now = pickle_input['scheduler_now']
             self._estimated_scheduler_runtime = pickle_input['estimated_scheduler_runtime']
-            self.json_user_request_list = pickle_input['json_user_request_list']
+            self.json_request_group_list = pickle_input['json_request_group_list']
             self.available_resources = pickle_input['available_resources']
             self.resource_usage_snapshot = pickle_input['resource_usage_snapshot']
             self.semester_details = pickle_input.get('semester_details')
             self.proposals_by_id = pickle_input.get('proposals_by_id', {})
 
         else:
-            if self.is_too_input:
+            if self.is_rr_input:
                 pickle_input = self._get_pickled_input(self.input_file)
                 self.sched_params = pickle_input['sched_params']
                 self.sched_params.input_file_name = self.input_file
                 self.normal = pickle_input['normal']
-                self.too = pickle_input['too']
-                self.json_user_request_list = pickle_input['json_user_request_list']
+                self.rr = pickle_input['rr']
+                self.json_request_group_list = pickle_input['json_request_group_list']
                 self.available_resources = pickle_input['available_resources']
                 self.semester_details = pickle_input.get('semester_details')
                 self.proposals_by_id = pickle_input.get('proposals_by_id', {})
-                self._estimated_scheduler_runtime = self.too['estimated_scheduler_runtime']
-                self.scheduler_now = self.too['scheduler_now']
-                self.resource_usage_snapshot = self.too['resource_usage_snapshot']
+                self._estimated_scheduler_runtime = self.rr['estimated_scheduler_runtime']
+                self.scheduler_now = self.rr['scheduler_now']
+                self.resource_usage_snapshot = self.rr['resource_usage_snapshot']
             else:
                 self._estimated_scheduler_runtime = self.normal['estimated_scheduler_runtime']
                 self.scheduler_now = self.normal['scheduler_now']
                 self.resource_usage_snapshot = self.normal['resource_usage_snapshot']
 
-    def set_too_mode(self):
-        self.is_too_input = True
+    def set_rr_mode(self):
+        self.is_rr_input = True
         self.refresh()
 
     def set_normal_mode(self):
-        self.is_too_input = False
+        self.is_rr_input = False
         self.refresh()
 
     def get_scheduler_now(self):

@@ -24,11 +24,11 @@ from adaptive_scheduler.utils                 import (iso_string_to_datetime, co
                                                       EqualityMixin, safe_unidecode)
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.log                   import UserRequestLogger
+from adaptive_scheduler.log                   import RequestGroupLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme, scheme_mappings
-from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
+from adaptive_scheduler.valhalla_connections  import ObservationPortalConnectionError
 
 from datetime    import datetime
 import ast
@@ -38,62 +38,62 @@ import numbers
 
 log = logging.getLogger(__name__)
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
+multi_rg_log = logging.getLogger('rg_logger')
+rg_log = RequestGroupLogger(multi_rg_log)
 
 event_bus = get_eventbus()
 
 POND_FIELD_DIGITS = 7
 
 
-def n_requests(user_reqs):
-    n_urs  = len(user_reqs)
-    n_rs   = n_base_requests(user_reqs)
+def n_requests(request_groups):
+    n_rgs = len(request_groups)
+    n_rs = n_base_requests(request_groups)
 
-    return n_urs, n_rs
-
-
-def n_base_requests(user_reqs):
-    return sum([ur.n_requests() for ur in user_reqs])
+    return n_rgs, n_rs
 
 
-def filter_out_compounds(user_reqs):
-    '''Given a list of UserRequests, return a list containing only UserRequests of
+def n_base_requests(request_groups):
+    return sum([rg.n_requests() for rg in request_groups])
+
+
+def filter_out_compounds(request_groups):
+    '''Given a list of RequestGroups, return a list containing only RequestGroups of
        type 'single'.'''
-    single_urs = []
-    for ur in user_reqs:
-        if ur.operator != 'single':
-            msg = "UR %s is of type %s - removing from consideration" % (ur.tracking_number, ur.operator)
+    single_rgs = []
+    for rg in request_groups:
+        if rg.operator != 'single':
+            msg = "RG %d is of type %s - removing from consideration" % (rg.id, rg.operator)
             log.warn(msg)
         else:
-            single_urs.append(ur)
+            single_rgs.append(rg)
 
-    return single_urs
+    return single_rgs
 
 
-def filter_compounds_by_type(urs):
-    '''Given a list of UserRequests, Return a dictionary that sorts them by type.'''
-    urs_by_type = {
+def filter_compounds_by_type(rgs):
+    '''Given a list of RequestGroups, Return a dictionary that sorts them by type.'''
+    rgs_by_type = {
                     'single' : [],
                     'many'   : [],
                     'and'    : [],
                     'oneof'  : [],
                   }
 
-    for ur in urs:
-        urs_by_type[ur.operator].append(ur)
+    for rg in rgs:
+        rgs_by_type[rg.operator].append(rg)
 
-    return urs_by_type
+    return rgs_by_type
 
 
-def generate_request_description(user_request_json, request_json):
+def generate_request_description(request_group_json, request_json):
     prop_id = None
     user_id = None
     telescope_class = None
     inst_type = None
-    if 'proposal' in user_request_json:
-        prop_id = user_request_json.get('proposal')
-        user_id = user_request_json.get('submitter')
+    if 'proposal' in request_group_json:
+        prop_id = request_group_json.get('proposal')
+        user_id = request_group_json.get('submitter')
     if 'location' in request_json:
         telescope_class = request_json.get('location').get('telescope_class')
     if 'molecules' in request_json and len(request_json['molecules']) > 0:
@@ -109,24 +109,24 @@ def generate_request_description(user_request_json, request_json):
     return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
-                    user_request_json.get('id'),
+                    request_group_json.get('id'),
                     request_json.get('id'),
                     telescope_class,
                     inst_type,
                     filter_string)
 
 
-def differentiate_by_type(operator, urs):
-    '''Given an operator type and a list of UserRequests, split the list into two
+def differentiate_by_type(operator, rgs):
+    '''Given an operator type and a list of RequestGroups, split the list into two
        lists, the chosen type, and the remainder.
        Valid operator types are 'single', 'and', 'oneof', 'many'.'''
     chosen_type = []
     other_types = []
-    for ur in urs:
-        if ur.operator == operator:
-            chosen_type.append(ur)
+    for rg in rgs:
+        if rg.operator == operator:
+            chosen_type.append(rg)
         else:
-            other_types.append(ur)
+            other_types.append(rg)
 
     return chosen_type, other_types
 
@@ -494,18 +494,18 @@ class Request(EqualityMixin):
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
         constraints - a Constraint object (airmass limit, etc.)
-        request_number - The unique request number of the Request
+        id - The unique id of the Request
         state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
+    def __init__(self, target, molecules, windows, constraints, id, state='PENDING',
                  duration=0, scheduled_reservation=None):
 
         self.target            = target
         self.molecules         = molecules
         self.windows           = windows
         self.constraints       = constraints
-        self.request_number    = request_number
+        self.id    = id
         self.state             = state
         self.req_duration      = duration
         self.scheduled_reservation = scheduled_reservation
@@ -522,7 +522,7 @@ class Request(EqualityMixin):
     duration = property(get_duration)
 
 
-class UserRequest(EqualityMixin):
+class RequestGroup(EqualityMixin):
     '''UserRequests are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
        ipp info, an id, and group name. This is translated into a CompoundReservation when scheduling'''
 
@@ -530,10 +530,10 @@ class UserRequest(EqualityMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires, submitter):
+    def __init__(self, operator, requests, proposal, id, observation_type, ipp_value, group_id, expires, submitter):
 
         self.proposal = proposal
-        self.tracking_number = tracking_number
+        self.id = id
         self.group_id = group_id
         self.ipp_value = ipp_value
         self.observation_type = observation_type
@@ -547,12 +547,12 @@ class UserRequest(EqualityMixin):
         '''Check the operator type being asked for matches a valid type
            of CompoundObservation.'''
 
-        if provided_operator not in UserRequest.valid_types:
+        if provided_operator not in RequestGroup.valid_types:
 
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid operator types are:\n")
 
-            for res_type, help_txt in UserRequest.valid_types.iteritems():
+            for res_type, help_txt in RequestGroup.valid_types.iteritems():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise RequestError(error_msg)
@@ -580,8 +580,8 @@ class UserRequest(EqualityMixin):
 
     def set_scheduled_reservations(self, scheduled_reservations_by_request):
         for request in self.requests:
-            if request.request_number in scheduled_reservations_by_request:
-                request.scheduled_reservation = scheduled_reservations_by_request[request.request_number]
+            if request.id in scheduled_reservations_by_request:
+                request.scheduled_reservation = scheduled_reservations_by_request[request.id]
 
     def drop_empty_children(self):
         to_keep = []
@@ -609,35 +609,35 @@ class UserRequest(EqualityMixin):
 
         return dropped
 
-    def is_target_of_opportunity(self):
+    def is_rapid_response(self):
         '''Return True if request is a ToO.
         '''
-        return self.observation_type == 'TARGET_OF_OPPORTUNITY'
+        return self.observation_type == 'RAPID_RESPONSE'
 
-    def is_schedulable(self, running_request_numbers):
-        return self._is_schedulable_easy(running_request_numbers)
+    def is_schedulable(self, running_request_ids):
+        return self._is_schedulable_easy(running_request_ids)
 
-    def _is_schedulable_easy(self, running_request_numbers):
+    def _is_schedulable_easy(self, running_request_ids):
         if self.operator == 'and':
             is_ok_to_return = True
             for r in self.requests:
-                if not r.has_windows() and not r.request_number in running_request_numbers:
+                if not r.has_windows() and not r.id in running_request_ids:
                     return False
 
         elif self.operator in ('oneof', 'single', 'many'):
             is_ok_to_return = False
             for r in self.requests:
-                if r.has_windows() or r.request_number in running_request_numbers:
+                if r.has_windows() or r.id in running_request_ids:
                     return True
 
         return is_ok_to_return
 
-    def _is_schedulable_hard(self, running_request_numbers):
+    def _is_schedulable_hard(self, running_request_ids):
         is_ok_to_return = {
-                            'and'    : (False, lambda r: not r.has_windows() and not r.request_number in running_request_numbers),
-                            'oneof'  : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
-                            'single' : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
-                            'many'   : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers)
+                            'and'    : (False, lambda r: not r.has_windows() and not r.id in running_request_ids),
+                            'oneof'  : (True,  lambda r: r.has_windows() or r.id in running_request_ids),
+                            'single' : (True,  lambda r: r.has_windows() or r.id in running_request_ids),
+                            'many'   : (True,  lambda r: r.has_windows() or r.id in running_request_ids)
                           }
 
         for r in self.requests:
@@ -647,28 +647,28 @@ class UserRequest(EqualityMixin):
         return not is_ok_to_return[self.operator][0]
 
     @staticmethod
-    def emit_user_request_feedback(tracking_number, msg, tag, timestamp=None):
+    def emit_request_group_feedback(id, msg, tag, timestamp=None):
         if not timestamp:
             timestamp = datetime.utcnow()
 
         originator = 'scheduler'
 
         event = UserFeedbackLogger.create_event(timestamp, originator, msg,
-                                                tag, tracking_number)
+                                                tag, id)
 
         event_bus.fire_event(event)
 
         return
 
-    def emit_user_feedback(self, msg, tag, timestamp=None):
-        UserRequest.emit_user_request_feedback(self.tracking_number, msg, tag, timestamp)
+    def emit_rg_feedback(self, msg, tag, timestamp=None):
+        RequestGroup.emit_request_group_feedback(self.id, msg, tag, timestamp)
 
     def get_priority_dumb(self):
         '''This is a placeholder for a more sophisticated priority function. For now,
            it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
 
         # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[0].request_number)
+        random.seed(self.requests[0].id)
         perturbation_size = 0.01
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
 
@@ -686,7 +686,7 @@ class UserRequest(EqualityMixin):
             request_index = 0
 
         # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[request_index].request_number)
+        random.seed(self.requests[request_index].id)
         perturbation_size = 0.01
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
 
@@ -724,7 +724,7 @@ class ModelBuilder(object):
             for prop in proposals:
                 proposal = Proposal(prop)
                 self.proposals_by_id[proposal.id] = proposal
-        except ValhallaConnectionError as e:
+        except ObservationPortalConnectionError as e:
             log.warning("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_details(self, proposal_id):
@@ -732,7 +732,7 @@ class ModelBuilder(object):
             try:
                 proposal = Proposal(self.valhalla_interface.get_proposal_by_id(proposal_id))
                 self.proposals_by_id[proposal_id] = proposal
-            except ValhallaConnectionError as e:
+            except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
         return self.proposals_by_id[proposal_id]
@@ -741,48 +741,48 @@ class ModelBuilder(object):
         if not self.semester_details:
             try:
                 self.semester_details = self.valhalla_interface.get_semester_details(date)
-            except ValhallaConnectionError as e:
+            except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
 
         return self.semester_details
 
-    def build_user_request(self, ur_dict, scheduled_requests=None, ignore_ipp=False):
+    def build_request_group(self, rg_dict, scheduled_requests=None, ignore_ipp=False):
         if scheduled_requests is None:
             scheduled_requests = {}
-        tracking_number = int(ur_dict['id'])
-        operator = ur_dict['operator'].lower()
-        ipp_value = ur_dict.get('ipp_value', 1.0)
-        submitter = ur_dict.get('submitter', '')
+        rg_id = int(rg_dict['id'])
+        operator = rg_dict['operator'].lower()
+        ipp_value = rg_dict.get('ipp_value', 1.0)
+        submitter = rg_dict.get('submitter', '')
         if ignore_ipp:
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
 
-        requests, invalid_requests  = self.build_requests(ur_dict, scheduled_requests)
+        requests, invalid_requests  = self.build_requests(rg_dict, scheduled_requests)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
             for invalid_request, error_msg in invalid_requests:
                 tag = "InvalidRequest"
-                UserRequest.emit_user_request_feedback(tracking_number, error_msg, tag)
+                RequestGroup.emit_request_group_feedback(rg_id, error_msg, tag)
             if operator.lower() == 'and':
-                msg = "Invalid request found within 'AND' UR %s making UR invalid" % tracking_number
-                tag = "InvalidUserRequest"
-                UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
+                msg = "Invalid request found within 'AND' RG %s making RG invalid" % rg_id
+                tag = "InvalidRequestGroup"
+                RequestGroup.emit_request_group_feedback(rg_id, msg, tag)
                 raise RequestError(msg)
 
         if not requests:
-            msg = "No valid Requests for UR %s" % tracking_number
-            tag = "InvalidUserRequest"
-            UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
+            msg = "No valid Requests for RG %s" % rg_id
+            tag = "InvalidRequestGroup"
+            RequestGroup.emit_request_group_feedback(rg_id, msg, tag)
             raise RequestError(msg)
 
-        proposal = self.get_proposal_details(ur_dict['proposal'])
+        proposal = self.get_proposal_details(rg_dict['proposal'])
 
         # Validate we are an allowed type of UR
-        valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
-        observation_type = ur_dict['observation_type']
+        valid_observation_types = ['NORMAL', 'RAPID_RESPONSE', 'TIME_CRITICAL']
+        observation_type = rg_dict['observation_type']
         if not observation_type in valid_observation_types:
-            msg = "UserRequest observation_type must be one of %s" % valid_observation_types
+            msg = "RequestGroup observation_type must be one of %s" % valid_observation_types
             raise RequestError(msg)
 
         # Calculate the maximum window time as the expire time
@@ -797,21 +797,21 @@ class ModelBuilder(object):
         if semester_details:
             max_window_time = min(max_window_time, semester_details['end'])
 
-        user_request = UserRequest(
+        request_group = RequestGroup(
                                     operator        = operator,
                                     requests        = requests,
                                     proposal        = proposal,
-                                    tracking_number = tracking_number,
+                                    id= rg_id,
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = safe_unidecode(ur_dict['group_id'], 50),
+                                    group_id        = safe_unidecode(rg_dict['group_id'], 50),
                                     expires         = max_window_time,
                                     submitter       = safe_unidecode(submitter, 50),
                                   )
 
         # Return only the invalid request and not the error message
         invalid_requests = [ir[0] for ir in invalid_requests]
-        return user_request, invalid_requests
+        return request_group, invalid_requests
 
     def build_requests(self, ur_dict, scheduled_requests=None):
         '''Returns tuple where first element is the list of validated request
@@ -950,7 +950,7 @@ class ModelBuilder(object):
                        molecules       = molecules,
                        windows         = windows,
                        constraints     = constraints,
-                       request_number  = int(req_dict['id']),
+                       id= int(req_dict['id']),
                        state           = req_dict['state'],
                        duration        = req_dict['duration'],
                        scheduled_reservation = scheduled_reservation

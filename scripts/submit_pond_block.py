@@ -1,6 +1,6 @@
-from adaptive_scheduler.pond import PondScheduleInterface, build_block, PondBlock, Block
+from adaptive_scheduler.pond import ObservationScheduleInterface, build_block, PondBlock, Block
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
-from adaptive_scheduler.model2 import (UserRequest, Request, Molecule, Window, Windows, Proposal, Target,
+from adaptive_scheduler.model2 import (RequestGroup, Request, Molecule, Window, Windows, Proposal, Target,
                                        SiderealTarget, Constraints, MoleculeFactory)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
@@ -45,8 +45,8 @@ proposal = Proposal({'id': 'LCOSchedulerTest',
                      'tac_priority': 20,
                      'pi': 'me'})
 
-user_request = UserRequest('single', [request,], proposal, 9000000012, 'NORMAL', 1.0, 'test normal',
-                           datetime(2049,1, 1), 'me')
+user_request = RequestGroup('single', [request, ], proposal, 9000000012, 'NORMAL', 1.0, 'test normal',
+                            datetime(2049,1, 1), 'me')
 
 configdb_interface = ConfigDBInterface(configdb_url='http://configdbdev.lco.gtn')
 block = build_block(reservation, request, user_request, semester_start, configdb_interface)
