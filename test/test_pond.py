@@ -9,7 +9,7 @@ from adaptive_scheduler.pond import (InstrumentResolutionError, build_block, res
 from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
                                        SiderealTarget, Request,
                                        RequestGroup, Constraints,
-                                       MoleculeFactory)
+                                       ConfigurationFactory)
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException

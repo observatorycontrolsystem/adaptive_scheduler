@@ -7,7 +7,7 @@ from datetime import datetime
 
 # Import the modules to test
 from adaptive_scheduler.model2 import (SiderealTarget, NonSiderealTarget,
-                                       Proposal, MoleculeFactory,
+                                       Proposal, ConfigurationFactory,
                                        Request, RequestGroup,
                                        Windows, Window, Constraints,
                                        ModelBuilder,
@@ -42,7 +42,7 @@ class TestRequest(object):
             priority=1
         )
 
-        self.mol_factory = MoleculeFactory()
+        self.mol_factory = ConfigurationFactory()
 
         self.molecule = self.mol_factory.build(
             dict(
@@ -130,7 +130,7 @@ class TestRequestGroup(object):
             tac_priority=base_priority
         )
 
-        self.mol_factory = MoleculeFactory()
+        self.mol_factory = ConfigurationFactory()
         molecule1 = self.mol_factory.build(
             dict(
                 type='expose',
@@ -312,7 +312,7 @@ class TestNonSiderealTarget(object):
 
 class TestMoleculeFactory(object):
     def setup(self):
-        self.mol_factory = MoleculeFactory()
+        self.mol_factory = ConfigurationFactory()
         self.valid_expose_mol = dict(
             type='expose',
             exposure_count=1,

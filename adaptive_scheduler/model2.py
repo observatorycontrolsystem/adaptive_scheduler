@@ -96,22 +96,30 @@ def generate_request_description(request_group_json, request_json):
         user_id = request_group_json.get('submitter')
     if 'location' in request_json:
         telescope_class = request_json.get('location').get('telescope_class')
-    if 'molecules' in request_json and len(request_json['molecules']) > 0:
+    if 'configurations' in request_json and len(request_json['configurations']) > 0:
         filters = set()
         inst_types = set()
-        for molecule in request_json['molecules']:
-            if 'filter' in molecule and molecule['filter']:
-                filters.add(molecule['filter'])
-            if 'instrument_name' in molecule and molecule['instrument_name']:
-                inst_types.add(molecule['instrument_name'])
+        target_names = set()
+        for configuration in request_json['configurations']:
+            if 'instrument_type' in configuration and configuration['instrument_type']:
+                inst_types.add(configuration['instrument_type'])
+            if 'target' in configuration and 'name' in configuration['target'] and configuration['target']['name']:
+                target_names.add(configuration['target']['name'])
+            for inst_config in configuration['instrument_configs']:
+                if 'optical_elements' in inst_config and inst_config['optical_elements']:
+                    for element_type, element_value in inst_config['optical_elements'].items():
+                        filters.add("{}: {}".format(element_type, element_value))
+
         inst_type = '(' + ', '.join(inst_types) + ')' if len(inst_types) > 0 else ''
         filter_string = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
-    return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
+        target_string = '(' + ', '.join(target_names) + ')' if len(target_names) > 0 else ''
+    return 'proposal={}, submitter={}, RG_id={}, R_id={}, telescope_class={}, target_names={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
                     request_group_json.get('id'),
                     request_json.get('id'),
                     telescope_class,
+                    target_string,
                     inst_type,
                     filter_string)
 
@@ -329,93 +337,12 @@ class SatelliteTarget(Target):
         return pointing
 
 
-class Constraints(DataContainer):
-    #TODO: Make this a named tuple
-    def __init__(self, *args, **kwargs):
-        self.max_airmass        = None
-        # default minimum lunar distance is 0 if none is specified in request.
-        self.min_lunar_distance = 0.0
-        self.max_lunar_phase    = None
-        self.max_seeing         = None
-        self.min_transparency   = None
-        DataContainer.__init__(self, *args, **kwargs)
-
-    def __repr__(self):
-        return "Constraints(airmass={}, min_lunar_distance={})".format(self.max_airmass, self.min_lunar_distance)
-
-
-class Molecule(DataContainer):
-    def __init__(self, required_fields, *initial_data, **kwargs):
+class Configuration(DataContainer):
+    def __init__(self, *initial_data, **kwargs):
         self.mol_dict = initial_data[0]
         self.ag_name = None
         DataContainer.__init__(self, *initial_data, **kwargs)
         self.required_fields = required_fields
-
-    def list_missing_fields(self):
-        missing_fields = []
-
-        for field in self.required_fields:
-            try:
-                getattr(self, field)
-            except:
-                missing_fields.append(field)
-
-        return missing_fields
-
-
-class MoleculeFactory(object):
-    def __init__(self):
-        self.required_fields_by_mol = {
-                                  'EXPOSE'    : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'STANDARD'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'ARC'       : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority'),
-                                  'LAMP_FLAT' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority'),
-                                  'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority', 'acquire_mode', 'acquire_radius_arcsec'),
-                                  'BIAS'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'exposure_time',
-                                                 'priority'),
-                                  'DARK'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'exposure_time',
-                                                 'priority'),
-                                  'SKY_FLAT'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'AUTO_FOCUS' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'TRIPLE'    : ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority'),
-                                  'NRES_TEST' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'NRES_SPECTRUM' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'NRES_EXPOSE' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority'),
-                                  'SCRIPT': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority', 'args')
-                                }
-
-    def build(self, mol_dict):
-        required_fields = self.required_fields_by_mol[mol_dict['type'].upper()]
-        return Molecule(required_fields, mol_dict)
 
 
 class Window(EqualityMixin):
@@ -632,20 +559,6 @@ class RequestGroup(EqualityMixin):
 
         return is_ok_to_return
 
-    def _is_schedulable_hard(self, running_request_ids):
-        is_ok_to_return = {
-                            'and'    : (False, lambda r: not r.has_windows() and not r.id in running_request_ids),
-                            'oneof'  : (True,  lambda r: r.has_windows() or r.id in running_request_ids),
-                            'single' : (True,  lambda r: r.has_windows() or r.id in running_request_ids),
-                            'many'   : (True,  lambda r: r.has_windows() or r.id in running_request_ids)
-                          }
-
-        for r in self.requests:
-            if is_ok_to_return[self.operator][1](r):
-                return is_ok_to_return[self.operator][0]
-
-        return not is_ok_to_return[self.operator][0]
-
     @staticmethod
     def emit_request_group_feedback(id, msg, tag, timestamp=None):
         if not timestamp:
@@ -663,29 +576,15 @@ class RequestGroup(EqualityMixin):
     def emit_rg_feedback(self, msg, tag, timestamp=None):
         RequestGroup.emit_request_group_feedback(self.id, msg, tag, timestamp)
 
-    def get_priority_dumb(self):
-        '''This is a placeholder for a more sophisticated priority function. For now,
-           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
-
-        # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[0].id)
-        perturbation_size = 0.01
-        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
-
-        #TODO: Placeholder for more sophisticated priority scheme
-        # add small random bit to help scheduler break degeneracies
-        return self.proposal.tac_priority*ran
-
     def get_priority(self):
-        '''This is a placeholder for a more sophisticated priority function. For now,
-           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
+        '''This returns the effective priority, seeded by the first request id'''
         return self.get_effective_priority(0)
 
     def get_effective_priority(self, request_index):
         if request_index < 0 or request_index >= len(self.requests):
             request_index = 0
 
-        # doesn't have to be statistically random; determinism is important
+        # seeded with the request id so it is repeatable with tests
         random.seed(self.requests[request_index].id)
         perturbation_size = 0.01
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
@@ -693,6 +592,7 @@ class RequestGroup(EqualityMixin):
         req = self.requests[request_index]
         effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
 
+        # TODO: address this effective priority cap, it is restricting most time critical priorities
         effective_priority = min(effective_priority, 32000.0)*ran
 
         return effective_priority
@@ -710,7 +610,6 @@ class RequestGroup(EqualityMixin):
 class ModelBuilder(object):
 
     def __init__(self, valhalla_interface, configdb_interface, proposals_by_id=None, semester_details=None):
-        self.molecule_factory   = MoleculeFactory()
         self.valhalla_interface = valhalla_interface
         self.configdb_interface = configdb_interface
         self.proposals_by_id = proposals_by_id if proposals_by_id else {}
@@ -844,35 +743,19 @@ class ModelBuilder(object):
         return requests, invalid_requests
 
     def build_request(self, req_dict, scheduled_reservation=None):
-        target_type = req_dict['target']['type']
-        req_dict['target']['name'] = safe_unidecode(req_dict['target']['name'], 50)
-        try:
-            if target_type == 'SIDEREAL':
-                target = SiderealTarget(req_dict['target'])
-            elif target_type == 'NON_SIDEREAL':
-                target = NonSiderealTarget(req_dict['target'])
-            elif target_type == 'SATELLITE':
-                target = SatelliteTarget(req_dict['target'])
-            else:
-                raise RequestError("Unsupported target type '%s'" % target_type)
-        except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
-            msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
-            raise RequestError(msg)
-
-        # Create the Molecules
-        molecules = []
-        for mol_dict in req_dict['molecules']:
-            molecules.append(self.molecule_factory.build(mol_dict))
+        # Create the Configurations
+        configurations = []
+        for configuration in req_dict['configurations']:
+            configurations.append(self.build_configuration(configuration))
 
         # A Request can only be scheduled on one instrument-based subnetwork
         if not self.have_same_instrument(molecules):
-            # Complain
-            msg  = "Request %s has molecules with different instruments" % req_dict['id']
+            msg = "Request {} has configurations with different instruments".format(req_dict['id'])
             msg += " - removing from consideration"
             raise RequestError(msg)
 
         # Get the instrument (we know they are all the same)
-        instrument_name = molecules[0].instrument_name
+        instrument_type = molecules[0].instrument_type
 
         filters = []
 
@@ -888,7 +771,7 @@ class ModelBuilder(object):
             elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
                 raise RequestError("Molecule must have either filter or spectra_slit")
 
-        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_name, filters,
+        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_type, filters,
                                                                            req_dict['location'])
 
         if not telescopes:
@@ -907,7 +790,7 @@ class ModelBuilder(object):
             )
             msg = "Request {} wants camera {}, which is not available on the subnetwork '{}'".format(
                 req_dict['id'],
-                instrument_name,
+                instrument_type,
                 req_location
             )
             raise RequestError(msg)
@@ -934,6 +817,28 @@ class ModelBuilder(object):
                      )
 
         return req
+
+    def build_configuration(self, configuration):
+        # build the target first
+        target_type = configuration['target']['type']
+        try:
+            if target_type == 'SIDEREAL':
+                target = SiderealTarget(configuration['target'])
+            elif target_type == 'NON_SIDEREAL':
+                target = NonSiderealTarget(configuration['target'])
+            elif target_type == 'SATELLITE':
+                target = SatelliteTarget(configuration['target'])
+            else:
+                raise RequestError("Unsupported target type '%s'" % target_type)
+        except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
+            msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
+            raise RequestError(msg)
+
+        configuration['target'] = target
+        configuration = Configuration(
+            **configuration
+        )
+        return configuration
 
     def have_same_instrument(self, molecules):
         instrument_names = []

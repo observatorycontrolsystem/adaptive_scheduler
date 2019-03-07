@@ -4,7 +4,7 @@ from __future__ import division
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
 from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
-                                       RequestGroup, Window, Windows, MoleculeFactory, Constraints)
+                                       RequestGroup, Window, Windows, ConfigurationFactory, Constraints)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
 from time_intervals.intervals import Intervals
@@ -27,7 +27,7 @@ class TestKernelMappings(object):
         self.start = datetime(2011, 11, 1, 0, 0, 0)
         self.end   = datetime(2011, 11, 3, 0, 0, 0)
 
-        self.mol_factory = MoleculeFactory()
+        self.mol_factory = ConfigurationFactory()
 
         self.tels = {
                       '1m0a.doma.bpl' :

@@ -4,7 +4,7 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.model2      import (SiderealTarget, Proposal, MoleculeFactory,
+from adaptive_scheduler.model2      import (SiderealTarget, Proposal, ConfigurationFactory,
                                             Request, RequestGroup,
                                             Windows, Window, Constraints)
 
@@ -50,7 +50,7 @@ class TestIntegration(object):
                                   tac_priority       = 1
                                 )
 
-        self.mol_factory = MoleculeFactory()
+        self.mol_factory = ConfigurationFactory()
 
         self.molecule = self.mol_factory.build(
                                                 dict(
