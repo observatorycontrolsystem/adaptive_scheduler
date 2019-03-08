@@ -28,7 +28,7 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', t
 
             r  = Request(
                           target         = target,
-                          molecules      = molecules,
+                          configurations= molecules,
                           windows        = windows,
                           constraints    = None,
                           id= next_request_id

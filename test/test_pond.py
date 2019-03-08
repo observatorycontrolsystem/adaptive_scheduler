@@ -283,7 +283,7 @@ class TestPondInteractions(object):
 
         request = Request(
             target=target,
-            molecules=[molecule],
+            configurations=[molecule],
             windows=None,
             constraints=constraints,
             id=22222
@@ -337,7 +337,7 @@ class TestPondInteractions(object):
 
         request = Request(
             target=target,
-            molecules=[molecule],
+            configurations=[molecule],
             windows=None,
             constraints=constraints,
             id=22222,

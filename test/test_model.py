@@ -69,7 +69,7 @@ class TestRequest(object):
     def test_invalid_request_type_raises_exception(self):
         junk_res_type = 'chocolate'
         request = Request(target=self.target,
-                          molecules=[self.molecule],
+                          configurations=[self.molecule],
                           windows=self.windows,
                           constraints=self.constraints,
                           id=self.id,
@@ -81,7 +81,7 @@ class TestRequest(object):
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
         request = Request(target=self.target,
-                          molecules=[self.molecule],
+                          configurations=[self.molecule],
                           windows=self.windows,
                           constraints=self.constraints,
                           id=self.id,
@@ -162,7 +162,7 @@ class TestRequestGroup(object):
 
         r = Request(
             target=None,
-            molecules=[molecule1],
+            configurations=[molecule1],
             windows=windows,
             constraints=None,
             id='0000000003',

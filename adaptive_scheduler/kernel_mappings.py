@@ -321,18 +321,21 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
     rise_sets_to_compute_later = {}
     for rg in rgs:
         for r in rg.requests:
-            rise_set_target = r.target.in_rise_set_format()
-            for resource in r.windows.windows_for_resource:
-                cache_key = make_cache_key(resource, rise_set_target, r.constraints.max_airmass,
-                                           r.constraints.min_lunar_distance)
-                if cache_key not in local_cache:
-                    try:
-                        # put intersections from the redis cache into the local cache for use later
-                        local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
-                    except Exception:
-                        # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
-                        rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target, visibility_for_resource[resource],
-                                                           r.constraints.max_airmass, r.constraints.min_lunar_distance))
+            for conf in r.configurations:
+                rise_set_target = conf.target.in_rise_set_format()
+                for resource in r.windows.windows_for_resource:
+                    cache_key = make_cache_key(resource, rise_set_target, conf.constraints['max_airmass'],
+                                               conf.constraints['min_lunar_distance'])
+                    if cache_key not in local_cache:
+                        try:
+                            # put intersections from the redis cache into the local cache for use later
+                            local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+                        except Exception:
+                            # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
+                            rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
+                                                                      visibility_for_resource[resource],
+                                                                      conf.constraints['max_airmass'],
+                                                                      conf.constraints['min_lunar_distance']))
 
     num_processes = cpu_count() - 1
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
@@ -362,10 +365,16 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
     for rg in rgs:
         for r in rg.requests:
             intervals_by_resource = {}
-            for resource in r.windows.windows_for_resource:
-                cache_key = make_cache_key(resource, r.target.in_rise_set_format(), r.constraints.max_airmass,
-                                           r.constraints.min_lunar_distance)
-                intervals_by_resource[resource] = local_cache[cache_key]
+            for conf in r.configurations:
+                for resource in r.windows.windows_for_resource:
+                    cache_key = make_cache_key(resource, conf.target.in_rise_set_format(),
+                                    conf.constraints['max_airmass'],
+                                    conf.constraints['min_lunar_distance'])
+                    target_intervals = local_cache[cache_key]
+                    if resource in intervals_by_resource:
+                        intervals_by_resource[resource] = intervals_by_resource[resource].intersect(target_intervals)
+                    else:
+                        intervals_by_resource[resource] = target_intervals
             process_request_visibility(rg.id, r, intervals_by_resource, downtime_intervals)
 
     return rgs

@@ -48,6 +48,11 @@ def log_windows(rg, log_msg):
             rg_log.info("%s %s" % (log_msg, w), rg.id)
 
 
+def log_constraints(constraints_dict):
+    return 'Constraints(airmass={}, min_lunar_distance={})'.format(constraints_dict['max_airmass'],
+                                                                   constraints_dict['min_lunar_distance'])
+
+
 def log_full_rg(rg, now):
     rg_log.info("Expires = %s" % rg.expires, rg.id)
     rg_log.info("IPP Value = %s" % rg.ipp_value, rg.id)
@@ -58,10 +63,11 @@ def log_full_rg(rg, now):
     for r in rg.requests:
         rg_log.info("Request %d: duration = %ss" % (r.id, r.duration),
                     rg.id)
-        rg_log.info("Request %d: target = %s" % (r.id, r.target),
-                    rg.id)
-        rg_log.info("Request %d: constraints = %s" % (r.id, r.constraints),
-                    rg.id)
+        for conf in r.configurations:
+            rg_log.info("Request %d: conf = %d, target = %s" % (r.id, conf.id, conf.target),
+                        rg.id)
+            rg_log.info("Request %d: conf = %d, constraints = %s" % (r.id, conf.id, log_constraints(conf.constraints)),
+                        rg.id)
 
 
 def print_reservation(res):
@@ -90,50 +96,6 @@ def print_compound_reservation(compound_res):
     log.debug(INDENT + "made of %d %s:", *pluralise(compound_res.size, 'Reservation'))
     for res in compound_res.reservation_list:
         print_reservation(res)
-
-    return
-
-
-def print_request(req, resource_name):
-    target_name = getattr(req.target, 'name', 'no name')
-    log.debug("Request %s: Target %s, observed from %s",req.id,
-                                                        target_name,
-                                                        resource_name)
-
-
-
-def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
-                      rs_up_intervals, intersection):
-    print_request(req, resource_name)
-    # Pull out the timepoint list for printing
-    intervals = user_intervals.toTupleList()
-    if not intervals:
-        log.debug("No user intervals found")
-        return
-    else:
-        earliest_tp = latest_tp = intervals[0][0]
-
-    for (start, end) in intervals:
-        log.debug("    User window:          %s to %s", start, end)
-        if start < earliest_tp:
-            earliest_tp = start
-        if end > latest_tp:
-            latest_tp = end
-
-    for dark_int in rs_dark_intervals:
-        if dark_int[0] < latest_tp+timedelta(days=1) and dark_int[1] > earliest_tp - timedelta(days=1):
-            log.debug("    Darkness:             %s to %s", dark_int[0], dark_int[1])
-
-    for up_int in rs_up_intervals:
-        if up_int[0] < latest_tp+timedelta(days=1) and up_int[1] > earliest_tp - timedelta(days=1):
-            log.debug("    Target above horizon: %s to %s", up_int[0], up_int[1])
-
-    log.debug("    Dark/rise intersections:")
-    if not intersection.toDictList():
-        log.debug("        <none>")
-    else:
-        for i in intersection.toDictList():
-            log.debug("        %s (%s)", i['time'], i['type'])
 
     return
 

@@ -86,35 +86,35 @@ class TestIntegration(object):
         self.windows_3.append(self.window_3)
 
         self.request_1 = Request(target         = self.target,
-                                 molecules      = [self.molecule],
+                                 configurations= [self.molecule],
                                  windows        = self.windows_1,
                                  constraints    = self.constraints,
                                  id= 1,
                                  duration       = 1750)
 
         self.request_2 = Request(target         = self.target,
-                                 molecules      = [self.molecule],
+                                 configurations= [self.molecule],
                                  windows        = self.windows_2,
                                  constraints    = self.constraints,
                                  id= 2,
                                  duration       =1750)
 
         self.request_3 = Request(target         = self.target,
-                                 molecules      = [self.molecule],
+                                 configurations= [self.molecule],
                                  windows        = self.windows_2,
                                  constraints    = self.constraints,
                                  id= 3,
                                  duration       =1750)
 
         self.request_4 = Request(target         = self.target,
-                                 molecules      = [self.molecule],
+                                 configurations= [self.molecule],
                                  windows        = self.windows_3,
                                  constraints    = self.constraints,
                                  id= 4,
                                  duration       =1750)
 
         self.request_5 = Request(target         = self.target,
-                                 molecules      = [self.molecule],
+                                 configurations= [self.molecule],
                                  windows        = self.windows_3,
                                  constraints    = self.constraints,
                                  id= 5,
@@ -264,7 +264,7 @@ class TestIntegration(object):
             windows = Windows()
             windows.append(window)
             request = Request(target=self.target,
-                              molecules=[self.molecule],
+                              configurations=[self.molecule],
                               windows=windows,
                               constraints=self.constraints,
                               id=int("11{}".format(days_out).rjust(10, '0')),

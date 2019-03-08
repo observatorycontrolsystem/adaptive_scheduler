@@ -593,14 +593,14 @@ class TestWindowFilters(object):
         request_id = 5
         r  = Request(
                       target         = None,
-                      molecules      = None,
+                      configurations= None,
                       windows        = Windows(),
                       constraints    = None,
                       id= request_id
                     )
         r2  = Request(
                       target         = None,
-                      molecules      = None,
+                      configurations= None,
                       windows        = Windows(),
                       constraints    = None,
                       id=9
@@ -623,7 +623,7 @@ class TestWindowFilters(object):
         request_id = 5
         r1  = Request(
                       target         = None,
-                      molecules      = None,
+                      configurations= None,
                       windows        = Windows(),
                       constraints    = None,
                       id= request_id,
@@ -631,7 +631,7 @@ class TestWindowFilters(object):
                     )
         r2  = Request(
                       target         = None,
-                      molecules      = None,
+                      configurations= None,
                       windows        = Windows(),
                       constraints    = None,
                       id=9,

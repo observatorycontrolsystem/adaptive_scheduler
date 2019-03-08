@@ -31,6 +31,7 @@ from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme
 from adaptive_scheduler.valhalla_connections  import ObservationPortalConnectionError
 
 from datetime    import datetime
+from collections import defaultdict
 import ast
 import logging
 import random
@@ -344,6 +345,25 @@ class Configuration(DataContainer):
         DataContainer.__init__(self, *initial_data, **kwargs)
         self.required_fields = required_fields
 
+    def get_instrument_requirements(self):
+        ''' Return a dictionary of instrument requirements for this configuration '''
+        science_optical_elements = defaultdict(set)
+        for instrument_config in self.instrument_configs:
+            for element_type, element_value in instrument_config['optical_elements']:
+                plural_element_type = element_type + 's'
+                science_optical_elements[plural_element_type].add(element_value)
+        guiding_optical_elements = defaultdict(set)
+        for element_type, element_value in self.guiding_config['optical_elements']:
+            plural_element_type = element_type + 's'
+            guiding_optical_elements[plural_element_type].add(element_value)
+
+        instrument_requirements = {
+            'self_guide': self.extra_params.get('self_guide', False),
+            'science_optical_elements': science_optical_elements,
+            'guiding_optical_elements': guiding_optical_elements
+        }
+        return instrument_requirements
+
 
 class Window(EqualityMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
@@ -414,24 +434,20 @@ class Request(EqualityMixin):
         place. These are combined within a CompoundRequest to allow AND and OR
         semantics ("do this and this and this", "do this or this").
 
-        target    - a Target object (pointing information)
         molecules - a list of Molecule objects (detailed observing information)
         windows   - a list of start/end datetimes, representing when this observation
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
-        constraints - a Constraint object (airmass limit, etc.)
         id - The unique id of the Request
         state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, id, state='PENDING',
+    def __init__(self, configurations, windows, id, state='PENDING',
                  duration=0, scheduled_reservation=None):
 
-        self.target            = target
-        self.molecules         = molecules
+        self.configurations         = configurations
         self.windows           = windows
-        self.constraints       = constraints
         self.id    = id
         self.state             = state
         self.req_duration      = duration
@@ -537,7 +553,7 @@ class RequestGroup(EqualityMixin):
         return dropped
 
     def is_rapid_response(self):
-        '''Return True if request is a ToO.
+        '''Return True if request is a Rapid Response.
         '''
         return self.observation_type == 'RAPID_RESPONSE'
 
@@ -745,56 +761,14 @@ class ModelBuilder(object):
     def build_request(self, req_dict, scheduled_reservation=None):
         # Create the Configurations
         configurations = []
+        instrument_types_to_requirements = {}
         for configuration in req_dict['configurations']:
-            configurations.append(self.build_configuration(configuration))
+            config = self.build_configuration(configuration)
+            configurations.append(config)
+            instrument_types_to_requirements[config.instrument_type] = config.get_instrument_requirements()
 
-        # A Request can only be scheduled on one instrument-based subnetwork
-        if not self.have_same_instrument(molecules):
-            msg = "Request {} has configurations with different instruments".format(req_dict['id'])
-            msg += " - removing from consideration"
-            raise RequestError(msg)
-
-        # Get the instrument (we know they are all the same)
-        instrument_type = molecules[0].instrument_type
-
-        filters = []
-
-        molecule_types_without_filter = ['dark', 'bias', 'engineering', 'triple', 'nres_test', 'nres_spectrum',
-                                         'nres_expose', 'script']
-
-        for molecule in molecules:
-            if hasattr(molecule, 'filter') and molecule.filter:
-                filters.append(molecule.filter.lower())
-            elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
-                filters.append(molecule.spectra_slit.lower())
-            # bias or dark molecules don't need filter or spectra_slit
-            elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
-                raise RequestError("Molecule must have either filter or spectra_slit")
-
-        # TODO: Update from filters to the optical elements of the instrument configs and the guiding configs.
-        # TODO: Update the configdb method call below- the guider and imager elements will be something like:
-        # from collections import defaultdict
-        # imager_elements = defaultdict(set)
-        # guider_elements = defaultdict(set)
-        # for configuration in configurations:
-        #     for instrument_config in configuration.instrument_configs:
-        #         for oe_type in instrument_config.optical_elements:
-        #             oe_type_plural = oe_type + 's'
-        #             imager_elements[oe_type_plural].add(instrument_config.optical_elements[oe_type])
-        #
-        #     for oe_type in configuration.guiding_config.optical_elements:
-        #         oe_type_plural = oe_type + 's'
-        #         guider_elements[oe_type_plural].add(configuration.guiding_config.optical_elements[oe_type])
-
-        filters = {'filters': set(filters)}
-
-        if hasattr(molecule, 'ag_name') and instrument_name.lower() == str(molecules[0].ag_name).lower():
-            self_guide = True
-        else:
-            self_guide = False
-
-        telescopes = self.configdb_interface.get_telescopes_for_instrument(
-            instrument_name, filters, {}, self_guide, req_dict['location']
+        telescopes = self.configdb_interface.get_telescopes_for_instruments(
+            intrument_types_to_requirements, req_dict['location']
         )
 
         if not telescopes:
@@ -811,9 +785,9 @@ class ModelBuilder(object):
                     tel_str
                 )
             )
-            msg = "Request {} wants camera {}, which is not available on the subnetwork '{}'".format(
+            msg = "Request {} wants cameras [{}], which are not available on the subnetwork '{}'".format(
                 req_dict['id'],
-                instrument_type,
+                ', '.join(instrument_types_to_requirements.keys()),
                 req_location
             )
             raise RequestError(msg)
@@ -825,14 +799,10 @@ class ModelBuilder(object):
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
 
-        constraints = Constraints(req_dict['constraints'])
-
         # Finally, package everything up into the Request
         req = Request(
-                       target          = target,
-                       molecules       = molecules,
+                       configurations=configurations,
                        windows         = windows,
-                       constraints     = constraints,
                        id= int(req_dict['id']),
                        state           = req_dict['state'],
                        duration        = req_dict['duration'],
@@ -862,16 +832,6 @@ class ModelBuilder(object):
             **configuration
         )
         return configuration
-
-    def have_same_instrument(self, molecules):
-        instrument_names = []
-        for mol in molecules:
-            instrument_names.append(mol.instrument_name)
-
-        if len(set(instrument_names)) > 1:
-            return False
-
-        return True
 
 
 class RequestError(Exception):

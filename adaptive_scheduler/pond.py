@@ -154,25 +154,26 @@ class ObservationScheduleInterface(object):
     @timeit
     def _send_schedule_to_pond(self, schedule, semester_start, configdb_interface, dry_run=False):
         '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
-    
-        blocks_by_resource = {}
-        for resource_name, reservations in schedule.items():
-            blocks_by_resource[resource_name] = []
-            for reservation in reservations:
-                try:
-                    block = build_block(reservation, reservation.request,
-                                        reservation.request_group, semester_start,
-                                        configdb_interface)
-                except Exception:
-                    log.exception('Unable to build block from reservation for request number {}'.format(
-                        self._get_request_id_from_reservation(reservation)
-                    ))
-                    continue
-                blocks_by_resource[resource_name].append(block)
-            _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
-            msg = 'Will send {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
-            log_info_dry_run(msg, dry_run)
-        n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
+
+        # TODO: Update this code to send Observations and ConfigStatuses to observation portal
+        # blocks_by_resource = {}
+        # for resource_name, reservations in schedule.items():
+        #     blocks_by_resource[resource_name] = []
+        #     for reservation in reservations:
+        #         try:
+        #             block = build_block(reservation, reservation.request,
+        #                                 reservation.request_group, semester_start,
+        #                                 configdb_interface)
+        #         except Exception:
+        #             log.exception('Unable to build block from reservation for request number {}'.format(
+        #                 self._get_request_id_from_reservation(reservation)
+        #             ))
+        #             continue
+        #         blocks_by_resource[resource_name].append(block)
+        #     _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
+        #     msg = 'Will send {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
+        #     log_info_dry_run(msg, dry_run)
+        # n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
 
         return n_submitted_total
 
@@ -401,88 +402,88 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
 
     return ag_match
 
-
-def build_block(reservation, request, request_group, semester_start, configdb_interface):
-    res_start, res_end = get_reservation_datetimes(reservation, semester_start)
-    is_too = request_group.observation_type == 'RAPID_RESPONSE'
-    telescope, observatory, site = split_location(reservation.scheduled_resource)
-
-    block = {
-        'telescope': telescope,
-        'observatory': observatory,
-        'site': site,
-        'start': res_start.isoformat(),
-        'end': res_end.isoformat(),
-        # Hard-code all scheduler output to a highish number, for now
-        'priority': 30,
-        'is_too': is_too,
-        'max_airmass': request.constraints.max_airmass,
-        'min_lunar_dist': request.constraints.min_lunar_distance,
-        'max_lunar_phase': request.constraints.max_lunar_phase,
-        'max_seeing': request.constraints.max_seeing,
-        'min_transparency': request.constraints.min_transparency,
-        'instrument_class': request.molecules[0].instrument_name,
-        'molecules': []
-    }
-
-    pointing = request.target.in_pond_format()
-
-    for i, molecule in enumerate(request.molecules):
-        specific_camera = resolve_instrument(molecule.instrument_name, site,
-                                             observatory, telescope, configdb_interface)
-        # copy all of the fields already in the molecule (passed through from valhalla)
-        mol_dict = molecule.mol_dict.copy()
-        mol_dict['exposure_time'] = round(mol_dict['exposure_time'], 7)
-        mol_dict['prop_id'] = request_group.proposal.id
-        mol_dict['tag_id'] = request_group.proposal.tag
-        mol_dict['user_id'] = request_group.submitter
-        mol_dict['group'] = request_group.group_id
-        mol_dict['tracking_num'] = request_group.id
-        mol_dict['request_num'] = request.id
-        # Add the pointing into the molecule
-        mol_dict['pointing'] = pointing
-        # Set the specific instrument as resolved with configdb
-        mol_dict['inst_name'] = specific_camera
-        # Set the autoguider name if needed
-        if molecule.ag_mode != 'OFF':
-            ag_name = getattr(molecule, 'ag_name', None) or ''
-            # TODO: Don't pass in an ag_name (as there will no longer be one...) Instead pass if self_guide is set to
-            # TODO: true in the extra params of the configuration
-            specific_ag = resolve_autoguider(ag_name, specific_camera,
-                                             site, observatory, telescope,
-                                             configdb_interface)
-            mol_dict['ag_name'] = specific_ag
-
-            msg = "Autoguider resolved as {}".format(specific_ag)
-            log.debug(msg)
-            rg_log.debug(msg, request_group.id)
-
-        # Need to map the ag_mode values
-        mol_dict['ag_mode'] = AG_MODE_MAPPING[mol_dict['ag_mode'].upper()]
-        # Need to map the expmeter_mode
-        if mol_dict['expmeter_mode'] == 'OFF':
-            mol_dict['expmeter_mode'] = 'EXPMETER_OFF'
-        mol_dict['expmeter_snr'] = mol_dict['expmeter_snr'] or 0.0
-        # replace '*' with ',' in filter if necessary
-        if 'filter' in mol_dict and '*' in mol_dict['filter']:
-            mol_dict['filter'] = mol_dict['filter'].replace('*', ',')
-
-        mol_summary_msg = "Building {} molecule {}/{} ({} x {:.3f}s)".format(
-            molecule.type,
-            i + 1,
-            len(request.molecules),
-            molecule.exposure_count,
-            molecule.exposure_time,
-        )
-        log.debug(mol_summary_msg)
-        rg_log.debug(mol_summary_msg, request_group.id)
-
-        block['molecules'].append(mol_dict)
-    log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
-                                     block['molecules'][0]['request_num'], block['molecules'][0]['tracking_num'],
-                                     block['start'], block['end'], block['priority'])
-
-    return block
+#
+# def build_block(reservation, request, request_group, semester_start, configdb_interface):
+#     res_start, res_end = get_reservation_datetimes(reservation, semester_start)
+#     is_too = request_group.observation_type == 'RAPID_RESPONSE'
+#     telescope, observatory, site = split_location(reservation.scheduled_resource)
+#
+#     block = {
+#         'telescope': telescope,
+#         'observatory': observatory,
+#         'site': site,
+#         'start': res_start.isoformat(),
+#         'end': res_end.isoformat(),
+#         # Hard-code all scheduler output to a highish number, for now
+#         'priority': 30,
+#         'is_too': is_too,
+#         'max_airmass': request.constraints.max_airmass,
+#         'min_lunar_dist': request.constraints.min_lunar_distance,
+#         'max_lunar_phase': request.constraints.max_lunar_phase,
+#         'max_seeing': request.constraints.max_seeing,
+#         'min_transparency': request.constraints.min_transparency,
+#         'instrument_class': request.molecules[0].instrument_name,
+#         'molecules': []
+#     }
+#
+#     pointing = request.target.in_pond_format()
+#
+#     for i, molecule in enumerate(request.molecules):
+#         specific_camera = resolve_instrument(molecule.instrument_name, site,
+#                                              observatory, telescope, configdb_interface)
+#         # copy all of the fields already in the molecule (passed through from valhalla)
+#         mol_dict = molecule.mol_dict.copy()
+#         mol_dict['exposure_time'] = round(mol_dict['exposure_time'], 7)
+#         mol_dict['prop_id'] = request_group.proposal.id
+#         mol_dict['tag_id'] = request_group.proposal.tag
+#         mol_dict['user_id'] = request_group.submitter
+#         mol_dict['group'] = request_group.group_id
+#         mol_dict['tracking_num'] = request_group.id
+#         mol_dict['request_num'] = request.id
+#         # Add the pointing into the molecule
+#         mol_dict['pointing'] = pointing
+#         # Set the specific instrument as resolved with configdb
+#         mol_dict['inst_name'] = specific_camera
+#         # Set the autoguider name if needed
+#         if molecule.ag_mode != 'OFF':
+#             ag_name = getattr(molecule, 'ag_name', None) or ''
+#             # TODO: Don't pass in an ag_name (as there will no longer be one...) Instead pass if self_guide is set to
+#             # TODO: true in the extra params of the configuration
+#             specific_ag = resolve_autoguider(ag_name, specific_camera,
+#                                              site, observatory, telescope,
+#                                              configdb_interface)
+#             mol_dict['ag_name'] = specific_ag
+#
+#             msg = "Autoguider resolved as {}".format(specific_ag)
+#             log.debug(msg)
+#             rg_log.debug(msg, request_group.id)
+#
+#         # Need to map the ag_mode values
+#         mol_dict['ag_mode'] = AG_MODE_MAPPING[mol_dict['ag_mode'].upper()]
+#         # Need to map the expmeter_mode
+#         if mol_dict['expmeter_mode'] == 'OFF':
+#             mol_dict['expmeter_mode'] = 'EXPMETER_OFF'
+#         mol_dict['expmeter_snr'] = mol_dict['expmeter_snr'] or 0.0
+#         # replace '*' with ',' in filter if necessary
+#         if 'filter' in mol_dict and '*' in mol_dict['filter']:
+#             mol_dict['filter'] = mol_dict['filter'].replace('*', ',')
+#
+#         mol_summary_msg = "Building {} molecule {}/{} ({} x {:.3f}s)".format(
+#             molecule.type,
+#             i + 1,
+#             len(request.molecules),
+#             molecule.exposure_count,
+#             molecule.exposure_time,
+#         )
+#         log.debug(mol_summary_msg)
+#         rg_log.debug(mol_summary_msg, request_group.id)
+#
+#         block['molecules'].append(mol_dict)
+#     log.debug("Constructing block: RN=%s TN=%s, %s <-> %s, priority %s",
+#                                      block['molecules'][0]['request_num'], block['molecules'][0]['tracking_num'],
+#                                      block['start'], block['end'], block['priority'])
+#
+#     return block
 
 
 @metric_timer('pond.get_network_running_interavls')

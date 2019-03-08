@@ -88,7 +88,7 @@ class TestKernelMappings(object):
         constraints = Constraints(max_airmass=airmass)
         req  = Request(
                         target         = self.target,
-                        molecules      = [self.mol],
+                        configurations= [self.mol],
                         windows        = dt_windows,
                         constraints    = constraints,
                         id=1,
@@ -348,7 +348,7 @@ class TestKernelMappings(object):
 
         req  = Request(
                        target         = self.target,
-                       molecules      = [self.mol],
+                       configurations= [self.mol],
                        windows        = dt_windows,
                        constraints    = constraints,
                        id='1'
@@ -401,7 +401,7 @@ class TestKernelMappings(object):
         constraints = Constraints({})
         req  = Request(
                         target     = self.target,
-                        molecules  = [self.mol],
+                        configurations= [self.mol],
                         windows    = dt_windows,
                         constraints = constraints,
                         id='1'
@@ -452,7 +452,7 @@ class TestKernelMappings(object):
         constraints = Constraints({})
         req  = Request(
                        target     = self.target,
-                       molecules  = [self.mol],
+                       configurations= [self.mol],
                        windows    = dt_windows,
                        constraints = constraints,
                        id='1'
@@ -514,7 +514,7 @@ class TestKernelMappings(object):
         constraints = Constraints()
         req = Request(
                        target          = target,
-                       molecules       = [self.mol],
+                       configurations= [self.mol],
                        windows         = dt_windows,
                        constraints     = constraints,
                        id='1',
@@ -581,7 +581,7 @@ class TestKernelMappings(object):
         constraints = Constraints()
         req = Request(
                        target          = target,
-                       molecules       = [self.mol],
+                       configurations= [self.mol],
                        windows         = dt_windows,
                        constraints     = constraints,
                        id='1',
