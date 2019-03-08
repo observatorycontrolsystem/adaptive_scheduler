@@ -113,7 +113,7 @@ class TestKernelMappings(object):
         configuration.constraints['max_airmass'] = airmass
 
         req  = Request(
-                        configurations= [self.configuration],
+                        configurations= [configuration],
                         windows        = dt_windows,
                         id=1,
                         duration       = 10

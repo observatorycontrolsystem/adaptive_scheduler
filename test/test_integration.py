@@ -69,9 +69,11 @@ class TestIntegration(object):
             mode='OFF'
         )
 
-        self.constraints = {}
+        self.constraints = {'max_airmass': None,
+                            'min_lunar_distance': 0}
 
         self.configuration = Configuration(**dict(
+            id=5,
             target=self.target,
             type='expose',
             instrument_type='1M0-SCICAM-SBIG',

@@ -592,17 +592,13 @@ class TestWindowFilters(object):
     def test_drop_empty_requests(self):
         request_id = 5
         r  = Request(
-                      target         = None,
                       configurations= None,
                       windows        = Windows(),
-                      constraints    = None,
                       id= request_id
                     )
         r2  = Request(
-                      target         = None,
                       configurations= None,
                       windows        = Windows(),
-                      constraints    = None,
                       id=9
                     )
         rg1 = RequestGroup(
@@ -622,18 +618,14 @@ class TestWindowFilters(object):
     def test_filter_on_pending(self):
         request_id = 5
         r1  = Request(
-                      target         = None,
                       configurations= None,
                       windows        = Windows(),
-                      constraints    = None,
                       id= request_id,
                       state          = 'PENDING'
                     )
         r2  = Request(
-                      target         = None,
                       configurations= None,
                       windows        = Windows(),
-                      constraints    = None,
                       id=9,
                       state          = 'UNSCHEDULABLE'
                     )
