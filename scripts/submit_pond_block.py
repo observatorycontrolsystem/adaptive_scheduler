@@ -1,7 +1,7 @@
 from adaptive_scheduler.pond import ObservationScheduleInterface, build_block, PondBlock, Block
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
-from adaptive_scheduler.model2 import (RequestGroup, Request, Molecule, Window, Windows, Proposal, Target,
-                                       SiderealTarget, Constraints, MoleculeFactory)
+from adaptive_scheduler.model2 import (RequestGroup, Request, Configuration, Window, Windows, Proposal, Target,
+                                       SiderealTarget, Constraints, ConfigurationFactory)
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 
@@ -26,7 +26,7 @@ windows.append(window)
 
 target = SiderealTarget(name='sirius', ra=101.2871542, dec=-16.7161167, proper_motion_ra=-546.01, proper_motion_dec=-1223.07)
 
-molecules = [MoleculeFactory().build({
+molecules = [ConfigurationFactory().build({
     'type': 'EXPOSE',
     'exposure_count': 60,
     'bin_x': 1,

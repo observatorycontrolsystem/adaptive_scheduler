@@ -50,7 +50,7 @@ class TestScheduler(object):
                                requests=None,
                                proposal=None,
                                id=request_group_id,
-                               group_id=None,
+                               name=None,
                                expires=None,
                                ipp_value=1.0
                              )
@@ -237,8 +237,8 @@ class TestScheduler(object):
 
 
     # TODO: Not sure if this case really needs to work.  If scheduler can only put in a single
-    # ToO for a resource at a time, that seems OK, but make sure it handles the case where the
-    # earlier ToO has a lower value than the non competing later ToO.  In that case, both should
+    # Rapid Response for a resource at a time, that seems OK, but make sure it handles the case where the
+    # earlier RR has a lower value than the non competing later RR.  In that case, both should
     # get scheduled, but I suspect that the current implementation will only schedule the later
     # more valuable one.
     @nottest
@@ -274,7 +274,7 @@ class TestScheduler(object):
         
         assert_equal(resource_mask['1m0a.doma.bpl'], Intervals([]))
 
-    def test_create_resource_mask_running_too(self):
+    def test_create_resource_mask_running_rr(self):
         mock_kernel_class = Mock()
         scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
         
@@ -295,7 +295,7 @@ class TestScheduler(object):
         resource_mask = scheduler.create_resource_mask(available_resources, resource_usage_snapshot, rr_request_group_ids, preemption_enabled=False)
         assert_equal(resource_mask['1m0a.doma.bpl'], self.build_intervals([(start, end)]))
 
-    def test_create_resource_mask_running_too_failed(self):
+    def test_create_resource_mask_running_rr_failed(self):
         mock_kernel_class = Mock()
         scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
         
@@ -457,8 +457,8 @@ class TestScheduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_rg(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
-        '''Should schedule a single too request
+    def test_run_scheduler_rr_mode_with_schedulable_rr_single_rg(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+        '''Should schedule a single Rapid Response request
         '''
         # Build mock user requests
         request_duration_seconds = 60
@@ -469,7 +469,7 @@ class TestScheduler(object):
         telescope2 = '1m0a.doma.lsc'
         request_windows = create_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
         request = create_request(request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=[telescope1, telescope2], is_rr=True)
-        too_single_rg = create_request_group(request_group_id, priority, [request], 'single')
+        rr_single_rg = create_request_group(request_group_id, priority, [request], 'single')
 
         # Build mock reservation list
         prepare_for_kernel_mock.side_effect = self.prepare_for_kernel_side_effect_factory(self.normalize_windows_to)
@@ -485,7 +485,7 @@ class TestScheduler(object):
 
         # Create unmocked Scheduler parameters
         scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
-        rr_request_groups = [too_single_rg]
+        rr_request_groups = [rr_single_rg]
 
         # Start scheduler run
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), [], {})
@@ -593,8 +593,8 @@ class TestScheduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_rg_with_unavoidable_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
-        '''Should cancel lowest priority normal running user request and schedule ToO
+    def test_run_scheduler_rr_mode_with_schedulable_rr_single_rg_with_unavoidable_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+        '''Should cancel lowest priority normal running user request and schedule Rapid Response
         '''
         # Build mock user requests
         request_duration_seconds = 60
@@ -676,8 +676,8 @@ class TestScheduler(object):
 
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_too_single_rg_with_unavoidable_too_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
-        '''Should not be scheduled and should not cancel running ToOs
+    def test_run_scheduler_rr_mode_with_schedulable_rr_single_rg_with_unavoidable_rr_conflict(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock):
+        '''Should not be scheduled and should not cancel running RRs
         '''
         # Build mock user requests
         request_duration_seconds = 60
@@ -750,8 +750,8 @@ class TestScheduler(object):
     @patch.object(Scheduler, 'apply_window_filters')
     @patch.object(Scheduler, 'prepare_available_windows_for_kernel')
     @patch.object(Scheduler, 'prepare_for_kernel')
-    def test_run_scheduler_too_mode_with_schedulable_not_visible_too_single_rg(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock, apply_window_filters_mock):
-        '''Should result in empty too schedule result when ToO not visible
+    def test_run_scheduler_rr_mode_with_schedulable_not_visible_rr_single_rg(self, prepare_for_kernel_mock, prepare_available_windows_for_kernel_mock, apply_window_filters_mock):
+        '''Should result in empty Rapid Response schedule result when RR not visible
         '''
         # Build mock user requests
         request_duration_seconds = 60
@@ -903,7 +903,7 @@ def create_request_windows(start_end_tuples):
     return windows
 
 
-def create_request_group(request_group_id, priority, requests, operator):  # window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60):
+def create_request_group(request_group_id, priority, requests, operator):
 
     mock_request_group = Mock(id=request_group_id, priority=priority, requests=requests, operator=operator)
     mock_request_group.n_requests = Mock(return_value=len(requests))
@@ -1243,7 +1243,7 @@ class TestSchedulerRunner(object):
         assert_equal(1, self.network_interface_mock.save.call_count)
 
     def test_scheduler_runner_no_rr_requests(self):
-        ''' Shouldn't fail when no ToOs are passed to scheduler
+        ''' Shouldn't fail when no RRs are passed to scheduler
         '''
         request_duration_seconds = 60
         priority = 10
@@ -1273,15 +1273,15 @@ class TestSchedulerRunner(object):
         rr_request_group_id = 1
         rr_request_id = 1
         request_windows = create_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
-        too_request = create_request(rr_request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_rr=True)
-        too_single_rg = create_request_group(rr_request_group_id, priority, [too_request], 'single')
+        rr_request = create_request(rr_request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_rr=True)
+        rr_single_rg = create_request_group(rr_request_group_id, priority, [rr_request], 'single')
 
         self.scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
 
-        mock_input_factory = create_scheduler_input_factory([too_single_rg], [])
+        mock_input_factory = create_scheduler_input_factory([rr_single_rg], [])
         scheduler_runner = SchedulerRunner(self.sched_params, self.scheduler_mock, self.network_interface_mock, self.network_model, mock_input_factory)
         scheduler_runner.semester_details = self.observation_portal_interface_mock.get_semester_details(None)
-        scheduler_runner.json_rgs_to_scheduler_model_rgs = Mock(return_value=[too_single_rg])
+        scheduler_runner.json_rgs_to_scheduler_model_rgs = Mock(return_value=[rr_single_rg])
         scheduler_runner.run()
 
         assert_equal(1, self.scheduler_mock.run_scheduler.call_count)
@@ -1290,7 +1290,7 @@ class TestSchedulerRunner(object):
 
     @patch('adaptive_scheduler.scheduler_input.SchedulingInput.request_groups')
     def test_call_scheduler_cancels_proper_resources(self, mock_prop):
-        ''' Only part of resources scheduled for ToO should be canceled after RR scheduling run
+        ''' Only part of resources scheduled for RR should be canceled after RR scheduling run
         and normal run should not cancel RRs
         '''
         network_model = {'1m0a.doma.lsc': {}, '1m0a.doma.elp': {}}
@@ -1341,15 +1341,15 @@ class TestSchedulerRunner(object):
 
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
-        # too loop cancels just the time it has reserved on a resource
+        # RR loop cancels just the time it has reserved on a resource
         assert_equal(self.network_interface_mock.cancel.call_args_list[0][0][0]['1m0a.doma.lsc'], [(rr_reservation_start, rr_reservation_start + timedelta(seconds=rr_reservation.duration))])
-        # cancel too flag set for too loop
+        # cancel RR flag set for RR loop
         assert_true(self.network_interface_mock.cancel.call_args_list[0][0][2])
-        # cancel normal flag set for first cancel of ToO loop (time based cancel)
+        # cancel normal flag set for first cancel of RR loop (time based cancel)
         assert_true(self.network_interface_mock.cancel.call_args_list[0][0][3])
-        # cancel normal flag not set for second cancel of ToO loop (all resource ToO cancel)
+        # cancel normal flag not set for second cancel of RR loop (all resource RR cancel)
         assert_false(self.network_interface_mock.cancel.call_args_list[1][0][3])
-        # cancel_too flag not set for normal loop
+        # cancel RR flag not set for normal loop
         assert_false(self.network_interface_mock.cancel.call_args_list[2][0][2])
         # normal loop cancels on all resources
         assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[2][0][0])
@@ -1365,8 +1365,8 @@ class TestSchedulerRunner(object):
         normal_request_group_id = 2
         normal_request_id = 2
         request_windows = create_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
-        too_request = create_request(rr_request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_rr=True)
-        too_single_rg = create_request_group(rr_request_group_id, priority, [too_request], 'single')
+        rr_request = create_request(rr_request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'], is_rr=True)
+        rr_single_rg = create_request_group(rr_request_group_id, priority, [rr_request], 'single')
         normal_request = create_request(normal_request_id, duration=request_duration_seconds, windows=request_windows, possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'])
         normal_single_rg = create_request_group(normal_request_group_id, priority, [normal_request], 'single')
 
@@ -1375,7 +1375,7 @@ class TestSchedulerRunner(object):
         scheduler_mock.run_scheduler = Mock(return_value=SchedulerResult())
         network_model_mock = {}
 
-        mock_input_factory = create_scheduler_input_factory([too_single_rg], [normal_single_rg])
+        mock_input_factory = create_scheduler_input_factory([rr_single_rg], [normal_single_rg])
         scheduler_runner = SchedulerRunner(sched_params, scheduler_mock, self.network_interface_mock, network_model_mock, mock_input_factory)
         scheduler_runner.semester_details = self.observation_portal_interface_mock.get_semester_details(None)
         scheduler_runner.run()
@@ -1413,13 +1413,13 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                             (
                              ("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),
                             ))
-        too_request = create_request(rr_request_id,
+        rr_request = create_request(rr_request_id,
                                      duration=request_duration_seconds,
                                      windows=request_windows,
                                      possible_telescopes=['1m0a.doma.elp', '1m0a.doma.lsc'],
                                      is_rr=True)
-        too_single_rg = create_request_group(rr_request_group_id, priority,
-                                             [too_request], 'single')
+        rr_single_rg = create_request_group(rr_request_group_id, priority,
+                                             [rr_request], 'single')
         normal_request = create_request(normal_request_id,
                                         duration=request_duration_seconds,
                                         windows=request_windows,
@@ -1428,7 +1428,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                                 priority, [normal_request],
                                                'single')
 
-        return [normal_single_rg, too_single_rg]
+        return [normal_single_rg, rr_single_rg]
 
     def setup_mock_create_input_factory(self, request_groups):
         snapshot = ResourceUsageSnapshot(datetime.utcnow, [], [])

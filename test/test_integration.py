@@ -4,9 +4,9 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.model2      import (SiderealTarget, Proposal, ConfigurationFactory,
+from adaptive_scheduler.model2      import (SiderealTarget, Proposal, Configuration,
                                             Request, RequestGroup,
-                                            Windows, Window, Constraints)
+                                            Windows, Window)
 
 from test_scheduler import create_scheduler_input_factory, create_running_request_group
 from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
@@ -50,21 +50,37 @@ class TestIntegration(object):
                                   tac_priority       = 1
                                 )
 
-        self.mol_factory = ConfigurationFactory()
+        self.instrument_config = dict(
+            exposure_count=1,
+            bin_x=2,
+            bin_y = 2,
+            exposure_time=60 * 25,
+            optical_elements={'filter': 'b'}
+        )
 
-        self.molecule = self.mol_factory.build(
-                                                dict(
-                                                  type            = 'expose',
-                                                  exposure_count  = 1,
-                                                  bin_x           = 2,
-                                                  bin_y           = 2,
-                                                  instrument_name = 'KB12',
-                                                  filter          = 'b',
-                                                  exposure_time   = 60*25,
-                                                  priority        = 1
-                                                )
-                                              )
-        self.constraints = Constraints({})
+        self.guiding_config = dict(
+            state='OPTIONAL',
+            mode='',
+            optical_elements={},
+            exposure_time=10
+        )
+
+        self.acquisition_config = dict(
+            mode='OFF'
+        )
+
+        self.constraints = {}
+
+        self.configuration = Configuration(**dict(
+            target=self.target,
+            type='expose',
+            instrument_type='1M0-SCICAM-SBIG',
+            priority=1,
+            instrument_configs=[self.instrument_config],
+            acquisition_config=self.acquisition_config,
+            guiding_config=self.guiding_config,
+            constraints=self.constraints
+        ))
 
         self.base_time = datetime(2016, 9, 14, 6, 0)
 
@@ -85,65 +101,55 @@ class TestIntegration(object):
         self.windows_3 = Windows()
         self.windows_3.append(self.window_3)
 
-        self.request_1 = Request(target         = self.target,
-                                 configurations= [self.molecule],
+        self.request_1 = Request(configurations= [self.configuration],
                                  windows        = self.windows_1,
-                                 constraints    = self.constraints,
                                  id= 1,
                                  duration       = 1750)
 
-        self.request_2 = Request(target         = self.target,
-                                 configurations= [self.molecule],
+        self.request_2 = Request(configurations= [self.configuration],
                                  windows        = self.windows_2,
-                                 constraints    = self.constraints,
                                  id= 2,
                                  duration       =1750)
 
-        self.request_3 = Request(target         = self.target,
-                                 configurations= [self.molecule],
+        self.request_3 = Request(configurations= [self.configuration],
                                  windows        = self.windows_2,
-                                 constraints    = self.constraints,
                                  id= 3,
                                  duration       =1750)
 
-        self.request_4 = Request(target         = self.target,
-                                 configurations= [self.molecule],
+        self.request_4 = Request(configurations= [self.configuration],
                                  windows        = self.windows_3,
-                                 constraints    = self.constraints,
                                  id= 4,
                                  duration       =1750)
 
-        self.request_5 = Request(target         = self.target,
-                                 configurations= [self.molecule],
+        self.request_5 = Request(configurations= [self.configuration],
                                  windows        = self.windows_3,
-                                 constraints    = self.constraints,
                                  id= 5,
                                  duration       =1750)
 
         self.and_request_group_1 = RequestGroup(operator='and', requests=[self.request_1, self.request_2],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                 id=1, observation_type='NORMAL',
-                                                ipp_value=1.0, group_id='ur 1', submitter='')
+                                                ipp_value=1.0, name='ur 1', submitter='')
         self.and_request_group_2 = RequestGroup(operator='and', requests=[self.request_3, self.request_4],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                 id=2, observation_type='NORMAL',
-                                                ipp_value=1.0, group_id='ur 2', submitter='')
+                                                ipp_value=1.0, name='ur 2', submitter='')
         self.many_request_group_1 = RequestGroup(operator='many', requests=[self.request_1, self.request_2],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                  id=3, observation_type='NORMAL',
-                                                 ipp_value=1.5, group_id='ur 3', submitter='')
+                                                 ipp_value=1.5, name='ur 3', submitter='')
         self.many_request_group_2 = RequestGroup(operator='many', requests=[self.request_3, self.request_4],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                  id=4, observation_type='NORMAL',
-                                                 ipp_value=1.5, group_id='ur 4', submitter='')
+                                                 ipp_value=1.5, name='ur 4', submitter='')
         self.rr_request_group_1 = RequestGroup(operator='many', requests=[self.request_5],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                id=5, observation_type='RAPID_RESPONSE',
-                                               ipp_value=1.5, group_id='ur 5', submitter='')
+                                               ipp_value=1.5, name='ur 5', submitter='')
         self.rr_request_group_2 = RequestGroup(operator='many', requests=[self.request_1, self.request_3],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                id=6, observation_type='RAPID_RESPONSE',
-                                               ipp_value=1.5, group_id='ur 6', submitter='')
+                                               ipp_value=1.5, name='ur 6', submitter='')
 
     def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
                            block_schedule_by_resource={}, running_request_groups=[], rapid_response_ids=[],
@@ -263,18 +269,16 @@ class TestIntegration(object):
                                     'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
             windows = Windows()
             windows.append(window)
-            request = Request(target=self.target,
-                              configurations=[self.molecule],
+            request = Request(configurations=[self.configuration],
                               windows=windows,
-                              constraints=self.constraints,
                               id=int("11{}".format(days_out).rjust(10, '0')),
                               duration=1750)
             request_list.append(request)
             days_out += 1
 
         request_group = RequestGroup(operator='and', requests=request_list, proposal=self.proposal,
-                                    expires=datetime(2050, 1, 1), id=100,
-                                    ipp_value=1.0, group_id='large ur', submitter='', observation_type='NORMAL')
+                                     expires=datetime(2050, 1, 1), id=100,
+                                     ipp_value=1.0, name='large ur', submitter='', observation_type='NORMAL')
 
         normal_request_list = [request_group,]
         result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))
@@ -481,6 +485,7 @@ class TestIntegration(object):
                                              'end': scheduler_start + timedelta(days=150)}
         cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(result.schedule)
         assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
+        assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
         assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
 
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[6][1], semester_start)

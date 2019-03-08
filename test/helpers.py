@@ -10,7 +10,7 @@ def create_mock_proposal():
     return mock_proposal
 
 
-def create_request_group(window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60, first_request_id=5, request_group_id=5):
+def create_request_group(window_dicts, operator='and', resource_name='Martin', configurations=None, proposal=create_mock_proposal(), expires=None, duration=60, first_request_id=5, request_group_id=5):
         t1 = {'name': resource_name}
 
         req_list = []
@@ -27,10 +27,8 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', t
                 window_list.append(w)
 
             r  = Request(
-                          target         = target,
-                          configurations= molecules,
+                          configurations= configurations,
                           windows        = windows,
-                          constraints    = None,
                           id= next_request_id
                         )
 
@@ -53,7 +51,7 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', t
                            proposal        = proposal,
                            expires         = None,
                            id= request_group_id,
-                           group_id        = None,
+                           name= None,
                            ipp_value       = 1.0,
                            observation_type= 'NORMAL',
                            submitter       = '',

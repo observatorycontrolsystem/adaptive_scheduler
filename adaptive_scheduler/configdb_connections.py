@@ -227,7 +227,7 @@ class ConfigDBInterface(object, SendMetricMixin):
         if len(telescope_sets) > 1:
             return telescope_sets[0].intersection(*telescope_sets[1:])
         else:
-            return telescope_sets[0]
+            return telescope_sets[0] if telescope_sets else set()
 
     def get_all_sites(self):
         """Function returns the current structure of sites we can use for telescope info"""

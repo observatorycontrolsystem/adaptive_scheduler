@@ -340,20 +340,17 @@ class SatelliteTarget(Target):
 
 class Configuration(DataContainer):
     def __init__(self, *initial_data, **kwargs):
-        self.mol_dict = initial_data[0]
-        self.ag_name = None
         DataContainer.__init__(self, *initial_data, **kwargs)
-        self.required_fields = required_fields
 
     def get_instrument_requirements(self):
         ''' Return a dictionary of instrument requirements for this configuration '''
         science_optical_elements = defaultdict(set)
         for instrument_config in self.instrument_configs:
-            for element_type, element_value in instrument_config['optical_elements']:
+            for element_type, element_value in instrument_config['optical_elements'].items():
                 plural_element_type = element_type + 's'
                 science_optical_elements[plural_element_type].add(element_value)
         guiding_optical_elements = defaultdict(set)
-        for element_type, element_value in self.guiding_config['optical_elements']:
+        for element_type, element_value in self.guiding_config['optical_elements'].items():
             plural_element_type = element_type + 's'
             guiding_optical_elements[plural_element_type].add(element_value)
 
@@ -434,7 +431,7 @@ class Request(EqualityMixin):
         place. These are combined within a CompoundRequest to allow AND and OR
         semantics ("do this and this and this", "do this or this").
 
-        molecules - a list of Molecule objects (detailed observing information)
+        configurations - a list of Configuration objects (detailed observing information)
         windows   - a list of start/end datetimes, representing when this observation
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
@@ -473,11 +470,11 @@ class RequestGroup(EqualityMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, id, observation_type, ipp_value, group_id, expires, submitter):
+    def __init__(self, operator, requests, proposal, id, observation_type, ipp_value, name, expires, submitter):
 
         self.proposal = proposal
         self.id = id
-        self.group_id = group_id
+        self.name = name
         self.ipp_value = ipp_value
         self.observation_type = observation_type
         self.operator = self._validate_type(operator)
@@ -719,7 +716,7 @@ class ModelBuilder(object):
                                     id= rg_id,
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = safe_unidecode(rg_dict['group_id'], 50),
+                                    name= rg_dict['name'],
                                     expires         = max_window_time,
                                     submitter       = safe_unidecode(submitter, 50),
                                   )
@@ -768,7 +765,7 @@ class ModelBuilder(object):
             instrument_types_to_requirements[config.instrument_type] = config.get_instrument_requirements()
 
         telescopes = self.configdb_interface.get_telescopes_for_instruments(
-            intrument_types_to_requirements, req_dict['location']
+            instrument_types_to_requirements, req_dict['location']
         )
 
         if not telescopes:

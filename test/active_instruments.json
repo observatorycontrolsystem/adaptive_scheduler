@@ -2458,7 +2458,7 @@
       "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
       "optical_element_groups": [
         {
-          "type": "filters",
+          "type": "slits",
           "name": "23",
           "optical_elements": [
             {
@@ -2986,7 +2986,7 @@
       "filters": "slit_1.6as",
       "optical_element_groups": [
         {
-          "type": "filters",
+          "type": "slits",
           "name": "29",
           "optical_elements": [
             {
@@ -3343,7 +3343,7 @@
       "filters": "slit_1.6as",
       "optical_element_groups": [
         {
-          "type": "filters",
+          "type": "slits",
           "name": "33",
           "optical_elements": [
             {
@@ -3392,7 +3392,7 @@
       "filters": "slit_1.6as",
       "optical_element_groups": [
         {
-          "type": "filters",
+          "type": "slits",
           "name": "34",
           "optical_elements": [
             {
@@ -3448,7 +3448,7 @@
       "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
       "optical_element_groups": [
         {
-          "type": "filters",
+          "type": "slits",
           "name": "35",
           "optical_elements": [
             {
