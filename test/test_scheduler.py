@@ -1205,7 +1205,7 @@ class TestSchedulerRunner(object):
         running_request.add_error("me love you long time")
 
         self.scheduler_runner.abort_running_requests([(running_request, ("A good reason", "Another good reason"))])
-        self.network_interface_mock.abort.assert_called_once_with(running_request, "A good reason, Another good reason")
+        self.network_interface_mock.abort.assert_called_once_with(running_request)
 
     def test_scheduler_runner_abort_running_requests_empty_list(self):
         start = datetime.strptime("2013-05-22 19:00:00", '%Y-%m-%d %H:%M:%S')

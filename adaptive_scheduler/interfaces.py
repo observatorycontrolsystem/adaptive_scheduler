@@ -157,15 +157,15 @@ class NetworkInterface(object):
         '''
         return self.valhalla_interface.get_all_request_groups(start, end)
 
-    def cancel(self, cancelation_date_list_by_resource, reason, include_toos, include_normals):
+    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
-        return self.network_schedule_interface.cancel(cancelation_date_list_by_resource, reason, include_toos,
-                                                      include_normals)
+        return self.network_schedule_interface.cancel(cancelation_date_list_by_resource, include_rr,
+                                                      include_normal)
     
-    def abort(self, running_request, reason):
-        return self.network_schedule_interface.abort(running_request, reason)
+    def abort(self, running_request):
+        return self.network_schedule_interface.abort(running_request)
             
     def save(self, schedule, semester_start, dry_run=False):
         ''' Save the provided observing schedule
@@ -233,7 +233,7 @@ class CachedInputNetworkInterface(object):
         '''
         return 0
     
-    def abort(self, running_request, reasons):
+    def abort(self, running_request):
         ''' Abort a running request"
         '''
         pass

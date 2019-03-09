@@ -78,44 +78,45 @@ class ObservationScheduleInterface(object):
     
     def fetch_data(self, telescopes, running_window_start, running_window_end):
         #Fetch the data
-        self.running_observations_by_telescope = self._fetch_running_blocks(telescopes, running_window_start, running_window_end)
+        self.running_observations_by_telescope = self._fetch_running_observations(telescopes, running_window_start, running_window_end)
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_observations_by_telescope)
         # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
-        self.rr_intervals_by_telescope = self._fetch_too_intervals(telescopes, running_window_start, running_window_end)
+        self.rr_intervals_by_telescope = self._fetch_rr_intervals(telescopes, running_window_start, running_window_end)
 
-    @metric_timer('pond.get_running_blocks', num_blocks=lambda x: len(x))
-    def _fetch_running_blocks(self, telescopes, end_after, start_before):
-        running_blocks = self._get_network_running_observations(telescopes, end_after, start_before)
+    @metric_timer('observation_portal.get_running_observations', num_blocks=lambda x: len(x))
+    def _fetch_running_observations(self, telescopes, end_after, start_before):
+        running_observations = self._get_network_running_observations(telescopes, end_after, start_before)
         # This is just logging held over from when this was in the scheduling loop
         all_running_observations = []
-        for blocks in running_blocks.values():
-            all_running_observations += blocks
-        for block in all_running_observations:
-            msg = "UR %s has a running block (id=%d, finishing at %s)" % (
-                                                         block['molecules'][0]['tracking_num'],
-                                                         block['id'],
-                                                         block['end']
+        for observations in running_observations.values():
+            all_running_observations += observations
+        for observation in all_running_observations:
+            msg = "Request %d has a running observation (id=%d, finishing at %s)" % (
+                                                         observation['request']['id'],
+                                                         observation['id'],
+                                                         observation['end']
                                                        )
-        return running_blocks
+            self.log.debug(msg)
+        return running_observations
 
-    @metric_timer('pond.get_too_intervals')
-    def _fetch_too_intervals(self, telescopes, end_after, start_before):
-        too_blocks = self._get_too_intervals_by_telescope(telescopes, end_after, start_before)
+    @metric_timer('observation_portal.get_rr_intervals')
+    def _fetch_rr_intervals(self, telescopes, end_after, start_before):
+        rr_observations = self._get_rr_intervals_by_telescope(telescopes, end_after, start_before)
         
-        return too_blocks
+        return rr_observations
 
     def running_request_groups_by_id(self):
         running_rgs = {}
-        for blocks in self.running_observations_by_telescope.values():
-            for block in blocks:
-                request_group_id = int(block['molecules'][0]['tracking_num'])
+        for observations in self.running_observations_by_telescope.values():
+            for observation in observations:
+                request_group_id = int(observation['request_group_id'])
                 running_rg = running_rgs.setdefault(request_group_id, RunningRequestGroup(request_group_id))
-                telescope = block['telescope'] + '.' + block['observatory'] + '.' + block['site']
-                request_number = block['molecules'][0]['request_num'] if 'request_num' in block['molecules'][0] else ''
-                running_request = ObservationRunningRequest(telescope, request_number, block['id'],
-                                                            block['start'], block['end'])
-                if any([mol['failed'] for mol in block['molecules']]):
-                    running_request.add_error("Block has failed molecules")
+                telescope = observation['telescope'] + '.' + observation['observatory'] + '.' + observation['site']
+                request_id = observation['request']['id']
+                running_request = ObservationRunningRequest(telescope, request_id, observation['id'],
+                                                            observation['start'], observation['end'])
+                if any([conf['state'] == 'FAILED' for conf in observation['request']['configurations']]):
+                    running_request.add_error("Observation has failed configurations")
                 running_rg.add_running_request(running_request)
             
         return running_rgs
@@ -125,21 +126,21 @@ class ObservationScheduleInterface(object):
         '''
         return self.rr_intervals_by_telescope
     
-    @metric_timer('pond.cancel_requests', num_requests=lambda x: x, rate=lambda x: x)
-    def cancel(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
+    @metric_timer('observation_portal.cancel_observations', num_requests=lambda x: x, rate=lambda x: x)
+    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
         ''' Cancel the current scheduler between start and end
         ''' 
         n_deleted = 0
         if cancelation_date_list_by_resource:
-            n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, reason, cancel_toos,
-                                              cancel_normals)
+            n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, include_rr,
+                                              include_normal)
         return n_deleted
     
-    def abort(self, pond_running_request, reason):
+    def abort(self, pond_running_request):
         ''' Abort a running request
         '''
         block_ids = [pond_running_request.block_id]
-        return self._cancel_blocks(block_ids, reason)
+        return self._cancel_observations(block_ids)
 
     @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
@@ -208,72 +209,61 @@ class ObservationScheduleInterface(object):
         except AttributeError:
             pass
         return request_id
-
-    def _get_blocks_by_telescope_for_request_group_ids(self, request_group_ids, tels, ends_after, starts_before):
-        telescope_blocks = {}     
-        for full_tel_name in tels:
-            tel_name, obs_name, site_name = full_tel_name.split('.')
-            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name)
-            filtered_blocks = [block for block in schedule if block['molecules'][0]['tracking_num'] in request_group_ids]
-            telescope_blocks[full_tel_name] = filtered_blocks
-            
-        return telescope_blocks
     
-    def _get_too_blocks_by_telescope(self, tels, ends_after, starts_before):
-        telescope_blocks = {}     
+    def _get_rr_observations_by_telescope(self, tels, ends_after, starts_before):
+        telescope_observations = {}
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, too_blocks=True)
-            telescope_blocks[full_tel_name] = schedule
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, only_rr=True)
+            telescope_observations[full_tel_name] = schedule
             
-        return telescope_blocks
+        return telescope_observations
 
-    # Already timed by the fetch_too_intervals method
     @timeit
-    def _get_too_intervals_by_telescope(self, tels, ends_after, starts_before):
+    def _get_rr_intervals_by_telescope(self, tels, ends_after, starts_before):
         '''
             Return a map of telescope name to intervals for all currently
-            schedule ToO intervals.
+            scheduled Rapid Response observations.
         '''
         telescope_interval = {}
-        too_blocks_by_telescope = self._get_too_blocks_by_telescope(tels, ends_after, starts_before)
+        rr_observations_by_telescope = self._get_rr_observations_by_telescope(tels, ends_after, starts_before)
         
         for full_tel_name in tels:
-            blocks = too_blocks_by_telescope.get(full_tel_name, [])
+            observations = rr_observations_by_telescope.get(full_tel_name, [])
     
-            intervals = get_intervals(blocks)
+            intervals = get_intervals(observations)
             if not intervals.is_empty():
                 telescope_interval[full_tel_name] = intervals
     
         return telescope_interval
 
-    @metric_timer('pond.get_schedule')
-    def _get_schedule(self, start, end, site, obs, tel, too_blocks=None):
-        # Only retrieve blocks which have not been cancelled or aborted
+    @metric_timer('observation_portal.get_schedule')
+    def _get_schedule(self, start, end, site, obs, tel, only_rr=False):
+        # Only retrieve observations which are currently active
         params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
-                    observatory=obs, telescope=tel, limit=1000,
-                    canceled=False, aborted=False, offset=0)
-        if too_blocks:
-            params['too_blocks'] = too_blocks
+                      observatory=obs, telescope=tel, limit=1000, exclude_observation_type='DIRECT',
+                      state=['PENDING', 'IN_PROGRESS'], offset=0)
+        if only_rr:
+            params['observation_type'] = 'RAPID_RESPONSE'
 
-        base_url = self.host + '/blocks/'
+        base_url = self.host + '/api/schedule/'
 
         initial_results = self._get_block_helper(base_url, params)
-        blocks = initial_results['results']
+        observations = initial_results['results']
         count = initial_results['count']
-        total = len(blocks)
+        total = len(observations)
         while total < count:
             params['offset'] += params['limit']
             results = self._get_block_helper(base_url, params)
             count = results['count']
             total += len(results['results'])
-            blocks.extend(results['results'])
+            observations.extend(results['results'])
 
-        for block in blocks:
+        for block in observations:
             block['start'] = parse(block['start'], ignoretz=True)
             block['end'] = parse(block['end'], ignoretz=True)
 
-        return blocks
+        return observations
 
     def _get_block_helper(self, base_url, params):
         try:
@@ -284,7 +274,7 @@ class ObservationScheduleInterface(object):
             raise ScheduleException(e, "Unable to retrieve Schedule from Pond: {}".format(repr(e)))
 
     @timeit
-    def _cancel_schedule(self, cancelation_date_list_by_resource, reason, cancel_toos, cancel_normals):
+    def _cancel_schedule(self, cancelation_date_list_by_resource, include_rr, include_normal):
         total_num_canceled = 0
         for full_tel_name, cancel_dates in cancelation_date_list_by_resource.items():
             for (start, end) in cancel_dates:
@@ -298,32 +288,30 @@ class ObservationScheduleInterface(object):
                     'site': site,
                     'observatory': obs,
                     'telescope': tel,
-                    'cancel_reason': reason
+                    'include_rr': include_rr,
+                    'include_normal': include_normal
                 }
-                if cancel_toos != cancel_normals:
-                    data['is_too'] = cancel_toos
 
                 try:
-                    results = requests.post(self.host + '/blocks/cancel/', json=data, timeout=120)
+                    results = requests.post(self.host + '/api/observations/cancel/', json=data, timeout=120)
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
-                    msg = 'Cancelled {} blocks at {}'.format(num_canceled, full_tel_name)
+                    msg = 'Cancelled {} observations at {}'.format(num_canceled, full_tel_name)
                     log.info(msg)
                 except Exception as e:
-                    raise ScheduleException("Failed to cancel blocks in pond: {}".format(repr(e)))
+                    raise ScheduleException("Failed to cancel observations in pond: {}".format(repr(e)))
 
         return total_num_canceled
 
-    def _cancel_blocks(self, block_ids, reason):
+    def _cancel_observations(self, observation_ids):
         try:
-            data = {'blocks': block_ids,
-                    'cancel_reason': reason}
-            results = requests.post(self.host + '/blocks/cancel/', json=data, timeout=120)
+            data = {'ids': observation_ids}
+            results = requests.post(self.host + '/api/observations/cancel/', json=data, timeout=120)
             results.raise_for_status()
             num_canceled = results.json()['canceled']
         except Exception as e:
-            raise ScheduleException("Failed to abort blocks in pond: {}".format(repr(e)))
+            raise ScheduleException("Failed to abort observations in pond: {}".format(repr(e)))
     
         return num_canceled
     
@@ -341,27 +329,25 @@ class ObservationScheduleInterface(object):
             running_at_tel[full_tel_name] = running
     
             n_running = len(running)
-            _, block_str = pl(n_running, 'block')
-            log.debug("Found %d running %s at %s", n_running, block_str, full_tel_name)
+            _, observation_str = pl(n_running, 'observation')
+            log.debug("Found %d running %s at %s", n_running, observation_str, full_tel_name)
             n_running_total += n_running
     
-        _, block_str = pl(n_running_total, 'block')
-        log.info("Network-wide, found %d running %s", n_running_total, block_str)
+        _, observation_str = pl(n_running_total, 'observation')
+        log.info("Network-wide, found %d running %s", n_running_total, observation_str)
     
         return running_at_tel
     
     def _get_running_observations(self, ends_after, starts_before, site, obs, tel):
-        schedule  = self._get_schedule(ends_after, starts_before, site, obs, tel)
+        schedule = self._get_schedule(ends_after, starts_before, site, obs, tel)
 
         cutoff_dt = starts_before
         for observation in schedule:
             if observation['start'] < starts_before < observation['end']:
-                if (len(observation['molecules']) > 0 and 'tracking_num' in observation['molecules'][0]
-                        and observation['molecules'][0]['tracking_num']):
-                    if observation['end'] > cutoff_dt:
-                        cutoff_dt = observation['end']
+                if observation['end'] > cutoff_dt:
+                    cutoff_dt = observation['end']
     
-        running = [b for b in schedule if b['start'] < cutoff_dt and 'tracking_num' in b['molecules'][0] and b['molecules'][0]['tracking_num']]
+        running = [b for b in schedule if b['start'] < cutoff_dt]
     
         return running
 
@@ -486,21 +472,21 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
 #     return block
 
 
-@metric_timer('pond.get_network_running_interavls')
-def get_network_running_intervals(running_blocks_by_telescope):
+@metric_timer('pond.get_network_running_intervals')
+def get_network_running_intervals(running_observations_by_telescope):
     running_at_tel = {}
 
-    for key, blocks in running_blocks_by_telescope.items():
-        running_at_tel[key] = get_intervals(blocks)
+    for telescope, observations in running_observations_by_telescope.items():
+        running_at_tel[telescope] = get_intervals(observations)
 
     return running_at_tel
 
 
-def get_intervals(blocks):
-    ''' Create Intervals from given blocks  '''
+def get_intervals(observations):
+    ''' Create Intervals from given observations '''
     intervals = []
-    for block in blocks:
-        intervals.append((block['start'], block['end']))
+    for observation in observations:
+        intervals.append((observation['start'], observation['end']))
 
     return Intervals(intervals)
 

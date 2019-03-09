@@ -706,17 +706,15 @@ class SchedulerRunner(object):
 
         return scheduler_result
 
-    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_rr, include_normals):
-        n_deleted = self.network_interface.cancel(cancelation_date_list_by_resource, "Superceded by new schedule",
-                                                  include_rr, include_normals)
+    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_rr, include_normal):
+        n_deleted = self.network_interface.cancel(cancelation_date_list_by_resource, include_rr, include_normal)
 
         return n_deleted
 
     def abort_running_requests(self, abort_requests):
         n_aborted = 0
         for rr, reasons in abort_requests:
-            reason = ', '.join(reasons)
-            n_aborted += self.network_interface.abort(rr, reason)
+            n_aborted += self.network_interface.abort(rr)
 
         return n_aborted
 
@@ -827,11 +825,11 @@ class SchedulerRunner(object):
 
             # Cancel just the time slots under a newly scheduled RR
             n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_rr=True,
-                                                      include_normals=True)
+                                                      include_normal=True)
             # Cancel any remaining ToOs not under a newly scheduled ToO (needed in case weather knocks out a telescope
             # that previously had a ToO scheduled on it)
             n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
-                                                       include_normals=False)
+                                                       include_normal=False)
             n_aborted = self.abort_running_requests(abort_requests)
             # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
             n_submitted = self.save_resource_schedules(scheduler_result.schedule,
@@ -871,7 +869,7 @@ class SchedulerRunner(object):
                 if resource in cancelation_date_list_by_resource:
                     n_deleted += self.clear_resource_schedules({resource: cancelation_date_list_by_resource[resource]},
                                                                include_rr=False,
-                                                               include_normals=True)
+                                                               include_normal=True)
                 if resource in abort_requests_by_resource:
                     n_aborted += self.abort_running_requests(abort_requests_by_resource[resource])
 
