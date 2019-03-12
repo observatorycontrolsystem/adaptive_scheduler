@@ -4,12 +4,11 @@ from nose.tools import assert_equal, assert_almost_equal, raises
 from nose import SkipTest
 from mock import patch, Mock, MagicMock
 
-from adaptive_scheduler.pond import (InstrumentResolutionError, build_block, resolve_instrument, resolve_autoguider,
+from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument, resolve_autoguider,
                                      ObservationScheduleInterface)
 from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
-                                       SiderealTarget, Request,
-                                       RequestGroup, Constraints,
-                                       ConfigurationFactory)
+                                       SiderealTarget, Request, Configuration,
+                                       RequestGroup)
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
@@ -22,7 +21,7 @@ import responses
 import os
 
 
-class TestPond(object):
+class TestObservations(object):
 
     def setup(self):
         # Metadata missing proposal and tag parameters
@@ -64,37 +63,6 @@ class TestPond(object):
             defocus=0.0,
         )
 
-    # TODO: delete this if not used
-    def create_pond_block(self, location='1m0a.doma.coj', start=datetime(2012, 1, 1, 0, 0, 0),
-                          end=datetime(2012, 1, 2, 0, 0, 0), group_id='group', submitter='mysubmitter',
-                          request_group_id=1, request_id=1):
-        reservation = Mock()
-        reservation.scheduled_resource = location
-        semester_start = datetime(2012, 1, 1)
-        reservation.scheduled_start = datetime_to_normalised_epoch(start, semester_start)
-        reservation.duration = (end - start).total_seconds()
-
-        request = Mock()
-        request.constraints = Mock()
-        request.constraints.max_airmass = 2.0
-        request.constraints.min_lunar_distance = 30.0
-        request.constraints.max_lunar_phase = 0
-        request.constraints.max_seeing = 0
-        request.constraints.min_transparency = 0
-        request.id = request_id
-        request.target = self.valid_target
-        request.molecules = [self.valid_expose_mol, ]
-
-        request_group = Mock()
-        request_group.proposal = self.valid_proposal
-        request_group.submitter = submitter
-        request_group.group_id = group_id,
-        request_group.id = request_group_id
-
-        scheduled_block = build_block(reservation, request, request_group, semester_start, self.configdb_interface)
-
-        return scheduled_block
-
     def test_proposal_lists_missing_fields(self):
         missing = self.proposal.list_missing_fields()
 
@@ -111,7 +79,7 @@ class TestPond(object):
             requests=None,
             proposal=None,
             id='0000000001',
-            group_id=None,
+            name=None,
             expires=None,
             ipp_value=1.0,
             observation_type="RAPID_RESPONSE",
@@ -125,14 +93,13 @@ class TestPond(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        host = os.getenv('POND_HOST', 'ponddev.lco.gtn')
-        get_endpoint = host + '/blocks/'
+        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        get_endpoint = host + '/api/observations/'
         responses.add(responses.GET, get_endpoint,
                       json={"error": 'failed to get pond blocks'}, status=500)
 
-        request_group_ids = [ur1.id]
         observation_schedule_interface = ObservationScheduleInterface(host=host)
-        rr_blocks = observation_schedule_interface._get_blocks_by_telescope_for_request_group_ids(request_group_ids, tels, start, end)
+        rr_blocks = observation_schedule_interface._get_rr_observations_by_telescope(tels, start, end)
         assert_equal({}, rr_blocks)
 
     def test_scicam_instrument_resolves_to_a_specific_camera(self):
@@ -169,7 +136,7 @@ class TestPond(object):
         resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
 
 
-class TestPondInteractions(object):
+class TestObservationInteractions(object):
     def setup(self):
         self.start = datetime(2013, 7, 18, 0, 0, 0)
         self.end = datetime(2013, 9, 18, 0, 0, 0)
@@ -196,29 +163,29 @@ class TestPondInteractions(object):
     def test_cancel_blocks_called_when_dry_run_not_set(self):
         reason = 'Superceded by new schedule'
         ids = range(10)
-        host = os.getenv('POND_HOST', 'ponddev.lco.gtn')
-        cancel_endpoint = host + '/blocks/cancel/'
+        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)
 
         pond_interface = ObservationScheduleInterface(host=host)
-        pond_interface._cancel_blocks(ids, reason)
+        pond_interface._cancel_observations(ids)
 
     @responses.activate
     def test_cancel_schedule(self):
         start_end_by_resource = {'1m0a.doma.lsc': [(self.start, self.end), ]}
 
         delete_list = [Mock(id=1), Mock(id=2), Mock(id=3)]
-        host = os.getenv('POND_HOST', 'ponddev.lco.gtn')
-        cancel_endpoint = host + '/blocks/cancel/'
+        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint,
                       json={"canceled": len(delete_list)}, status=200)
 
         pond_interface = ObservationScheduleInterface(host=host)
-        n_deleted = pond_interface._cancel_schedule(start_end_by_resource, 'A good reason', True, True)
+        n_deleted = pond_interface._cancel_schedule(start_end_by_resource, True, True)
 
         assert_equal(n_deleted, len(delete_list))
 
-    @patch('adaptive_scheduler.pond.build_block')
+    @patch('adaptive_scheduler.observations.build_observation')
     def test_dont_send_schedule_to_pond_if_dry_run(self, mock_func1):
         mock_res_list = [Mock(), Mock()]
 
@@ -235,8 +202,8 @@ class TestPondInteractions(object):
                                    '1m0a.domb.lsc': ['block 3']}
 
         pond_interface = ObservationScheduleInterface()
-        n_submitted_total = pond_interface._send_schedule_to_pond(schedule, self.start,
-                                                                  self.configdb_interface, dry_run)
+        n_submitted_total = pond_interface._send_schedule_to_observation_portal(schedule, self.start,
+                                                                                self.configdb_interface, dry_run)
 
         assert_equal(n_submitted_total, 3)
 
@@ -258,41 +225,38 @@ class TestPondInteractions(object):
             proposal=proposal,
             expires=None,
             id=333333,
-            group_id=None,
+            name=None,
             ipp_value=1.0,
             observation_type="NORMAL",
             submitter=''
         )
 
-        constraints = Constraints(
-            max_airmass=None,
-            min_lunar_distance=None,
-            max_lunar_phase=None,
-            max_seeing=None,
-            min_transparency=None
-        )
-
-        molecule = Mock()
-        molecule.ag_mode = 'OFF'
-        molecule.type = 'EXPOSE'
-        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0, 'exposure_time': 30,
-                             'exposure_count': 1}
-        molecule.exposure_count = 1
-        molecule.exposure_time = 30
-        molecule.instrument_name = 'xx01'
+        configuration = Mock()
+        configuration.guiding_config = {'state': 'OFF'}
+        configuration.type = 'EXPOSE'
+        configuration.id = 11
+        configuration.instrument_type = '1M0-TEST-SCICAM'
+        configuration.constraints = {}
+        configuration.target = target
 
         request = Request(
-            target=target,
-            configurations=[molecule],
+            configurations=[configuration],
             windows=None,
-            constraints=constraints,
             id=22222
         )
 
-        received = build_block(reservation, request, request_group, self.start,
-                               self.configdb_interface)
+        reservation.request = request
+        reservation.request_group = request_group
+        configdb_interface = Mock()
+        configdb_interface.get_specific_instrument.return_value='xx01'
+        received = build_observation(reservation, self.start, configdb_interface)
 
-        assert_equal(received['is_too'], False, "Should not be a ToO block")
+        assert_equal(received['request'], 22222)
+        assert_equal(received['site'], 'bpl')
+        assert_equal(received['enclosure'], 'doma')
+        assert_equal(received['telescope'], '1m0a')
+        assert_equal(received['configuration_statuses'][0]['configuration'], 11)
+        assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx01')
 
     def test_build_too_block(self):
         reservation = Reservation(
@@ -312,38 +276,37 @@ class TestPondInteractions(object):
             proposal=proposal,
             expires=None,
             id=333333,
-            group_id=None,
+            name=None,
             ipp_value=1.0,
             observation_type="RAPID_RESPONSE",
             submitter=''
         )
 
-        constraints = Constraints(
-            max_airmass=None,
-            min_lunar_distance=None,
-            max_lunar_phase=None,
-            max_seeing=None,
-            min_transparency=None
-        )
-
-        molecule = Mock()
-        molecule.ag_mode = 'OFF'
-        molecule.type = 'EXPOSE'
-        molecule.mol_dict = {'ag_mode': 'OFF', 'expmeter_mode': 'OFF', 'expmeter_snr': 0, 'exposure_time': 30,
-                             'exposure_count': 1}
-        molecule.exposure_count = 1
-        molecule.exposure_time = 30
-        molecule.instrument_name = 'xx01'
+        configuration = Mock()
+        configuration.guiding_config = {'state': 'OPTIONAL'}
+        configuration.type = 'EXPOSE'
+        configuration.instrument_type = '1M0-FAKE-SCICAM'
+        configuration.constraints = {}
+        configuration.id = 13
+        configuration.target = target
 
         request = Request(
-            target=target,
-            configurations=[molecule],
+            configurations=[configuration],
             windows=None,
-            constraints=constraints,
-            id=22222,
+            id=22223,
         )
 
-        received = build_block(reservation, request, request_group, self.start,
-                               self.configdb_interface)
+        reservation.request = request
+        reservation.request_group = request_group
+        configdb_interface = Mock()
+        configdb_interface.get_specific_instrument.return_value = 'xx03'
+        configdb_interface.get_autoguider_for_instrument.return_value='xx04'
+        received = build_observation(reservation, self.start, configdb_interface)
 
-        assert_equal(received['is_too'], True, "Should be a ToO block")
+        assert_equal(received['request'], 22223)
+        assert_equal(received['site'], 'bpl')
+        assert_equal(received['enclosure'], 'doma')
+        assert_equal(received['telescope'], '1m0a')
+        assert_equal(received['configuration_statuses'][0]['configuration'], 13)
+        assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx03')
+        assert_equal(received['configuration_statuses'][0]['guide_camera_name'], 'xx04')

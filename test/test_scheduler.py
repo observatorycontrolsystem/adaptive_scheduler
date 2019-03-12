@@ -1344,13 +1344,13 @@ class TestSchedulerRunner(object):
         # RR loop cancels just the time it has reserved on a resource
         assert_equal(self.network_interface_mock.cancel.call_args_list[0][0][0]['1m0a.doma.lsc'], [(rr_reservation_start, rr_reservation_start + timedelta(seconds=rr_reservation.duration))])
         # cancel RR flag set for RR loop
-        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][2])
+        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][1])
         # cancel normal flag set for first cancel of RR loop (time based cancel)
-        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][3])
+        assert_true(self.network_interface_mock.cancel.call_args_list[0][0][2])
         # cancel normal flag not set for second cancel of RR loop (all resource RR cancel)
-        assert_false(self.network_interface_mock.cancel.call_args_list[1][0][3])
+        assert_false(self.network_interface_mock.cancel.call_args_list[1][0][2])
         # cancel RR flag not set for normal loop
-        assert_false(self.network_interface_mock.cancel.call_args_list[2][0][2])
+        assert_false(self.network_interface_mock.cancel.call_args_list[2][0][1])
         # normal loop cancels on all resources
         assert_true('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[2][0][0])
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[3][0][0])

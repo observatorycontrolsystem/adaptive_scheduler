@@ -18,7 +18,7 @@ from __future__ import division
 from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface
-from adaptive_scheduler.pond             import ObservationScheduleInterface
+from adaptive_scheduler.observations             import ObservationScheduleInterface
 from adaptive_scheduler.valhalla_connections import ObservationPortalInterface
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner

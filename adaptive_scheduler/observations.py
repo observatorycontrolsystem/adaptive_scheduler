@@ -1,33 +1,17 @@
 #!/usr/bin/env python
 
 '''
-pond.py - Facade to the pond_client library.
+observations.py - Facilitates getting, submitting, and cancelling observations from the Observation Portal.
 
-This module provides the scheduler's interface for constructing POND objects.
-It maps objects across domains from 1) -> 2) (described below).
+This module provides the scheduler's interface for constructing Observations.
 
-1) A complete scheduled observation in this facade needs the following:
-    * A ScheduledBlock made up of
-            * A Proposal object
-        * One or more Molecules, each made up of
-            * A set of Molecule-specific parameters
-            * A Target, if applicable
-
-
-2) A complete scheduled observation in the POND needs the following:
-    * A ScheduledBlock made up of
-        * One or more Observations, each made up of
-            * A set of Observation-specific parameters
-            * A Pointing, if applicable
-
-   Meta information about Observations is added by means of Group objects.
-
-Author: Eric Saunders
-February 2012
+Author: Jon Nation
+March 2019
 '''
 from __future__ import division
 
 from datetime import timedelta
+from collections import defaultdict
 
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
 
@@ -80,7 +64,7 @@ class ObservationScheduleInterface(object):
         #Fetch the data
         self.running_observations_by_telescope = self._fetch_running_observations(telescopes, running_window_start, running_window_end)
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_observations_by_telescope)
-        # TODO: Possible inefficency here.  Might be able to determine running too intervals from running blocks wihtout another call to pond
+        # TODO: Possible inefficency here.  Might be able to determine running RR intervals from running blocks wihtout another call
         self.rr_intervals_by_telescope = self._fetch_rr_intervals(telescopes, running_window_start, running_window_end)
 
     @metric_timer('observation_portal.get_running_observations', num_blocks=lambda x: len(x))
@@ -136,80 +120,66 @@ class ObservationScheduleInterface(object):
                                               include_normal)
         return n_deleted
     
-    def abort(self, pond_running_request):
+    def abort(self, running_request):
         ''' Abort a running request
         '''
-        block_ids = [pond_running_request.block_id]
+        block_ids = [running_request.block_id]
         return self._cancel_observations(block_ids)
 
-    @metric_timer('pond.save_requests', num_requests=lambda x: x, rate=lambda x: x)
+    @metric_timer('observation_portal.save_schedule', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
         ''' Save the provided observing schedule
         '''
-        # Convert the kernel schedule into POND blocks, and send them to the POND
-        n_submitted = self._send_schedule_to_pond(schedule, semester_start,
-                                            configdb_interface, dry_run)
+        # Convert the kernel schedule into observation_portal observations, and submit them
+        n_submitted = self._send_schedule_to_observation_portal(schedule, semester_start,
+                                                                configdb_interface, dry_run)
         return n_submitted
     
     # Already timed by the save method
     @timeit
-    def _send_schedule_to_pond(self, schedule, semester_start, configdb_interface, dry_run=False):
-        '''Convert a kernel schedule into POND blocks, and send them to the POND.'''
+    def _send_schedule_to_observation_portal(self, schedule, semester_start, configdb_interface, dry_run=False):
+        ''' Convert a kernel schedule into Observation Portal observations and submit them '''
 
         # TODO: Update this code to send Observations and ConfigStatuses to observation portal
-        # blocks_by_resource = {}
-        # for resource_name, reservations in schedule.items():
-        #     blocks_by_resource[resource_name] = []
-        #     for reservation in reservations:
-        #         try:
-        #             block = build_block(reservation, reservation.request,
-        #                                 reservation.request_group, semester_start,
-        #                                 configdb_interface)
-        #         except Exception:
-        #             log.exception('Unable to build block from reservation for request number {}'.format(
-        #                 self._get_request_id_from_reservation(reservation)
-        #             ))
-        #             continue
-        #         blocks_by_resource[resource_name].append(block)
-        #     _, block_str = pl(len(blocks_by_resource[resource_name]), 'block')
-        #     msg = 'Will send {} {} to {}'.format(len(blocks_by_resource[resource_name]), block_str, resource_name)
-        #     log_info_dry_run(msg, dry_run)
-        # n_submitted_total = self._send_blocks_to_pond(blocks_by_resource, dry_run)
+        observations_by_resource = defaultdict(list)
+        for resource_name, reservations in schedule.items():
+            for reservation in reservations:
+                try:
+                    observation = build_observation(reservation, semester_start, configdb_interface)
+                except Exception:
+                    log.exception('Unable to build observation from reservation for request number {}'.format(
+                        reservation.request.id
+                    ))
+                    continue
+                observations_by_resource[resource_name].append(observation)
+            _, observation_str = pl(len(observations_by_resource[resource_name]), 'observation')
+            msg = 'Will send {} {} to {}'.format(len(observations_by_resource[resource_name]), observation_str, resource_name)
+            log_info_dry_run(msg, dry_run)
+        n_submitted_total = self._send_observations_to_observation_portal(observations_by_resource, dry_run)
 
         return n_submitted_total
 
-    def _send_blocks_to_pond(self, blocks_by_resource, dry_run=False):
-        pond_blocks = [block for blocks in blocks_by_resource.values() for block in blocks]
-        # with open('/data/adaptive_scheduler/pond_blocks.json', 'w') as open_file:
-        #     json.dump(pond_blocks, open_file)
-        num_created = len(pond_blocks)
+    def _send_observations_to_observation_portal(self, observations_by_resource, dry_run=False):
+        observations = [ob for obs in observations_by_resource.values() for ob in obs]
+        num_created = len(observations)
         if not dry_run:
             try:
-                response = requests.post(self.host + '/blocks/', json=pond_blocks, timeout=120)
+                response = requests.post(self.host + '/api/observations/', json=observations, timeout=120)
                 response.raise_for_status()
                 num_created = response.json()['num_created']
-                self._log_bad_requests(pond_blocks, response.json()['errors'] if 'errors' in response.json() else {})
+                self._log_bad_observations(observations, response.json()['errors'] if 'errors' in response.json() else {})
             except Exception as e:
-                log.error("_send_blocks_to_pond error: {}".format(repr(e)))
+                log.error("_send_observations_to_observation_portal error: {}".format(repr(e)))
 
         return num_created
 
-    def _log_bad_requests(self, block_list, errors):
+    def _log_bad_observations(self, observations, errors):
         for index, error in errors.items():
-            bad_block = block_list[int(index)]
-            log.warning('Failed to schedule block for request {}, user request {} due to reason {}'
-                        .format(bad_block['molecules'][0]['request_num'],
-                                bad_block['molecules'][0]['tracking_num'],
+            bad_observation = observations[int(index)]
+            log.warning('Failed to schedule observation for request {} due to reason {}'
+                        .format(bad_observation['request'],
                                 error))
 
-    def _get_request_id_from_reservation(self, reservation):
-        request_id = 0
-        try:
-            request_id = reservation.request.id
-        except AttributeError:
-            pass
-        return request_id
-    
     def _get_rr_observations_by_telescope(self, tels, ends_after, starts_before):
         telescope_observations = {}
         for full_tel_name in tels:
@@ -248,13 +218,13 @@ class ObservationScheduleInterface(object):
 
         base_url = self.host + '/api/schedule/'
 
-        initial_results = self._get_block_helper(base_url, params)
+        initial_results = self._get_schedule_helper(base_url, params)
         observations = initial_results['results']
         count = initial_results['count']
         total = len(observations)
         while total < count:
             params['offset'] += params['limit']
-            results = self._get_block_helper(base_url, params)
+            results = self._get_schedule_helper(base_url, params)
             count = results['count']
             total += len(results['results'])
             observations.extend(results['results'])
@@ -265,13 +235,13 @@ class ObservationScheduleInterface(object):
 
         return observations
 
-    def _get_block_helper(self, base_url, params):
+    def _get_schedule_helper(self, base_url, params):
         try:
             results = requests.get(base_url, params=params, timeout=120)
             results.raise_for_status()
             return results.json()
         except Exception as e:
-            raise ScheduleException(e, "Unable to retrieve Schedule from Pond: {}".format(repr(e)))
+            raise ScheduleException(e, "Unable to retrieve Schedule from Observation Portal: {}".format(repr(e)))
 
     @timeit
     def _cancel_schedule(self, cancelation_date_list_by_resource, include_rr, include_normal):
@@ -300,7 +270,7 @@ class ObservationScheduleInterface(object):
                     msg = 'Cancelled {} observations at {}'.format(num_canceled, full_tel_name)
                     log.info(msg)
                 except Exception as e:
-                    raise ScheduleException("Failed to cancel observations in pond: {}".format(repr(e)))
+                    raise ScheduleException("Failed to cancel observations in Observation Portal: {}".format(repr(e)))
 
         return total_num_canceled
 
@@ -311,7 +281,7 @@ class ObservationScheduleInterface(object):
             results.raise_for_status()
             num_canceled = results.json()['canceled']
         except Exception as e:
-            raise ScheduleException("Failed to abort observations in pond: {}".format(repr(e)))
+            raise ScheduleException("Failed to abort observations in Observation Portal: {}".format(repr(e)))
     
         return num_canceled
     
@@ -387,6 +357,45 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
         raise InstrumentResolutionError(msg)
 
     return ag_match
+
+
+def build_observation(reservation, semester_start, configdb_interface):
+    request = reservation.request
+    res_start, res_end = get_reservation_datetimes(reservation, semester_start)
+    telescope, enclosure, site = split_location(reservation.scheduled_resource)
+
+    configuration_statuses = []
+    for i, configuration in enumerate(request.configurations):
+        specific_camera = resolve_instrument(configuration.instrument_type, site,
+                                             enclosure, telescope, configdb_interface)
+        configuration_status = {
+            'instrument_name': specific_camera,
+            'configuration': configuration.id
+        }
+
+        if configuration.guiding_config.get('state', 'OFF') != 'OFF':
+            self_guide = getattr(configuration.extra_params, 'self_guide', False)
+            specific_ag = resolve_autoguider(self_guide, specific_camera,
+                                             site, enclosure, telescope,
+                                             configdb_interface)
+            configuration_status['guide_camera_name'] = specific_ag
+            msg = "Autoguider resolved as {}".format(specific_ag)
+            log.debug(msg)
+            rg_log.debug(msg, reservation.request_group.id)
+        configuration_statuses.append(configuration_status)
+
+    observation = {
+        'site': site,
+        'enclosure': enclosure,
+        'telescope': telescope,
+        'start': res_start.isoformat(),
+        'end': res_end.isoformat(),
+        'request': request.id,
+        'configuration_statuses': configuration_statuses
+    }
+
+    return observation
+
 
 #
 # def build_block(reservation, request, request_group, semester_start, configdb_interface):
@@ -472,7 +481,7 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
 #     return block
 
 
-@metric_timer('pond.get_network_running_intervals')
+@metric_timer('observation_portal.get_network_running_intervals')
 def get_network_running_intervals(running_observations_by_telescope):
     running_at_tel = {}
 
