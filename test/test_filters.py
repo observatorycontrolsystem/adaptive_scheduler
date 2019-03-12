@@ -7,7 +7,7 @@ from mock       import patch, Mock
 from datetime   import datetime, timedelta
 from copy       import deepcopy
 
-from adaptive_scheduler.model2          import (RequestGroup, Request, Windows)
+from adaptive_scheduler.models          import (RequestGroup, Request, Windows)
 import helpers
 
 import adaptive_scheduler.request_filters
@@ -61,30 +61,6 @@ class TestExpiryFilter(object):
 
         assert_equal(rg1, rg2)
         assert_not_equal(rg1, rg3)
-
-
-    # def test_unexpired_request_not_filtered(self):
-    #
-    #     rg_list = [
-    #                 self.create_user_request(self.future_expiry1),
-    #                 self.create_user_request(self.future_expiry2),
-    #               ]
-    #
-    #     received_rg_list = filter_on_expiry(rg_list)
-    #     assert_equal(received_rg_list, rg_list)
-
-
-    # def test_expired_request_is_filtered(self):
-    #     rg_list = [
-    #                 self.create_user_request(self.past_expiry),
-    #                 self.create_user_request(self.future_expiry1),
-    #               ]
-    #     expected_rg_list = deepcopy(rg_list)
-    #     del(expected_rg_list)[0]
-    #
-    #     received_rg_list = filter_on_expiry(rg_list)
-    #     assert_equal(received_rg_list, expected_rg_list)
-
 
 
 class TestWindowFilters(object):

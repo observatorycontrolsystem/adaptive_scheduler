@@ -1,6 +1,6 @@
 from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
 from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput, SchedulingInputUtils
-from adaptive_scheduler.model2 import RequestGroup, Window, Windows
+from adaptive_scheduler.models import RequestGroup, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningRequestGroup, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation

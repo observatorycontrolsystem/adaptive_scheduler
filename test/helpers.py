@@ -1,4 +1,4 @@
-from adaptive_scheduler.model2          import (RequestGroup, Request, Window, Windows)
+from adaptive_scheduler.models          import (RequestGroup, Request, Window, Windows)
 
 from mock import Mock, PropertyMock
 from datetime import datetime, timedelta

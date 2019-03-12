@@ -6,7 +6,7 @@ from mock import patch, Mock, MagicMock
 
 from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument, resolve_autoguider,
                                      ObservationScheduleInterface)
-from adaptive_scheduler.model2 import (Proposal, Target, SatelliteTarget,
+from adaptive_scheduler.models import (Proposal, Target, SatelliteTarget,
                                        SiderealTarget, Request, Configuration,
                                        RequestGroup)
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
@@ -73,7 +73,7 @@ class TestObservations(object):
 
     @raises(ScheduleException)
     @responses.activate
-    def test_no_pond_connection_okay(self):
+    def test_no_observation_portal_connection_okay(self):
         ur1 = RequestGroup(
             operator='single',
             requests=None,
@@ -93,10 +93,10 @@ class TestObservations(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
         get_endpoint = host + '/api/observations/'
         responses.add(responses.GET, get_endpoint,
-                      json={"error": 'failed to get pond blocks'}, status=500)
+                      json={"error": 'failed to get Observation Portal observations'}, status=500)
 
         observation_schedule_interface = ObservationScheduleInterface(host=host)
         rr_blocks = observation_schedule_interface._get_rr_observations_by_telescope(tels, start, end)
@@ -163,30 +163,30 @@ class TestObservationInteractions(object):
     def test_cancel_blocks_called_when_dry_run_not_set(self):
         reason = 'Superceded by new schedule'
         ids = range(10)
-        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)
 
-        pond_interface = ObservationScheduleInterface(host=host)
-        pond_interface._cancel_observations(ids)
+        schedule_interface = ObservationScheduleInterface(host=host)
+        schedule_interface._cancel_observations(ids)
 
     @responses.activate
     def test_cancel_schedule(self):
         start_end_by_resource = {'1m0a.doma.lsc': [(self.start, self.end), ]}
 
         delete_list = [Mock(id=1), Mock(id=2), Mock(id=3)]
-        host = os.getenv('POND_HOST', 'http://lakedev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint,
                       json={"canceled": len(delete_list)}, status=200)
 
-        pond_interface = ObservationScheduleInterface(host=host)
-        n_deleted = pond_interface._cancel_schedule(start_end_by_resource, True, True)
+        schedule_interface = ObservationScheduleInterface(host=host)
+        n_deleted = schedule_interface._cancel_schedule(start_end_by_resource, True, True)
 
         assert_equal(n_deleted, len(delete_list))
 
     @patch('adaptive_scheduler.observations.build_observation')
-    def test_dont_send_schedule_to_pond_if_dry_run(self, mock_func1):
+    def test_dont_send_schedule_to_observation_portal_if_dry_run(self, mock_func1):
         mock_res_list = [Mock(), Mock()]
 
         schedule = {
@@ -201,8 +201,8 @@ class TestObservationInteractions(object):
         mock_func1.return_value = {'1m0a.doma.lsc': ['block 1', 'block 2'],
                                    '1m0a.domb.lsc': ['block 3']}
 
-        pond_interface = ObservationScheduleInterface()
-        n_submitted_total = pond_interface._send_schedule_to_observation_portal(schedule, self.start,
+        schedule_interface = ObservationScheduleInterface()
+        n_submitted_total = schedule_interface._send_schedule_to_observation_portal(schedule, self.start,
                                                                                 self.configdb_interface, dry_run)
 
         assert_equal(n_submitted_total, 3)

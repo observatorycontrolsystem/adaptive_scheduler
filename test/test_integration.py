@@ -4,7 +4,7 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.model2      import (SiderealTarget, Proposal, Configuration,
+from adaptive_scheduler.models      import (SiderealTarget, Proposal, Configuration,
                                             Request, RequestGroup,
                                             Windows, Window)
 

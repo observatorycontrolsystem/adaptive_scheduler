@@ -1,6 +1,6 @@
 from adaptive_scheduler.scheduler_input import SchedulingInputProvider, SchedulerParameters, SchedulingInputFactory,\
     SchedulingInputUtils
-from adaptive_scheduler.model2 import RequestError
+from adaptive_scheduler.models import RequestError
 
 from mock import Mock, patch
 from nose.tools import assert_equal, assert_almost_equal, assert_not_equal, assert_true, assert_false

@@ -1,4 +1,4 @@
-from adaptive_scheduler.model2           import ModelBuilder, RequestError, n_base_requests
+from adaptive_scheduler.models           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
 from adaptive_scheduler.valhalla_connections import ObservationPortalConnectionError
@@ -22,8 +22,7 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
-                 pond_host='http://lakedev.lco.gtn',
-                 valhalla_url='http://valhalladev.lco.gtn/',
+                 observation_portal_url='http://valhalladev.lco.gtn/',
                  configdb_url='http://configdbdev.lco.gtn/',
                  downtime_url='http://downtimedev.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
@@ -46,14 +45,13 @@ class SchedulerParameters(object):
         self.request_logs = request_logs
         self.rr_run_time = rr_run_time
         self.normal_run_time = normal_run_time
-        self.pond_host = pond_host
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.rr_runtime_seconds = rr_runtime_seconds
         self.ignore_ipp = ignore_ipp
         self.debug = debug
-        self.valhalla_url = valhalla_url
+        self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
 

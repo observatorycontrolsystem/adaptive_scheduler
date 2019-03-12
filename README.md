@@ -24,14 +24,14 @@ The scheduler should now be ready to start as a service.
 #### To update
 * Logon to scheduler1 as eng
 * Stop the scheduler: <code>service adaptive_scheduler stop</code>. Make sure it is not in the middle of a connection 
-to the pond before stopping it - look at its log file in /var/log/adaptive_scheduler.err.
+to the observation portal before stopping it - look at its log file in /var/log/adaptive_scheduler.err.
 * Go to /lco/adaptive_scheduler directory and git pull the latest code
 * source the scheduler virtual env at /lco/env/scheduler/bin/ and pip install the requirements if any have changed
 * Start the scheduler: <code>service adaptive_scheduler start</code>
 
 ### Setup Instructions (docker)
-* build the container: <code>docker build -t docker.lcogt.net/adaptive_scheduler .</code>
-* push the container: <code>docker push docker.lcogt.net/adaptive_scheduler</code>
+* build the container: <code>docker build -t docker.lco.global/adaptive_scheduler .</code>
+* push the container: <code>docker push docker.lco.global/adaptive_scheduler</code>
 * if using the docker-compose.yml file in the project, make sure it's entrypoint is set correctly, and that the 
 environment variables are set correctly with the hosts correct for all the services. There is a test entrypoint to run 
 the unit tests and a normal entrypoint to run the scheduler. 
@@ -42,4 +42,6 @@ Eric Saunders
 Sotiria Lampoudi
 
 Jonathan Nation
+
+Elisabeth Heinrich-Josties
 

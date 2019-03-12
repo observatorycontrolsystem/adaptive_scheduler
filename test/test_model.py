@@ -7,7 +7,7 @@ from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_e
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.model2 import (SiderealTarget, NonSiderealTarget,
+from adaptive_scheduler.models import (SiderealTarget, NonSiderealTarget,
                                        Proposal, Configuration,
                                        Request, RequestGroup,
                                        Windows, Window,
@@ -118,7 +118,7 @@ class TestRequestGroup(object):
     def setup(self):
         pass
 
-    @mock.patch('adaptive_scheduler.model2.event_bus.fire_event')
+    @mock.patch('adaptive_scheduler.models.event_bus.fire_event')
     def test_emit_user_feedback(self, mock_func):
         request_group_id = 5
         operator = 'single'
@@ -335,25 +335,6 @@ class TestNonSiderealTarget(object):
 
         assert_in('meandist', target.required_fields)
 
-    def test_pond_format(self):
-        initial_data = {
-            'scheme': 'MPC_MINOR_PLANET',
-            'name': 'test target',
-            'epochofel': 22.2,
-            'orbinc': 11.1,
-            'longascnode': 21.4,
-            'argofperih': 21.3,
-            'meandist': 11.2,
-            'eccentricity': 0.44,
-            'meananom': 20.22
-        }
-        target = NonSiderealTarget(initial_data)
-        pointing = target.in_pond_format()
-        assert_equal(pointing['rot_mode'], 'SKY')
-        assert_almost_equal(pointing['rot_angle'], 0.0)
-        assert_equal(pointing['type'], 'NON_SIDEREAL')
-        assert_almost_equal(pointing['eccentricity'], 0.44)
-
 
 class TestModelBuilder(object):
 
@@ -521,8 +502,8 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict)
 
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
     def test_build_request_observation_type_normal(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
@@ -549,8 +530,8 @@ class TestModelBuilder(object):
         request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
         assert_equal(request_group_model.observation_type, 'NORMAL')
 
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
     def test_build_request_observation_type_rapid_response(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
@@ -578,8 +559,8 @@ class TestModelBuilder(object):
         assert_equal(request_group_model.observation_type, 'RAPID_RESPONSE')
 
     @raises(RequestError)
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
     def test_dont_accept_unsupported_observation_type(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
@@ -605,8 +586,8 @@ class TestModelBuilder(object):
 
         request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
 
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_semester_details')
-    @mock.patch('adaptive_scheduler.model2.ModelBuilder.get_proposal_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
+    @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
     def test_build_request_group_returns_invalid_request_groups(self, mock_proposal, mock_semester):
         mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
         mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})

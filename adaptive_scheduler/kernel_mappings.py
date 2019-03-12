@@ -33,7 +33,7 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           timeit, metric_timer )
 from adaptive_scheduler.printing import plural_str as pl
-from adaptive_scheduler.model2   import Window, Windows, filter_compounds_by_type, RequestGroup
+from adaptive_scheduler.models   import Window, Windows, filter_compounds_by_type, RequestGroup
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,

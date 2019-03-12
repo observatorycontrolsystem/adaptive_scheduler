@@ -72,8 +72,8 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-r", "--valhalla_url", type=str, required=True, dest='valhalla_url',
-                            help="Valhalla endpoint URL")
+    arg_parser.add_argument("-h", "--observation_portal_url", type=str, required=True, dest='observation_portal_url',
+                            help="Observation Portal base URL")
     arg_parser.add_argument("-c", "--configdb_url", type=str, dest='configdb_url', default=defaults.configdb_url,
                             help="ConfigDB endpoint URL")
     arg_parser.add_argument("-d", "--dry-run", action="store_true",
@@ -100,8 +100,6 @@ def parse_args(argv):
                                 help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
                                 help="Enable saving the per-request log files")
-    arg_parser.add_argument("--pondhost", type=str, dest='pond_host',
-                                help="Hostname for POND communication", default=defaults.pond_host)
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                                 help="Downtime endpoint url", default=defaults.downtime_url)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
@@ -172,8 +170,8 @@ def main(argv):
     event_bus.add_listener(timing_logger, persist=True,
                            event_type=TimingLogger._EndEvent)
     
-    schedule_interface = ObservationScheduleInterface(host=sched_params.pond_host)
-    observation_portal_interface = ObservationPortalInterface(sched_params.valhalla_url, debug=sched_params.debug)
+    schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
+    observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url, debug=sched_params.debug)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
     network_state_interface = Network(configdb_interface)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,

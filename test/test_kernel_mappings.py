@@ -5,7 +5,7 @@ import copy
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
+from adaptive_scheduler.models import (SiderealTarget, Request, Proposal,
                                        RequestGroup, Window, Windows, Configuration)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
