@@ -372,7 +372,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                                     conf.constraints['min_lunar_distance'])
                     target_intervals = local_cache[cache_key]
                     if resource in intervals_by_resource:
-                        intervals_by_resource[resource] = intervals_by_resource[resource].intersect(target_intervals)
+                        intervals_by_resource[resource] = intervals_by_resource[resource].intersect([target_intervals])
                     else:
                         intervals_by_resource[resource] = target_intervals
             process_request_visibility(rg.id, r, intervals_by_resource, downtime_intervals)

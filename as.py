@@ -72,7 +72,7 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-h", "--observation_portal_url", type=str, required=True, dest='observation_portal_url',
+    arg_parser.add_argument("-p", "--observation_portal_url", type=str, required=True, dest='observation_portal_url',
                             help="Observation Portal base URL")
     arg_parser.add_argument("-c", "--configdb_url", type=str, dest='configdb_url', default=defaults.configdb_url,
                             help="ConfigDB endpoint URL")

@@ -9,6 +9,7 @@ Author: Jon Nation
 March 2019
 '''
 from __future__ import division
+import os
 
 from datetime import timedelta
 from collections import defaultdict
@@ -54,6 +55,7 @@ class ObservationScheduleInterface(object):
     
     def __init__(self, host=None):
         self.host = host
+        self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
         self.running_observations_by_telescope = None
         self.running_intervals_by_telescope = None
         self.rr_intervals_by_telescope = None
@@ -95,7 +97,7 @@ class ObservationScheduleInterface(object):
             for observation in observations:
                 request_group_id = int(observation['request_group_id'])
                 running_rg = running_rgs.setdefault(request_group_id, RunningRequestGroup(request_group_id))
-                telescope = observation['telescope'] + '.' + observation['observatory'] + '.' + observation['site']
+                telescope = observation['telescope'] + '.' + observation['enclosure'] + '.' + observation['site']
                 request_id = observation['request']['id']
                 running_request = ObservationRunningRequest(telescope, request_id, observation['id'],
                                                             observation['start'], observation['end'])
@@ -164,7 +166,7 @@ class ObservationScheduleInterface(object):
         num_created = len(observations)
         if not dry_run:
             try:
-                response = requests.post(self.host + '/api/observations/', json=observations, timeout=120)
+                response = requests.post(self.host + '/api/observations/', json=observations, headers=self.headers, timeout=120)
                 response.raise_for_status()
                 num_created = response.json()['num_created']
                 self._log_bad_observations(observations, response.json()['errors'] if 'errors' in response.json() else {})
@@ -208,10 +210,10 @@ class ObservationScheduleInterface(object):
         return telescope_interval
 
     @metric_timer('observation_portal.get_schedule')
-    def _get_schedule(self, start, end, site, obs, tel, only_rr=False):
+    def _get_schedule(self, start, end, site, enc, tel, only_rr=False):
         # Only retrieve observations which are currently active
         params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
-                      observatory=obs, telescope=tel, limit=1000, exclude_observation_type='DIRECT',
+                      enclosure=enc, telescope=tel, limit=1000, exclude_observation_type='DIRECT',
                       state=['PENDING', 'IN_PROGRESS'], offset=0)
         if only_rr:
             params['observation_type'] = 'RAPID_RESPONSE'
@@ -237,7 +239,7 @@ class ObservationScheduleInterface(object):
 
     def _get_schedule_helper(self, base_url, params):
         try:
-            results = requests.get(base_url, params=params, timeout=120)
+            results = requests.get(base_url, params=params, headers=self.headers, timeout=120)
             results.raise_for_status()
             return results.json()
         except Exception as e:
@@ -248,7 +250,7 @@ class ObservationScheduleInterface(object):
         total_num_canceled = 0
         for full_tel_name, cancel_dates in cancelation_date_list_by_resource.items():
             for (start, end) in cancel_dates:
-                tel, obs, site = full_tel_name.split('.')
+                tel, enc, site = full_tel_name.split('.')
                 log.info("Cancelling schedule at %s, from %s to %s", full_tel_name,
                          start, end)
 
@@ -256,14 +258,14 @@ class ObservationScheduleInterface(object):
                     'start': start.isoformat(),
                     'end': end.isoformat(),
                     'site': site,
-                    'observatory': obs,
+                    'enclosure': enc,
                     'telescope': tel,
                     'include_rr': include_rr,
                     'include_normal': include_normal
                 }
 
                 try:
-                    results = requests.post(self.host + '/api/observations/cancel/', json=data, timeout=120)
+                    results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers, timeout=120)
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
@@ -277,7 +279,7 @@ class ObservationScheduleInterface(object):
     def _cancel_observations(self, observation_ids):
         try:
             data = {'ids': observation_ids}
-            results = requests.post(self.host + '/api/observations/cancel/', json=data, timeout=120)
+            results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers, timeout=120)
             results.raise_for_status()
             num_canceled = results.json()['canceled']
         except Exception as e:
