@@ -27,8 +27,8 @@ class ConfigDBInterface(object, SendMetricMixin):
             self.configdb_url += '/'
         self.telescopes_file = telescopes_file
         self.active_instruments_file = active_instruments_file
-        self.active_instruments = {}
-        self.telescope_info = {}
+        self.active_instruments = None
+        self.telescope_info = None
         self.update_configdb_structures()
 
     def update_configdb_structures(self):
@@ -42,7 +42,7 @@ class ConfigDBInterface(object, SendMetricMixin):
         except ConfigDBError as e:
             log.warning("update_active_instruments error {}. Reusing previous structures".format(repr(e)))
 
-        if not self.active_instruments:
+        if self.active_instruments is None:
             # First time loading from configdb failed so attempt to read from file
             with open(self.active_instruments_file, 'r') as active_instruments_cache:
                 self.active_instruments = json.load(active_instruments_cache)
@@ -58,7 +58,7 @@ class ConfigDBInterface(object, SendMetricMixin):
         except ConfigDBError as e:
             log.warning("update_telescope_info error {}. Reusing previous structures".format(repr(e)))
 
-        if not self.telescope_info:
+        if self.telescope_info is None:
             # First time loading from configdb failed so attempt to read from file
             with open(self.telescopes_file, 'r') as telescopes_cache:
                 self.telescope_info = json.load(telescopes_cache)
