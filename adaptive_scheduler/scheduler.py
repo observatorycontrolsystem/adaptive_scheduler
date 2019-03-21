@@ -28,7 +28,7 @@ from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
                                                  filter_for_kernel,
                                                  construct_global_availability)
 from adaptive_scheduler.request_filters  import filter_rgs, drop_empty_requests, set_now
-from adaptive_scheduler.valhalla_connections import ObservationPortalConnectionError
+from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInterface
 
 

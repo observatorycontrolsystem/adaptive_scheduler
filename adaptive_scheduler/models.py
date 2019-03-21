@@ -28,7 +28,7 @@ from adaptive_scheduler.log                   import RequestGroupLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme, scheme_mappings
-from adaptive_scheduler.valhalla_connections  import ObservationPortalConnectionError
+from adaptive_scheduler.observation_portal_connections  import ObservationPortalConnectionError
 
 from datetime    import datetime
 from collections import defaultdict

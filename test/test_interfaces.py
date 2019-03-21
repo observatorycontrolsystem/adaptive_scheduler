@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from mock import Mock, MagicMock, patch
-from adaptive_scheduler.valhalla_connections import ObservationPortalInterface
+from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
 from adaptive_scheduler.interfaces import RunningRequestGroup, RunningRequest, ResourceUsageSnapshot, NetworkInterface
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.monitoring.network_status import Network

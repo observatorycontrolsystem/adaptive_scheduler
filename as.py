@@ -19,7 +19,7 @@ from adaptive_scheduler.eventbus         import get_eventbus
 from adaptive_scheduler.feedback         import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces       import NetworkInterface
 from adaptive_scheduler.observations             import ObservationScheduleInterface
-from adaptive_scheduler.valhalla_connections import ObservationPortalInterface
+from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler        import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input  import SchedulingInputFactory, SchedulingInputProvider, FileBasedSchedulingInputProvider, SchedulerParameters

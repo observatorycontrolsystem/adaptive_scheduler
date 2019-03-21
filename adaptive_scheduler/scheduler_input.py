@@ -1,7 +1,7 @@
 from adaptive_scheduler.models           import ModelBuilder, RequestError, n_base_requests
 from adaptive_scheduler.utils            import iso_string_to_datetime
 from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
-from adaptive_scheduler.valhalla_connections import ObservationPortalConnectionError
+from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 
 import os
 import logging
