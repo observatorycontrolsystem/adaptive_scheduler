@@ -213,7 +213,8 @@ class ObservationScheduleInterface(object):
     def _get_schedule(self, start, end, site, enc, tel, only_rr=False):
         # Only retrieve observations which are currently active
         params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
-                      enclosure=enc, telescope=tel, limit=1000, exclude_observation_type='DIRECT',
+                      enclosure=enc, telescope=tel, limit=1000,
+                      observation_type=['NORMAL', 'RAPID_RESPONSE', 'TIME_CRITICAL'],
                       state=['PENDING', 'IN_PROGRESS'], offset=0)
         if only_rr:
             params['observation_type'] = 'RAPID_RESPONSE'
