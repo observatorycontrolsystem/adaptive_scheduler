@@ -125,8 +125,8 @@ class ObservationScheduleInterface(object):
     def abort(self, running_request):
         ''' Abort a running request
         '''
-        block_ids = [running_request.block_id]
-        return self._cancel_observations(block_ids)
+        observation_ids = [running_request.observation_id]
+        return self._cancel_observations(observation_ids)
 
     @metric_timer('observation_portal.save_schedule', num_requests=lambda x: x, rate=lambda x: x)
     def save(self, schedule, semester_start, configdb_interface, dry_run=False):
