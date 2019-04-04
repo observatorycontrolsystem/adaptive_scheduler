@@ -24,10 +24,8 @@ CENTOS:
 Additional dependencies
 -----------------------
 * Python 2.7
-    CENTOS: yum install bzip2-devel openssl-devel ncurses-devel sqlite-devel
-    UBUNTU: sudo apt-get install libbz2-dev libssl-dev libreadline-dev libsqlite3-dev
-* MySQL
-    CENTOS: yum install mysql mysql-devel mysql-client
+    CENTOS: yum install bzip2-devel openssl-devel ncurses-devel
+    UBUNTU: sudo apt-get install libbz2-dev libssl-dev libreadline-dev
 * Fortran compiler (rise_set/SciPy)
     CENTOS: yum install gcc-gfortran libgfortran
     UBUNTU: sudo apt-get install gfortran
