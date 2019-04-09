@@ -391,7 +391,7 @@ class MoleculeFactory(object):
                                                  'instrument_name', 'filter', 'exposure_time',
                                                  'priority'),
                                   'AUTO_FOCUS' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'exposure_time',
+                                                 'instrument_name', 'filter', 'exposure_time',
                                                  'priority'),
                                   'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
                                                  'instrument_name', 'filter', 'exposure_time',
