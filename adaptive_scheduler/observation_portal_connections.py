@@ -75,6 +75,7 @@ class ObservationPortalInterface(object, SendMetricMixin):
             response = requests.get(self.obs_portal_url + '/api/last_changed/', headers=self.headers, timeout=180)
             response.raise_for_status()
             last_changed = parse(response.json()['last_change_time'])
+            last_changed = last_changed.replace(tzinfo=None)
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("last_changed check failed: {}".format(repr(e)))
 

@@ -744,19 +744,22 @@ class ModelBuilder(object):
 
     def build_configuration(self, configuration):
         # build the target first
-        target_type = configuration['target']['type']
-        try:
-            if target_type == 'SIDEREAL':
-                target = SiderealTarget(configuration['target'])
-            elif target_type == 'NON_SIDEREAL':
-                target = NonSiderealTarget(configuration['target'])
-            elif target_type == 'SATELLITE':
-                target = SatelliteTarget(configuration['target'])
-            else:
-                raise RequestError("Unsupported target type '%s'" % target_type)
-        except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
-            msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
-            raise RequestError(msg)
+        if isinstance(configuration['target'], Target):
+            target = configuration['target']
+        else:
+            target_type = configuration['target']['type']
+            try:
+                if target_type == 'SIDEREAL':
+                    target = SiderealTarget(configuration['target'])
+                elif target_type == 'NON_SIDEREAL':
+                    target = NonSiderealTarget(configuration['target'])
+                elif target_type == 'SATELLITE':
+                    target = SatelliteTarget(configuration['target'])
+                else:
+                    raise RequestError("Unsupported target type '%s'" % target_type)
+            except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
+                msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
+                raise RequestError(msg)
 
         configuration['target'] = target
         configuration = Configuration(

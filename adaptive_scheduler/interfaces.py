@@ -140,9 +140,11 @@ class NetworkInterface(object):
             last_changed_check = redis.get('scheduler_last_changed_check_time')
             if not last_changed_check:
                 last_changed_check = datetime.utcnow() - timedelta(days=365)
+            else:
+                last_changed_check = pickle.loads(last_changed_check)
             now = datetime.utcnow()
             last_changed = self.valhalla_interface.get_last_changed()
-            redis.set('scheduler_last_changed_check_time', now)
+            redis.set('scheduler_last_changed_check_time', pickle.dumps(now))
             if last_changed > last_changed_check:
                 return True
             else:
