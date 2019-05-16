@@ -11,7 +11,7 @@ ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib
 
 # install and update packages
 RUN yum -y install epel-release \
-        && yum -y install gcc glpk-devel fftw-devel gsl-devel suitesparse-devel openblas-devel lapack-devel blas-devel python-devel python-pip mysql-devel mysql supervisor\
+        && yum -y install gcc glpk-devel fftw-devel gsl-devel suitesparse-devel openblas-devel lapack-devel blas-devel python-devel python-pip supervisor\
         && yum -y update \
         && yum -y clean all
 
