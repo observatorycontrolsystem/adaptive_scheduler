@@ -199,11 +199,6 @@ class SchedulingInputUtils(object, SendMetricMixin):
 
         return scheduler_models_rgs_by_type
 
-    def request_group_priorities(self, scheduler_model_request_groups):
-        priorities_map = {rg.id: rg.get_priority() for rg in scheduler_model_request_groups}
-
-        return priorities_map
-
     def rapid_response_ids(self, scheduler_model_request_groups):
         scheduler_models_rgs_by_type = self.sort_scheduler_models_rgs_by_type(scheduler_model_request_groups)
         rapid_response_ids = [rg.id for rg in scheduler_models_rgs_by_type['rr']]

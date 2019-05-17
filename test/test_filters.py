@@ -120,7 +120,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows, expected_window)
 
 
-    @patch("adaptive_scheduler.valhalla_connections.ObservationPortalInterface.get_semester_details")
+    @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_filters_out_only_future_windows(self, mock_semester_service):
         mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=300),
                                               'end': self.semester_end}
@@ -156,7 +156,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows, [expected_window])
 
 
-    @patch("adaptive_scheduler.valhalla_connections.ObservationPortalInterface.get_semester_details")
+    @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_filters_out_only_future_windows2(self, mock_semester_service):
         mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=30),
                                               'end': self.semester_end}
@@ -203,7 +203,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].start, self.current_time)
 
 
-    @patch("adaptive_scheduler.valhalla_connections.ObservationPortalInterface.get_semester_details")
+    @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_truncates_upper_crossing_windows(self, mock_semester_service):
         mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=300),
                                               'end': self.semester_end}
@@ -227,7 +227,7 @@ class TestWindowFilters(object):
         assert_equal(received_windows[0].end, self.semester_end)
 
 
-    @patch("adaptive_scheduler.valhalla_connections.ObservationPortalInterface.get_semester_details")
+    @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_truncates_upper_crossing_windows_extra_horizon(self, mock_semester_service):
         mock_semester_service.return_value = {'id': '2015A', 'start': self.semester_end - timedelta(days=30),
                                               'end': self.semester_end}
