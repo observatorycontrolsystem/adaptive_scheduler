@@ -87,43 +87,6 @@ class TestScheduler(object):
         assert_equal({}, scheduler_result.schedule)
         assert_equal({}, scheduler_result.resource_schedules_to_cancel)
 
-    def test_constructing_value_matrix(self):
-        # tel2 is not used
-        tels = ['1m0a.doma.tel1', '1m0a.doma.tel2']
-
-        windows = create_request_windows((("2013-05-22T19:00:00Z", "2013-05-22T20:00:00Z"),))
-        rr_r1 = create_request(1, 60, windows, tels, is_rr=True)
-        rr_rg1 = create_request_group(1, 20, [rr_r1], 'single')
-        rr_r2 = create_request(2, 60, windows, tels, is_rr=True)
-        rr_rg2 = create_request_group(2, 100, [rr_r2], 'single')
-
-        rr_rgs = [rr_rg1, rr_rg2]
-
-        normal_r1 = create_request(30, 60, windows, tels, is_rr=False)
-        normal_rg1 = create_request_group(30, 10, [normal_r1], 'single')
-
-        running_r1 = RunningRequest('1m0a.doma.tel1', normal_rg1.id, Mock(), Mock())
-        running_rg1 = RunningRequestGroup(normal_rg1.id, running_r1)
-        running_request_groups = [running_rg1]
-        extra_block_intervals = {}
-        timestamp = datetime.utcnow()
-        request_group_priorities = {}
-        request_group_priorities[normal_rg1.id] = normal_rg1.get_priority()
-        resource_usage_snapshot = ResourceUsageSnapshot(timestamp, running_request_groups, extra_block_intervals)
-
-        mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
-        matrix = scheduler.construct_value_function_dict(rr_rgs, tels, resource_usage_snapshot, request_group_priorities)
-
-        expected = {
-                    ('1m0a.doma.tel1', 1) : 2.0,
-                    ('1m0a.doma.tel1', 2) : 10.0,
-                    ('1m0a.doma.tel2', 1) : 20.0,
-                    ('1m0a.doma.tel2', 2) : 100.0,
-                    }
-
-        assert_equal(matrix, expected)
-
     def test_combine_running_and_rr_requests(self):
         start = datetime(2012, 1, 1, 0, 0, 0)
         end = datetime(2012, 1, 2, 0, 0, 0)

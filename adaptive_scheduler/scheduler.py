@@ -56,57 +56,6 @@ class Scheduler(object, SendMetricMixin):
 
         return excluded_intervals_1
 
-    def construct_value_function_dict(self, urgent_rgs, resources, resource_usage_snapshot, rg_priorities):
-        ''' Constructs a value dictionary of tuple (telescope, request_group_id) to value
-    
-            where value = too priority / running block priority or if no block is running at
-            that telescope, value = too priority
-    
-            NOTE: Assumes running block priority is above 1
-        '''
-        request_group_id_to_resource_map = defaultdict(set)
-        for urgent_rg in urgent_rgs:
-            request_group_id = urgent_rg.id
-
-            if urgent_rg.n_requests() > 1:
-                msg = "Rapid Response RG %d has more than one child R, which is not supported." % request_group_id
-                msg += " Submit as separate requests."
-                self.log.info(msg)
-                continue
-
-            for request in urgent_rg.requests:
-                for resource, windows in request.windows:
-                    request_group_id_to_resource_map[request_group_id].add(resource)
-
-        value_function_dict = {}
-        for resource in resources:
-            running_rg_list = resource_usage_snapshot.request_groups_for_resource(resource)
-            # Compute the priority of the the telescopes without Rapid Response observations
-            # use a priority of 1 for telescopes without a running block
-            running_request_priority = 1
-            for running_at_tel in running_rg_list:
-                running_request_group_id = running_at_tel.id
-                normal_rg_priority = 0
-                normal_rg_priority += rg_priorities.get(running_request_group_id, 0)
-#                 else:
-#                     # The running request wasn't included in the list of schedulable rgs so we don't know it's priority
-#                     # This could happen if the running request has been canceled.  In this case treat it like nothing is running
-#                     # Not sure if there are other ways this can happen.  Beware....
-#                     # TODO: add function unit test for this case
-#                     normal_rg_priority = 1
-                # Take the greater of the running priorities.  Should it be the sum? Something else?
-                if normal_rg_priority > running_request_priority:
-                    running_request_priority = normal_rg_priority
-
-            for rg in urgent_rgs:
-                request_group_id = rg.id
-                if resource in request_group_id_to_resource_map[request_group_id]:
-                    rr_priority = rg.get_priority()
-                    # Make sure __future__ division is imported to make this work correctly
-                    value_function_dict[(resource, request_group_id)] = rr_priority / running_request_priority
-
-        return value_function_dict
-
     def compute_optimal_combination(self, value_dict, request_group_ids, resources):
         '''
         Compute combination of telescope to request group id that has the highest value
@@ -677,18 +626,19 @@ class SchedulerRunner(object):
             self.update_network_model()
 
         # Always run the scheduler on the first run
+        rerun_required = False
         scheduler_run_start = self.input_factory.input_provider.get_scheduler_now()
         try:
             self.semester_details = self.get_semester_details(scheduler_run_start)
             self.network_interface.configdb_interface.update_configdb_structures()
-            if self.scheduler_rerun_required() or self.first_run:
+            if self.scheduler_rerun_required() or self.first_run or rerun_required:
+                rerun_required = False
                 self.create_new_schedule(scheduler_run_start)
         except (ObservationPortalConnectionError, ScheduleException, EstimateExceededException) as eee:
+            # Estimated run time was exceeded so exception was raised, or web resource failed
+            # We should force a rerun in any case in case the network events and requests haven't changed
+            rerun_required = True
             self.log.warning("Skipping Scheduling Run: {}".format(repr(eee)))
-            # Estimated run time was exceeded so exception was raised
-            # to short circuit to exit.  Just try again.  Run time
-            # estimate should have been updated.
-            pass
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
