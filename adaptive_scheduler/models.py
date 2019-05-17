@@ -544,7 +544,8 @@ class RequestGroup(EqualityMixin):
             # Time critical priority is base * 100 * fixed 1 hour duration
             effective_priority = self.get_base_priority() * 100.0 * 60.0
         elif self.observation_type.upper() == 'RAPID_RESPONSE':
-            effective_priority = self.get_base_priority() * req.get_duration() / 60.0
+            # Rapid response is only the tac priority
+            effective_priority = self.get_base_priority()
         else:
             effective_priority = 0
             log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(self.observation_type))
