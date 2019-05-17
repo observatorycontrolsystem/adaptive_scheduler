@@ -104,8 +104,8 @@ def generate_request_description(request_group_json, request_json):
         for configuration in request_json['configurations']:
             if 'instrument_type' in configuration and configuration['instrument_type']:
                 inst_types.add(configuration['instrument_type'])
-            if 'target' in configuration and configuration['target'].name:
-                target_names.add(configuration['target'].name)
+            if 'target' in configuration and configuration['target'].get('name'):
+                target_names.add(configuration['target']['name'])
             for inst_config in configuration['instrument_configs']:
                 if 'optical_elements' in inst_config and inst_config['optical_elements']:
                     for element_type, element_value in inst_config['optical_elements'].items():
@@ -537,9 +537,18 @@ class RequestGroup(EqualityMixin):
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
 
         req = self.requests[request_index]
-        effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
 
-        # TODO: address this effective priority cap, it is restricting most time critical priorities
+        if self.observation_type.upper() == 'NORMAL':
+            effective_priority = self.get_ipp_modified_priority() * req.get_duration() / 60.0
+        elif self.observation_type.upper() == 'TIME_CRITICAL':
+            # Time critical priority is base * 100 * fixed 1 hour duration
+            effective_priority = self.get_base_priority() * 100.0 * 60.0
+        elif self.observation_type.upper() == 'RAPID_RESPONSE':
+            effective_priority = self.get_base_priority() * req.get_duration() / 60.0
+        else:
+            effective_priority = 0
+            log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(self.observation_type))
+
         effective_priority = min(effective_priority, 32000.0)*ran
 
         return effective_priority
