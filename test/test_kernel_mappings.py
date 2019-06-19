@@ -67,8 +67,8 @@ class TestKernelMappings(object):
         )
 
         self.guiding_config = dict(
-            state='OPTIONAL',
-            mode='',
+            mode='ON',
+            optional=True,
             optical_elements={},
             exposure_time=10
         )

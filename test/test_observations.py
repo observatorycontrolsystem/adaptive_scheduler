@@ -232,7 +232,7 @@ class TestObservationInteractions(object):
         )
 
         configuration = Mock()
-        configuration.guiding_config = {'state': 'OFF'}
+        configuration.guiding_config = {'mode': 'OFF'}
         configuration.type = 'EXPOSE'
         configuration.id = 11
         configuration.instrument_type = '1M0-TEST-SCICAM'
@@ -283,7 +283,7 @@ class TestObservationInteractions(object):
         )
 
         configuration = Mock()
-        configuration.guiding_config = {'state': 'OPTIONAL'}
+        configuration.guiding_config = {'mode': 'ON', 'optional': True}
         configuration.type = 'EXPOSE'
         configuration.instrument_type = '1M0-FAKE-SCICAM'
         configuration.constraints = {}

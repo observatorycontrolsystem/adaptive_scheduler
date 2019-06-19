@@ -53,8 +53,8 @@ class TestRequest(object):
         )
 
         self.guiding_config = dict(
-            state='OPTIONAL',
-            mode='',
+            mode='ON',
+            optional=True,
             optical_elements={},
             extra_params={},
             exposure_time=10
@@ -161,8 +161,8 @@ class TestRequestGroup(object):
         )
 
         guiding_config = dict(
-            state='OPTIONAL',
-            mode='',
+            mode='ON',
+            optional=True,
             optical_elements={},
             extra_params={},
             exposure_time=10
@@ -354,8 +354,8 @@ class TestModelBuilder(object):
         )
 
         self.guiding_config = dict(
-            state='OPTIONAL',
-            mode='',
+            mode='ON',
+            optional=True,
             optical_elements={},
             extra_params={},
             exposure_time=10
