@@ -4,7 +4,7 @@ from __future__ import division
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.models      import (SiderealTarget, Proposal, Configuration,
+from adaptive_scheduler.models      import (ICRSTarget, Proposal, Configuration,
                                             Request, RequestGroup,
                                             Windows, Window)
 
@@ -22,7 +22,7 @@ class TestIntegration(object):
     '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
-        self.target = SiderealTarget(
+        self.target = ICRSTarget(
                                       name  = 'deneb',
                                       #ra  = '20 41 25.91',
                                       #dec = '+45 16 49.22',

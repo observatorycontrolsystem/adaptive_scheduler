@@ -139,7 +139,7 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
         rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
                                                                  target_intervals=rs_up_intervals,
                                                                  moon_distance=Angle(degrees=min_lunar_distance))
-    # HA support only currently implemented for sidereal targets
+    # HA support only currently implemented for ICRS targets
     if 'ra' in rise_set_target:
         rs_ha_intervals = visibility.get_ha_intervals(rise_set_target)
     else:

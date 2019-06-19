@@ -7,7 +7,7 @@ from mock import patch, Mock, MagicMock
 from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument, resolve_autoguider,
                                      ObservationScheduleInterface)
 from adaptive_scheduler.models import (Proposal, Target, SatelliteTarget,
-                                       SiderealTarget, Request, Configuration,
+                                       ICRSTarget, Request, Configuration,
                                        RequestGroup)
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
@@ -38,9 +38,9 @@ class TestObservations(object):
             tac_priority=2,
         )
 
-        self.valid_target = SiderealTarget(
+        self.valid_target = ICRSTarget(
             name='deneb',
-            type='sidereal',
+            type='ICRS',
             # ra  = '20 41 25.91',
             # dec = '+45 16 49.22',
             ra=310.35795833333333,
@@ -217,7 +217,7 @@ class TestObservationInteractions(object):
         reservation.scheduled_resource = '1m0a.doma.bpl'
 
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
-        target = SiderealTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
+        target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
         request_group = RequestGroup(
             operator='single',
@@ -268,7 +268,7 @@ class TestObservationInteractions(object):
         reservation.scheduled_resource = '1m0a.doma.bpl'
 
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
-        target = SiderealTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
+        target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
         request_group = RequestGroup(
             operator='single',

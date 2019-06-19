@@ -185,7 +185,7 @@ class NullTarget(Target):
         Target.__init__(self, (), *initial_data, **kwargs)
 
 
-class SiderealTarget(Target):
+class ICRSTarget(Target):
     ''' SiderealTarget for targets with Sidereal parameters (ra/dec)
     '''
     def __init__(self, *initial_data, **kwargs):
@@ -225,7 +225,7 @@ class SiderealTarget(Target):
     dec = property(get_dec, set_dec)
 
 
-class NonSiderealTarget(Target):
+class OrbitalElementsTarget(Target):
     ''' NonSiderealTarget for targets with moving object parameters, like comets or minor planets
     '''
     def __init__(self, *initial_data, **kwargs):
@@ -759,10 +759,10 @@ class ModelBuilder(object):
         else:
             target_type = configuration['target']['type']
             try:
-                if target_type == 'SIDEREAL':
-                    target = SiderealTarget(configuration['target'])
-                elif target_type == 'NON_SIDEREAL':
-                    target = NonSiderealTarget(configuration['target'])
+                if target_type == 'ICRS':
+                    target = ICRSTarget(configuration['target'])
+                elif target_type == 'ORBITAL_ELEMENTS':
+                    target = OrbitalElementsTarget(configuration['target'])
                 elif target_type == 'SATELLITE':
                     target = SatelliteTarget(configuration['target'])
                 else:

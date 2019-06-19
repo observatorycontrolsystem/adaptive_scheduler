@@ -16,7 +16,7 @@ May 2015
 '''
 
 from reqdb.client                 import SchedulerClient
-from adaptive_scheduler.valhalla_connections import ObservationPortalInterface
+from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
 
 from datetime    import datetime
 from collections import defaultdict

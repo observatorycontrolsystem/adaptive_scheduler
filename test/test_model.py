@@ -7,7 +7,7 @@ from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_e
 from datetime import datetime
 
 # Import the modules to test
-from adaptive_scheduler.models import (SiderealTarget, NonSiderealTarget,
+from adaptive_scheduler.models import (ICRSTarget, OrbitalElementsTarget,
                                        Proposal, Configuration,
                                        Request, RequestGroup,
                                        Windows, Window,
@@ -20,7 +20,7 @@ class TestRequest(object):
     '''Unit tests for the adaptive scheduler Request object.'''
 
     def setup(self):
-        self.target = SiderealTarget(
+        self.target = ICRSTarget(
             name='deneb',
             # ra  = '20 41 25.91',
             # dec = '+45 16 49.22',
@@ -309,7 +309,7 @@ class TestWindows(object):
         assert_equal(windows.size(), 1)
 
 
-class TestNonSiderealTarget(object):
+class TestOrbitalElementsTarget(object):
 
     def setup(self):
         pass
@@ -317,21 +317,21 @@ class TestNonSiderealTarget(object):
     def test_minor_planet_has_required_fields(self):
         initial_data = {'scheme': 'MPC_MINOR_PLANET'}
 
-        target = NonSiderealTarget(initial_data)
+        target = OrbitalElementsTarget(initial_data)
 
         assert_in('meandist', target.required_fields)
 
     def test_comet_has_required_fields(self):
         initial_data = {'scheme': 'MPC_COMET'}
 
-        target = NonSiderealTarget(initial_data)
+        target = OrbitalElementsTarget(initial_data)
 
         assert_in('perihdist', target.required_fields)
 
     def test_accepts_lowercase_scheme(self):
         initial_data = {'scheme': 'mpc_minor_planet'}
 
-        target = NonSiderealTarget(initial_data)
+        target = OrbitalElementsTarget(initial_data)
 
         assert_in('meandist', target.required_fields)
 
@@ -341,7 +341,7 @@ class TestModelBuilder(object):
     def setup(self):
         self.target = {
             'name': 'MY Target',
-            'type': 'SIDEREAL',
+            'type': 'ICRS',
         }
 
         self.instrument_config = dict(

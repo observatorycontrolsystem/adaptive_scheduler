@@ -5,7 +5,7 @@ import copy
 
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.models import (SiderealTarget, Request, Proposal,
+from adaptive_scheduler.models import (ICRSTarget, Request, Proposal,
                                        RequestGroup, Window, Windows, Configuration)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
@@ -42,14 +42,14 @@ class TestKernelMappings(object):
                                                  )
                     }
 
-        self.target = SiderealTarget(
+        self.target = ICRSTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
                               ra  = 310.35795833333333,
                               dec = 45.280338888888885
                             )
 
-        self.prop_mot_target = SiderealTarget(
+        self.prop_mot_target = ICRSTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
                               ra  = 316.73026646,
@@ -521,7 +521,7 @@ class TestKernelMappings(object):
                  tel_name : tel,
                }
 
-        target = SiderealTarget(
+        target = ICRSTarget(
                                   ra  = 310.35795833333333,
                                   dec = -60.0,
                                )
@@ -587,7 +587,7 @@ class TestKernelMappings(object):
                  tel_name : tel,
                }
 
-        target = SiderealTarget(
+        target = ICRSTarget(
                                   # RA 15:41:25.91
                                   ra  = 235.357958333,
                                   dec = -60.0,

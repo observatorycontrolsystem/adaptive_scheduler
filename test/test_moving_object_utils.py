@@ -10,7 +10,7 @@ December 2013
 '''
 
 from adaptive_scheduler.moving_object_utils import InvalidElements, required_fields_from_scheme
-from adaptive_scheduler.models import NonSiderealTarget
+from adaptive_scheduler.models import OrbitalElementsTarget
 
 from nose.tools import assert_equal, raises
 
@@ -33,5 +33,5 @@ class TestMovingObjectUtils(object):
     @raises(InvalidElements)
     def test_invalid_scheme_raises_exception(self):
         self.elements['scheme'] = 'nonsense'
-        target = NonSiderealTarget(self.elements)
+        target = OrbitalElementsTarget(self.elements)
 

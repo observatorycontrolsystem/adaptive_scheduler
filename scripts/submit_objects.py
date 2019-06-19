@@ -51,7 +51,6 @@ location = {
 Target parameters.
     * Targets always have equinox J2000.
     * Only ICRS coordinates are accepted.
-    * At present only SIDEREAL is a supported type.
     * If you need automatic target name resolution, use the web interface at
       http://scheduler-dev.lco.gtn/odin/
 '''
