@@ -164,7 +164,7 @@ class ObservationScheduleInterface(object):
     def _send_observations_to_observation_portal(self, observations_by_resource, dry_run=False):
         observations = [ob for obs in observations_by_resource.values() for ob in obs]
         num_created = len(observations)
-        if not dry_run:
+        if not dry_run and num_created > 0:
             try:
                 response = requests.post(self.host + '/api/observations/', json=observations, headers=self.headers, timeout=120)
                 response.raise_for_status()
