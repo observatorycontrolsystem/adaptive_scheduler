@@ -104,8 +104,11 @@ def generate_request_description(request_group_json, request_json):
         for configuration in request_json['configurations']:
             if 'instrument_type' in configuration and configuration['instrument_type']:
                 inst_types.add(configuration['instrument_type'])
-            if 'target' in configuration and configuration['target'].get('name'):
-                target_names.add(configuration['target']['name'])
+            if 'target' in configuration:
+                if isinstance(configuration['target'], Target) and hasattr(configuration['target'], 'name'):
+                    target_names.add(configuration['target'].name)
+                elif configuration['target'].get('name'):
+                    target_names.add(configuration['target']['name'])
             for inst_config in configuration['instrument_configs']:
                 if 'optical_elements' in inst_config and inst_config['optical_elements']:
                     for element_type, element_value in inst_config['optical_elements'].items():
