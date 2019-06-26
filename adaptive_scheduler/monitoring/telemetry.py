@@ -46,7 +46,7 @@ def _get_datum_query(datumname, datuminstance=None, originator=None):
                 "filter": [
                     {
                         "match": {
-                            "datumname.keyword": datumname
+                            "datumname": datumname
                         }
                     },
                     {
