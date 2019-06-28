@@ -118,7 +118,7 @@ class ObservationScheduleInterface(object):
         ''' 
         n_deleted = 0
         if cancelation_date_list_by_resource:
-            n_deleted = self._cancel_schedule(cancelation_date_list_by_resource, include_rr,
+            n_deleted += self._cancel_schedule(cancelation_date_list_by_resource, include_rr,
                                               include_normal)
         return n_deleted
     
