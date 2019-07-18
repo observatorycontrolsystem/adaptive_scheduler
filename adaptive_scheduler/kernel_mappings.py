@@ -24,7 +24,7 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
-from rise_set.utils           import is_satellite_target
+from rise_set.utils           import is_static_target
 
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -134,7 +134,7 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                       airmass=max_airmass)
-    if not is_satellite_target(rise_set_target):
+    if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
         rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
                                                                  target_intervals=rs_up_intervals,
