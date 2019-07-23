@@ -22,9 +22,9 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
-                 observation_portal_url='http://valhalladev.lco.gtn/',
-                 configdb_url='http://configdbdev.lco.gtn/',
-                 downtime_url='http://downtimedev.lco.gtn',
+                 observation_portal_url='http://observation-portal-dev.lco.gtn/',
+                 configdb_url='http://configdb-dev.lco.gtn/',
+                 downtime_url='http://downtime-dev.lco.gtn',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, rr_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -366,7 +366,7 @@ class SchedulingInputProvider(object):
     def _get_json_request_group_list(self):
         now = self.get_scheduler_now()
         try:
-            semester_details = self.network_interface.valhalla_interface.get_semester_details(self._get_estimated_scheduler_end())
+            semester_details = self.network_interface.observation_portal_interface.get_semester_details(self._get_estimated_scheduler_end())
         except ObservationPortalConnectionError as e:
             raise SchedulingInputException("Can't retrieve current semester to get request groups.")
         rg_list = self.network_interface.get_all_request_groups(semester_details['start'],
@@ -394,7 +394,7 @@ class SchedulingInputProvider(object):
         return snapshot
 
     def get_model_builder(self):
-        mb = ModelBuilder(self.network_interface.valhalla_interface,
+        mb = ModelBuilder(self.network_interface.observation_portal_interface,
                           self.network_interface.configdb_interface)
 
         return mb

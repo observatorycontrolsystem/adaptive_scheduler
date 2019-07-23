@@ -958,7 +958,7 @@ class TestSchedulerRunner(object):
         self.observation_portal_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
                                                                                'start': datetime.utcnow() - timedelta(days=30),
                                                                                'end': datetime.utcnow() + timedelta(days=30)})
-        self.network_interface_mock.valhalla_interface = self.observation_portal_interface_mock
+        self.network_interface_mock.observation_portal_interface = self.observation_portal_interface_mock
 
         self.network_model = {}
         self.mock_input_factory = Mock()
@@ -1357,11 +1357,11 @@ class TestSchedulerRunnerUseOfRunTimes(object):
         self.network_interface = Mock()
         self.network_interface.cancel = Mock(return_value=0)
         self.network_interface.save = Mock(return_value=0)
-        self.valhalla_interface_mock = Mock()
-        self.valhalla_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
+        self.observation_portal_interface_mock = Mock()
+        self.observation_portal_interface_mock.get_semester_details = Mock(return_value={'id': '2015A',
                                                                                'start': datetime.utcnow() - timedelta(days=30),
                                                                                'end': datetime.utcnow() + timedelta(days=30)})
-        self.network_interface.valhalla_interface = self.valhalla_interface_mock
+        self.network_interface.observation_portal_interface = self.observation_portal_interface_mock
         self.network_model = {}
         self.input_factory = Mock()
 
@@ -1447,7 +1447,7 @@ class TestSchedulerRunnerUseOfRunTimes(object):
                                            self.network_interface,
                                            self.network_model,
                                            self.input_factory)
-        scheduler_runner.semester_details = self.valhalla_interface_mock.get_semester_details(datetime.utcnow())
+        scheduler_runner.semester_details = self.observation_portal_interface_mock.get_semester_details(datetime.utcnow())
         expected_rr_run_time_arg = scheduler_runner.estimated_rr_run_timedelta
         expected_normal_run_time_arg = scheduler_runner.estimated_normal_run_timedelta
         network_state_timestamp = datetime(2014, 10, 29, 12, 0, 0)

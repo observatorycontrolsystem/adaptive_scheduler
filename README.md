@@ -1,5 +1,5 @@
 # Adaptive Scheduler
-Runs Gurobi solver to schedule the network of telescopes with requests from valhalla.
+Runs Gurobi solver to schedule the network of telescopes with requests from the observation portal.
 Scheduled observations are placed in the Pond at the end of each run.
 The scheduler is meant to run continuously, with each round of scheduling consisting of scheduling 
 all the ToO requests followed by scheduling all of the normal requests. 

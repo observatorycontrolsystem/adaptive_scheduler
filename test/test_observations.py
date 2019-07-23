@@ -93,7 +93,7 @@ class TestObservations(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
         get_endpoint = host + '/api/observations/'
         responses.add(responses.GET, get_endpoint,
                       json={"error": 'failed to get Observation Portal observations'}, status=500)
@@ -163,7 +163,7 @@ class TestObservationInteractions(object):
     def test_cancel_blocks_called_when_dry_run_not_set(self):
         reason = 'Superceded by new schedule'
         ids = range(10)
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)
 
@@ -175,7 +175,7 @@ class TestObservationInteractions(object):
         start_end_by_resource = {'1m0a.doma.lsc': [(self.start, self.end), ]}
 
         delete_list = [Mock(id=1), Mock(id=2), Mock(id=3)]
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://valhalladev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint,
                       json={"canceled": len(delete_list)}, status=200)

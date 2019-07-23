@@ -15,11 +15,11 @@ class TestSchedulingInputProvider(object):
         self.network_interface = Mock()
         self.network_interface.get_all_request_groups = Mock(return_value=[])
 
-        self.valhalla_interface = Mock()
-        self.valhalla_interface.get_semester_details = Mock(return_value={'id': '2015A',
+        self.observation_portal_interface = Mock()
+        self.observation_portal_interface.get_semester_details = Mock(return_value={'id': '2015A',
                                                                           'start': datetime.utcnow() - timedelta(days=30),
                                                                           'end': datetime.utcnow() + timedelta(days=30)})
-        self.network_interface.valhalla_interface = self.valhalla_interface
+        self.network_interface.observation_portal_interface = self.observation_portal_interface
         self.network_model = {}
 
     def test_constructor(self):

@@ -22,7 +22,7 @@ class ObservationPortalInterface(object, SendMetricMixin):
         self.current_semester_details = None
 
     def get_proposals(self):
-        ''' Returns all active proposals using the bulk proposals API of valhalla
+        ''' Returns all active proposals using the bulk proposals API of the observation portal
         '''
         try:
             response = requests.get(self.obs_portal_url + '/api/proposals/?active=True&limit=1000', headers=self.headers,
@@ -33,7 +33,7 @@ class ObservationPortalInterface(object, SendMetricMixin):
             raise ObservationPortalConnectionError("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_by_id(self, proposal_id):
-        ''' Returns the proposal details for the proposal_id given from the valhalla proposal API
+        ''' Returns the proposal details for the proposal_id given from the observation portal proposal API
         '''
         try:
             response = requests.get(self.obs_portal_url + '/api/proposals/' + proposal_id + '/', headers=self.headers,
@@ -45,7 +45,7 @@ class ObservationPortalInterface(object, SendMetricMixin):
 
     def get_semester_details(self, date=datetime.utcnow()):
         ''' Return the previously cached semester details unless date specified is not within that semesters range.
-            Gets the semester from the semesters api in valhalla.
+            Gets the semester from the semesters api in the observation portal.
         '''
         if (
                 not self.current_semester_details

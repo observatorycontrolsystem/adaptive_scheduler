@@ -569,8 +569,8 @@ class RequestGroup(EqualityMixin):
 
 class ModelBuilder(object):
 
-    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id=None, semester_details=None):
-        self.valhalla_interface = valhalla_interface
+    def __init__(self, observation_portal_interface, configdb_interface, proposals_by_id=None, semester_details=None):
+        self.observation_portal_interface = observation_portal_interface
         self.configdb_interface = configdb_interface
         self.proposals_by_id = proposals_by_id if proposals_by_id else {}
         self.semester_details = semester_details
@@ -579,7 +579,7 @@ class ModelBuilder(object):
 
     def _get_all_proposals(self):
         try:
-            proposals = self.valhalla_interface.get_proposals()
+            proposals = self.observation_portal_interface.get_proposals()
             for prop in proposals:
                 proposal = Proposal(prop)
                 self.proposals_by_id[proposal.id] = proposal
@@ -589,7 +589,7 @@ class ModelBuilder(object):
     def get_proposal_details(self, proposal_id):
         if proposal_id not in self.proposals_by_id:
             try:
-                proposal = Proposal(self.valhalla_interface.get_proposal_by_id(proposal_id))
+                proposal = Proposal(self.observation_portal_interface.get_proposal_by_id(proposal_id))
                 self.proposals_by_id[proposal_id] = proposal
             except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
@@ -599,7 +599,7 @@ class ModelBuilder(object):
     def get_semester_details(self, date):
         if not self.semester_details:
             try:
-                self.semester_details = self.valhalla_interface.get_semester_details(date)
+                self.semester_details = self.observation_portal_interface.get_semester_details(date)
             except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
 

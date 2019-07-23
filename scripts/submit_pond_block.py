@@ -8,8 +8,8 @@ from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from datetime import datetime
 
 # Script for submitting block directly into the pond. Modify the resource and reservation duration and start
-# to change when and for how long a block is. If you use tracking/request numbers that are not in valhalla,
-# valhalla will crash when it tries to do its is_dirty check.
+# to change when and for how long a block is. If you use request/request_group ids that are not in the observation portal,
+# it will crash when it tries to do its is_dirty check.
 
 resource = '1m0a.doma.cpt'
 semester_start = datetime(2017, 12, 1)
