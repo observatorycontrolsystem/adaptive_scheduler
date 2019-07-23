@@ -117,9 +117,9 @@ class ResourceUsageSnapshot(object):
 
 class NetworkInterface(object):
     
-    def __init__(self, schedule_interface, valhalla_interface, network_state_interface, configdb_interface):
+    def __init__(self, schedule_interface, observation_portal_interface, network_state_interface, configdb_interface):
         self.network_schedule_interface = schedule_interface
-        self.valhalla_interface = valhalla_interface
+        self.observation_portal_interface = observation_portal_interface
         self.configdb_interface = configdb_interface
         self.network_state_interface = network_state_interface
         
@@ -143,7 +143,7 @@ class NetworkInterface(object):
             else:
                 last_changed_check = pickle.loads(last_changed_check)
             now = datetime.utcnow()
-            last_changed = self.valhalla_interface.get_last_changed()
+            last_changed = self.observation_portal_interface.get_last_changed()
             redis.set('scheduler_last_changed_check_time', pickle.dumps(now))
             if last_changed > last_changed_check:
                 return True
@@ -157,7 +157,7 @@ class NetworkInterface(object):
         '''Get all user requests waiting for scheduling between
         start and end date
         '''
-        return self.valhalla_interface.get_all_request_groups(start, end)
+        return self.observation_portal_interface.get_all_request_groups(start, end)
 
     def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
         ''' Cancel the current scheduler between start and end

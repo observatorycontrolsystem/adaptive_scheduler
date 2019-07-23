@@ -225,49 +225,49 @@ def filter_on_scheduling_horizon(request_groups, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
     '''
-    urs_by_type = filter_compounds_by_type(request_groups)
-    log.info("Identified %s, %s, %s, %s" % (pl(len(urs_by_type['single']), 'single'),
-                                            pl(len(urs_by_type['many']), 'many'),
-                                            pl(len(urs_by_type['and']), 'and'),
-                                            pl(len(urs_by_type['oneof']), 'oneof')))
+    rgs_by_type = filter_compounds_by_type(request_groups)
+    log.info("Identified %s, %s, %s, %s" % (pl(len(rgs_by_type['single']), 'single'),
+                                            pl(len(rgs_by_type['many']), 'many'),
+                                            pl(len(rgs_by_type['and']), 'and'),
+                                            pl(len(rgs_by_type['oneof']), 'oneof')))
 
     # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
-    horizon_limited_urs = urs_by_type['single'] + urs_by_type['many']
-    horizon_limited_urs = truncate_upper_crossing_windows(horizon_limited_urs, horizon=scheduling_horizon)
-    horizon_limited_urs = filter_out_future_windows(horizon_limited_urs, horizon=scheduling_horizon)
+    log.info("Filtering RGs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
+    horizon_limited_rgs = rgs_by_type['single'] + rgs_by_type['many']
+    horizon_limited_rgs = truncate_upper_crossing_windows(horizon_limited_rgs, horizon=scheduling_horizon)
+    horizon_limited_rgs = filter_out_future_windows(horizon_limited_rgs, horizon=scheduling_horizon)
     #TODO: Add the duration filter here?
     # Clean up Requests without any windows
-    horizon_limited_urs = filter_on_type(horizon_limited_urs)
+    horizon_limited_rgs = filter_on_type(horizon_limited_rgs)
     # Many's may have children with no windows that should be removed from consideration
-    removed_requests = drop_empty_requests(horizon_limited_urs)
-    log.info("After filtering, %d horizon-limited urs remain" % len(horizon_limited_urs))
+    removed_requests = drop_empty_requests(horizon_limited_rgs)
+    log.info("After filtering, %d horizon-limited rgs remain" % len(horizon_limited_rgs))
     
     # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
     # TODO: Remove this block after review
-    log.info("Filtering compound URs of type 'and' and 'oneof', not constrained by scheduling horizon")
-    unlimited_urs = urs_by_type['and'] + urs_by_type['oneof']
-    unlimited_urs = truncate_upper_crossing_windows(unlimited_urs)
-    unlimited_urs = filter_out_future_windows(unlimited_urs)
+    log.info("Filtering compound RGs of type 'and' and 'oneof', not constrained by scheduling horizon")
+    unlimited_rgs = rgs_by_type['and'] + rgs_by_type['oneof']
+    unlimited_rgs = truncate_upper_crossing_windows(unlimited_rgs)
+    unlimited_rgs = filter_out_future_windows(unlimited_rgs)
     
     # TODO: it's possible that one-ofs and ands may have these windowless 
     # children at this point from requests that crossed the semester boundary
     # might need to drop empty requests before filtering on type   
     
     # Clean up Requests without any windows
-    unlimited_urs = filter_on_type(unlimited_urs)
-    log.info("After filtering, %d unlimited URs remain" % len(unlimited_urs))
+    unlimited_rgs = filter_on_type(unlimited_rgs)
+    log.info("After filtering, %d unlimited RGs remain" % len(unlimited_rgs))
     
-    remaining_urs = horizon_limited_urs + unlimited_urs
+    remaining_rgs = horizon_limited_rgs + unlimited_rgs
      
-    return remaining_urs
+    return remaining_rgs
 
 
 @timeit
 def filter_for_kernel(request_groups, visibility_for_resource, downtime_intervals, semester_start, semester_end,
                       scheduling_horizon):
-    '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
-       considering dark time and target visibility. Remove any URs that are now too
+    '''After throwing out and marking RGs as UNSCHEDULABLE, reduce windows by
+       considering dark time and target visibility. Remove any RGs that are now too
        small to hold their duration after this consideration, so they are not passed
        to the kernel.
        NOTE: We do this as an explicit additional filtering step, because we do not
