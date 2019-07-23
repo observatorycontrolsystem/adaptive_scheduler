@@ -259,14 +259,14 @@ class TestKernelMappings(object):
         request_group      = self.make_request_group(requests, operator)
         request_groups     = [request_group]
         scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-        filtered_urs = filter_on_scheduling_horizon(request_groups,
+        filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                     scheduling_horizon)
         
         expected_window_start = start
         expected_window_end = scheduling_horizon
         
-        assert_equal(1, len(filtered_urs))
-        output_ur = filtered_urs[0]
+        assert_equal(1, len(filtered_rgs))
+        output_ur = filtered_rgs[0]
         assert_equal(1, len(output_ur.requests))
         bpl_1m0a_doma_windows = output_ur.requests[0].windows.at('1m0a.doma.bpl')
         assert_equal(1, len(bpl_1m0a_doma_windows))
@@ -284,14 +284,14 @@ class TestKernelMappings(object):
             request_group      = self.make_request_group(requests, operator)
             request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(request_groups,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = scheduling_horizon
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
@@ -313,14 +313,14 @@ class TestKernelMappings(object):
             request_group      = self.make_request_group(requests, operator)
             request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(request_groups,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = end
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
@@ -342,14 +342,14 @@ class TestKernelMappings(object):
             request_group      = self.make_request_group(requests, operator)
             request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(request_groups,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = end
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
