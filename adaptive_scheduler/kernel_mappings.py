@@ -490,7 +490,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
 
 def construct_global_availability(resource_interval_mask, semester_start, resource_windows):
     '''Use the interval mask to make unavailable portions of each resource where an
-       observation is running/too request will occur. Normalise and intersect with the resource windows to
+       observation is running/rr request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
        resource_intervals_mask is expected to be a dict like:
        { 'resource_name' : Intervals() }

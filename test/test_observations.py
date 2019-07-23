@@ -258,7 +258,7 @@ class TestObservationInteractions(object):
         assert_equal(received['configuration_statuses'][0]['configuration'], 11)
         assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx01')
 
-    def test_build_too_block(self):
+    def test_build_rr_observation(self):
         reservation = Reservation(
             priority=None,
             duration=10,

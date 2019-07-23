@@ -776,8 +776,8 @@ class SchedulerRunner(object):
             # Cancel just the time slots under a newly scheduled RR
             n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_rr=True,
                                                       include_normal=True)
-            # Cancel any remaining ToOs not under a newly scheduled ToO (needed in case weather knocks out a telescope
-            # that previously had a ToO scheduled on it)
+            # Cancel any remaining RRs not under a newly scheduled RR (needed in case weather knocks out a telescope
+            # that previously had a RR scheduled on it)
             n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
                                                        include_normal=False)
             n_aborted = self.abort_running_requests(abort_requests)
@@ -930,21 +930,21 @@ class SchedulerRunner(object):
 
     @timeit
     def create_new_schedule(self, network_state_timestamp):
-        too_scheduler_result = self.scheduling_cycle(RR_OBSERVATION_TYPE, network_state_timestamp)
+        rr_scheduler_result = self.scheduling_cycle(RR_OBSERVATION_TYPE, network_state_timestamp)
         set_schedule_type(None)
         # Pass in the rr_schedule_result to the normal scheduling run to block off the times that are
         # scheduled for RRs from normal scheduling.
-        self.scheduling_cycle(NORMAL_OBSERVATION_TYPE, network_state_timestamp, too_scheduler_result)
+        self.scheduling_cycle(NORMAL_OBSERVATION_TYPE, network_state_timestamp, rr_scheduler_result)
         set_schedule_type(None)
 
     @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
-    def scheduling_cycle(self, schedule_type, network_state_timestamp, too_schedule_result=None):
+    def scheduling_cycle(self, schedule_type, network_state_timestamp, rr_schedule_result=None):
         set_schedule_type(schedule_type)
         result = None
         if schedule_type == NORMAL_OBSERVATION_TYPE:
             scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
                                                                                 scheduled_requests_by_rg=self.normal_scheduled_requests_by_rg,
-                                                                                rr_schedule=too_schedule_result.schedule,
+                                                                                rr_schedule=rr_schedule_result.schedule,
                                                                                 network_state_timestamp=network_state_timestamp)
             result = self.create_normal_schedule(scheduler_input)
         elif schedule_type == RR_OBSERVATION_TYPE:

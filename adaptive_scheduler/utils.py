@@ -71,7 +71,7 @@ def set_schedule_type(schedule_type):
     if schedule_type is NORMAL_OBSERVATION_TYPE:
         metric_wrappers.global_tags = {'schedule_type':'normal'}
     elif schedule_type is RR_OBSERVATION_TYPE:
-        metric_wrappers.global_tags = {'schedule_type':'too'}
+        metric_wrappers.global_tags = {'schedule_type':'rr'}
     else:
         metric_wrappers.global_tags = None
 

@@ -229,7 +229,7 @@ class CachedInputNetworkInterface(object):
         '''Update the state of all the unschedulable Request Groups in the DB in one go.'''
         pass
     
-    def cancel(self, cancelation_date_list_by_resource, include_toos, include_normals):
+    def cancel(self, cancelation_date_list_by_resource, include_rrs, include_normals):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''

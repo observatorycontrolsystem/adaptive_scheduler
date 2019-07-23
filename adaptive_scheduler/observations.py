@@ -34,12 +34,6 @@ log = logging.getLogger(__name__)
 multi_rg_log = logging.getLogger('rg_logger')
 rg_log = RequestGroupLogger(multi_rg_log)
 
-AG_MODE_MAPPING = {
-    'OPTIONAL': 'OPT',
-    'ON': 'YES',
-    'OFF': 'NO'
-}
-
 
 class ObservationRunningRequest(RunningRequest):
     
@@ -108,7 +102,7 @@ class ObservationScheduleInterface(object):
         return running_rgs
         
     def rr_request_group_intervals_by_telescope(self):
-        ''' Return the schedule ToO intervals for the supplied telescope
+        ''' Return the schedule RR intervals for the supplied telescope
         '''
         return self.rr_intervals_by_telescope
     
