@@ -62,7 +62,7 @@ if __name__ == '__main__':
         for r in ur['requests']:
             unschedulable_r_numbers.append(r['request_number'])
 
-    print "Marking %s URs UNSCHEDULABLE" % len(unschedulable_ur_numbers)
+    print "Marking %s RGs UNSCHEDULABLE" % len(unschedulable_ur_numbers)
     print "Marking %s Rs UNSCHEDULABLE" % len(unschedulable_r_numbers)
 
     # Uncomment these to really do it

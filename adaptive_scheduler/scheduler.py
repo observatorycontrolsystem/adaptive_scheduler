@@ -125,7 +125,7 @@ class Scheduler(object, SendMetricMixin):
         return request_groups, []
 
     def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details, extra_downtime_by_resource):
-        ''' Returns the set of URs with windows adjusted to include only RGs with windows
+        ''' Returns the set of RGs with windows adjusted to include only RGs with windows
         suitable for scheduling
         '''
         return request_groups
