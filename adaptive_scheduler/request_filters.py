@@ -94,7 +94,7 @@ def log_rgs(fn):
 
 
 def _for_all_rg_windows(rg_list, filter_test):
-    '''Loop over all Requests of each UserRequest provided, and execute the supplied
+    '''Loop over all Requests of each RequestGroup provided, and execute the supplied
        filter condition on each one.'''
     for rg in rg_list:
             rg.filter_requests(filter_test)

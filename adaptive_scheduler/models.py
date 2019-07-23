@@ -400,7 +400,7 @@ class Request(EqualityMixin):
 
 
 class RequestGroup(EqualityMixin):
-    '''UserRequests are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
+    '''RequestGroups are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
        ipp info, an id, and group name. This is translated into a CompoundReservation when scheduling'''
 
     _many_type = {'many': 'As many as possible of the provided blocks are to be scheduled'}

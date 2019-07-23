@@ -156,7 +156,7 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
 
 
 def construct_compound_reservation(request_group, semester_start):
-    '''Convert a UserRequest into a CompoundReservation, translating datetimes
+    '''Convert a RequestGroup into a CompoundReservation, translating datetimes
        to kernel epoch times. The Request windows were already translated into visible windows during the 
        filter_on_visibility step.
     '''
