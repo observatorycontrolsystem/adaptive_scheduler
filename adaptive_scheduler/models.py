@@ -39,9 +39,6 @@ import numbers
 
 log = logging.getLogger(__name__)
 
-multi_rg_log = logging.getLogger('rg_logger')
-rg_log = RequestGroupLogger(multi_rg_log)
-
 event_bus = get_eventbus()
 
 POND_FIELD_DIGITS = 7
