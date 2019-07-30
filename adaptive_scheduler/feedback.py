@@ -10,13 +10,14 @@ October 2013
 '''
 
 from adaptive_scheduler.eventbus import BaseListener, Event
-from adaptive_scheduler.log      import UserRequestLogger
+from adaptive_scheduler.log      import RequestGroupLogger
 from adaptive_scheduler.utils    import EqualityMixin
 import os.path
 import logging
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
+multi_rg_log = logging.getLogger('rg_logger')
+rg_log = RequestGroupLogger(multi_rg_log)
+
 
 class UserFeedbackLogger(BaseListener):
 
@@ -24,31 +25,26 @@ class UserFeedbackLogger(BaseListener):
         pass
 
     @classmethod
-    def create_event(cls, timestamp, originator, msg, tag, tracking_number):
-        return cls._Event(timestamp, originator, msg, tag, tracking_number)
-
+    def create_event(cls, timestamp, originator, msg, tag, request_group_id):
+        return cls._Event(timestamp, originator, msg, tag, request_group_id)
 
     def on_update(self, event):
         logged_msg = str(event)
-        ur_log.info(logged_msg, event.tracking_number)
-
+        rg_log.info(logged_msg, event.request_group_id)
 
     class _Event(Event, EqualityMixin):
-        def __init__(self, timestamp, originator, msg, tag, tracking_number):
+        def __init__(self, timestamp, originator, msg, tag, request_group_id):
             self.timestamp       = timestamp
             self.originator      = originator
             self.msg             = msg
             self.tag             = tag
-            self.tracking_number = tracking_number
-
+            self.request_group_id = request_group_id
 
         def dispatch(self, listener):
             listener.on_update(self)
 
-
         def __repr__(self):
             return "%s <%s [%s] %s>" % ('UserFeedbackEvent', self.timestamp, self.tag, self.msg)
-
 
 
 class TimingLogger(BaseListener):
@@ -65,12 +61,10 @@ class TimingLogger(BaseListener):
     def create_end_event(cls, timestamp):
         return cls._EndEvent(timestamp)
 
-
     def on_start(self, event):
         self.start = event.timestamp
 
         return
-
 
     def on_end(self, event):
         self.end = event.timestamp
@@ -91,7 +85,6 @@ class TimingLogger(BaseListener):
             out_fh.write(msg)
 
         return
-
 
     class _StartEvent(Event, EqualityMixin):
         def __init__(self, timestamp):

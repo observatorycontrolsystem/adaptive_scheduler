@@ -8,10 +8,10 @@ April 2013
 '''
 
 from __future__ import division
-from adaptive_scheduler.model2 import Request, Molecule
+from adaptive_scheduler.models import Request, Configuration
 
 
-m = Molecule(
+m = Configuration(
               exposure_count=2,
               exposure_time=90,
               bin_x=2,

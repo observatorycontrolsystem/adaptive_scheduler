@@ -10,7 +10,7 @@ December 2013
 '''
 
 from adaptive_scheduler.moving_object_utils import InvalidElements, required_fields_from_scheme
-from adaptive_scheduler.model2 import NonSiderealTarget
+from adaptive_scheduler.models import OrbitalElementsTarget
 
 from nose.tools import assert_equal, raises
 
@@ -30,17 +30,8 @@ class TestMovingObjectUtils(object):
             'scheme': 'MPC_MINOR_PLANET',
         }
 
-    def test_minor_planet_pond_pointing_requires_expected_fields(self):
-        target = NonSiderealTarget(self.elements)
-
-        pointing_required_fields = required_fields_from_scheme(target.scheme)
-
-        for field in pointing_required_fields:
-            assert field in self.elements.keys()
-
     @raises(InvalidElements)
     def test_invalid_scheme_raises_exception(self):
         self.elements['scheme'] = 'nonsense'
-        target = NonSiderealTarget(self.elements)
+        target = OrbitalElementsTarget(self.elements)
 
-        pointing = pond_pointing_from_scheme(target)

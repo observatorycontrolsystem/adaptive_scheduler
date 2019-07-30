@@ -16,15 +16,15 @@ May 2015
 '''
 
 from reqdb.client                 import SchedulerClient
-from adaptive_scheduler.valhalla_connections import ValhallaInterface
+from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
 
 from datetime    import datetime
 from collections import defaultdict
 
 def get_user_requests(requestdb_url, start, end):
     requestdb_client = SchedulerClient(requestdb_url)
-    reqdb = ValhallaInterface(requestdb_client)
-    urs = reqdb.get_all_user_requests(start, end)
+    reqdb = ObservationPortalInterface(requestdb_client)
+    urs = reqdb.get_all_request_groups(start, end)
 
     return urs
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
         for r in ur['requests']:
             unschedulable_r_numbers.append(r['request_number'])
 
-    print "Marking %s URs UNSCHEDULABLE" % len(unschedulable_ur_numbers)
+    print "Marking %s RGs UNSCHEDULABLE" % len(unschedulable_ur_numbers)
     print "Marking %s Rs UNSCHEDULABLE" % len(unschedulable_r_numbers)
 
     # Uncomment these to really do it

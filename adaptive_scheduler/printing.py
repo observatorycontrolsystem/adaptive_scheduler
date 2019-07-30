@@ -9,7 +9,7 @@ December 2011
 '''
 
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
-from adaptive_scheduler.log   import UserRequestLogger
+from adaptive_scheduler.log   import RequestGroupLogger
 from datetime import timedelta
 
 INDENT = "    "
@@ -19,50 +19,55 @@ import logging
 log = logging.getLogger(__name__)
 
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
+multi_rg_log = logging.getLogger('rg_logger')
+rg_log = RequestGroupLogger(multi_rg_log)
 
 
-def summarise_urs(user_reqs, log_msg):
-    log.debug("User Request breakdown:")
-    for ur in user_reqs:
-        r_nums  = [r.request_number for r in ur.requests]
-        w_total = sum([r.n_windows() for r in ur.requests])
+def summarise_rgs(request_groups, log_msg):
+    log.debug("Request Group breakdown:")
+    for rg in request_groups:
+        r_nums  = [r.id for r in rg.requests]
+        w_total = sum([r.n_windows() for r in rg.requests])
         _, w_str = pluralise(w_total, 'Window')
-        r_total, r_str = pluralise(len(ur.requests), 'Request')
-        r_states = [r.state for r in ur.requests]
+        r_total, r_str = pluralise(len(rg.requests), 'Request')
+        r_states = [r.state for r in rg.requests]
 
-        sum_str = ' %s: %s (%d %s, %d %s) %s'
-        log.debug(sum_str, ur.tracking_number, r_nums,
+        sum_str = ' %d: %s (%d %s, %d %s) %s'
+        log.debug(sum_str, rg.id, r_nums,
                   r_total, r_str, w_total, w_str, r_states)
         msg = log_msg + sum_str
-        ur_log.info(msg % (ur.tracking_number, r_nums,
-                     r_total, r_str, w_total, w_str, r_states), ur.tracking_number)
+        rg_log.info(msg % (rg.id, r_nums,
+                           r_total, r_str, w_total, w_str, r_states), rg.id)
 
     return
 
 
-def log_windows(ur, log_msg):
-    for r in ur.requests:
+def log_windows(rg, log_msg):
+    for r in rg.requests:
         for w in r.windows:
-            ur_log.info("%s %s" % (log_msg, w), ur.tracking_number)
+            rg_log.info("%s %s" % (log_msg, w), rg.id)
 
 
-def log_full_ur(ur, now):
-    ur_log.info("Expires = %s" % ur.expires, ur.tracking_number)
-    ur_log.info("IPP Value = %s" % ur.ipp_value, ur.tracking_number)
-    ur_log.info("Base Priority = %s" % ur.get_base_priority(), ur.tracking_number)
-    ur_log.info("Effective Priority = %s" % ur.priority, ur.tracking_number)
-    ur_log.info("Operator = %s" % ur.operator, ur.tracking_number)
+def log_constraints(constraints_dict):
+    return 'Constraints(airmass={}, min_lunar_distance={})'.format(constraints_dict['max_airmass'],
+                                                                   constraints_dict['min_lunar_distance'])
 
-    for r in ur.requests:
-        ur_log.info("Request %s: duration = %ss" % (r.request_number, r.duration),
-                    ur.tracking_number)
-        ur_log.info("Request %s: target = %s" % (r.request_number, r.target),
-                    ur.tracking_number)
-        ur_log.info("Request %s: constraints = %s" % (r.request_number, r.constraints),
-                    ur.tracking_number)
 
+def log_full_rg(rg, now):
+    rg_log.info("Expires = %s" % rg.expires, rg.id)
+    rg_log.info("IPP Value = %s" % rg.ipp_value, rg.id)
+    rg_log.info("Base Priority = %s" % rg.get_base_priority(), rg.id)
+    rg_log.info("Effective Priority = %s" % rg.priority, rg.id)
+    rg_log.info("Operator = %s" % rg.operator, rg.id)
+
+    for r in rg.requests:
+        rg_log.info("Request %d: duration = %ss" % (r.id, r.duration),
+                    rg.id)
+        for conf in r.configurations:
+            rg_log.info("Request %d: conf = %d, target = %s" % (r.id, conf.id, conf.target),
+                        rg.id)
+            rg_log.info("Request %d: conf = %d, constraints = %s" % (r.id, conf.id, log_constraints(conf.constraints)),
+                        rg.id)
 
 
 def print_reservation(res):
@@ -91,51 +96,6 @@ def print_compound_reservation(compound_res):
     log.debug(INDENT + "made of %d %s:", *pluralise(compound_res.size, 'Reservation'))
     for res in compound_res.reservation_list:
         print_reservation(res)
-
-    return
-
-
-def print_request(req, resource_name):
-    target_name = getattr(req.target, 'name', 'no name')
-    log.debug("Request %s: Target %s, observed from %s",req.request_number,
-                                                        target_name,
-                                                        resource_name)
-
-
-
-
-def print_req_summary(req, resource_name, user_intervals, rs_dark_intervals,
-                      rs_up_intervals, intersection):
-    print_request(req, resource_name)
-    # Pull out the timepoint list for printing
-    intervals = user_intervals.toTupleList()
-    if not intervals:
-        log.debug("No user intervals found")
-        return
-    else:
-        earliest_tp = latest_tp = intervals[0][0]
-
-    for (start, end) in intervals:
-        log.debug("    User window:          %s to %s", start, end)
-        if start < earliest_tp:
-            earliest_tp = start
-        if end > latest_tp:
-            latest_tp = end
-
-    for dark_int in rs_dark_intervals:
-        if dark_int[0] < latest_tp+timedelta(days=1) and dark_int[1] > earliest_tp - timedelta(days=1):
-            log.debug("    Darkness:             %s to %s", dark_int[0], dark_int[1])
-
-    for up_int in rs_up_intervals:
-        if up_int[0] < latest_tp+timedelta(days=1) and up_int[1] > earliest_tp - timedelta(days=1):
-            log.debug("    Target above horizon: %s to %s", up_int[0], up_int[1])
-
-    log.debug("    Dark/rise intersections:")
-    if not intersection.toDictList():
-        log.debug("        <none>")
-    else:
-        for i in intersection.toDictList():
-            log.debug("        %s (%s)", i['time'], i['type'])
 
     return
 
@@ -172,6 +132,7 @@ def print_schedule(schedule, semester_start=None, semester_end=None):
             print_reservation(res)
 
     return
+
 
 def iprint(string, indent_level=0):
     print (indent_level * INDENT) + string

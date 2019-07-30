@@ -9,7 +9,7 @@ time_intervals<2.0
 
 pyslalib
 rise_set
-gurobipy
+gurobipy==6.0.2
 lcogt-dateutils
 potsdb==1.0.3
 requests<=2.30.0

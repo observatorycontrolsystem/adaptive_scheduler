@@ -24,7 +24,7 @@ March 2012
 
 from rise_set.angle           import Angle
 from rise_set.visibility      import Visibility
-from rise_set.utils           import is_satellite_target
+from rise_set.utils           import is_static_target
 
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -33,13 +33,13 @@ from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as C
 from adaptive_scheduler.utils    import ( datetime_to_epoch, normalise,
                                           timeit, metric_timer )
 from adaptive_scheduler.printing import plural_str as pl
-from adaptive_scheduler.model2   import Window, Windows, filter_compounds_by_type, UserRequest
+from adaptive_scheduler.models   import Window, Windows, filter_compounds_by_type, RequestGroup
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
                                                 drop_empty_requests,
                                                 log_windows)
-from adaptive_scheduler.log         import UserRequestLogger
+from adaptive_scheduler.log         import RequestGroupLogger
 
 from multiprocessing import Pool, cpu_count, current_process, TimeoutError
 from redis import Redis
@@ -50,8 +50,8 @@ import os
 import logging
 log = logging.getLogger(__name__)
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
+multi_rg_log = logging.getLogger('rg_logger')
+rg_log = RequestGroupLogger(multi_rg_log)
 
 redis = Redis(host=os.getenv('REDIS_URL', 'redisdev'), db=0, password='schedulerpass', socket_connect_timeout=15,
               socket_timeout=30)
@@ -134,12 +134,12 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     rs_dark_intervals = visibility.get_dark_intervals()
     rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                       airmass=max_airmass)
-    if not is_satellite_target(rise_set_target):
+    if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
         rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
                                                                  target_intervals=rs_up_intervals,
                                                                  moon_distance=Angle(degrees=min_lunar_distance))
-    # HA support only currently implemented for sidereal targets
+    # HA support only currently implemented for ICRS targets
     if 'ra' in rise_set_target:
         rs_ha_intervals = visibility.get_ha_intervals(rise_set_target)
     else:
@@ -155,45 +155,45 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     return dark_intervals
 
 
-def construct_compound_reservation(user_request, semester_start):
-    '''Convert a UserRequest into a CompoundReservation, translating datetimes
+def construct_compound_reservation(request_group, semester_start):
+    '''Convert a RequestGroup into a CompoundReservation, translating datetimes
        to kernel epoch times. The Request windows were already translated into visible windows during the 
        filter_on_visibility step.
     '''
     reservations = []
-    for index, request in enumerate(user_request.requests):
+    for index, request in enumerate(request_group.requests):
         visibility_intervals_for_resources = req_windows_to_kernel_intervals(request.windows.windows_for_resource)
         kernel_intervals_for_resources = translate_request_windows_to_kernel_windows(visibility_intervals_for_resources,
                                                                                      semester_start)
 
         # Construct the kernel Reservation
-        res = Reservation(user_request.get_effective_priority(index), request.duration, kernel_intervals_for_resources,
+        res = Reservation(request_group.get_effective_priority(index), request.duration, kernel_intervals_for_resources,
                           previous_solution_reservation=request.scheduled_reservation)
         # Store the original requests for recovery after scheduling
         # TODO: Do this with a field provided for this purpose, not this hack
-        res.user_request = user_request
+        res.request_group = request_group
         res.request = request
 
         reservations.append(res)
 
     # Combine Reservations into CompoundReservations
     # Each CompoundReservation represents an actual request to do something
-    compound_res = CompoundReservation(reservations, user_request.operator)
+    compound_res = CompoundReservation(reservations, request_group.operator)
 
     return compound_res
 
 
-def construct_many_compound_reservation(user_request, request_index, semester_start):
-    request = user_request.requests[request_index]
+def construct_many_compound_reservation(request_group, request_index, semester_start):
+    request = request_group.requests[request_index]
     visibility_intervals_for_resources = req_windows_to_kernel_intervals(request.windows.windows_for_resource)
     kernel_intervals_for_resources = translate_request_windows_to_kernel_windows(visibility_intervals_for_resources,
                                                                                  semester_start)
     # Construct the kernel Reservation
-    res = Reservation(user_request.get_effective_priority(request_index), request.duration,
+    res = Reservation(request_group.get_effective_priority(request_index), request.duration,
                       kernel_intervals_for_resources, previous_solution_reservation=request.scheduled_reservation)
     # Store the original requests for recovery after scheduling
     # TODO: Do this with a field provided for this purpose, not this hack
-    res.user_request = user_request
+    res.request_group = request_group
     res.request          = request
 
     # Create a CR of type 'single' for kernel scheduling
@@ -221,53 +221,53 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 @timeit
 @metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x))
-def filter_on_scheduling_horizon(user_requests, scheduling_horizon):
+def filter_on_scheduling_horizon(request_groups, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
     '''
-    urs_by_type = filter_compounds_by_type(user_requests)
-    log.info("Identified %s, %s, %s, %s" % (pl(len(urs_by_type['single']), 'single'),
-                                            pl(len(urs_by_type['many']), 'many'),
-                                            pl(len(urs_by_type['and']), 'and'),
-                                            pl(len(urs_by_type['oneof']), 'oneof')))
+    rgs_by_type = filter_compounds_by_type(request_groups)
+    log.info("Identified %s, %s, %s, %s" % (pl(len(rgs_by_type['single']), 'single'),
+                                            pl(len(rgs_by_type['many']), 'many'),
+                                            pl(len(rgs_by_type['and']), 'and'),
+                                            pl(len(rgs_by_type['oneof']), 'oneof')))
 
     # Filter windows that are beyond the short-term scheduling horizon
-    log.info("Filtering URs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
-    horizon_limited_urs = urs_by_type['single'] + urs_by_type['many']
-    horizon_limited_urs = truncate_upper_crossing_windows(horizon_limited_urs, horizon=scheduling_horizon)
-    horizon_limited_urs = filter_out_future_windows(horizon_limited_urs, horizon=scheduling_horizon)
+    log.info("Filtering RGs of type 'single' and 'many' based on scheduling horizon (%s)" % scheduling_horizon)
+    horizon_limited_rgs = rgs_by_type['single'] + rgs_by_type['many']
+    horizon_limited_rgs = truncate_upper_crossing_windows(horizon_limited_rgs, horizon=scheduling_horizon)
+    horizon_limited_rgs = filter_out_future_windows(horizon_limited_rgs, horizon=scheduling_horizon)
     #TODO: Add the duration filter here?
     # Clean up Requests without any windows
-    horizon_limited_urs = filter_on_type(horizon_limited_urs)
+    horizon_limited_rgs = filter_on_type(horizon_limited_rgs)
     # Many's may have children with no windows that should be removed from consideration
-    removed_requests = drop_empty_requests(horizon_limited_urs)
-    log.info("After filtering, %d horizon-limited urs remain" % len(horizon_limited_urs))
+    removed_requests = drop_empty_requests(horizon_limited_rgs)
+    log.info("After filtering, %d horizon-limited rgs remain" % len(horizon_limited_rgs))
     
     # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
     # TODO: Remove this block after review
-    log.info("Filtering compound URs of type 'and' and 'oneof', not constrained by scheduling horizon")
-    unlimited_urs = urs_by_type['and'] + urs_by_type['oneof']
-    unlimited_urs = truncate_upper_crossing_windows(unlimited_urs)
-    unlimited_urs = filter_out_future_windows(unlimited_urs)
+    log.info("Filtering compound RGs of type 'and' and 'oneof', not constrained by scheduling horizon")
+    unlimited_rgs = rgs_by_type['and'] + rgs_by_type['oneof']
+    unlimited_rgs = truncate_upper_crossing_windows(unlimited_rgs)
+    unlimited_rgs = filter_out_future_windows(unlimited_rgs)
     
     # TODO: it's possible that one-ofs and ands may have these windowless 
     # children at this point from requests that crossed the semester boundary
     # might need to drop empty requests before filtering on type   
     
     # Clean up Requests without any windows
-    unlimited_urs = filter_on_type(unlimited_urs)
-    log.info("After filtering, %d unlimited URs remain" % len(unlimited_urs))
+    unlimited_rgs = filter_on_type(unlimited_rgs)
+    log.info("After filtering, %d unlimited RGs remain" % len(unlimited_rgs))
     
-    remaining_urs = horizon_limited_urs + unlimited_urs
+    remaining_rgs = horizon_limited_rgs + unlimited_rgs
      
-    return remaining_urs
+    return remaining_rgs
 
 
 @timeit
-def filter_for_kernel(user_requests, visibility_for_resource, downtime_intervals, semester_start, semester_end,
+def filter_for_kernel(request_groups, visibility_for_resource, downtime_intervals, semester_start, semester_end,
                       scheduling_horizon):
-    '''After throwing out and marking URs as UNSCHEDULABLE, reduce windows by
-       considering dark time and target visibility. Remove any URs that are now too
+    '''After throwing out and marking RGs as UNSCHEDULABLE, reduce windows by
+       considering dark time and target visibility. Remove any RGs that are now too
        small to hold their duration after this consideration, so they are not passed
        to the kernel.
        NOTE: We do this as an explicit additional filtering step, because we do not
@@ -275,17 +275,17 @@ def filter_for_kernel(user_requests, visibility_for_resource, downtime_intervals
        step is network-dependent; if the network subsequently changes (e.g. a
        telescope becomes available), then the Request may then be schedulable.'''
     # trim windows to scheduling horizon, expiry, or end of semester and filter
-    urs = filter_on_scheduling_horizon(user_requests, scheduling_horizon)
+    rgs = filter_on_scheduling_horizon(request_groups, scheduling_horizon)
 
     # Filter on rise_set/airmass/downtime intervals
-    urs = filter_on_visibility(urs, visibility_for_resource, downtime_intervals, semester_start, semester_end)
+    rgs = filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semester_start, semester_end)
 
     # Clean up now impossible Requests
-    urs = filter_on_duration(urs)
+    rgs = filter_on_duration(rgs)
     # TODO: Do we need to drop empty requests here before carrying on?
-    urs = filter_on_type(urs, [])
+    rgs = filter_on_type(rgs, [])
 
-    return urs
+    return rgs
 
 
 def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
@@ -316,23 +316,26 @@ def update_cached_semester(semester_start, semester_end):
 
 
 @log_windows
-def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semester_start, semester_end):
+def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semester_start, semester_end):
     update_cached_semester(semester_start, semester_end)
     rise_sets_to_compute_later = {}
-    for cr in crs:
-        for r in cr.requests:
-            rise_set_target = r.target.in_rise_set_format()
-            for resource in r.windows.windows_for_resource:
-                cache_key = make_cache_key(resource, rise_set_target, r.constraints.max_airmass,
-                                           r.constraints.min_lunar_distance)
-                if cache_key not in local_cache:
-                    try:
-                        # put intersections from the redis cache into the local cache for use later
-                        local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
-                    except Exception:
-                        # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
-                        rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target, visibility_for_resource[resource],
-                                                           r.constraints.max_airmass, r.constraints.min_lunar_distance))
+    for rg in rgs:
+        for r in rg.requests:
+            for conf in r.configurations:
+                rise_set_target = conf.target.in_rise_set_format()
+                for resource in r.windows.windows_for_resource:
+                    cache_key = make_cache_key(resource, rise_set_target, conf.constraints['max_airmass'],
+                                               conf.constraints['min_lunar_distance'])
+                    if cache_key not in local_cache:
+                        try:
+                            # put intersections from the redis cache into the local cache for use later
+                            local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+                        except Exception:
+                            # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
+                            rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
+                                                                      visibility_for_resource[resource],
+                                                                      conf.constraints['max_airmass'],
+                                                                      conf.constraints['min_lunar_distance']))
 
     num_processes = cpu_count() - 1
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
@@ -342,14 +345,14 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
         try:
             pool.map_async(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values()).get(300)
         except TimeoutError as te:
-	    pool.terminate()
-	    log.warn('300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
+            pool.terminate()
+            log.warn('300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
         except Exception:
             log.warn('Failed to save rise_set intervals into redis. Please check that redis is online. Falling back on synchronous rise_set calculations.')
         log.info("finished computing rise_sets")
-	pool.close()
-	pool.join()
-	log.info("finished closing thread pool")
+        pool.close()
+        pool.join()
+        log.info("finished closing thread pool")
         for cache_key in rise_sets_to_compute_later.keys():
             try:
                 local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
@@ -359,29 +362,35 @@ def filter_on_visibility(crs, visibility_for_resource, downtime_intervals, semes
                 local_cache[cache_key] = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
 
     # now that we have all the rise_set intervals in local cache, perform the visibility filter on the requests
-    for cr in crs:
-        for r in cr.requests:
+    for rg in rgs:
+        for r in rg.requests:
             intervals_by_resource = {}
-            for resource in r.windows.windows_for_resource:
-                cache_key = make_cache_key(resource, r.target.in_rise_set_format(), r.constraints.max_airmass,
-                                           r.constraints.min_lunar_distance)
-                intervals_by_resource[resource] = local_cache[cache_key]
-            process_request_visibility(cr.tracking_number, r, intervals_by_resource, downtime_intervals)
+            for conf in r.configurations:
+                for resource in r.windows.windows_for_resource:
+                    cache_key = make_cache_key(resource, conf.target.in_rise_set_format(),
+                                    conf.constraints['max_airmass'],
+                                    conf.constraints['min_lunar_distance'])
+                    target_intervals = local_cache[cache_key]
+                    if resource in intervals_by_resource:
+                        intervals_by_resource[resource] = intervals_by_resource[resource].intersect([target_intervals])
+                    else:
+                        intervals_by_resource[resource] = target_intervals
+            process_request_visibility(rg.id, r, intervals_by_resource, downtime_intervals)
 
-    return crs
+    return rgs
 
 
-def process_request_visibility(tracking_number, request, target_intervals, downtime_intervals):
+def process_request_visibility(request_group_id, request, target_intervals, downtime_intervals):
     request = compute_request_availability(request, target_intervals, downtime_intervals)
     if request.has_windows():
         tag = 'RequestIsVisible'
-        msg = 'Request {} (UR {}) is visible ({} windows remaining)'.format(request.request_number, tracking_number,
+        msg = 'Request {} (RG {}) is visible ({} windows remaining)'.format(request.id, request_group_id,
                                                                             request.n_windows())
     else:
         tag = 'RequestIsNotVisible'
-        msg = 'Request {} (UR {}) is not up and dark at any available telescope'.format(request.request_number,
-                                                                                        tracking_number)
-    UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
+        msg = 'Request {} (RG {}) is not up and dark at any available telescope'.format(request.id,
+                                                                                        request_group_id)
+    RequestGroup.emit_request_group_feedback(request_group_id, msg, tag)
 
 
 def compute_request_availability(req, target_intervals_by_resource, downtime_intervals):
@@ -419,30 +428,30 @@ def intervals_to_windows(req, intersections_for_resource):
 
 @timeit
 @metric_timer('make_compound_reservations', num_requests=lambda x: len(x))
-def make_compound_reservations(user_requests, semester_start):
+def make_compound_reservations(request_groups, semester_start):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
     to_schedule = []
-    for ur in user_requests:
+    for rg in request_groups:
         # Make and store the CompoundReservation
-        compound_res = construct_compound_reservation(ur, semester_start)
+        compound_res = construct_compound_reservation(rg, semester_start)
         to_schedule.append(compound_res)
 
     return to_schedule
 
 
 @timeit
-def make_many_type_compound_reservations(many_user_requests, semester_start):
+def make_many_type_compound_reservations(many_request_groups, semester_start):
     '''Parse a list of CompoundRequests of type 'many', and produce a corresponding
        list of CompoundReservations. Each 'many' will produce one CompoundReservation
        per Request child.'''
     to_schedule = []
-    for many_ur in many_user_requests:
+    for many_rg in many_request_groups:
         # Produce a distinct CR for each R in a 'many'
         # We do this because the kernel knows nothing about 'many', and will treat
         # the scheduling of the children as completely independent
-        for request_index, _ in enumerate(many_ur.requests):
-            compound_res = construct_many_compound_reservation(many_ur, request_index, semester_start)
+        for request_index, _ in enumerate(many_rg.requests):
+            compound_res = construct_many_compound_reservation(many_rg, request_index, semester_start)
             to_schedule.append(compound_res)
 
     return to_schedule
@@ -481,7 +490,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
 
 def construct_global_availability(resource_interval_mask, semester_start, resource_windows):
     '''Use the interval mask to make unavailable portions of each resource where an
-       observation is running/too request will occur. Normalise and intersect with the resource windows to
+       observation is running/rr request will occur. Normalise and intersect with the resource windows to
        get a final global availability for each resource.
        resource_intervals_mask is expected to be a dict like:
        { 'resource_name' : Intervals() }

@@ -1,10 +1,12 @@
 #!/usr/bin/python
 from __future__ import division
 
+import copy
+
 from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
 
-from adaptive_scheduler.model2 import (SiderealTarget, Request, Proposal,
-                                       UserRequest, Window, Windows, MoleculeFactory, Constraints)
+from adaptive_scheduler.models import (ICRSTarget, Request, Proposal,
+                                       RequestGroup, Window, Windows, Configuration)
 from adaptive_scheduler.utils import (datetime_to_epoch,
                                       normalised_epoch_to_datetime)
 from time_intervals.intervals import Intervals
@@ -27,8 +29,6 @@ class TestKernelMappings(object):
         self.start = datetime(2011, 11, 1, 0, 0, 0)
         self.end   = datetime(2011, 11, 3, 0, 0, 0)
 
-        self.mol_factory = MoleculeFactory()
-
         self.tels = {
                       '1m0a.doma.bpl' :
                                         dict(
@@ -42,14 +42,14 @@ class TestKernelMappings(object):
                                                  )
                     }
 
-        self.target = SiderealTarget(
+        self.target = ICRSTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
                               ra  = 310.35795833333333,
                               dec = 45.280338888888885
                             )
 
-        self.prop_mot_target = SiderealTarget(
+        self.prop_mot_target = ICRSTarget(
                               #ra  = '20 41 25.91',
                               #dec = '+45 16 49.22',
                               ra  = 316.73026646,
@@ -58,16 +58,40 @@ class TestKernelMappings(object):
                               proper_motion_dec= 3144.68
                             )
 
-        self.mol = self.mol_factory.build(
-                                            dict(
-                                                 type   = 'expose',
-                                                 filter ='B',
-                                                 bin_x  = 2,
-                                                 bin_y  = 2,
-                                                 exposure_count = 1,
-                                                 exposure_time  = 30,
-                                                )
-                                               )
+        self.instrument_config = dict(
+            exposure_count=1,
+            bin_x=2,
+            bin_y=2,
+            exposure_time=30,
+            optical_elements={'filter': 'B'}
+        )
+
+        self.guiding_config = dict(
+            mode='ON',
+            optional=True,
+            optical_elements={},
+            exposure_time=10
+        )
+
+        self.acquisition_config = dict(
+            mode='OFF'
+        )
+
+        self.constraints = {'max_airmass': None,
+                            'min_lunar_distance': 0}
+
+        self.configuration = Configuration(
+            dict(
+                id=5,
+                target=self.target,
+                instrument_type='1M0-SCICAM-SINISTRO',
+                type='expose',
+                instrument_configs=[self.instrument_config],
+                guiding_config=self.guiding_config,
+                acquisition_config=self.acquisition_config,
+                constraints=self.constraints
+            )
+        )
 
 
     def make_constrained_request(self, airmass=None,
@@ -85,26 +109,26 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
-        constraints = Constraints(max_airmass=airmass)
+        configuration = copy.deepcopy(self.configuration)
+        configuration.constraints['max_airmass'] = airmass
+
         req  = Request(
-                        target         = self.target,
-                        molecules      = [self.mol],
+                        configurations= [configuration],
                         windows        = dt_windows,
-                        constraints    = constraints,
-                        request_number = '1',
+                        id=1,
                         duration       = 10
                       )
 
         return req
 
 
-    def make_user_request(self, requests, operator='single'):
+    def make_request_group(self, requests, operator='single'):
         proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
-        ur = UserRequest(operator=operator, requests=requests, proposal=proposal, submitter='',
-                         expires=datetime(2999, 1, 1), tracking_number='1', group_id='test group id', ipp_value=1.0,
-                         observation_type='NORMAL')
+        rg = RequestGroup(operator=operator, requests=requests, proposal=proposal, submitter='',
+                          expires=datetime(2999, 1, 1), id=1, name='test group id', ipp_value=1.0,
+                          observation_type='NORMAL')
         
-        return ur
+        return rg
 
 
     def make_intersection_dict(self):
@@ -136,13 +160,18 @@ class TestKernelMappings(object):
         return dt_intervals_list
 
     def make_rise_set_intervals(self, req, visibilities):
-        rs_target = req.target.in_rise_set_format()
-        max_airmass = req.constraints.max_airmass
-        min_lunar_distance = req.constraints.min_lunar_distance
         intervals_for_resource = {}
-        for resource, visibility in visibilities.items():
-            intervals_for_resource[resource] = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
-                                                                                min_lunar_distance)
+        for configuration in req.configurations:
+            rs_target = configuration.target.in_rise_set_format()
+            max_airmass = configuration.constraints['max_airmass']
+            min_lunar_distance = configuration.constraints['min_lunar_distance']
+            for resource, visibility in visibilities.items():
+                intervals = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
+                                                                                    min_lunar_distance)
+                if resource in intervals_for_resource:
+                    intervals_for_resource[resource] = intervals_for_resource[resource].intersect(intervals)
+                else:
+                    intervals_for_resource[resource] = intervals
 
         return intervals_for_resource
 
@@ -150,7 +179,7 @@ class TestKernelMappings(object):
         max_airmass = 2.5
         min_lunar_distance = 30.0
         resource = '1m0a.doma.lsc'
-        rs_target = self.make_constrained_request().target.in_rise_set_format()
+        rs_target = self.make_constrained_request().configurations[0].target.in_rise_set_format()
 
         assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance),
                      '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.iteritems()))))
@@ -189,13 +218,13 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'and'
-        user_request  = self.make_user_request(requests, operator)
+        request_group  = self.make_request_group(requests, operator)
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.proposal.tac_priority = 1
+        request_group.proposal.tac_priority = 1
 
-        received = construct_compound_reservation(user_request,
+        received = construct_compound_reservation(request_group,
                                                   sem_start)
 
         assert_equal(len(received.reservation_list), len(requests))
@@ -206,14 +235,14 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request()
         requests          = [request, request]
         operator          = 'many'
-        user_request  = self.make_user_request(requests, operator)
+        request_group  = self.make_request_group(requests, operator)
         sem_start         = self.start
 
         #TODO: Replace with cleaner mock patching
-        user_request.proposal.tac_priority = 1
+        request_group.proposal.tac_priority = 1
 
         received = construct_many_compound_reservation(
-                                               user_request,
+                                               request_group,
                                                0,
                                                sem_start)
 
@@ -227,17 +256,17 @@ class TestKernelMappings(object):
         request           = self.make_constrained_request(start=start, end=end)
         operator          = 'single'
         requests          = [request]
-        user_request      = self.make_user_request(requests, operator)
-        user_requests     = [user_request]
+        request_group      = self.make_request_group(requests, operator)
+        request_groups     = [request_group]
         scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-        filtered_urs = filter_on_scheduling_horizon(user_requests,
+        filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                     scheduling_horizon)
         
         expected_window_start = start
         expected_window_end = scheduling_horizon
         
-        assert_equal(1, len(filtered_urs))
-        output_ur = filtered_urs[0]
+        assert_equal(1, len(filtered_rgs))
+        output_ur = filtered_rgs[0]
         assert_equal(1, len(output_ur.requests))
         bpl_1m0a_doma_windows = output_ur.requests[0].windows.at('1m0a.doma.bpl')
         assert_equal(1, len(bpl_1m0a_doma_windows))
@@ -252,17 +281,17 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'many'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = scheduling_horizon
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
@@ -281,17 +310,17 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'oneof'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = end
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
@@ -310,17 +339,17 @@ class TestKernelMappings(object):
             request2          = self.make_constrained_request(start=start, end=end)
             operator          = 'and'
             requests          = [request1, request2]
-            user_request      = self.make_user_request(requests, operator)
-            user_requests     = [user_request]
+            request_group      = self.make_request_group(requests, operator)
+            request_groups     = [request_group]
             scheduling_horizon = datetime(2011, 11, 15, 6, 0, 0)
-            filtered_urs = filter_on_scheduling_horizon(user_requests,
+            filtered_rgs = filter_on_scheduling_horizon(request_groups,
                                                         scheduling_horizon)
             
             expected_window_start = start
             expected_window_end = end
             
-            assert_equal(1, len(filtered_urs))
-            output_ur = filtered_urs[0]
+            assert_equal(1, len(filtered_rgs))
+            output_ur = filtered_rgs[0]
             assert_equal(2, len(output_ur.requests))
             bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
             bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
@@ -344,15 +373,11 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
-        constraints = Constraints({})
-
-        req  = Request(
-                       target         = self.target,
-                       molecules      = [self.mol],
-                       windows        = dt_windows,
-                       constraints    = constraints,
-                       request_number = '1'
-                      )
+        req = Request(
+            configurations=[self.configuration],
+            windows=dt_windows,
+            id='1'
+        )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
@@ -398,13 +423,10 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
-        constraints = Constraints({})
         req  = Request(
-                        target     = self.target,
-                        molecules  = [self.mol],
+                        configurations= [self.configuration],
                         windows    = dt_windows,
-                        constraints = constraints,
-                        request_number = '1'
+                        id='1'
                       )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -449,13 +471,10 @@ class TestKernelMappings(object):
         for w in windows:
             dt_windows.append(Window(w, self.tels[resource_name]['name']))
 
-        constraints = Constraints({})
         req  = Request(
-                       target     = self.target,
-                       molecules  = [self.mol],
+                       configurations= [self.configuration],
                        windows    = dt_windows,
-                       constraints = constraints,
-                       request_number = '1'
+                       id='1'
                       )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -502,7 +521,7 @@ class TestKernelMappings(object):
                  tel_name : tel,
                }
 
-        target = SiderealTarget(
+        target = ICRSTarget(
                                   ra  = 310.35795833333333,
                                   dec = -60.0,
                                )
@@ -511,13 +530,13 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
-        constraints = Constraints()
+        configuration = copy.deepcopy(self.configuration)
+        configuration.target = target
+
         req = Request(
-                       target          = target,
-                       molecules       = [self.mol],
+                       configurations= [configuration],
                        windows         = dt_windows,
-                       constraints     = constraints,
-                       request_number  = '1',
+                       id='1',
                        duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)
@@ -568,7 +587,7 @@ class TestKernelMappings(object):
                  tel_name : tel,
                }
 
-        target = SiderealTarget(
+        target = ICRSTarget(
                                   # RA 15:41:25.91
                                   ra  = 235.357958333,
                                   dec = -60.0,
@@ -578,13 +597,13 @@ class TestKernelMappings(object):
         dt_windows = Windows()
         dt_windows.append(window)
 
-        constraints = Constraints()
+        configuration = copy.deepcopy(self.configuration)
+        configuration.target = target
+
         req = Request(
-                       target          = target,
-                       molecules       = [self.mol],
+                       configurations= [configuration],
                        windows         = dt_windows,
-                       constraints     = constraints,
-                       request_number  = '1',
+                       id='1',
                        duration        = 10,
                      )
         sem_start = datetime(2013, 03, 1, 0, 0, 0)

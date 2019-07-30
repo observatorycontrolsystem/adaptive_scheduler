@@ -31,9 +31,9 @@ log.addHandler(fh)
 # Setting the project name in the opentsdb_python_metrics library
 metric_wrappers.project_name = 'adaptive_scheduler'
 
-# Constants used to denote whether we are in a normal or ToO loop currently
-NORMAL_SCHEDULE_TYPE = 'normal'
-TOO_SCHEDULE_TYPE = 'too'
+# Constants used to denote whether we are in a normal or RR loop currently
+NORMAL_OBSERVATION_TYPE = 'normal'
+RR_OBSERVATION_TYPE = 'rr'
 
 
 def safe_unidecode(unicode_str, max_length):
@@ -68,10 +68,10 @@ def set_schedule_type(schedule_type):
     :param schedule_type:
     :return:
     '''
-    if schedule_type is NORMAL_SCHEDULE_TYPE:
+    if schedule_type is NORMAL_OBSERVATION_TYPE:
         metric_wrappers.global_tags = {'schedule_type':'normal'}
-    elif schedule_type is TOO_SCHEDULE_TYPE:
-        metric_wrappers.global_tags = {'schedule_type':'too'}
+    elif schedule_type is RR_OBSERVATION_TYPE:
+        metric_wrappers.global_tags = {'schedule_type':'rr'}
     else:
         metric_wrappers.global_tags = None
 
@@ -163,19 +163,23 @@ def iso_string_to_datetime(iso_string):
         d = datetime.strptime(iso_string, format_milli)
     return d
 
+
 def datetime_to_epoch(dt):
     '''Convert a datetime to Unix epoch time, a continuous, integer timescale, with
        units of a second.'''
     return calendar.timegm(dt.timetuple())
+
 
 def datetime_to_normalised_epoch(dt, dt_start):
     '''Convert a datetime into kernel time, a truncated Unix epoch time. We use this
        for convenience, as a continuous measure since an arbitrary start point.'''
     return normalise(datetime_to_epoch(dt), datetime_to_epoch(dt_start))
 
+
 def epoch_to_datetime(epoch_time):
     '''Convert a Unix epoch time to a datetime.'''
     return datetime.utcfromtimestamp(epoch_time)
+
 
 def normalised_epoch_to_datetime(epoch_time, epoch_start):
     '''Convert a normalised kernel epoch time to a datetime. The normalisation
@@ -183,13 +187,16 @@ def normalised_epoch_to_datetime(epoch_time, epoch_start):
     unnormed_epoch = unnormalise(epoch_time, epoch_start)
     return epoch_to_datetime(unnormed_epoch)
 
+
 def normalise(value, start):
     '''Normalise any value to a positive range, starting at zero.'''
     return value - start
 
+
 def unnormalise(value, start):
     '''Perform the inverse of normalise().'''
     return value + start
+
 
 def get_reservation_datetimes(reservation, semester_start):
     '''Find the real-world (datetime) start and end times of the provided
@@ -203,6 +210,7 @@ def get_reservation_datetimes(reservation, semester_start):
     dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
 
     return dt_start, dt_end
+
 
 def split_location(location):
     '''
@@ -227,10 +235,10 @@ def split_location(location):
     # Separation wasn't possible
     return (location, location, location)
 
+
 def join_location(site, observatory, telescope):
     # Join on full stops
     return "%s.%s.%s" % (telescope, observatory, site)
-
 
 
 def timeit(method):

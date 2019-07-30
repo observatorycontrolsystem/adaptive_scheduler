@@ -1,4 +1,4 @@
-from adaptive_scheduler.model2          import (UserRequest, Request, Window, Windows)
+from adaptive_scheduler.models          import (RequestGroup, Request, Window, Windows)
 
 from mock import Mock, PropertyMock
 from datetime import datetime, timedelta
@@ -9,12 +9,13 @@ def create_mock_proposal():
     
     return mock_proposal
 
-def create_user_request(window_dicts, operator='and', resource_name='Martin', target=None, molecules=None, proposal=create_mock_proposal(), expires=None, duration=60, first_request_number='0000000005', tracking_number='0000000005'):
+
+def create_request_group(window_dicts, operator='and', resource_name='Martin', configurations=None, proposal=create_mock_proposal(), expires=None, duration=60, first_request_id=5, request_group_id=5):
         t1 = {'name': resource_name}
 
         req_list = []
         window_list = []
-        next_request_number = int(first_request_number)
+        next_request_id = int(first_request_id)
         for req_windows in window_dicts:
             windows = Windows()
             for window_dict in req_windows:
@@ -26,36 +27,34 @@ def create_user_request(window_dicts, operator='and', resource_name='Martin', ta
                 window_list.append(w)
 
             r  = Request(
-                          target         = target,
-                          molecules      = molecules,
+                          configurations= configurations,
                           windows        = windows,
-                          constraints    = None,
-                          request_number = str(next_request_number).zfill(10)
+                          id= next_request_id
                         )
 
             r.get_duration = Mock(return_value=duration) 
                 
             
             req_list.append(r)
-            next_request_number += 1
+            next_request_id += 1
 
         if len(req_list) == 1:
             operator = 'single'
 
         if expires:
-            UserRequest.expires = PropertyMock(return_value=expires)
+            RequestGroup.expires = PropertyMock(return_value=expires)
         else:
-            UserRequest.expires = PropertyMock(return_value=datetime.utcnow() + timedelta(days=365))
-        ur1 = UserRequest(
+            RequestGroup.expires = PropertyMock(return_value=datetime.utcnow() + timedelta(days=365))
+        rg = RequestGroup(
                            operator        = operator,
                            requests        = req_list,
                            proposal        = proposal,
                            expires         = None,
-                           tracking_number = tracking_number,
-                           group_id        = None,
+                           id= request_group_id,
+                           name= None,
                            ipp_value       = 1.0,
                            observation_type= 'NORMAL',
                            submitter       = '',
                          )
 
-        return ur1, window_list
+        return rg, window_list

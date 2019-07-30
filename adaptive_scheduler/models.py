@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 '''
-model2.py - summary line
+requests.py - A set of python classes to store Request data
 
 description
 
@@ -24,13 +24,14 @@ from adaptive_scheduler.utils                 import (iso_string_to_datetime, co
                                                       EqualityMixin, safe_unidecode)
 from adaptive_scheduler.printing              import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.log                   import UserRequestLogger
+from adaptive_scheduler.log                   import RequestGroupLogger
 from adaptive_scheduler.feedback              import UserFeedbackLogger
 from adaptive_scheduler.eventbus              import get_eventbus
 from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme, scheme_mappings
-from adaptive_scheduler.valhalla_connections  import ValhallaConnectionError
+from adaptive_scheduler.observation_portal_connections  import ObservationPortalConnectionError
 
 from datetime    import datetime
+from collections import defaultdict
 import ast
 import logging
 import random
@@ -38,95 +39,103 @@ import numbers
 
 log = logging.getLogger(__name__)
 
-multi_ur_log = logging.getLogger('ur_logger')
-ur_log = UserRequestLogger(multi_ur_log)
-
 event_bus = get_eventbus()
 
 POND_FIELD_DIGITS = 7
 
 
-def n_requests(user_reqs):
-    n_urs  = len(user_reqs)
-    n_rs   = n_base_requests(user_reqs)
+def n_requests(request_groups):
+    n_rgs = len(request_groups)
+    n_rs = n_base_requests(request_groups)
 
-    return n_urs, n_rs
-
-
-def n_base_requests(user_reqs):
-    return sum([ur.n_requests() for ur in user_reqs])
+    return n_rgs, n_rs
 
 
-def filter_out_compounds(user_reqs):
-    '''Given a list of UserRequests, return a list containing only UserRequests of
+def n_base_requests(request_groups):
+    return sum([rg.n_requests() for rg in request_groups])
+
+
+def filter_out_compounds(request_groups):
+    '''Given a list of RequestGroups, return a list containing only RequestGroups of
        type 'single'.'''
-    single_urs = []
-    for ur in user_reqs:
-        if ur.operator != 'single':
-            msg = "UR %s is of type %s - removing from consideration" % (ur.tracking_number, ur.operator)
+    single_rgs = []
+    for rg in request_groups:
+        if rg.operator != 'single':
+            msg = "RG %d is of type %s - removing from consideration" % (rg.id, rg.operator)
             log.warn(msg)
         else:
-            single_urs.append(ur)
+            single_rgs.append(rg)
 
-    return single_urs
+    return single_rgs
 
 
-def filter_compounds_by_type(urs):
-    '''Given a list of UserRequests, Return a dictionary that sorts them by type.'''
-    urs_by_type = {
+def filter_compounds_by_type(rgs):
+    '''Given a list of RequestGroups, Return a dictionary that sorts them by type.'''
+    rgs_by_type = {
                     'single' : [],
                     'many'   : [],
                     'and'    : [],
                     'oneof'  : [],
                   }
 
-    for ur in urs:
-        urs_by_type[ur.operator].append(ur)
+    for rg in rgs:
+        rgs_by_type[rg.operator].append(rg)
 
-    return urs_by_type
+    return rgs_by_type
 
 
-def generate_request_description(user_request_json, request_json):
+def generate_request_description(request_group_json, request_json):
     prop_id = None
     user_id = None
     telescope_class = None
     inst_type = None
-    if 'proposal' in user_request_json:
-        prop_id = user_request_json.get('proposal')
-        user_id = user_request_json.get('submitter')
+    if 'proposal' in request_group_json:
+        prop_id = request_group_json.get('proposal')
+        user_id = request_group_json.get('submitter')
     if 'location' in request_json:
         telescope_class = request_json.get('location').get('telescope_class')
-    if 'molecules' in request_json and len(request_json['molecules']) > 0:
+    if 'configurations' in request_json and len(request_json['configurations']) > 0:
         filters = set()
         inst_types = set()
-        for molecule in request_json['molecules']:
-            if 'filter' in molecule and molecule['filter']:
-                filters.add(molecule['filter'])
-            if 'instrument_name' in molecule and molecule['instrument_name']:
-                inst_types.add(molecule['instrument_name'])
+        target_names = set()
+        for configuration in request_json['configurations']:
+            if 'instrument_type' in configuration and configuration['instrument_type']:
+                inst_types.add(configuration['instrument_type'])
+            if 'target' in configuration:
+                if isinstance(configuration['target'], Target) and hasattr(configuration['target'], 'name'):
+                    target_names.add(configuration['target'].name)
+                elif configuration['target'].get('name'):
+                    target_names.add(configuration['target']['name'])
+            for inst_config in configuration['instrument_configs']:
+                if 'optical_elements' in inst_config and inst_config['optical_elements']:
+                    for element_type, element_value in inst_config['optical_elements'].items():
+                        filters.add("{}: {}".format(element_type, element_value))
+
         inst_type = '(' + ', '.join(inst_types) + ')' if len(inst_types) > 0 else ''
         filter_string = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
-    return 'prop_id={}, user_id={}, TN={}, RN={}, telescope_class={}, inst_names={}, filters={}'.format(
+        target_string = '(' + ', '.join(target_names) + ')' if len(target_names) > 0 else ''
+    return 'proposal={}, submitter={}, RG_id={}, R_id={}, telescope_class={}, target_names={}, inst_names={}, filters={}'.format(
                     prop_id,
                     user_id,
-                    user_request_json.get('id'),
+                    request_group_json.get('id'),
                     request_json.get('id'),
                     telescope_class,
+                    target_string,
                     inst_type,
                     filter_string)
 
 
-def differentiate_by_type(operator, urs):
-    '''Given an operator type and a list of UserRequests, split the list into two
+def differentiate_by_type(operator, rgs):
+    '''Given an operator type and a list of RequestGroups, split the list into two
        lists, the chosen type, and the remainder.
        Valid operator types are 'single', 'and', 'oneof', 'many'.'''
     chosen_type = []
     other_types = []
-    for ur in urs:
-        if ur.operator == operator:
-            chosen_type.append(ur)
+    for rg in rgs:
+        if rg.operator == operator:
+            chosen_type.append(rg)
         else:
-            other_types.append(ur)
+            other_types.append(rg)
 
     return chosen_type, other_types
 
@@ -170,25 +179,13 @@ class Target(DataContainer):
         fields_as_str = '({})'.format(', '.join(fields_as_str))
         return "{} {}".format(self.__class__.__name__, fields_as_str)
 
-    def in_pond_format(self):
-        ''' Common pointing fields to all pointing types'''
-        pointing = {}
-        pointing['rot_mode'] = getattr(self, 'rot_mode', 'SKY') or 'SKY'
-        pointing['rot_angle'] = round(getattr(self, 'rot_angle', 0.0), 3)  # rot_angle is limited to 3 digits in pond
-        if hasattr(self, 'vmag') and self.vmag:
-            pointing['vmag'] = round(self.vmag, POND_FIELD_DIGITS)
-        if hasattr(self, 'radvel') and self.radvel:
-            pointing['radvel'] = round(self.radvel, POND_FIELD_DIGITS)
-
-        return pointing
-
 
 class NullTarget(Target):
     def __init__(self, *initial_data, **kwargs):
         Target.__init__(self, (), *initial_data, **kwargs)
 
 
-class SiderealTarget(Target):
+class ICRSTarget(Target):
     ''' SiderealTarget for targets with Sidereal parameters (ra/dec)
     '''
     def __init__(self, *initial_data, **kwargs):
@@ -224,37 +221,11 @@ class SiderealTarget(Target):
 
         return target_dict
 
-    def in_pond_format(self):
-        pointing = super(SiderealTarget, self).in_pond_format()
-        if hasattr(self, 'proper_motion_ra') and hasattr(self, 'proper_motion_dec'):
-            # convert proper motion ra/dec to sec/y without cos(d) term and arcsec/y
-            # for more info: https://issues.lco.global/issues/8723
-            prop_mot_ra, prop_mot_dec = convert_proper_motion(self.proper_motion_ra,
-                                                              self.proper_motion_dec,
-                                                              self.dec.in_degrees())
-        else:
-            prop_mot_dec = 0.0
-            prop_mot_ra = 0.0
-
-        pointing.update({
-            'type': 'SIDEREAL',
-            'coord_sys': 'ICRS',
-            'coord_type': 'RD',
-            'name': self.name,
-            'ra': round(self.ra.in_degrees(), POND_FIELD_DIGITS),
-            'dec': round(self.dec.in_degrees(), POND_FIELD_DIGITS),
-            'pro_mot_ra': round(prop_mot_ra, POND_FIELD_DIGITS),
-            'pro_mot_dec': round(prop_mot_dec, POND_FIELD_DIGITS),
-            'parallax': round(getattr(self, 'parallax', 0.0) / 1000.0, POND_FIELD_DIGITS),  # marcsec to arcsec
-            'epoch': round(getattr(self, 'epoch', 2000.0), POND_FIELD_DIGITS)
-        })
-        return pointing
-
     ra = property(get_ra, set_ra)
     dec = property(get_dec, set_dec)
 
 
-class NonSiderealTarget(Target):
+class OrbitalElementsTarget(Target):
     ''' NonSiderealTarget for targets with moving object parameters, like comets or minor planets
     '''
     def __init__(self, *initial_data, **kwargs):
@@ -284,17 +255,6 @@ class NonSiderealTarget(Target):
 
         return target_dict
 
-    def in_pond_format(self):
-        ''' This copies in all fields supplied from valhalla to pass through to the pond'''
-        pointing = super(NonSiderealTarget, self).in_pond_format()
-        pointing['type'] = 'NON_SIDEREAL'
-        pointing.update({x: getattr(self, x) for x in scheme_mappings[self.scheme.upper()]})
-        for key, value in pointing.items():
-            if isinstance(value, numbers.Number):
-                pointing[key] = round(value, POND_FIELD_DIGITS)
-
-        return pointing
-
 
 class SatelliteTarget(Target):
     ''' SatelliteTarget for targets with satellite parameters and fixed windows. Rise-set just returns the
@@ -311,111 +271,29 @@ class SatelliteTarget(Target):
 
         return target_dict
 
-    def in_pond_format(self):
-        pointing = super(SatelliteTarget, self).in_pond_format()
-        pointing.update({
-            'type': 'SATELLITE',
-            'coord_type': 'AA',
-            'coord_sys': 'APP',
-            'name': self.name,
-            'alt': round(self.altitude, POND_FIELD_DIGITS),
-            'az': round(self.azimuth, POND_FIELD_DIGITS),
-            'diff_alt_rate': round(self.diff_pitch_rate, POND_FIELD_DIGITS),
-            'diff_az_rate': round(self.diff_roll_rate, POND_FIELD_DIGITS),
-            'diff_alt_accel': round(self.diff_pitch_acceleration, POND_FIELD_DIGITS),
-            'diff_az_accel': round(self.diff_roll_acceleration, POND_FIELD_DIGITS),
-            'diff_epoch_rate': round(self.diff_epoch_rate, POND_FIELD_DIGITS)
-        })
-        return pointing
 
-
-class Constraints(DataContainer):
-    #TODO: Make this a named tuple
-    def __init__(self, *args, **kwargs):
-        self.max_airmass        = None
-        # default minimum lunar distance is 0 if none is specified in request.
-        self.min_lunar_distance = 0.0
-        self.max_lunar_phase    = None
-        self.max_seeing         = None
-        self.min_transparency   = None
-        DataContainer.__init__(self, *args, **kwargs)
-
-    def __repr__(self):
-        return "Constraints(airmass={}, min_lunar_distance={})".format(self.max_airmass, self.min_lunar_distance)
-
-
-class Molecule(DataContainer):
-    def __init__(self, required_fields, *initial_data, **kwargs):
-        self.mol_dict = initial_data[0]
-        self.ag_name = None
+class Configuration(DataContainer):
+    def __init__(self, *initial_data, **kwargs):
         DataContainer.__init__(self, *initial_data, **kwargs)
-        self.required_fields = required_fields
 
-    def list_missing_fields(self):
-        missing_fields = []
+    def get_instrument_requirements(self):
+        ''' Return a dictionary of instrument requirements for this configuration '''
+        science_optical_elements = defaultdict(set)
+        for instrument_config in self.instrument_configs:
+            for element_type, element_value in instrument_config['optical_elements'].items():
+                plural_element_type = element_type + 's'
+                science_optical_elements[plural_element_type].add(element_value)
+        guiding_optical_elements = defaultdict(set)
+        for element_type, element_value in self.guiding_config['optical_elements'].items():
+            plural_element_type = element_type + 's'
+            guiding_optical_elements[plural_element_type].add(element_value)
 
-        for field in self.required_fields:
-            try:
-                getattr(self, field)
-            except:
-                missing_fields.append(field)
-
-        return missing_fields
-
-
-class MoleculeFactory(object):
-    def __init__(self):
-        self.required_fields_by_mol = {
-                                  'EXPOSE'    : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'STANDARD'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'ARC'       : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority'),
-                                  'LAMP_FLAT' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority'),
-                                  'SPECTRUM'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'spectra_slit', 'exposure_time',
-                                                 'priority', 'acquire_mode', 'acquire_radius_arcsec'),
-                                  'BIAS'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'exposure_time',
-                                                 'priority'),
-                                  'DARK'      : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'exposure_time',
-                                                 'priority'),
-                                  'SKY_FLAT'  : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'AUTO_FOCUS' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'ZERO_POINTING' : ('type', 'exposure_count', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'filter', 'exposure_time',
-                                                 'priority'),
-                                  'TRIPLE'    : ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority'),
-                                  'NRES_TEST' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'NRES_SPECTRUM' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'NRES_EXPOSE' : ('type', 'exposure_count', 'exposure_time', 'bin_x', 'bin_y',
-                                                 'instrument_name', 'priority', 'acquire_mode',
-                                                 'acquire_radius_arcsec'),
-                                  'ENGINEERING': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority'),
-                                  'SCRIPT': ('type', 'exposure_count', 'bin_x', 'bin_y', 'instrument_name',
-                                                 'exposure_time', 'priority', 'args')
-                                }
-
-    def build(self, mol_dict):
-        required_fields = self.required_fields_by_mol[mol_dict['type'].upper()]
-        return Molecule(required_fields, mol_dict)
+        instrument_requirements = {
+            'self_guide': self.extra_params.get('self_guide', False),
+            'science_optical_elements': science_optical_elements,
+            'guiding_optical_elements': guiding_optical_elements
+        }
+        return instrument_requirements
 
 
 class Window(EqualityMixin):
@@ -487,25 +365,21 @@ class Request(EqualityMixin):
         place. These are combined within a CompoundRequest to allow AND and OR
         semantics ("do this and this and this", "do this or this").
 
-        target    - a Target object (pointing information)
-        molecules - a list of Molecule objects (detailed observing information)
+        configurations - a list of Configuration objects (detailed observing information)
         windows   - a list of start/end datetimes, representing when this observation
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
-        constraints - a Constraint object (airmass limit, etc.)
-        request_number - The unique request number of the Request
+        id - The unique id of the Request
         state          - the initial state of the Request
     '''
 
-    def __init__(self, target, molecules, windows, constraints, request_number, state='PENDING',
+    def __init__(self, configurations, windows, id, state='PENDING',
                  duration=0, scheduled_reservation=None):
 
-        self.target            = target
-        self.molecules         = molecules
+        self.configurations         = configurations
         self.windows           = windows
-        self.constraints       = constraints
-        self.request_number    = request_number
+        self.id    = id
         self.state             = state
         self.req_duration      = duration
         self.scheduled_reservation = scheduled_reservation
@@ -522,19 +396,19 @@ class Request(EqualityMixin):
     duration = property(get_duration)
 
 
-class UserRequest(EqualityMixin):
-    '''UserRequests are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
+class RequestGroup(EqualityMixin):
+    '''RequestGroups are just top-level groups of requests. They contain a set of requests, an operator, proposal info,
        ipp info, an id, and group name. This is translated into a CompoundReservation when scheduling'''
 
     _many_type = {'many': 'As many as possible of the provided blocks are to be scheduled'}
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, tracking_number, observation_type, ipp_value, group_id, expires, submitter):
+    def __init__(self, operator, requests, proposal, id, observation_type, ipp_value, name, expires, submitter):
 
         self.proposal = proposal
-        self.tracking_number = tracking_number
-        self.group_id = group_id
+        self.id = id
+        self.name = name
         self.ipp_value = ipp_value
         self.observation_type = observation_type
         self.operator = self._validate_type(operator)
@@ -547,12 +421,12 @@ class UserRequest(EqualityMixin):
         '''Check the operator type being asked for matches a valid type
            of CompoundObservation.'''
 
-        if provided_operator not in UserRequest.valid_types:
+        if provided_operator not in RequestGroup.valid_types:
 
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid operator types are:\n")
 
-            for res_type, help_txt in UserRequest.valid_types.iteritems():
+            for res_type, help_txt in RequestGroup.valid_types.iteritems():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise RequestError(error_msg)
@@ -580,8 +454,8 @@ class UserRequest(EqualityMixin):
 
     def set_scheduled_reservations(self, scheduled_reservations_by_request):
         for request in self.requests:
-            if request.request_number in scheduled_reservations_by_request:
-                request.scheduled_reservation = scheduled_reservations_by_request[request.request_number]
+            if request.id in scheduled_reservations_by_request:
+                request.scheduled_reservation = scheduled_reservations_by_request[request.id]
 
     def drop_empty_children(self):
         to_keep = []
@@ -609,89 +483,72 @@ class UserRequest(EqualityMixin):
 
         return dropped
 
-    def is_target_of_opportunity(self):
-        '''Return True if request is a ToO.
+    def is_rapid_response(self):
+        '''Return True if request is a Rapid Response.
         '''
-        return self.observation_type == 'TARGET_OF_OPPORTUNITY'
+        return self.observation_type == 'RAPID_RESPONSE'
 
-    def is_schedulable(self, running_request_numbers):
-        return self._is_schedulable_easy(running_request_numbers)
+    def is_schedulable(self, running_request_ids):
+        return self._is_schedulable_easy(running_request_ids)
 
-    def _is_schedulable_easy(self, running_request_numbers):
+    def _is_schedulable_easy(self, running_request_ids):
         if self.operator == 'and':
             is_ok_to_return = True
             for r in self.requests:
-                if not r.has_windows() and not r.request_number in running_request_numbers:
+                if not r.has_windows() and not r.id in running_request_ids:
                     return False
 
         elif self.operator in ('oneof', 'single', 'many'):
             is_ok_to_return = False
             for r in self.requests:
-                if r.has_windows() or r.request_number in running_request_numbers:
+                if r.has_windows() or r.id in running_request_ids:
                     return True
 
         return is_ok_to_return
 
-    def _is_schedulable_hard(self, running_request_numbers):
-        is_ok_to_return = {
-                            'and'    : (False, lambda r: not r.has_windows() and not r.request_number in running_request_numbers),
-                            'oneof'  : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
-                            'single' : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers),
-                            'many'   : (True,  lambda r: r.has_windows() or r.request_number in running_request_numbers)
-                          }
-
-        for r in self.requests:
-            if is_ok_to_return[self.operator][1](r):
-                return is_ok_to_return[self.operator][0]
-
-        return not is_ok_to_return[self.operator][0]
-
     @staticmethod
-    def emit_user_request_feedback(tracking_number, msg, tag, timestamp=None):
+    def emit_request_group_feedback(id, msg, tag, timestamp=None):
         if not timestamp:
             timestamp = datetime.utcnow()
 
         originator = 'scheduler'
 
         event = UserFeedbackLogger.create_event(timestamp, originator, msg,
-                                                tag, tracking_number)
+                                                tag, id)
 
         event_bus.fire_event(event)
 
         return
 
-    def emit_user_feedback(self, msg, tag, timestamp=None):
-        UserRequest.emit_user_request_feedback(self.tracking_number, msg, tag, timestamp)
-
-    def get_priority_dumb(self):
-        '''This is a placeholder for a more sophisticated priority function. For now,
-           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
-
-        # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[0].request_number)
-        perturbation_size = 0.01
-        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
-
-        #TODO: Placeholder for more sophisticated priority scheme
-        # add small random bit to help scheduler break degeneracies
-        return self.proposal.tac_priority*ran
+    def emit_rg_feedback(self, msg, tag, timestamp=None):
+        RequestGroup.emit_request_group_feedback(self.id, msg, tag, timestamp)
 
     def get_priority(self):
-        '''This is a placeholder for a more sophisticated priority function. For now,
-           it is just a pass-through to the proposal (i.e. TAC-assigned) priority.'''
+        '''This returns the effective priority, seeded by the first request id'''
         return self.get_effective_priority(0)
 
     def get_effective_priority(self, request_index):
         if request_index < 0 or request_index >= len(self.requests):
             request_index = 0
 
-        # doesn't have to be statistically random; determinism is important
-        random.seed(self.requests[request_index].request_number)
+        # seeded with the request id so it is repeatable with tests
+        random.seed(self.requests[request_index].id)
         perturbation_size = 0.01
         ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
 
         req = self.requests[request_index]
-        effective_priority = self.get_ipp_modified_priority() * req.get_duration()/60.0
+
+        if self.observation_type.upper() == 'NORMAL':
+            effective_priority = self.get_ipp_modified_priority() * req.get_duration() / 60.0
+        elif self.observation_type.upper() == 'TIME_CRITICAL':
+            # Time critical priority is base * 100 * fixed 1 hour duration
+            effective_priority = self.get_base_priority() * 100.0 * 60.0
+        elif self.observation_type.upper() == 'RAPID_RESPONSE':
+            # Rapid response is only the tac priority
+            effective_priority = self.get_base_priority()
+        else:
+            effective_priority = 0
+            log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(self.observation_type))
 
         effective_priority = min(effective_priority, 32000.0)*ran
 
@@ -709,9 +566,8 @@ class UserRequest(EqualityMixin):
 
 class ModelBuilder(object):
 
-    def __init__(self, valhalla_interface, configdb_interface, proposals_by_id=None, semester_details=None):
-        self.molecule_factory   = MoleculeFactory()
-        self.valhalla_interface = valhalla_interface
+    def __init__(self, observation_portal_interface, configdb_interface, proposals_by_id=None, semester_details=None):
+        self.observation_portal_interface = observation_portal_interface
         self.configdb_interface = configdb_interface
         self.proposals_by_id = proposals_by_id if proposals_by_id else {}
         self.semester_details = semester_details
@@ -720,19 +576,19 @@ class ModelBuilder(object):
 
     def _get_all_proposals(self):
         try:
-            proposals = self.valhalla_interface.get_proposals()
+            proposals = self.observation_portal_interface.get_proposals()
             for prop in proposals:
                 proposal = Proposal(prop)
                 self.proposals_by_id[proposal.id] = proposal
-        except ValhallaConnectionError as e:
+        except ObservationPortalConnectionError as e:
             log.warning("failed to retrieve bulk proposals: {}".format(repr(e)))
 
     def get_proposal_details(self, proposal_id):
         if proposal_id not in self.proposals_by_id:
             try:
-                proposal = Proposal(self.valhalla_interface.get_proposal_by_id(proposal_id))
+                proposal = Proposal(self.observation_portal_interface.get_proposal_by_id(proposal_id))
                 self.proposals_by_id[proposal_id] = proposal
-            except ValhallaConnectionError as e:
+            except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve proposal {}: {}".format(proposal_id, repr(e)))
 
         return self.proposals_by_id[proposal_id]
@@ -740,49 +596,49 @@ class ModelBuilder(object):
     def get_semester_details(self, date):
         if not self.semester_details:
             try:
-                self.semester_details = self.valhalla_interface.get_semester_details(date)
-            except ValhallaConnectionError as e:
+                self.semester_details = self.observation_portal_interface.get_semester_details(date)
+            except ObservationPortalConnectionError as e:
                 raise RequestError("failed to retrieve semester for date {}: {}".format(date.isoformat(), repr(e)))
 
         return self.semester_details
 
-    def build_user_request(self, ur_dict, scheduled_requests=None, ignore_ipp=False):
+    def build_request_group(self, rg_dict, scheduled_requests=None, ignore_ipp=False):
         if scheduled_requests is None:
             scheduled_requests = {}
-        tracking_number = int(ur_dict['id'])
-        operator = ur_dict['operator'].lower()
-        ipp_value = ur_dict.get('ipp_value', 1.0)
-        submitter = ur_dict.get('submitter', '')
+        rg_id = int(rg_dict['id'])
+        operator = rg_dict['operator'].lower()
+        ipp_value = rg_dict.get('ipp_value', 1.0)
+        submitter = rg_dict.get('submitter', '')
         if ignore_ipp:
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
 
-        requests, invalid_requests  = self.build_requests(ur_dict, scheduled_requests)
+        requests, invalid_requests  = self.build_requests(rg_dict, scheduled_requests)
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
             for invalid_request, error_msg in invalid_requests:
                 tag = "InvalidRequest"
-                UserRequest.emit_user_request_feedback(tracking_number, error_msg, tag)
+                RequestGroup.emit_request_group_feedback(rg_id, error_msg, tag)
             if operator.lower() == 'and':
-                msg = "Invalid request found within 'AND' UR %s making UR invalid" % tracking_number
-                tag = "InvalidUserRequest"
-                UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
+                msg = "Invalid request found within 'AND' RG %s making RG invalid" % rg_id
+                tag = "InvalidRequestGroup"
+                RequestGroup.emit_request_group_feedback(rg_id, msg, tag)
                 raise RequestError(msg)
 
         if not requests:
-            msg = "No valid Requests for UR %s" % tracking_number
-            tag = "InvalidUserRequest"
-            UserRequest.emit_user_request_feedback(tracking_number, msg, tag)
+            msg = "No valid Requests for RG %s" % rg_id
+            tag = "InvalidRequestGroup"
+            RequestGroup.emit_request_group_feedback(rg_id, msg, tag)
             raise RequestError(msg)
 
-        proposal = self.get_proposal_details(ur_dict['proposal'])
+        proposal = self.get_proposal_details(rg_dict['proposal'])
 
         # Validate we are an allowed type of UR
-        valid_observation_types = ['NORMAL', 'TARGET_OF_OPPORTUNITY']
-        observation_type = ur_dict['observation_type']
+        valid_observation_types = ['NORMAL', 'RAPID_RESPONSE', 'TIME_CRITICAL']
+        observation_type = rg_dict['observation_type']
         if not observation_type in valid_observation_types:
-            msg = "UserRequest observation_type must be one of %s" % valid_observation_types
+            msg = "RequestGroup observation_type must be one of %s" % valid_observation_types
             raise RequestError(msg)
 
         # Calculate the maximum window time as the expire time
@@ -797,21 +653,21 @@ class ModelBuilder(object):
         if semester_details:
             max_window_time = min(max_window_time, semester_details['end'])
 
-        user_request = UserRequest(
+        request_group = RequestGroup(
                                     operator        = operator,
                                     requests        = requests,
                                     proposal        = proposal,
-                                    tracking_number = tracking_number,
+                                    id= rg_id,
                                     observation_type = observation_type,
                                     ipp_value       = ipp_value,
-                                    group_id        = safe_unidecode(ur_dict['group_id'], 50),
+                                    name= rg_dict['name'],
                                     expires         = max_window_time,
                                     submitter       = safe_unidecode(submitter, 50),
                                   )
 
         # Return only the invalid request and not the error message
         invalid_requests = [ir[0] for ir in invalid_requests]
-        return user_request, invalid_requests
+        return request_group, invalid_requests
 
     def build_requests(self, ur_dict, scheduled_requests=None):
         '''Returns tuple where first element is the list of validated request
@@ -844,52 +700,17 @@ class ModelBuilder(object):
         return requests, invalid_requests
 
     def build_request(self, req_dict, scheduled_reservation=None):
-        target_type = req_dict['target']['type']
-        req_dict['target']['name'] = safe_unidecode(req_dict['target']['name'], 50)
-        try:
-            if target_type == 'SIDEREAL':
-                target = SiderealTarget(req_dict['target'])
-            elif target_type == 'NON_SIDEREAL':
-                target = NonSiderealTarget(req_dict['target'])
-            elif target_type == 'SATELLITE':
-                target = SatelliteTarget(req_dict['target'])
-            else:
-                raise RequestError("Unsupported target type '%s'" % target_type)
-        except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
-            msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
-            raise RequestError(msg)
+        # Create the Configurations
+        configurations = []
+        instrument_types_to_requirements = {}
+        for configuration in req_dict['configurations']:
+            config = self.build_configuration(configuration)
+            configurations.append(config)
+            instrument_types_to_requirements[config.instrument_type] = config.get_instrument_requirements()
 
-        # Create the Molecules
-        molecules = []
-        for mol_dict in req_dict['molecules']:
-            molecules.append(self.molecule_factory.build(mol_dict))
-
-        # A Request can only be scheduled on one instrument-based subnetwork
-        if not self.have_same_instrument(molecules):
-            # Complain
-            msg  = "Request %s has molecules with different instruments" % req_dict['id']
-            msg += " - removing from consideration"
-            raise RequestError(msg)
-
-        # Get the instrument (we know they are all the same)
-        instrument_name = molecules[0].instrument_name
-
-        filters = []
-
-        molecule_types_without_filter = ['dark', 'bias', 'engineering', 'triple', 'nres_test', 'nres_spectrum',
-                                         'nres_expose', 'script']
-
-        for molecule in molecules:
-            if hasattr(molecule, 'filter') and molecule.filter:
-                filters.append(molecule.filter.lower())
-            elif hasattr(molecule, 'spectra_slit') and molecule.spectra_slit:
-                filters.append(molecule.spectra_slit.lower())
-            # bias or dark molecules don't need filter or spectra_slit
-            elif not hasattr(molecule, 'type') or (molecule.type.lower() not in molecule_types_without_filter):
-                raise RequestError("Molecule must have either filter or spectra_slit")
-
-        telescopes = self.configdb_interface.get_telescopes_for_instrument(instrument_name, filters,
-                                                                           req_dict['location'])
+        telescopes = self.configdb_interface.get_telescopes_for_instruments(
+            instrument_types_to_requirements, req_dict['location']
+        )
 
         if not telescopes:
             # Complain
@@ -905,9 +726,9 @@ class ModelBuilder(object):
                     tel_str
                 )
             )
-            msg = "Request {} wants camera {}, which is not available on the subnetwork '{}'".format(
+            msg = "Request {} wants cameras [{}], which are not available on the subnetwork '{}'".format(
                 req_dict['id'],
-                instrument_name,
+                ', '.join(instrument_types_to_requirements.keys()),
                 req_location
             )
             raise RequestError(msg)
@@ -919,15 +740,11 @@ class ModelBuilder(object):
                 window = Window(window_dict=window_dict, resource=telescope)
                 windows.append(window)
 
-        constraints = Constraints(req_dict['constraints'])
-
         # Finally, package everything up into the Request
         req = Request(
-                       target          = target,
-                       molecules       = molecules,
+                       configurations=configurations,
                        windows         = windows,
-                       constraints     = constraints,
-                       request_number  = int(req_dict['id']),
+                       id= int(req_dict['id']),
                        state           = req_dict['state'],
                        duration        = req_dict['duration'],
                        scheduled_reservation = scheduled_reservation
@@ -935,15 +752,30 @@ class ModelBuilder(object):
 
         return req
 
-    def have_same_instrument(self, molecules):
-        instrument_names = []
-        for mol in molecules:
-            instrument_names.append(mol.instrument_name)
+    def build_configuration(self, configuration):
+        # build the target first
+        if isinstance(configuration['target'], Target):
+            target = configuration['target']
+        else:
+            target_type = configuration['target']['type']
+            try:
+                if target_type == 'ICRS':
+                    target = ICRSTarget(configuration['target'])
+                elif target_type == 'ORBITAL_ELEMENTS':
+                    target = OrbitalElementsTarget(configuration['target'])
+                elif target_type == 'SATELLITE':
+                    target = SatelliteTarget(configuration['target'])
+                else:
+                    raise RequestError("Unsupported target type '%s'" % target_type)
+            except (InvalidAngleError, RatesConfigError, AngleConfigError) as er:
+                msg = "Rise-Set error: {}. Removing from consideration.".format(repr(er))
+                raise RequestError(msg)
 
-        if len(set(instrument_names)) > 1:
-            return False
-
-        return True
+        configuration['target'] = target
+        configuration = Configuration(
+            **configuration
+        )
+        return configuration
 
 
 class RequestError(Exception):

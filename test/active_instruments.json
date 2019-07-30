@@ -5,9 +5,73 @@
     "science_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "1",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb29",
       "id": 33,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
@@ -40,6 +104,69 @@
     "autoguider_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "2",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb29",
       "id": 33,
       "camera_type": {
@@ -77,9 +204,108 @@
     "science_camera": {
       "filter_wheel": 15,
       "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "3",
+          "optical_elements": [
+            {
+              "name": "D51",
+              "code": "D51",
+              "schedulable": true
+            },
+            {
+              "name": "H-Beta",
+              "code": "H-Beta",
+              "schedulable": true
+            },
+            {
+              "name": "H-Alpha",
+              "code": "H-Alpha",
+              "schedulable": true
+            },
+            {
+              "name": "Skymapper-VS",
+              "code": "Skymapper-VS",
+              "schedulable": true
+            },
+            {
+              "name": "solar",
+              "code": "solar",
+              "schedulable": true
+            },
+            {
+              "name": "Astrodon-UV",
+              "code": "Astrodon-UV",
+              "schedulable": true
+            },
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "200um-Pinhole",
+              "code": "200um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fs02",
       "id": 20,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 12.0,
         "front_padding": 240.0,
         "code": "2m0-SciCam-Spectral",
@@ -118,6 +344,19 @@
     "autoguider_camera": {
       "filter_wheel": 17,
       "filters": "air",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "4",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb40",
       "id": 38,
       "camera_type": {
@@ -161,9 +400,123 @@
     "science_camera": {
       "filter_wheel": 11,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "5",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "ha",
+              "code": "ha",
+              "schedulable": true
+            },
+            {
+              "name": "al",
+              "code": "al",
+              "schedulable": true
+            },
+            {
+              "name": "l3",
+              "code": "l3",
+              "schedulable": true
+            },
+            {
+              "name": "r3",
+              "code": "r3",
+              "schedulable": true
+            },
+            {
+              "name": "g3",
+              "code": "g3",
+              "schedulable": true
+            },
+            {
+              "name": "b3",
+              "code": "b3",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl12",
       "id": 67,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -196,6 +549,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "6",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef09",
       "id": 8,
       "camera_type": {
@@ -251,9 +657,73 @@
     "science_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "7",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb27",
       "id": 60,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
@@ -286,6 +756,69 @@
     "autoguider_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "8",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb27",
       "id": 60,
       "camera_type": {
@@ -323,9 +856,103 @@
     "science_camera": {
       "filter_wheel": 14,
       "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "9",
+          "optical_elements": [
+            {
+              "name": "H-Beta",
+              "code": "H-Beta",
+              "schedulable": true
+            },
+            {
+              "name": "H-Alpha",
+              "code": "H-Alpha",
+              "schedulable": true
+            },
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl14",
       "id": 69,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -358,6 +985,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "10",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef03",
       "id": 3,
       "camera_type": {
@@ -413,9 +1093,123 @@
     "science_camera": {
       "filter_wheel": 11,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "11",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "ha",
+              "code": "ha",
+              "schedulable": true
+            },
+            {
+              "name": "al",
+              "code": "al",
+              "schedulable": true
+            },
+            {
+              "name": "l3",
+              "code": "l3",
+              "schedulable": true
+            },
+            {
+              "name": "r3",
+              "code": "r3",
+              "schedulable": true
+            },
+            {
+              "name": "g3",
+              "code": "g3",
+              "schedulable": true
+            },
+            {
+              "name": "b3",
+              "code": "b3",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl11",
       "id": 66,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -448,6 +1242,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "12",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef10",
       "id": 9,
       "camera_type": {
@@ -503,9 +1350,73 @@
     "science_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "13",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb98",
       "id": 71,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
@@ -538,6 +1449,69 @@
     "autoguider_camera": {
       "filter_wheel": 8,
       "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "14",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "100um-Pinhole",
+              "code": "100um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb98",
       "id": 71,
       "camera_type": {
@@ -575,9 +1549,93 @@
     "science_camera": {
       "filter_wheel": 1,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "15",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl04",
       "id": 15,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -610,6 +1668,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "16",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef08",
       "id": 7,
       "camera_type": {
@@ -665,9 +1776,93 @@
     "science_camera": {
       "filter_wheel": 1,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "17",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl06",
       "id": 55,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -700,6 +1895,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "18",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef04",
       "id": 4,
       "camera_type": {
@@ -755,9 +2003,113 @@
     "science_camera": {
       "filter_wheel": 15,
       "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "19",
+          "optical_elements": [
+            {
+              "name": "D51",
+              "code": "D51",
+              "schedulable": true
+            },
+            {
+              "name": "H-Beta",
+              "code": "H-Beta",
+              "schedulable": true
+            },
+            {
+              "name": "OIII",
+              "code": "OIII",
+              "schedulable": true
+            },
+            {
+              "name": "H-Alpha",
+              "code": "H-Alpha",
+              "schedulable": true
+            },
+            {
+              "name": "Skymapper-VS",
+              "code": "Skymapper-VS",
+              "schedulable": true
+            },
+            {
+              "name": "solar",
+              "code": "solar",
+              "schedulable": true
+            },
+            {
+              "name": "Astrodon-UV",
+              "code": "Astrodon-UV",
+              "schedulable": true
+            },
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "200um-Pinhole",
+              "code": "200um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fs01",
       "id": 19,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 12.0,
         "front_padding": 240.0,
         "code": "2m0-SciCam-Spectral",
@@ -796,6 +2148,19 @@
     "autoguider_camera": {
       "filter_wheel": 17,
       "filters": "air",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "20",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb34",
       "id": 35,
       "camera_type": {
@@ -839,9 +2204,118 @@
     "science_camera": {
       "filter_wheel": 16,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,B*ND,V*ND,R*ND,I*ND,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "21",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "ND",
+              "code": "ND",
+              "schedulable": true
+            },
+            {
+              "name": "B*ND",
+              "code": "B*ND",
+              "schedulable": true
+            },
+            {
+              "name": "V*ND",
+              "code": "V*ND",
+              "schedulable": true
+            },
+            {
+              "name": "R*ND",
+              "code": "R*ND",
+              "schedulable": true
+            },
+            {
+              "name": "I*ND",
+              "code": "I*ND",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl05",
       "id": 58,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -874,6 +2348,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "22",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef01",
       "id": 1,
       "camera_type": {
@@ -929,9 +2456,63 @@
     "science_camera": {
       "filter_wheel": 5,
       "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
+      "optical_element_groups": [
+        {
+          "type": "slits",
+          "name": "23",
+          "optical_elements": [
+            {
+              "name": "slit_6.0as",
+              "code": "slit_6.0as",
+              "schedulable": true
+            },
+            {
+              "name": "slit_1.6as",
+              "code": "slit_1.6as",
+              "schedulable": true
+            },
+            {
+              "name": "slit_2.0as",
+              "code": "slit_2.0as",
+              "schedulable": true
+            },
+            {
+              "name": "slit_1.2as",
+              "code": "slit_1.2as",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_default",
+              "code": "floyds_slit_default",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_xl",
+              "code": "floyds_slit_xl",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_l",
+              "code": "floyds_slit_l",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_m",
+              "code": "floyds_slit_m",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_s",
+              "code": "floyds_slit_s",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "floyds01",
       "id": 17,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 0.5,
         "front_padding": 240.0,
         "code": "2m0-FLOYDS-SciCam",
@@ -964,6 +2545,19 @@
     "autoguider_camera": {
       "filter_wheel": 17,
       "filters": "air",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "24",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb42",
       "id": 39,
       "camera_type": {
@@ -1007,9 +2601,93 @@
     "science_camera": {
       "filter_wheel": 1,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "25",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl16",
       "id": 68,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -1042,6 +2720,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "26",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef02",
       "id": 2,
       "camera_type": {
@@ -1097,9 +2828,53 @@
     "science_camera": {
       "filter_wheel": 4,
       "filters": "Ha,rp,ip,gp,V,B,clear",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "27",
+          "optical_elements": [
+            {
+              "name": "Ha",
+              "code": "Ha",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "clear",
+              "code": "clear",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb16",
       "id": 28,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "0m8-SciCam-SBIG",
@@ -1138,6 +2913,34 @@
     "autoguider_camera": {
       "filter_wheel": 21,
       "filters": "air,Luminance,Green,Blue",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "28",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "Luminance",
+              "code": "Luminance",
+              "schedulable": true
+            },
+            {
+              "name": "Green",
+              "code": "Green",
+              "schedulable": true
+            },
+            {
+              "name": "Blue",
+              "code": "Blue",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb31",
       "id": 34,
       "camera_type": {
@@ -1181,9 +2984,23 @@
     "science_camera": {
       "filter_wheel": 13,
       "filters": "slit_1.6as",
+      "optical_element_groups": [
+        {
+          "type": "slits",
+          "name": "29",
+          "optical_elements": [
+            {
+              "name": "slit_1.6as",
+              "code": "slit_1.6as",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "nres",
       "id": 53,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 0.5,
         "front_padding": 240.0,
         "code": "0m8-NRES-SciCam",
@@ -1216,6 +3033,34 @@
     "autoguider_camera": {
       "filter_wheel": 21,
       "filters": "air,Luminance,Green,Blue",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "30",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "Luminance",
+              "code": "Luminance",
+              "schedulable": true
+            },
+            {
+              "name": "Green",
+              "code": "Green",
+              "schedulable": true
+            },
+            {
+              "name": "Blue",
+              "code": "Blue",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb35",
       "id": 36,
       "camera_type": {
@@ -1259,9 +3104,103 @@
     "science_camera": {
       "filter_wheel": 14,
       "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "31",
+          "optical_elements": [
+            {
+              "name": "H-Beta",
+              "code": "H-Beta",
+              "schedulable": true
+            },
+            {
+              "name": "H-Alpha",
+              "code": "H-Alpha",
+              "schedulable": true
+            },
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl03",
       "id": 14,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -1294,6 +3233,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "32",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef07",
       "id": 6,
       "camera_type": {
@@ -1349,9 +3341,23 @@
     "science_camera": {
       "filter_wheel": 13,
       "filters": "slit_1.6as",
+      "optical_element_groups": [
+        {
+          "type": "slits",
+          "name": "33",
+          "optical_elements": [
+            {
+              "name": "slit_1.6as",
+              "code": "slit_1.6as",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "nres01",
       "id": 73,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 0.5,
         "front_padding": 240.0,
         "code": "1m0-NRES-SciCam",
@@ -1384,6 +3390,19 @@
     "autoguider_camera": {
       "filter_wheel": 13,
       "filters": "slit_1.6as",
+      "optical_element_groups": [
+        {
+          "type": "slits",
+          "name": "34",
+          "optical_elements": [
+            {
+              "name": "slit_1.6as",
+              "code": "slit_1.6as",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ak01",
       "id": 74,
       "camera_type": {
@@ -1427,9 +3446,63 @@
     "science_camera": {
       "filter_wheel": 5,
       "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
+      "optical_element_groups": [
+        {
+          "type": "slits",
+          "name": "35",
+          "optical_elements": [
+            {
+              "name": "slit_6.0as",
+              "code": "slit_6.0as",
+              "schedulable": true
+            },
+            {
+              "name": "slit_1.6as",
+              "code": "slit_1.6as",
+              "schedulable": true
+            },
+            {
+              "name": "slit_1.2as",
+              "code": "slit_1.2as",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_default",
+              "code": "floyds_slit_default",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_xl",
+              "code": "floyds_slit_xl",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_l",
+              "code": "floyds_slit_l",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_m",
+              "code": "floyds_slit_m",
+              "schedulable": true
+            },
+            {
+              "name": "floyds_slit_s",
+              "code": "floyds_slit_s",
+              "schedulable": true
+            },
+            {
+              "name": "slit_2.0as",
+              "code": "slit_2.0as",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "floyds02",
       "id": 18,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 0.5,
         "front_padding": 240.0,
         "code": "2m0-FLOYDS-SciCam",
@@ -1462,6 +3535,19 @@
     "autoguider_camera": {
       "filter_wheel": 17,
       "filters": "air",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "36",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "kb37",
       "id": 37,
       "camera_type": {
@@ -1505,9 +3591,98 @@
     "science_camera": {
       "filter_wheel": 19,
       "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "37",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "ND",
+              "code": "ND",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "fl15",
       "id": 70,
       "camera_type": {
+        "allow_self_guiding": true,
         "fixed_overhead_per_exposure": 1.0,
         "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
@@ -1540,6 +3715,59 @@
     "autoguider_camera": {
       "filter_wheel": 10,
       "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "38",
+          "optical_elements": [
+            {
+              "name": "opaque",
+              "code": "opaque",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
       "code": "ef06",
       "id": 5,
       "camera_type": {
