@@ -134,12 +134,13 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
                                                       airmass=max_airmass)
     if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
-        rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
-                                                                 target_intervals=rs_up_intervals,
-                                                                 moon_distance=Angle(degrees=min_lunar_distance))
-
-        rs_up_intervals = visibility.get_zenith_distance_intervals(target=rise_set_target,
-                                                                   target_intervals=rs_up_intervals)
+        if min_lunar_distance > 0.0:
+            rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
+                                                                     target_intervals=rs_up_intervals,
+                                                                     moon_distance=Angle(degrees=min_lunar_distance))
+        if visibility.zenith_blind_spot.in_degrees() > 0.0:
+            rs_up_intervals = visibility.get_zenith_distance_intervals(target=rise_set_target,
+                                                                       target_intervals=rs_up_intervals)
 
     # HA support only currently implemented for ICRS targets
     if 'ra' in rise_set_target:
