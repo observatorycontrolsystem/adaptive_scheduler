@@ -166,6 +166,13 @@ class ConfigDBInterface(object, SendMetricMixin):
         return True
 
     @staticmethod
+    def _location_fully_set(location_constraints):
+        for constraint in ['telescope_class', 'site', 'enclosure', 'telescope']:
+            if constraint not in location_constraints or not location_constraints.get(constraint):
+                return False
+        return True
+
+    @staticmethod
     def _elements_available(elements_by_type, available_element_groups):
         # Assume that the elements_by_type have only valid element types.
         for element_type in elements_by_type:
@@ -196,9 +203,10 @@ class ConfigDBInterface(object, SendMetricMixin):
         Returns:
             Set of available telescopes
         """
+        loc_is_set = self._location_fully_set(location)
         telescope_sets = defaultdict(set)
         for instrument in self.active_instruments:
-            if instrument['state'] == 'SCHEDULABLE' or (instrument['state'] != 'DISABLED' and is_staff):
+            if instrument['state'] == 'SCHEDULABLE' or (instrument['state'] != 'DISABLED' and is_staff and loc_is_set):
                 instrument_location = self._parse_instrument_string(instrument['__str__'])
                 for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
                     if (case_insensitive_equals(instrument_type,

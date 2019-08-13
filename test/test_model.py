@@ -439,6 +439,25 @@ class TestModelBuilder(object):
 
         request = self.mb.build_request(req_dict, is_staff=False)
 
+    @raises(RequestError)
+    def test_build_request_2m_sbig_doesnt_resolve_when_location_not_set(self):
+        location = self.location.copy()
+        location['site'] = 'ogg'
+        location['telescope'] = '2m0a'
+        location['telescope_class'] = '2m0'
+        configuration = self.configurations[0].copy()
+        configuration['instrument_type'] = '2M0-SCICAM-SBIG'
+        req_dict = {
+            'configurations': [configuration, ],
+            'location': location,
+            'windows': self.windows,
+            'id': self.id,
+            'duration': 10,
+            'state': self.state,
+        }
+
+        request = self.mb.build_request(req_dict, is_staff=True)
+
     def test_build_request_2m_sbig_resolves_when_staff(self):
         location = self.location.copy()
         location['site'] = 'ogg'
