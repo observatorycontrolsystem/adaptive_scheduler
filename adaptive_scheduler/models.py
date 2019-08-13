@@ -376,12 +376,11 @@ class Request(EqualityMixin):
 
     def __init__(self, configurations, windows, id, state='PENDING',
                  duration=0, scheduled_reservation=None):
-
-        self.configurations         = configurations
-        self.windows           = windows
-        self.id    = id
-        self.state             = state
-        self.req_duration      = duration
+        self.configurations = configurations
+        self.windows = windows
+        self.id = id
+        self.state = state
+        self.req_duration = duration
         self.scheduled_reservation = scheduled_reservation
 
     def get_duration(self):
@@ -404,10 +403,11 @@ class RequestGroup(EqualityMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, id, observation_type, ipp_value, name, expires, submitter):
-
+    def __init__(self, operator, requests, proposal, id, is_staff, observation_type, ipp_value, name, expires,
+                 submitter):
         self.proposal = proposal
         self.id = id
+        self.is_staff = is_staff
         self.name = name
         self.ipp_value = ipp_value
         self.observation_type = observation_type
@@ -613,7 +613,8 @@ class ModelBuilder(object):
              # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
 
-        requests, invalid_requests  = self.build_requests(rg_dict, scheduled_requests)
+        requests, invalid_requests = self.build_requests(
+            rg_dict, scheduled_requests, is_staff=rg_dict.get('is_staff', False))
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
@@ -637,7 +638,7 @@ class ModelBuilder(object):
         # Validate we are an allowed type of UR
         valid_observation_types = ['NORMAL', 'RAPID_RESPONSE', 'TIME_CRITICAL']
         observation_type = rg_dict['observation_type']
-        if not observation_type in valid_observation_types:
+        if observation_type not in valid_observation_types:
             msg = "RequestGroup observation_type must be one of %s" % valid_observation_types
             raise RequestError(msg)
 
@@ -654,22 +655,23 @@ class ModelBuilder(object):
             max_window_time = min(max_window_time, semester_details['end'])
 
         request_group = RequestGroup(
-                                    operator        = operator,
-                                    requests        = requests,
-                                    proposal        = proposal,
-                                    id= rg_id,
-                                    observation_type = observation_type,
-                                    ipp_value       = ipp_value,
-                                    name= rg_dict['name'],
-                                    expires         = max_window_time,
-                                    submitter       = safe_unidecode(submitter, 50),
-                                  )
+            operator=operator,
+            requests=requests,
+            proposal=proposal,
+            id=rg_id,
+            is_staff=rg_dict.get('is_staff', False),
+            observation_type=observation_type,
+            ipp_value=ipp_value,
+            name=rg_dict['name'],
+            expires=max_window_time,
+            submitter=safe_unidecode(submitter, 50),
+        )
 
         # Return only the invalid request and not the error message
         invalid_requests = [ir[0] for ir in invalid_requests]
         return request_group, invalid_requests
 
-    def build_requests(self, ur_dict, scheduled_requests=None):
+    def build_requests(self, ur_dict, scheduled_requests=None, is_staff=False):
         '''Returns tuple where first element is the list of validated request
         models and the second is a list of invalid request dicts  paired with
         validation errors
@@ -686,11 +688,12 @@ class ModelBuilder(object):
         '''
         if scheduled_requests is None:
             scheduled_requests = {}
-        requests         = []
+        requests = []
         invalid_requests = []
         for req_dict in ur_dict['requests']:
             try:
-                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(req_dict['id']))
+                req = self.build_request(req_dict, scheduled_reservation=scheduled_requests.get(
+                    req_dict['id']), is_staff=is_staff)
                 requests.append(req)
             except RequestError as e:
                 log.warn(e)
@@ -699,7 +702,7 @@ class ModelBuilder(object):
 
         return requests, invalid_requests
 
-    def build_request(self, req_dict, scheduled_reservation=None):
+    def build_request(self, req_dict, scheduled_reservation=None, is_staff=False):
         # Create the Configurations
         configurations = []
         instrument_types_to_requirements = {}
@@ -709,7 +712,7 @@ class ModelBuilder(object):
             instrument_types_to_requirements[config.instrument_type] = config.get_instrument_requirements()
 
         telescopes = self.configdb_interface.get_telescopes_for_instruments(
-            instrument_types_to_requirements, req_dict['location']
+            instrument_types_to_requirements, req_dict['location'], is_staff=is_staff
         )
 
         if not telescopes:
@@ -742,13 +745,13 @@ class ModelBuilder(object):
 
         # Finally, package everything up into the Request
         req = Request(
-                       configurations=configurations,
-                       windows         = windows,
-                       id= int(req_dict['id']),
-                       state           = req_dict['state'],
-                       duration        = req_dict['duration'],
-                       scheduled_reservation = scheduled_reservation
-                     )
+            configurations=configurations,
+            windows=windows,
+            id=int(req_dict['id']),
+            state=req_dict['state'],
+            duration=req_dict['duration'],
+            scheduled_reservation=scheduled_reservation
+        )
 
         return req
 

@@ -41,16 +41,17 @@ class TestExpiryFilter(object):
 
     def create_request_group(self, expiry_dt):
         rg = RequestGroup(
-                           operator = 'single',
-                           requests = None,
-                           proposal = None,
-                           expires  = expiry_dt,
-                           id='0000000005',
-                           name= None,
-                           ipp_value=1.0,
-                           observation_type='NORMAL',
-                           submitter=''
-                         )
+            operator='single',
+            requests=None,
+            proposal=None,
+            expires=expiry_dt,
+            id='0000000005',
+            is_staff=False,
+            name=None,
+            ipp_value=1.0,
+            observation_type='NORMAL',
+            submitter=''
+        )
         return rg
 
 
@@ -567,55 +568,57 @@ class TestWindowFilters(object):
 
     def test_drop_empty_requests(self):
         request_id = 5
-        r  = Request(
-                      configurations= None,
-                      windows        = Windows(),
-                      id= request_id
-                    )
-        r2  = Request(
-                      configurations= None,
-                      windows        = Windows(),
-                      id=9
-                    )
+        r = Request(
+            configurations=None,
+            windows=Windows(),
+            id=request_id
+        )
+        r2 = Request(
+            configurations=None,
+            windows=Windows(),
+            id=9
+        )
         rg1 = RequestGroup(
-                           operator        = 'single',
-                           requests        = [r],
-                           proposal        = None,
-                           expires         = None,
-                           id=1,
-                           name= None,
-                           ipp_value       = 1.0,
-                           observation_type= 'NORMAL',
-                           submitter       = '',
-                         )
+            operator='single',
+            requests=[r],
+            proposal=None,
+            expires=None,
+            id=1,
+            is_staff=False,
+            name=None,
+            ipp_value=1.0,
+            observation_type='NORMAL',
+            submitter='',
+        )
         received = drop_empty_requests([rg1])
         assert_equal(received, [5])
 
     def test_filter_on_pending(self):
         request_id = 5
-        r1  = Request(
-                      configurations= None,
-                      windows        = Windows(),
-                      id= request_id,
-                      state          = 'PENDING'
-                    )
-        r2  = Request(
-                      configurations= None,
-                      windows        = Windows(),
-                      id=9,
-                      state          = 'UNSCHEDULABLE'
-                    )
+        r1 = Request(
+            configurations=None,
+            windows=Windows(),
+            id=request_id,
+            state='PENDING'
+        )
+        r2 = Request(
+            configurations=None,
+            windows=Windows(),
+            id=9,
+            state='UNSCHEDULABLE'
+        )
         rg1 = RequestGroup(
-                           operator        = 'single',
-                           requests        = [r1, r2],
-                           proposal        = None,
-                           expires         = None,
-                           id=1,
-                           name= None,
-                           ipp_value       = 1.0,
-                           observation_type= 'NORMAL',
-                           submitter       = '',
-                         )
+            operator='single',
+            requests=[r1, r2],
+            proposal=None,
+            expires=None,
+            id=1,
+            is_staff=False,
+            name=None,
+            ipp_value=1.0,
+            observation_type='NORMAL',
+            submitter='',
+        )
 
         filter_on_pending([rg1])
 

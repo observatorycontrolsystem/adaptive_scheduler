@@ -130,27 +130,27 @@ class TestIntegration(object):
 
         self.and_request_group_1 = RequestGroup(operator='and', requests=[self.request_1, self.request_2],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                id=1, observation_type='NORMAL',
+                                                id=1, is_staff=False, observation_type='NORMAL',
                                                 ipp_value=1.0, name='ur 1', submitter='')
         self.and_request_group_2 = RequestGroup(operator='and', requests=[self.request_3, self.request_4],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                id=2, observation_type='NORMAL',
+                                                id=2, is_staff=False, observation_type='NORMAL',
                                                 ipp_value=1.0, name='ur 2', submitter='')
         self.many_request_group_1 = RequestGroup(operator='many', requests=[self.request_1, self.request_2],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                 id=3, observation_type='NORMAL',
+                                                 id=3, is_staff=False, observation_type='NORMAL',
                                                  ipp_value=1.5, name='ur 3', submitter='')
         self.many_request_group_2 = RequestGroup(operator='many', requests=[self.request_3, self.request_4],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                 id=4, observation_type='NORMAL',
+                                                 id=4, is_staff=False, observation_type='NORMAL',
                                                  ipp_value=1.5, name='ur 4', submitter='')
         self.rr_request_group_1 = RequestGroup(operator='many', requests=[self.request_5],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                               id=5, observation_type='RAPID_RESPONSE',
+                                               id=5, is_staff=False, observation_type='RAPID_RESPONSE',
                                                ipp_value=1.5, name='ur 5', submitter='')
         self.rr_request_group_2 = RequestGroup(operator='many', requests=[self.request_1, self.request_3],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                               id=6, observation_type='RAPID_RESPONSE',
+                                               id=6, is_staff=False, observation_type='RAPID_RESPONSE',
                                                ipp_value=1.5, name='ur 6', submitter='')
 
     def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
@@ -279,10 +279,10 @@ class TestIntegration(object):
             days_out += 1
 
         request_group = RequestGroup(operator='and', requests=request_list, proposal=self.proposal,
-                                     expires=datetime(2050, 1, 1), id=100,
+                                     expires=datetime(2050, 1, 1), id=100, is_staff=False,
                                      ipp_value=1.0, name='large ur', submitter='', observation_type='NORMAL')
 
-        normal_request_list = [request_group,]
+        normal_request_list = [request_group, ]
         result = self._schedule_requests([], normal_request_list, new_time - timedelta(hours=10))
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
 

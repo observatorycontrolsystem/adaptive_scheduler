@@ -74,18 +74,6 @@ class TestObservations(object):
     @raises(ScheduleException)
     @responses.activate
     def test_no_observation_portal_connection_okay(self):
-        ur1 = RequestGroup(
-            operator='single',
-            requests=None,
-            proposal=None,
-            id='0000000001',
-            name=None,
-            expires=None,
-            ipp_value=1.0,
-            observation_type="RAPID_RESPONSE",
-            submitter=''
-        )
-
         tels = {
             '1m0a.doma.elp': [],
             '1m0a.doma.coj': []
@@ -225,6 +213,7 @@ class TestObservationInteractions(object):
             proposal=proposal,
             expires=None,
             id=333333,
+            is_staff=False,
             name=None,
             ipp_value=1.0,
             observation_type="NORMAL",
@@ -276,6 +265,7 @@ class TestObservationInteractions(object):
             proposal=proposal,
             expires=None,
             id=333333,
+            is_staff=False,
             name=None,
             ipp_value=1.0,
             observation_type="RAPID_RESPONSE",

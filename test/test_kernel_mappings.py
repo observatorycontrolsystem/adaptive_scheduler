@@ -125,7 +125,7 @@ class TestKernelMappings(object):
     def make_request_group(self, requests, operator='single'):
         proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
         rg = RequestGroup(operator=operator, requests=requests, proposal=proposal, submitter='',
-                          expires=datetime(2999, 1, 1), id=1, name='test group id', ipp_value=1.0,
+                          expires=datetime(2999, 1, 1), id=1, is_staff=False, name='test group id', ipp_value=1.0,
                           observation_type='NORMAL')
         
         return rg

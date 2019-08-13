@@ -46,14 +46,15 @@ class TestScheduler(object):
         rg_list = []
         for request_group_id in request_group_ids:
             rg = RequestGroup(
-                               operator='single',
-                               requests=None,
-                               proposal=None,
-                               id=request_group_id,
-                               name=None,
-                               expires=None,
-                               ipp_value=1.0
-                             )
+                operator='single',
+                requests=None,
+                proposal=None,
+                id=request_group_id,
+                is_staff=False,
+                name=None,
+                expires=None,
+                ipp_value=1.0
+            )
 
             rg_list.append(rg)
 

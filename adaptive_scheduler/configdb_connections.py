@@ -73,7 +73,7 @@ class ConfigDBInterface(object, SendMetricMixin):
         :return: json list of instruments
         """
         try:
-            r = requests.get(self.configdb_url + 'instruments/?state=SCHEDULABLE', timeout=120)
+            r = requests.get(self.configdb_url + 'instruments/', timeout=120)
         except requests.exceptions.Timeout as te:
             msg = "{}: {}".format(
                 te.__class__.__name__, "get_all_active_instruments failed: Timeout connecting to Configdb"
@@ -182,7 +182,7 @@ class ConfigDBInterface(object, SendMetricMixin):
                     break
         return True
 
-    def get_telescopes_for_instruments(self, instrument_types_to_requirements, location):
+    def get_telescopes_for_instruments(self, instrument_types_to_requirements, location, is_staff=False):
         """Get the set of telescopes on which a request can be observed.
 
         The main dictionary passed in contains instrument requirements by instrument type. The requirements include
@@ -198,30 +198,32 @@ class ConfigDBInterface(object, SendMetricMixin):
         """
         telescope_sets = defaultdict(set)
         for instrument in self.active_instruments:
-            instrument_location = self._parse_instrument_string(instrument['__str__'])
-            for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
-                if (case_insensitive_equals(instrument_type,
-                                            instrument['science_camera']['camera_type']['code']) and
-                        self._location_available(instrument_location, location)):
-                    # This instrument is a candidate, now the optical elements just need to match
-                    self_guide = instrument_requirements['self_guide']
-                    these_imager_element_groups = instrument['science_camera']['optical_element_groups']
+            if instrument['state'] == 'SCHEDULABLE' or (instrument['state'] != 'DISABLED' and is_staff):
+                instrument_location = self._parse_instrument_string(instrument['__str__'])
+                for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
+                    if (case_insensitive_equals(instrument_type,
+                                                instrument['science_camera']['camera_type']['code']) and
+                            self._location_available(instrument_location, location)):
+                        # This instrument is a candidate, now the optical elements just need to match
+                        self_guide = instrument_requirements['self_guide']
+                        these_imager_element_groups = instrument['science_camera']['optical_element_groups']
 
-                    if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
-                        these_guider_element_groups = these_imager_element_groups
-                    elif not self_guide:
-                        these_guider_element_groups = instrument['autoguider_camera']['optical_element_groups']
-                    else:
-                        # There is no available guider on this telescope
-                        continue
+                        if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            these_guider_element_groups = these_imager_element_groups
+                        elif not self_guide:
+                            these_guider_element_groups = instrument['autoguider_camera']['optical_element_groups']
+                        else:
+                            # There is no available guider on this telescope
+                            continue
 
-                    if (
-                        self._elements_available(instrument_requirements['science_optical_elements'],
-                                                 these_imager_element_groups) and
-                        self._elements_available(instrument_requirements['guiding_optical_elements'],
-                                                 these_guider_element_groups)
-                    ):
-                        telescope_sets[instrument_type].add(instrument_location['telescope_location'])
+                        if (
+                            self._elements_available(instrument_requirements['science_optical_elements'],
+                                                     these_imager_element_groups) and
+                            self._elements_available(instrument_requirements['guiding_optical_elements'],
+                                                     these_guider_element_groups)
+                        ):
+                            telescope_sets[instrument_type].add(
+                                instrument_location['telescope_location'])
 
         telescope_sets = telescope_sets.values()
         if len(telescope_sets) > 1:

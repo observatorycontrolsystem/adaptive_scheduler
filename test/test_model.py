@@ -98,7 +98,7 @@ class TestRequest(object):
                           id=self.id,
                           )
         request_group = RequestGroup(operator=junk_res_type, requests=[request], name='Group 1', proposal=Proposal(),
-                                     id=1, observation_type='NORMAL', ipp_value=1.0,
+                                     id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
                                      expires=datetime(2999, 1, 1), submitter='')
 
     def test_valid_request_type_does_not_raise_exception(self):
@@ -108,7 +108,7 @@ class TestRequest(object):
                           id=self.id,
                           )
         request_group = RequestGroup(operator=valid_res_type, requests=[request], name='Group 1', proposal=Proposal(),
-                                     id=1, observation_type='NORMAL', ipp_value=1.0,
+                                     id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
                                      expires=datetime(2999, 1, 1), submitter='')
 
 
@@ -122,12 +122,13 @@ class TestRequestGroup(object):
     def test_emit_user_feedback(self, mock_func):
         request_group_id = 5
         operator = 'single'
-        ur = RequestGroup(
+        rg = RequestGroup(
             operator=operator,
             requests=[],
             proposal=None,
             expires=None,
             id=request_group_id,
+            is_staff=False,
             name=None,
             ipp_value=1.0,
             observation_type='NORMAL',
@@ -137,7 +138,7 @@ class TestRequestGroup(object):
         msg = 'Yo dude'
         tag = 'MeTag'
         timestamp = datetime(2013, 10, 15, 1, 1, 1)
-        ur.emit_rg_feedback(msg, tag, timestamp)
+        rg.emit_rg_feedback(msg, tag, timestamp)
 
         assert_equal(mock_func.called, True)
 
@@ -220,6 +221,7 @@ class TestRequestGroup(object):
             proposal=proposal,
             expires=None,
             id=4,
+            is_staff=False,
             ipp_value=ipp_value,
             observation_type='NORMAL',
             name=None,
@@ -248,14 +250,14 @@ class TestRequestGroup(object):
         r_mock2 = mock.MagicMock()
         r_mock2.has_windows.return_value = False
 
-        ur = RequestGroup(operator='many', requests=[r_mock1, r_mock2], name='Group 1', proposal=Proposal(),
-                          id=1, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
+        rg = RequestGroup(operator='many', requests=[r_mock1, r_mock2], name='Group 1', proposal=Proposal(),
+                          id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
                           submitter='')
 
-        ur.drop_empty_children()
+        rg.drop_empty_children()
 
-        assert_equal(len(ur.requests), 1)
-        assert_equal(ur.requests[0], r_mock1)
+        assert_equal(len(rg.requests), 1)
+        assert_equal(rg.requests[0], r_mock1)
 
 
 class TestWindows(object):
@@ -617,6 +619,7 @@ class TestModelBuilder(object):
             'expires': '2014-10-29 12:12:12',
             'name': '',
             'id': '1',
+            'is_staff': False,
             'ipp_value': '1.0',
             'operator': 'many',
             'observation_type': 'NORMAL',
