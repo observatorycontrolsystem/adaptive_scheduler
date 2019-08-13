@@ -419,6 +419,47 @@ class TestModelBuilder(object):
         assert_equal(set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']),
                      set(request.windows.windows_for_resource.keys()))
 
+    @raises(RequestError)
+    def test_build_request_2m_sbig_doesnt_resolve_when_not_staff(self):
+        location = self.location.copy()
+        location['site'] = 'ogg'
+        location['telescope'] = '2m0a'
+        location['enclosure'] = 'clma'
+        location['telescope_class'] = '2m0'
+        configuration = self.configurations[0].copy()
+        configuration['instrument_type'] = '2M0-SCICAM-SBIG'
+        req_dict = {
+            'configurations': [configuration, ],
+            'location': location,
+            'windows': self.windows,
+            'id': self.id,
+            'duration': 10,
+            'state': self.state,
+        }
+
+        request = self.mb.build_request(req_dict, is_staff=False)
+
+    def test_build_request_2m_sbig_resolves_when_staff(self):
+        location = self.location.copy()
+        location['site'] = 'ogg'
+        location['telescope'] = '2m0a'
+        location['enclosure'] = 'clma'
+        location['telescope_class'] = '2m0'
+        configuration = self.configurations[0].copy()
+        configuration['instrument_type'] = '2M0-SCICAM-SBIG'
+        req_dict = {
+            'configurations': [configuration, ],
+            'location': location,
+            'windows': self.windows,
+            'id': self.id,
+            'duration': 10,
+            'state': self.state,
+        }
+
+        request = self.mb.build_request(req_dict, is_staff=True)
+        assert_equal(set(['2m0a.clma.ogg', ]),
+                     set(request.windows.windows_for_resource.keys()))
+
     def test_build_request_fl03_resolves_to_lsc_telescope(self):
         location = {
             'telescope_class': '1m0',
