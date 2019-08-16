@@ -103,17 +103,25 @@ class ConfigDBInterface(object, SendMetricMixin):
         Raises:
             ConfigDBError: If the specific instrument name is not found
         """
+        fallback_instrument = ''
         for instrument in self.active_instruments:
-            temp_instrument_type = instrument['science_camera']['camera_type']['code']
-            if case_insensitive_equals(instrument_type, temp_instrument_type):
-                split_string = instrument['__str__'].lower().split('.')
-                temp_site, temp_observatory, temp_telescope, _ = split_string
-                if (
-                    case_insensitive_equals(site, temp_site) and
-                    case_insensitive_equals(enclosure, temp_observatory) and
-                    case_insensitive_equals(telescope, temp_telescope)
-                ):
-                    return instrument['science_camera']['code']
+            if instrument['state'] != ['DISABLED']:
+                temp_instrument_type = instrument['science_camera']['camera_type']['code']
+                if case_insensitive_equals(instrument_type, temp_instrument_type):
+                    split_string = instrument['__str__'].lower().split('.')
+                    temp_site, temp_observatory, temp_telescope, _ = split_string
+                    if (
+                        case_insensitive_equals(site, temp_site) and
+                        case_insensitive_equals(enclosure, temp_observatory) and
+                        case_insensitive_equals(telescope, temp_telescope)
+                    ):
+                        if instrument['state'] == 'SCHEDULABLE':
+                            return instrument['science_camera']['code']
+                        else:
+                            fallback_instrument = instrument['science_camera']['code']
+
+        if fallback_instrument:
+            return fallback_instrument
 
         raise ConfigDBError(
             'get_specific_instrument failed: unable to find instrument type {} at location {}'
