@@ -139,12 +139,23 @@ class ConfigDBInterface(object, SendMetricMixin):
         Raises:
             ConfigDBError: If unable to determine a suitable autoguider
         """
+        fallback_instrument = ''
         for instrument in self.active_instruments:
-            if case_insensitive_equals(instrument_name, instrument['science_camera']['code']):
-                if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
-                    return instrument['science_camera']['code']
-                elif not self_guide:
-                    return instrument['autoguider_camera']['code']
+            if instrument['state'] != ['DISABLED']:
+                if case_insensitive_equals(instrument_name, instrument['science_camera']['code']):
+                    if instrument['state'] == 'SCHEDULABLE':
+                        if not self_guide:
+                            return instrument['autoguider_camera']['code']
+                        elif instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            return instrument['science_camera']['code']
+                    else:
+                        if not self_guide:
+                            fallback_instrument = instrument['autoguider_camera']['code']
+                        elif instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            fallback_instrument = instrument['science_camera']['code']
+
+        if fallback_instrument:
+            return fallback_instrument
 
         raise ConfigDBError(
             'get_autoguider_for_instrument failed: unable to find autoguider for instrument {} where self_guide={}'
