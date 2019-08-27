@@ -7,6 +7,7 @@
     "horizon": 15.0,
     "latitude": 28.300308,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -16.511703
   },
@@ -18,6 +19,7 @@
     "horizon": 15.0,
     "latitude": 34.43314722,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -119.8630833
   },
@@ -29,6 +31,7 @@
     "horizon": 15.0,
     "latitude": -30.1673305556,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -70.8046611111
   },
@@ -40,6 +43,7 @@
     "horizon": 15.0,
     "latitude": 30.67986944,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -104.015175
   },
@@ -51,6 +55,7 @@
     "horizon": 15.0,
     "latitude": 28.300308,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -16.511703
   },
@@ -62,6 +67,7 @@
     "horizon": 15.0,
     "latitude": 34.43314722,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -119.8630833
   },
@@ -73,6 +79,7 @@
     "horizon": 25.0,
     "latitude": 20.7069444444,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -156.258055556
   },
@@ -84,6 +91,7 @@
     "horizon": 15.0,
     "latitude": -30.1674472222,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -70.8046805556
   },
@@ -95,6 +103,7 @@
     "horizon": 15.0,
     "latitude": -32.3806616944,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 20.8101083333
   },
@@ -106,6 +115,7 @@
     "horizon": 15.0,
     "latitude": 34.6914533333,
     "ha_limit_neg": -4.9,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -120.042221667
   },
@@ -117,6 +127,7 @@
     "horizon": 25.0,
     "latitude": -31.272932,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 149.070648
   },
@@ -128,6 +139,7 @@
     "horizon": 15.0,
     "latitude": -32.3805542,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 20.8100352
   },
@@ -139,6 +151,7 @@
     "horizon": 15.0,
     "latitude": -31.272932,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 149.070648
   },
@@ -150,6 +163,7 @@
     "horizon": 25.0,
     "latitude": -31.272932,
     "ha_limit_neg": -12.0,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 149.070648
   },
@@ -161,6 +175,7 @@
     "horizon": 25.0,
     "latitude": 20.7069244,
     "ha_limit_neg": -12.0,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -156.2576447
   },
@@ -172,6 +187,7 @@
     "horizon": 25.0,
     "latitude": -31.272932,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 149.070648
   },
@@ -183,6 +199,7 @@
     "horizon": 15.0,
     "latitude": -31.272932,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 149.070648
   },
@@ -194,6 +211,7 @@
     "horizon": 25.0,
     "latitude": 20.7069444444,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -156.258055556
   },
@@ -205,6 +223,7 @@
     "horizon": 15.0,
     "latitude": -32.3805542,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": 20.8101815
   },
@@ -216,6 +235,7 @@
     "horizon": 15.0,
     "latitude": 34.43314722,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -119.8630833
   },
@@ -227,6 +247,7 @@
     "horizon": 15.0,
     "latitude": -30.1674472222,
     "ha_limit_neg": -4.533333,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -70.8046805556
   },
@@ -238,6 +259,7 @@
     "horizon": 15.0,
     "latitude": -30.1673833333,
     "ha_limit_neg": -4.6,
+    "zenith_blind_spot": 0.0,
     "events": [],
     "longitude": -70.8047888889
   }

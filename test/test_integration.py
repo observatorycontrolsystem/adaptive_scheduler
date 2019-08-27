@@ -40,6 +40,7 @@ class TestIntegration(object):
                                     status = 'online',
                                     ha_limit_neg = -4.6,
                                     ha_limit_pos = 4.6,
+                                    zenith_blind_spot=0.0
                                   )
         self.telescopes = {'1m0a.doma.ogg': self.telescope}
 

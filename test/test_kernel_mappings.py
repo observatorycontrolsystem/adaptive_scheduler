@@ -39,6 +39,7 @@ class TestKernelMappings(object):
                                                    horizon      = 25,
                                                    ha_limit_neg = -12.0,
                                                    ha_limit_pos = 12.0,
+                                                   zenith_blind_spot=0.0
                                                  )
                     }
 
@@ -515,6 +516,7 @@ class TestKernelMappings(object):
                          horizon      = 15,
                          ha_limit_neg = -4.6,
                          ha_limit_pos = 4.6,
+                         zenith_blind_spot=0.0
                        )
 
         tels = {
@@ -581,6 +583,7 @@ class TestKernelMappings(object):
                          horizon      = 15,
                          ha_limit_neg = -4.6,
                          ha_limit_pos = 4.6,
+                         zenith_blind_spot=0.0
                        )
 
         tels = {

@@ -61,17 +61,15 @@ local_cache = {}
 
 def telescope_to_rise_set_telescope(telescope):
     '''Convert scheduler Telescope to rise_set telescope dict.'''
-
     # TODO: Move scheduler Telescope code to rise_set.
     HOURS_TO_DEGREES = 15
-    telescope_dict = {
-                        'latitude'  : Angle(degrees=telescope['latitude']),
-                        'longitude' : Angle(degrees=telescope['longitude']),
-                        'ha_limit_neg' : Angle(degrees=telescope['ha_limit_neg'] * HOURS_TO_DEGREES),
-                        'ha_limit_pos' : Angle(degrees=telescope['ha_limit_pos'] * HOURS_TO_DEGREES),
-                     }
-
-    return telescope_dict
+    return {
+        'latitude': Angle(degrees=telescope['latitude']),
+        'longitude': Angle(degrees=telescope['longitude']),
+        'ha_limit_neg': Angle(degrees=telescope['ha_limit_neg'] * HOURS_TO_DEGREES),
+        'ha_limit_pos': Angle(degrees=telescope['ha_limit_pos'] * HOURS_TO_DEGREES),
+        'zenith_blind_spot': Angle(degrees=telescope['zenith_blind_spot'] * HOURS_TO_DEGREES)
+    }
 
 
 def rise_set_to_kernel_intervals(intervals):
@@ -136,9 +134,14 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
                                                       airmass=max_airmass)
     if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
-        rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
-                                                                 target_intervals=rs_up_intervals,
-                                                                 moon_distance=Angle(degrees=min_lunar_distance))
+        if min_lunar_distance > 0.0:
+            rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
+                                                                     target_intervals=rs_up_intervals,
+                                                                     moon_distance=Angle(degrees=min_lunar_distance))
+        if visibility.zenith_blind_spot.in_degrees() > 0.0:
+            rs_up_intervals = visibility.get_zenith_distance_intervals(target=rise_set_target,
+                                                                       target_intervals=rs_up_intervals)
+
     # HA support only currently implemented for ICRS targets
     if 'ra' in rise_set_target:
         rs_ha_intervals = visibility.get_ha_intervals(rise_set_target)
@@ -481,7 +484,8 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         visibility = Visibility(rs_telescope, semester_start,
                                 semester_end, tel['horizon'],
                                 twilight, tel['ha_limit_neg'],
-                                tel['ha_limit_pos'])
+                                tel['ha_limit_pos'],
+                                tel['zenith_blind_spot'])
 
         visibility_for_resource[tel_name] = visibility
 

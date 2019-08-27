@@ -293,6 +293,7 @@ class ConfigDBInterface(object, SendMetricMixin):
                         'horizon': telescope['horizon'],
                         'ha_limit_neg': telescope['ha_limit_neg'],
                         'ha_limit_pos': telescope['ha_limit_pos'],
+                        'zenith_blind_spot': telescope['zenith_blind_spot'],
                         'events': [],
                         'status': 'online' if active else 'offline'
                     }
