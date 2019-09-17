@@ -73,7 +73,7 @@ class ConfigDBInterface(object, SendMetricMixin):
         :return: json list of instruments
         """
         try:
-            r = requests.get(self.configdb_url + 'instruments/?state=SCHEDULABLE', timeout=120)
+            r = requests.get(self.configdb_url + 'instruments/', timeout=120)
         except requests.exceptions.Timeout as te:
             msg = "{}: {}".format(
                 te.__class__.__name__, "get_all_active_instruments failed: Timeout connecting to Configdb"
@@ -103,17 +103,25 @@ class ConfigDBInterface(object, SendMetricMixin):
         Raises:
             ConfigDBError: If the specific instrument name is not found
         """
+        fallback_instrument = ''
         for instrument in self.active_instruments:
-            temp_instrument_type = instrument['science_camera']['camera_type']['code']
-            if case_insensitive_equals(instrument_type, temp_instrument_type):
-                split_string = instrument['__str__'].lower().split('.')
-                temp_site, temp_observatory, temp_telescope, _ = split_string
-                if (
-                    case_insensitive_equals(site, temp_site) and
-                    case_insensitive_equals(enclosure, temp_observatory) and
-                    case_insensitive_equals(telescope, temp_telescope)
-                ):
-                    return instrument['science_camera']['code']
+            if instrument['state'] != ['DISABLED']:
+                temp_instrument_type = instrument['science_camera']['camera_type']['code']
+                if case_insensitive_equals(instrument_type, temp_instrument_type):
+                    split_string = instrument['__str__'].lower().split('.')
+                    temp_site, temp_observatory, temp_telescope, _ = split_string
+                    if (
+                        case_insensitive_equals(site, temp_site) and
+                        case_insensitive_equals(enclosure, temp_observatory) and
+                        case_insensitive_equals(telescope, temp_telescope)
+                    ):
+                        if instrument['state'] == 'SCHEDULABLE':
+                            return instrument['science_camera']['code']
+                        else:
+                            fallback_instrument = instrument['science_camera']['code']
+
+        if fallback_instrument:
+            return fallback_instrument
 
         raise ConfigDBError(
             'get_specific_instrument failed: unable to find instrument type {} at location {}'
@@ -131,12 +139,23 @@ class ConfigDBInterface(object, SendMetricMixin):
         Raises:
             ConfigDBError: If unable to determine a suitable autoguider
         """
+        fallback_instrument = ''
         for instrument in self.active_instruments:
-            if case_insensitive_equals(instrument_name, instrument['science_camera']['code']):
-                if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
-                    return instrument['science_camera']['code']
-                elif not self_guide:
-                    return instrument['autoguider_camera']['code']
+            if instrument['state'] != ['DISABLED']:
+                if case_insensitive_equals(instrument_name, instrument['science_camera']['code']):
+                    if instrument['state'] == 'SCHEDULABLE':
+                        if not self_guide:
+                            return instrument['autoguider_camera']['code']
+                        elif instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            return instrument['science_camera']['code']
+                    else:
+                        if not self_guide:
+                            fallback_instrument = instrument['autoguider_camera']['code']
+                        elif instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            fallback_instrument = instrument['science_camera']['code']
+
+        if fallback_instrument:
+            return fallback_instrument
 
         raise ConfigDBError(
             'get_autoguider_for_instrument failed: unable to find autoguider for instrument {} where self_guide={}'
@@ -166,6 +185,13 @@ class ConfigDBInterface(object, SendMetricMixin):
         return True
 
     @staticmethod
+    def _location_fully_set(location_constraints):
+        for constraint in ['telescope_class', 'site', 'enclosure', 'telescope']:
+            if constraint not in location_constraints or not location_constraints.get(constraint):
+                return False
+        return True
+
+    @staticmethod
     def _elements_available(elements_by_type, available_element_groups):
         # Assume that the elements_by_type have only valid element types.
         for element_type in elements_by_type:
@@ -182,7 +208,7 @@ class ConfigDBInterface(object, SendMetricMixin):
                     break
         return True
 
-    def get_telescopes_for_instruments(self, instrument_types_to_requirements, location):
+    def get_telescopes_for_instruments(self, instrument_types_to_requirements, location, is_staff=False):
         """Get the set of telescopes on which a request can be observed.
 
         The main dictionary passed in contains instrument requirements by instrument type. The requirements include
@@ -196,32 +222,35 @@ class ConfigDBInterface(object, SendMetricMixin):
         Returns:
             Set of available telescopes
         """
+        loc_is_set = self._location_fully_set(location)
         telescope_sets = defaultdict(set)
         for instrument in self.active_instruments:
-            instrument_location = self._parse_instrument_string(instrument['__str__'])
-            for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
-                if (case_insensitive_equals(instrument_type,
-                                            instrument['science_camera']['camera_type']['code']) and
-                        self._location_available(instrument_location, location)):
-                    # This instrument is a candidate, now the optical elements just need to match
-                    self_guide = instrument_requirements['self_guide']
-                    these_imager_element_groups = instrument['science_camera']['optical_element_groups']
+            if instrument['state'] == 'SCHEDULABLE' or (instrument['state'] != 'DISABLED' and is_staff and loc_is_set):
+                instrument_location = self._parse_instrument_string(instrument['__str__'])
+                for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
+                    if (case_insensitive_equals(instrument_type,
+                                                instrument['science_camera']['camera_type']['code']) and
+                            self._location_available(instrument_location, location)):
+                        # This instrument is a candidate, now the optical elements just need to match
+                        self_guide = instrument_requirements['self_guide']
+                        these_imager_element_groups = instrument['science_camera']['optical_element_groups']
 
-                    if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
-                        these_guider_element_groups = these_imager_element_groups
-                    elif not self_guide:
-                        these_guider_element_groups = instrument['autoguider_camera']['optical_element_groups']
-                    else:
-                        # There is no available guider on this telescope
-                        continue
+                        if self_guide and instrument['science_camera']['camera_type']['allow_self_guiding']:
+                            these_guider_element_groups = these_imager_element_groups
+                        elif not self_guide:
+                            these_guider_element_groups = instrument['autoguider_camera']['optical_element_groups']
+                        else:
+                            # There is no available guider on this telescope
+                            continue
 
-                    if (
-                        self._elements_available(instrument_requirements['science_optical_elements'],
-                                                 these_imager_element_groups) and
-                        self._elements_available(instrument_requirements['guiding_optical_elements'],
-                                                 these_guider_element_groups)
-                    ):
-                        telescope_sets[instrument_type].add(instrument_location['telescope_location'])
+                        if (
+                            self._elements_available(instrument_requirements['science_optical_elements'],
+                                                     these_imager_element_groups) and
+                            self._elements_available(instrument_requirements['guiding_optical_elements'],
+                                                     these_guider_element_groups)
+                        ):
+                            telescope_sets[instrument_type].add(
+                                instrument_location['telescope_location'])
 
         telescope_sets = telescope_sets.values()
         if len(telescope_sets) > 1:

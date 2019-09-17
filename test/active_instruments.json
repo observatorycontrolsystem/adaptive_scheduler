@@ -2596,6 +2596,181 @@
     }
   },
   {
+    "telescope": "http://configdb.lco.gtn/telescopes/14/",
+    "__str__": "ogg.clma.2m0a.fake01-na42",
+    "science_camera": {
+      "filter_wheel": 1,
+      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "25",
+          "optical_elements": [
+            {
+              "name": "I",
+              "code": "I",
+              "schedulable": true
+            },
+            {
+              "name": "R",
+              "code": "R",
+              "schedulable": true
+            },
+            {
+              "name": "U",
+              "code": "U",
+              "schedulable": true
+            },
+            {
+              "name": "w",
+              "code": "w",
+              "schedulable": true
+            },
+            {
+              "name": "Y",
+              "code": "Y",
+              "schedulable": true
+            },
+            {
+              "name": "up",
+              "code": "up",
+              "schedulable": true
+            },
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            },
+            {
+              "name": "rp",
+              "code": "rp",
+              "schedulable": true
+            },
+            {
+              "name": "ip",
+              "code": "ip",
+              "schedulable": true
+            },
+            {
+              "name": "gp",
+              "code": "gp",
+              "schedulable": true
+            },
+            {
+              "name": "zs",
+              "code": "zs",
+              "schedulable": true
+            },
+            {
+              "name": "V",
+              "code": "V",
+              "schedulable": true
+            },
+            {
+              "name": "B",
+              "code": "B",
+              "schedulable": true
+            },
+            {
+              "name": "400um-Pinhole",
+              "code": "400um-Pinhole",
+              "schedulable": true
+            },
+            {
+              "name": "150um-Pinhole",
+              "code": "150um-Pinhole",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
+      "code": "fake01",
+      "id": 17,
+      "camera_type": {
+        "allow_self_guiding": true,
+        "fixed_overhead_per_exposure": 0.5,
+        "front_padding": 240.0,
+        "code": "2M0-SCICAM-SBIG",
+        "name": "2.0 meter SBIG",
+        "acquire_exposure_time": 30.0,
+        "pscale": 0.139,
+        "acquire_processing_time": 60.0,
+        "default_mode": {
+          "overhead": 25000,
+          "id": 9,
+          "binning": 1,
+          "readout": 25.0
+        },
+        "filter_change_time": 0.0,
+        "config_change_time": 30.0,
+        "mode_set": [
+          {
+            "overhead": 25000,
+            "id": 9,
+            "binning": 1,
+            "readout": 25.0
+          }
+        ],
+        "id": 4,
+        "size": "0.33x0.03"
+      }
+    },
+    "state": "MANUAL",
+    "id": 9999,
+    "autoguider_camera": {
+      "filter_wheel": 17,
+      "filters": "air",
+      "optical_element_groups": [
+        {
+          "type": "filters",
+          "name": "24",
+          "optical_elements": [
+            {
+              "name": "air",
+              "code": "air",
+              "schedulable": true
+            }
+          ]
+        }
+      ],
+      "code": "na42",
+      "id": 9998,
+      "camera_type": {
+        "fixed_overhead_per_exposure": 1.0,
+        "front_padding": 90.0,
+        "code": "2M0-SBIG-AG",
+        "name": "2.0 meter SBIG AG",
+        "acquire_exposure_time": 0.0,
+        "pscale": 0.244,
+        "acquire_processing_time": 0.0,
+        "default_mode": {
+          "overhead": 3000,
+          "id": 27,
+          "binning": 1,
+          "readout": 0.0
+        },
+        "filter_change_time": 0.0,
+        "config_change_time": 0.0,
+        "mode_set": [
+          {
+            "overhead": 3000,
+            "id": 27,
+            "binning": 1,
+            "readout": 0.0
+          },
+          {
+            "overhead": 3000,
+            "id": 28,
+            "binning": 2,
+            "readout": 0.0
+          }
+        ],
+        "id": 13,
+        "size": "6.40x4.30"
+      }
+    }
+  },
+  {
     "telescope": "http://configdb.lco.gtn/telescopes/6/",
     "__str__": "cpt.doma.1m0a.fl16-ef02",
     "science_camera": {

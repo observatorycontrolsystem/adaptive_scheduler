@@ -46,15 +46,16 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', c
         else:
             RequestGroup.expires = PropertyMock(return_value=datetime.utcnow() + timedelta(days=365))
         rg = RequestGroup(
-                           operator        = operator,
-                           requests        = req_list,
-                           proposal        = proposal,
-                           expires         = None,
-                           id= request_group_id,
-                           name= None,
-                           ipp_value       = 1.0,
-                           observation_type= 'NORMAL',
-                           submitter       = '',
-                         )
+            operator=operator,
+            requests=req_list,
+            proposal=proposal,
+            expires=None,
+            id=request_group_id,
+            is_staff=False,
+            name=None,
+            ipp_value=1.0,
+            observation_type='NORMAL',
+            submitter='',
+        )
 
         return rg, window_list
