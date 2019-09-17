@@ -52,7 +52,8 @@ class DowntimeInterface(object, SendMetricMixin):
         downtime_json = self._get_downtime_json(start, end)
 
         for interval in downtime_json:
-            resource = '.'.join([interval['telescope'], interval['observatory'], interval['site']])
+            resource = '.'.join(
+                [interval['telescope'].lower(), interval['observatory'].lower(), interval['site'].lower()])
             if resource not in downtime_intervals:
                 downtime_intervals[resource] = []
             downtime_intervals[resource].append((datetime.strptime(interval['start'], DOWNTIME_DATE_FORMAT),
