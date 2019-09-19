@@ -22,7 +22,11 @@ from slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit, metric_timer
 
 from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
-from gurobipy import Model, tuplelist, GRB, quicksum
+from gurobipy import Model, tuplelist, GRB, quicksum, GurobiError
+from time import sleep
+
+import logging
+log = logging.getLogger(__name__)
 
 
 class Result(object):
@@ -101,6 +105,17 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
+        result = None
+        while result is None:
+            try:
+                result = self._gurobi_schedule(timelimit)
+            except GurobiError as ge:
+                log.warn("Gurobi license not available, sleeping 10 seconds.")
+                sleep(10.0)
+
+        return result
+
+    def _gurobi_schedule(self, timelimit=None):
         # Instantiate a Gurobi Model object
         m = Model("LCOGT Schedule")
 
