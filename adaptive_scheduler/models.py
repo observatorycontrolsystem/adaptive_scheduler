@@ -177,9 +177,11 @@ class Target(DataContainer):
         fields_as_str = []
         for field in self.required_fields:
             field_value = getattr(self, field)
-            if not isinstance(field, str):
-                field_value = unicodedata.normalize('NFKD', field_value)
-            fields_as_str.append(field + '=' + str(field_value))
+            try:
+                s_field_value = str(field_value)
+            except UnicodeEncodeError:
+                s_field_value = str(unicodedata.normalize('NFKD', field_value))
+            fields_as_str.append(field + '=' + s_field_value)
         fields_as_str = '({})'.format(', '.join(fields_as_str))
         return "{} {}".format(self.__class__.__name__, fields_as_str)
 
