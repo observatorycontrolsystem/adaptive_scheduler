@@ -33,6 +33,7 @@ from adaptive_scheduler.observation_portal_connections  import ObservationPortal
 from datetime    import datetime
 from collections import defaultdict
 import ast
+import unicodedata
 import logging
 import random
 import numbers
@@ -175,7 +176,10 @@ class Target(DataContainer):
     def __repr__(self):
         fields_as_str = []
         for field in self.required_fields:
-            fields_as_str.append(field + '=' + str(getattr(self, field)))
+            field_value = getattr(self, field)
+            if not isinstance(field, str):
+                field_value = unicodedata.normalize('NFKD', field_value)
+            fields_as_str.append(field + '=' + str(field_value))
         fields_as_str = '({})'.format(', '.join(fields_as_str))
         return "{} {}".format(self.__class__.__name__, fields_as_str)
 
