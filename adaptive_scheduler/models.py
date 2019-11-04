@@ -33,7 +33,6 @@ from adaptive_scheduler.observation_portal_connections  import ObservationPortal
 from datetime    import datetime
 from collections import defaultdict
 import ast
-import unicodedata
 import logging
 import random
 import numbers
@@ -180,7 +179,7 @@ class Target(DataContainer):
             try:
                 s_field_value = str(field_value)
             except UnicodeEncodeError:
-                s_field_value = str(unicodedata.normalize('NFKD', field_value))
+                s_field_value = str(field_value.encode(errors='ignore'))
             fields_as_str.append(field + '=' + s_field_value)
         fields_as_str = '({})'.format(', '.join(fields_as_str))
         return "{} {}".format(self.__class__.__name__, fields_as_str)
