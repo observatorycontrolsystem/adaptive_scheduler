@@ -181,7 +181,7 @@ class ObservationScheduleInterface(object):
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
             schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, only_rr=True,
-                                          states=['PENDING', 'IN_PROGRESS', 'FAILED'])
+                                          states=['PENDING', 'IN_PROGRESS'])
             telescope_observations[full_tel_name] = schedule
 
         return telescope_observations
