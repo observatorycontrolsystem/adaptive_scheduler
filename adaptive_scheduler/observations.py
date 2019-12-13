@@ -308,7 +308,7 @@ class ObservationScheduleInterface(object):
 
     def _get_running_observations(self, ends_after, starts_before, site, obs, tel):
         schedule = self._get_schedule(ends_after, starts_before, site, obs, tel,
-                                      states=['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED'])
+                                      states=['PENDING', 'IN_PROGRESS', 'COMPLETED'])
 
         cutoff_dt = starts_before
         for observation in schedule:
