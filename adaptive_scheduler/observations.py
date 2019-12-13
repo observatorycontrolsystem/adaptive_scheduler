@@ -11,7 +11,7 @@ March 2019
 from __future__ import division
 import os
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 from collections import defaultdict
 
 from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
@@ -180,9 +180,10 @@ class ObservationScheduleInterface(object):
         telescope_observations = {}
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
-            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, only_rr=True)
+            schedule = self._get_schedule(ends_after, starts_before, site_name, obs_name, tel_name, only_rr=True,
+                                          states=['PENDING', 'IN_PROGRESS', 'FAILED'])
             telescope_observations[full_tel_name] = schedule
-            
+
         return telescope_observations
 
     @timeit
@@ -193,23 +194,23 @@ class ObservationScheduleInterface(object):
         '''
         telescope_interval = {}
         rr_observations_by_telescope = self._get_rr_observations_by_telescope(tels, ends_after, starts_before)
-        
+
         for full_tel_name in tels:
             observations = rr_observations_by_telescope.get(full_tel_name, [])
-    
+
             intervals = get_intervals(observations)
             if not intervals.is_empty():
                 telescope_interval[full_tel_name] = intervals
-    
+
         return telescope_interval
 
     @metric_timer('observation_portal.get_schedule')
-    def _get_schedule(self, start, end, site, enc, tel, only_rr=False):
+    def _get_schedule(self, start, end, site, enc, tel, only_rr=False, states=[]):
         # Only retrieve observations which are currently active
         params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
                       enclosure=enc, telescope=tel, limit=1000,
                       observation_type=['NORMAL', 'RAPID_RESPONSE', 'TIME_CRITICAL'],
-                      state=['PENDING', 'IN_PROGRESS'], offset=0)
+                      state=states, offset=0)
         if only_rr:
             params['observation_type'] = 'RAPID_RESPONSE'
 
@@ -304,18 +305,19 @@ class ObservationScheduleInterface(object):
         log.info("Network-wide, found %d running %s", n_running_total, observation_str)
     
         return running_at_tel
-    
+
     def _get_running_observations(self, ends_after, starts_before, site, obs, tel):
-        schedule = self._get_schedule(ends_after, starts_before, site, obs, tel)
+        schedule = self._get_schedule(ends_after, starts_before, site, obs, tel,
+                                      states=['PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED'])
 
         cutoff_dt = starts_before
         for observation in schedule:
             if observation['start'] < starts_before < observation['end']:
-                if observation['end'] > cutoff_dt:
+                if observation['end'] > cutoff_dt and observation['state'] in ['PENDING', 'IN_PROGRESS']:
                     cutoff_dt = observation['end']
-    
+
         running = [b for b in schedule if b['start'] < cutoff_dt]
-    
+
         return running
 
 
