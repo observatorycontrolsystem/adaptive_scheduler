@@ -205,7 +205,9 @@ class ObservationScheduleInterface(object):
         return telescope_interval
 
     @metric_timer('observation_portal.get_schedule')
-    def _get_schedule(self, start, end, site, enc, tel, only_rr=False, states=[]):
+    def _get_schedule(self, start, end, site, enc, tel, only_rr=False, states=None):
+        if states is None:
+            states = []
         # Only retrieve observations which are currently active
         params = dict(end_after=start, start_before=end, start_after=start - timedelta(days=1), site=site,
                       enclosure=enc, telescope=tel, limit=1000,
