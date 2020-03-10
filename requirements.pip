@@ -15,8 +15,8 @@ potsdb==1.0.3
 requests<=2.30.0
 redis<=3.3
 retry<=0.10.0
-opentsdb_http_client
-opentsdb_python_metrics
+opentsdb_http_client>=0.2.0
+opentsdb_python_metrics>=0.2.0
 lcogt-logging
 python-dateutil
 unidecode<1.1.0
