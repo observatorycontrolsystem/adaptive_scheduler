@@ -36,6 +36,10 @@ to the observation portal before stopping it - look at its log file in /var/log/
 environment variables are set correctly with the hosts correct for all the services. There is a test entrypoint to run 
 the unit tests and a normal entrypoint to run the scheduler. 
 
+### scheduler1.lco.gtn ###
+If you reboot scheduler1,the networking must be started manually: 
+ifconfig eth0 hw ether 00:30:48:f1:70:49  to spoof the MAC
+
 #### Authors: 
 Eric Saunders
 
