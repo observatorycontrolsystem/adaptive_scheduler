@@ -3,8 +3,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/16/",
     "__str__": "tfn.aqwa.0m4a.kb29-kb29",
     "science_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -78,23 +76,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -102,8 +84,6 @@
     "state": "SCHEDULABLE",
     "id": 49,
     "autoguider_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -176,23 +156,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -202,8 +166,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fs02-kb40",
     "science_camera": {
-      "filter_wheel": 15,
-      "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -312,29 +274,7 @@
         "name": "2.0 meter Spectral",
         "acquire_exposure_time": 0.0,
         "pscale": 0.154,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 42000,
-          "id": 11,
-          "binning": 2,
-          "readout": 10.5
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 42000,
-            "id": 11,
-            "binning": 2,
-            "readout": 10.5
-          },
-          {
-            "overhead": 42000,
-            "id": 10,
-            "binning": 1,
-            "readout": 42.0
-          }
-        ],
         "id": 5,
         "size": "10.5x10.5"
       }
@@ -342,8 +282,6 @@
     "state": "SCHEDULABLE",
     "id": 42,
     "autoguider_camera": {
-      "filter_wheel": 17,
-      "filters": "air",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -366,29 +304,7 @@
         "name": "2.0 meter Spectral AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.092,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 3000,
-          "id": 23,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 3000,
-            "id": 23,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 3000,
-            "id": 24,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 11,
         "size": "2.40x1.60"
       }
@@ -398,8 +314,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/4/",
     "__str__": "coj.doma.1m0a.fl12-ef09",
     "science_camera": {
-      "filter_wheel": 11,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -523,23 +437,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -547,8 +445,6 @@
     "state": "SCHEDULABLE",
     "id": 63,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -611,41 +507,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -655,8 +517,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/20/",
     "__str__": "ogg.clma.0m4b.kb27-kb27",
     "science_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -730,23 +590,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -754,8 +598,6 @@
     "state": "SCHEDULABLE",
     "id": 57,
     "autoguider_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -828,23 +670,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -854,8 +680,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/7/",
     "__str__": "cpt.domb.1m0a.fl14-ef03",
     "science_camera": {
-      "filter_wheel": 14,
-      "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -959,23 +783,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -983,8 +791,6 @@
     "state": "SCHEDULABLE",
     "id": 20,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1047,41 +853,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -1091,8 +863,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/5/",
     "__str__": "coj.domb.1m0a.fl11-ef10",
     "science_camera": {
-      "filter_wheel": 11,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ha,al,l3,r3,g3,b3,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1216,23 +986,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -1240,8 +994,6 @@
     "state": "SCHEDULABLE",
     "id": 64,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1304,41 +1056,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -1348,8 +1066,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/22/",
     "__str__": "coj.clma.0m4a.kb98-kb98",
     "science_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1423,23 +1139,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -1447,8 +1147,6 @@
     "state": "SCHEDULABLE",
     "id": 66,
     "autoguider_camera": {
-      "filter_wheel": 8,
-      "filters": "opaque,100um-Pinhole,w,up,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1521,23 +1219,7 @@
         "name": "0.4 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 32000,
-          "id": 19,
-          "binning": 2,
-          "readout": 13.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 32000,
-            "id": 19,
-            "binning": 2,
-            "readout": 13.0
-          }
-        ],
         "id": 9,
         "size": "29.2x19.5"
       }
@@ -1547,8 +1229,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/12/",
     "__str__": "lsc.domc.1m0a.fl04-ef08",
     "science_camera": {
-      "filter_wheel": 1,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1642,23 +1322,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -1666,8 +1330,6 @@
     "state": "SCHEDULABLE",
     "id": 35,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1730,41 +1392,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -1774,8 +1402,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/8/",
     "__str__": "cpt.domc.1m0a.fl06-ef04",
     "science_camera": {
-      "filter_wheel": 1,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1869,23 +1495,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -1893,8 +1503,6 @@
     "state": "SCHEDULABLE",
     "id": 25,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1957,41 +1565,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -2001,8 +1575,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.fs01-kb34",
     "science_camera": {
-      "filter_wheel": 15,
-      "filters": "D51,H-Beta,OIII,H-Alpha,Skymapper-VS,solar,Astrodon-UV,I,R,Y,up,air,rp,ip,gp,zs,V,B,200um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2116,29 +1688,7 @@
         "name": "2.0 meter Spectral",
         "acquire_exposure_time": 0.0,
         "pscale": 0.154,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 42000,
-          "id": 11,
-          "binning": 2,
-          "readout": 10.5
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 42000,
-            "id": 11,
-            "binning": 2,
-            "readout": 10.5
-          },
-          {
-            "overhead": 42000,
-            "id": 10,
-            "binning": 1,
-            "readout": 42.0
-          }
-        ],
         "id": 5,
         "size": "10.5x10.5"
       }
@@ -2146,8 +1696,6 @@
     "state": "SCHEDULABLE",
     "id": 7,
     "autoguider_camera": {
-      "filter_wheel": 17,
-      "filters": "air",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2170,29 +1718,7 @@
         "name": "2.0 meter Spectral AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.092,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 3000,
-          "id": 23,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 3000,
-            "id": 23,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 3000,
-            "id": 24,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 11,
         "size": "2.40x1.60"
       }
@@ -2202,8 +1728,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/9/",
     "__str__": "elp.doma.1m0a.fl05-ef01",
     "science_camera": {
-      "filter_wheel": 16,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,B*ND,V*ND,R*ND,I*ND,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2322,23 +1846,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -2346,8 +1854,6 @@
     "state": "SCHEDULABLE",
     "id": 55,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2410,41 +1916,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -2454,8 +1926,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.floyds01-kb42",
     "science_camera": {
-      "filter_wheel": 5,
-      "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
       "optical_element_groups": [
         {
           "type": "slits",
@@ -2519,23 +1989,7 @@
         "name": "2.0 meter FLOYDS",
         "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "acquire_processing_time": 60.0,
-        "default_mode": {
-          "overhead": 25000,
-          "id": 9,
-          "binning": 1,
-          "readout": 25.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 30.0,
-        "mode_set": [
-          {
-            "overhead": 25000,
-            "id": 9,
-            "binning": 1,
-            "readout": 25.0
-          }
-        ],
         "id": 4,
         "size": "0.33x0.03"
       }
@@ -2543,8 +1997,6 @@
     "state": "SCHEDULABLE",
     "id": 40,
     "autoguider_camera": {
-      "filter_wheel": 17,
-      "filters": "air",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2567,29 +2019,7 @@
         "name": "2.0 meter FLOYDS AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.244,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 3000,
-          "id": 27,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 3000,
-            "id": 27,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 3000,
-            "id": 28,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 13,
         "size": "6.40x4.30"
       }
@@ -2599,8 +2029,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fake01-na42",
     "science_camera": {
-      "filter_wheel": 1,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2694,23 +2122,7 @@
         "name": "2.0 meter SBIG",
         "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "acquire_processing_time": 60.0,
-        "default_mode": {
-          "overhead": 25000,
-          "id": 9,
-          "binning": 1,
-          "readout": 25.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 30.0,
-        "mode_set": [
-          {
-            "overhead": 25000,
-            "id": 9,
-            "binning": 1,
-            "readout": 25.0
-          }
-        ],
         "id": 4,
         "size": "0.33x0.03"
       }
@@ -2718,8 +2130,6 @@
     "state": "MANUAL",
     "id": 9999,
     "autoguider_camera": {
-      "filter_wheel": 17,
-      "filters": "air",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2742,29 +2152,7 @@
         "name": "2.0 meter SBIG AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.244,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 3000,
-          "id": 27,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 3000,
-            "id": 27,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 3000,
-            "id": 28,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 13,
         "size": "6.40x4.30"
       }
@@ -2774,8 +2162,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/6/",
     "__str__": "cpt.doma.1m0a.fl16-ef02",
     "science_camera": {
-      "filter_wheel": 1,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2869,23 +2255,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -2893,8 +2263,6 @@
     "state": "SCHEDULABLE",
     "id": 17,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2957,41 +2325,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -3001,8 +2335,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.kb16-kb31",
     "science_camera": {
-      "filter_wheel": 4,
-      "filters": "Ha,rp,ip,gp,V,B,clear",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3056,29 +2388,7 @@
         "name": "0.8 meter SBIG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.28,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 36000,
-          "id": 17,
-          "binning": 2,
-          "readout": 8.5
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 36000,
-            "id": 17,
-            "binning": 2,
-            "readout": 8.5
-          },
-          {
-            "overhead": 36000,
-            "id": 16,
-            "binning": 1,
-            "readout": 21.5
-          }
-        ],
         "id": 8,
         "size": "14.3x9.5"
       }
@@ -3086,8 +2396,6 @@
     "state": "SCHEDULABLE",
     "id": 45,
     "autoguider_camera": {
-      "filter_wheel": 21,
-      "filters": "air,Luminance,Green,Blue",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3125,29 +2433,7 @@
         "name": "0.8 meter SciCam AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.28,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 10000,
-          "id": 21,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 10000,
-            "id": 21,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 10000,
-            "id": 22,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 10,
         "size": "7.1x4.8"
       }
@@ -3157,8 +2443,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.nres-kb35",
     "science_camera": {
-      "filter_wheel": 13,
-      "filters": "slit_1.6as",
       "optical_element_groups": [
         {
           "type": "slits",
@@ -3182,23 +2466,7 @@
         "name": "0.8 meter NRES",
         "acquire_exposure_time": 30.0,
         "pscale": 0.5,
-        "acquire_processing_time": 60.0,
-        "default_mode": {
-          "overhead": 20000,
-          "id": 32,
-          "binning": 1,
-          "readout": 6.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 30.0,
-        "mode_set": [
-          {
-            "overhead": 20000,
-            "id": 32,
-            "binning": 1,
-            "readout": 6.0
-          }
-        ],
         "id": 15,
         "size": "0.045x0.045"
       }
@@ -3206,8 +2474,6 @@
     "state": "SCHEDULABLE",
     "id": 48,
     "autoguider_camera": {
-      "filter_wheel": 21,
-      "filters": "air,Luminance,Green,Blue",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3245,29 +2511,7 @@
         "name": "NRES Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.612,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 10000,
-          "id": 26,
-          "binning": 2,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 10000,
-            "id": 25,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 10000,
-            "id": 26,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 12,
         "size": "15.6x10.4"
       }
@@ -3277,8 +2521,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.fl03-ef07",
     "science_camera": {
-      "filter_wheel": 14,
-      "filters": "H-Beta,H-Alpha,I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3382,23 +2624,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -3406,8 +2632,6 @@
     "state": "SCHEDULABLE",
     "id": 32,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3470,41 +2694,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
@@ -3514,8 +2704,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.nres01-ak01",
     "science_camera": {
-      "filter_wheel": 13,
-      "filters": "slit_1.6as",
       "optical_element_groups": [
         {
           "type": "slits",
@@ -3539,23 +2727,7 @@
         "name": "1.0 meter NRES",
         "acquire_exposure_time": 30.0,
         "pscale": 0.5,
-        "acquire_processing_time": 60.0,
-        "default_mode": {
-          "overhead": 20000,
-          "id": 37,
-          "binning": 1,
-          "readout": 6.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 30.0,
-        "mode_set": [
-          {
-            "overhead": 20000,
-            "id": 37,
-            "binning": 1,
-            "readout": 6.0
-          }
-        ],
         "id": 17,
         "size": "0.045x0.045"
       }
@@ -3563,8 +2735,6 @@
     "state": "SCHEDULABLE",
     "id": 68,
     "autoguider_camera": {
-      "filter_wheel": 13,
-      "filters": "slit_1.6as",
       "optical_element_groups": [
         {
           "type": "slits",
@@ -3587,29 +2757,7 @@
         "name": "NRES Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.612,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 10000,
-          "id": 26,
-          "binning": 2,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 10000,
-            "id": 25,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 10000,
-            "id": 26,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 12,
         "size": "15.6x10.4"
       }
@@ -3619,8 +2767,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.floyds02-kb37",
     "science_camera": {
-      "filter_wheel": 5,
-      "filters": "slit_6.0as,slit_1.6as,slit_2.0as,slit_1.2as,floyds_slit_default,floyds_slit_xl,floyds_slit_l,floyds_slit_m,floyds_slit_s",
       "optical_element_groups": [
         {
           "type": "slits",
@@ -3684,23 +2830,7 @@
         "name": "2.0 meter FLOYDS",
         "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "acquire_processing_time": 60.0,
-        "default_mode": {
-          "overhead": 25000,
-          "id": 9,
-          "binning": 1,
-          "readout": 25.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 30.0,
-        "mode_set": [
-          {
-            "overhead": 25000,
-            "id": 9,
-            "binning": 1,
-            "readout": 25.0
-          }
-        ],
         "id": 4,
         "size": "0.33x0.03"
       }
@@ -3708,8 +2838,6 @@
     "state": "SCHEDULABLE",
     "id": 5,
     "autoguider_camera": {
-      "filter_wheel": 17,
-      "filters": "air",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3732,29 +2860,7 @@
         "name": "2.0 meter FLOYDS AG",
         "acquire_exposure_time": 0.0,
         "pscale": 0.244,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 3000,
-          "id": 27,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 3000,
-            "id": 27,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 3000,
-            "id": 28,
-            "binning": 2,
-            "readout": 0.0
-          }
-        ],
         "id": 13,
         "size": "6.40x4.30"
       }
@@ -3764,8 +2870,6 @@
     "telescope": "http://configdb.lco.gtn/telescopes/10/",
     "__str__": "lsc.doma.1m0a.fl15-ef06",
     "science_camera": {
-      "filter_wheel": 19,
-      "filters": "I,R,U,w,Y,up,air,rp,ip,gp,zs,V,B,ND,400um-Pinhole,150um-Pinhole",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3864,23 +2968,7 @@
         "name": "1.0 meter Sinistro",
         "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 46000,
-          "id": 8,
-          "binning": 1,
-          "readout": 37.0
-        },
-        "filter_change_time": 2.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 46000,
-            "id": 8,
-            "binning": 1,
-            "readout": 37.0
-          }
-        ],
         "id": 3,
         "size": "26.4x26.4"
       }
@@ -3888,8 +2976,6 @@
     "state": "SCHEDULABLE",
     "id": 65,
     "autoguider_camera": {
-      "filter_wheel": 10,
-      "filters": "opaque,150um-Pinhole,air,rp,ip,gp,zs,V,B",
       "optical_element_groups": [
         {
           "type": "filters",
@@ -3952,41 +3038,7 @@
         "name": "Autoguider",
         "acquire_exposure_time": 0.0,
         "pscale": 0.335,
-        "acquire_processing_time": 0.0,
-        "default_mode": {
-          "overhead": 115,
-          "id": 1,
-          "binning": 1,
-          "readout": 0.0
-        },
-        "filter_change_time": 0.0,
         "config_change_time": 0.0,
-        "mode_set": [
-          {
-            "overhead": 115,
-            "id": 1,
-            "binning": 1,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 2,
-            "binning": 2,
-            "readout": 0.0
-          },
-          {
-            "overhead": 115,
-            "id": 3,
-            "binning": 3,
-            "readout": 0.0
-          },
-          {
-            "overhead": 114,
-            "id": 4,
-            "binning": 4,
-            "readout": 0.0
-          }
-        ],
         "id": 1,
         "size": "5.7x5.7"
       }
