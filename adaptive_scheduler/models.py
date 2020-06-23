@@ -18,8 +18,9 @@ from rise_set.astrometry                      import (make_ra_dec_target,
                                                       make_major_planet_target,
                                                       make_comet_target,
                                                       make_satellite_target)
-from rise_set.angle                           import Angle, InvalidAngleError, AngleConfigError
-from rise_set.rates                           import ProperMotion, RatesConfigError
+from rise_set.angle                           import Angle
+from rise_set.exceptions                      import InvalidAngleError, AngleConfigError, RatesConfigError
+from rise_set.rates                           import ProperMotion
 from adaptive_scheduler.utils                 import (iso_string_to_datetime, convert_proper_motion,
                                                       EqualityMixin, safe_unidecode)
 from adaptive_scheduler.printing              import plural_str as pl

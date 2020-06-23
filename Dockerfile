@@ -18,7 +18,7 @@ RUN yum -y install epel-release \
 # install python libs (and set cvxopt to install glpk)
 COPY requirements.pip $APPLICATION_ROOT/requirements.pip
 RUN pip install --upgrade pip
-RUN pip install numpy && CVXOPT_BUILD_GLPK=1 pip --trusted-host buildsba.lco.gtn install -r $APPLICATION_ROOT/requirements.pip
+RUN pip install 'numpy<1.17.0' && CVXOPT_BUILD_GLPK=1 pip --trusted-host buildsba.lco.gtn install -r $APPLICATION_ROOT/requirements.pip
 
 # copy the stuff
 COPY . $APPLICATION_ROOT
