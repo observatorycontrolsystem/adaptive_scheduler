@@ -2,7 +2,18 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/16/",
     "__str__": "tfn.aqwa.0m4a.kb29-kb29",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "0m4-SciCam-SBIG",
+      "name": "0.4 meter SBIG",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0,
+      "id": 9
+    },
+    "code": "kb29",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -69,18 +80,13 @@
       "code": "kb29",
       "id": 33,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
         "name": "0.4 meter SBIG",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "config_change_time": 0.0,
         "id": 9,
         "size": "29.2x19.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 49,
     "autoguider_camera": {
@@ -165,7 +171,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fs02-kb40",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 12.0,
+      "front_padding": 240.0,
+      "code": "2m0-SciCam-Spectral",
+      "name": "2.0 meter Spectral",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fs02",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -267,18 +283,13 @@
       "code": "fs02",
       "id": 20,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 12.0,
-        "front_padding": 240.0,
         "code": "2m0-SciCam-Spectral",
         "name": "2.0 meter Spectral",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.154,
-        "config_change_time": 0.0,
         "id": 5,
         "size": "10.5x10.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 42,
     "autoguider_camera": {
@@ -313,7 +324,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/4/",
     "__str__": "coj.doma.1m0a.fl12-ef09",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl12",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -430,18 +451,13 @@
       "code": "fl12",
       "id": 67,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 63,
     "autoguider_camera": {
@@ -516,7 +532,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/20/",
     "__str__": "ogg.clma.0m4b.kb27-kb27",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "0m4-SciCam-SBIG",
+      "name": "0.4 meter SBIG",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "kb27",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -583,18 +609,13 @@
       "code": "kb27",
       "id": 60,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
         "name": "0.4 meter SBIG",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "config_change_time": 0.0,
         "id": 9,
         "size": "29.2x19.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 57,
     "autoguider_camera": {
@@ -679,7 +700,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/7/",
     "__str__": "cpt.domb.1m0a.fl14-ef03",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl14",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -776,18 +807,13 @@
       "code": "fl14",
       "id": 69,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 20,
     "autoguider_camera": {
@@ -862,7 +888,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/5/",
     "__str__": "coj.domb.1m0a.fl11-ef10",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl11",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -979,18 +1015,13 @@
       "code": "fl11",
       "id": 66,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 64,
     "autoguider_camera": {
@@ -1065,7 +1096,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/22/",
     "__str__": "coj.clma.0m4a.kb98-kb98",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "0m4-SciCam-SBIG",
+      "name": "0.4 meter SBIG",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "kb98",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1132,18 +1173,13 @@
       "code": "kb98",
       "id": 71,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "0m4-SciCam-SBIG",
         "name": "0.4 meter SBIG",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.571,
-        "config_change_time": 0.0,
         "id": 9,
         "size": "29.2x19.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 66,
     "autoguider_camera": {
@@ -1228,7 +1264,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/12/",
     "__str__": "lsc.domc.1m0a.fl04-ef08",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl04",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1315,18 +1361,13 @@
       "code": "fl04",
       "id": 15,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 35,
     "autoguider_camera": {
@@ -1401,7 +1442,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/8/",
     "__str__": "cpt.domc.1m0a.fl06-ef04",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl06",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1488,18 +1539,13 @@
       "code": "fl06",
       "id": 55,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 25,
     "autoguider_camera": {
@@ -1574,7 +1620,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.fs01-kb34",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 12.0,
+      "front_padding": 240.0,
+      "code": "2m0-SciCam-Spectral",
+      "name": "2.0 meter Spectral",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fs01",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1681,18 +1737,13 @@
       "code": "fs01",
       "id": 19,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 12.0,
-        "front_padding": 240.0,
         "code": "2m0-SciCam-Spectral",
         "name": "2.0 meter Spectral",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.154,
-        "config_change_time": 0.0,
         "id": 5,
         "size": "10.5x10.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 7,
     "autoguider_camera": {
@@ -1727,7 +1778,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/9/",
     "__str__": "elp.doma.1m0a.fl05-ef01",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl05",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -1839,18 +1900,13 @@
       "code": "fl05",
       "id": 58,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 55,
     "autoguider_camera": {
@@ -1925,7 +1981,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.floyds01-kb42",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 0.5,
+      "front_padding": 240.0,
+      "code": "2m0-FLOYDS-SciCam",
+      "name": "2.0 meter FLOYDS",
+      "acquire_exposure_time": 30.0,
+      "config_change_time": 30.0
+    },
+    "code": "floyds01",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "slits",
@@ -1982,18 +2048,13 @@
       "code": "floyds01",
       "id": 17,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 0.5,
-        "front_padding": 240.0,
         "code": "2m0-FLOYDS-SciCam",
         "name": "2.0 meter FLOYDS",
-        "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "config_change_time": 30.0,
         "id": 4,
         "size": "0.33x0.03"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 40,
     "autoguider_camera": {
@@ -2028,7 +2089,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fake01-na42",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 0.5,
+      "front_padding": 240.0,
+      "code": "2M0-SCICAM-SBIG",
+      "name": "2.0 meter SBIG",
+      "acquire_exposure_time": 30.0,
+      "config_change_time": 30.0
+    },
+    "code": "fake01",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2115,18 +2186,13 @@
       "code": "fake01",
       "id": 17,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 0.5,
-        "front_padding": 240.0,
         "code": "2M0-SCICAM-SBIG",
         "name": "2.0 meter SBIG",
-        "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "config_change_time": 30.0,
         "id": 4,
         "size": "0.33x0.03"
       }
-    },
+    }],
     "state": "MANUAL",
     "id": 9999,
     "autoguider_camera": {
@@ -2161,7 +2227,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/6/",
     "__str__": "cpt.doma.1m0a.fl16-ef02",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl16",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2248,18 +2324,13 @@
       "code": "fl16",
       "id": 68,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 17,
     "autoguider_camera": {
@@ -2334,7 +2405,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.kb16-kb31",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "0m8-SciCam-SBIG",
+      "name": "0.8 meter SBIG",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "kb16",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2381,18 +2462,13 @@
       "code": "kb16",
       "id": 28,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "0m8-SciCam-SBIG",
         "name": "0.8 meter SBIG",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.28,
-        "config_change_time": 0.0,
         "id": 8,
         "size": "14.3x9.5"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 45,
     "autoguider_camera": {
@@ -2442,7 +2518,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.nres-kb35",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 0.5,
+      "front_padding": 240.0,
+      "code": "0m8-NRES-SciCam",
+      "name": "0.8 meter NRES",
+      "acquire_exposure_time": 30.0,
+      "config_change_time": 30.0
+    },
+    "code": "nres",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "slits",
@@ -2456,21 +2542,16 @@
           ]
         }
       ],
-      "code": "nres",
+      "code": "fl33",
       "id": 53,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 0.5,
-        "front_padding": 240.0,
         "code": "0m8-NRES-SciCam",
         "name": "0.8 meter NRES",
-        "acquire_exposure_time": 30.0,
         "pscale": 0.5,
-        "config_change_time": 30.0,
         "id": 15,
         "size": "0.045x0.045"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 48,
     "autoguider_camera": {
@@ -2520,7 +2601,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.fl03-ef07",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl03",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2617,18 +2708,13 @@
       "code": "fl03",
       "id": 14,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 32,
     "autoguider_camera": {
@@ -2703,7 +2789,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.nres01-ak01",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 0.5,
+      "front_padding": 240.0,
+      "code": "1m0-NRES-SciCam",
+      "name": "1.0 meter NRES",
+      "acquire_exposure_time": 30.0,
+      "config_change_time": 30.0
+    },
+    "code": "nres01",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "slits",
@@ -2717,21 +2813,16 @@
           ]
         }
       ],
-      "code": "nres01",
+      "code": "fl44",
       "id": 73,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 0.5,
-        "front_padding": 240.0,
         "code": "1m0-NRES-SciCam",
         "name": "1.0 meter NRES",
-        "acquire_exposure_time": 30.0,
         "pscale": 0.5,
-        "config_change_time": 30.0,
         "id": 17,
         "size": "0.045x0.045"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 68,
     "autoguider_camera": {
@@ -2766,7 +2857,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.floyds02-kb37",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 0.5,
+      "front_padding": 240.0,
+      "code": "2m0-FLOYDS-SciCam",
+      "name": "2.0 meter FLOYDS",
+      "acquire_exposure_time": 30.0,
+      "config_change_time": 30.0
+    },
+    "code": "floyds02",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "slits",
@@ -2823,18 +2924,13 @@
       "code": "floyds02",
       "id": 18,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 0.5,
-        "front_padding": 240.0,
         "code": "2m0-FLOYDS-SciCam",
         "name": "2.0 meter FLOYDS",
-        "acquire_exposure_time": 30.0,
         "pscale": 0.139,
-        "config_change_time": 30.0,
         "id": 4,
         "size": "0.33x0.03"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 5,
     "autoguider_camera": {
@@ -2869,7 +2965,17 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/10/",
     "__str__": "lsc.doma.1m0a.fl15-ef06",
-    "science_camera": {
+    "instrument_type": {
+      "allow_self_guiding": true,
+      "fixed_overhead_per_exposure": 1.0,
+      "front_padding": 90.0,
+      "code": "1m0-SciCam-Sinistro",
+      "name": "1.0 meter Sinistro",
+      "acquire_exposure_time": 0.0,
+      "config_change_time": 0.0
+    },
+    "code": "fl15",
+    "science_cameras": [{
       "optical_element_groups": [
         {
           "type": "filters",
@@ -2961,18 +3067,13 @@
       "code": "fl15",
       "id": 70,
       "camera_type": {
-        "allow_self_guiding": true,
-        "fixed_overhead_per_exposure": 1.0,
-        "front_padding": 90.0,
         "code": "1m0-SciCam-Sinistro",
         "name": "1.0 meter Sinistro",
-        "acquire_exposure_time": 0.0,
         "pscale": 0.389,
-        "config_change_time": 0.0,
         "id": 3,
         "size": "26.4x26.4"
       }
-    },
+    }],
     "state": "SCHEDULABLE",
     "id": 65,
     "autoguider_camera": {
