@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import mock
 from StringIO import StringIO
 
-from adaptive_scheduler.monitoring.telemetry import Datum
+from adaptive_scheduler.monitoring.elasticearch_telemetry import Datum
 from adaptive_scheduler.monitoring.monitors import (OfflineResourceMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface

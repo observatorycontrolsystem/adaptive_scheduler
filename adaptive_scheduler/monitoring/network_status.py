@@ -20,15 +20,9 @@ Author: Martin Norbury
 May 2013
 '''
 from adaptive_scheduler.monitoring.monitors import OfflineResourceMonitor, AvailableForScheduling
-from adaptive_scheduler.monitoring.telemetry import ConnectionError
+from adaptive_scheduler.monitoring.elasticearch_telemetry import ConnectionError
 
-import datetime as dt
-import socket
-import requests
-from retry import retry
-import collections
-
-DEFAULT_MONITORS = [OfflineResourceMonitor, AvailableForScheduling]
+from elasticsearch import Elasticsearch
 
 import logging
 
@@ -68,7 +62,7 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, configdb_interface, monitors=None):
+    def __init__(self, configdb_interface, scheduling_input=None, monitors=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
@@ -77,9 +71,20 @@ class Network(object):
         if monitors:
             self.monitors = monitors
         else:
-            self.monitors = []
-            for monitor in DEFAULT_MONITORS:
-                self.monitors.append(monitor(configdb_interface))
+            self.monitors = [
+                OfflineResourceMonitor(configdb_interface),
+            ]
+            if scheduling_input.elasticsearch_url and scheduling_input.elasticsearch_index:
+                es = Elasticsearch([scheduling_input.elasticsearch_url])
+                if es.ping():
+                    # Only add the elasticsearch telemetry monitors if your elasticsearch is accessible
+                    self.monitors.append(AvailableForScheduling(
+                        configdb_interface,
+                        scheduling_input.elasticsearch_url,
+                        scheduling_input.elasticsearch_index,
+                        scheduling_input.elasticsearch_excluded_observatories
+                    ))
+
         self.current_events = {}
         self.previous_events = {}
 

@@ -102,6 +102,14 @@ def parse_args(argv):
                                 help="Enable saving the per-request log files")
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                                 help="Downtime endpoint url", default=defaults.downtime_url)
+    arg_parser.add_argument("--elasticsearch_url", type=str, dest='elasticsearch_url',
+                                help="Elasticsearch telemetry endpoint url", default=defaults.elasticsearch_url)
+    arg_parser.add_argument("--elasticsearch_index", type=str, dest='elasticsearch_index',
+                                help="Elasticsearch telemetry index name", default=defaults.elasticsearch_index)
+    arg_parser.add_argument("--elasticsearch_excluded_observatories", type=str,
+                                dest='elasticsearch_excluded_observatories',
+                                help="Elasticsearch telemetry observatories to exclude (comma delimited)",
+                                default=defaults.elasticsearch_excluded_observatories)
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                                 help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
@@ -173,7 +181,7 @@ def main(argv):
     schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
     observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url, debug=sched_params.debug)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
-    network_state_interface = Network(configdb_interface)
+    network_state_interface = Network(configdb_interface, sched_params)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
                                          configdb_interface)
 #     network_interface = CachedInputNetworkInterface('/data/adaptive_scheduler/input_states/scheduler_input.pickle')

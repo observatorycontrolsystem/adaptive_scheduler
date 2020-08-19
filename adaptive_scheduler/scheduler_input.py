@@ -22,9 +22,12 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
-                 observation_portal_url='http://observation-portal-dev.lco.gtn/',
-                 configdb_url='http://configdb-dev.lco.gtn/',
-                 downtime_url='http://downtime-dev.lco.gtn',
+                 observation_portal_url='',
+                 configdb_url='',
+                 downtime_url='',
+                 elasticsearch_url='',
+                 elasticsearch_index='live-telemetry',
+                 elasticsearch_excluded_observatories='',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
                  normal_runtime_seconds=360.0, rr_runtime_seconds=120, debug=False):
         self.dry_run = dry_run
@@ -54,6 +57,12 @@ class SchedulerParameters(object):
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
+        self.elasticsearch_url = elasticsearch_url
+        self.elasticsearch_index = elasticsearch_index
+        if elasticsearch_excluded_observatories:
+            self.elasticsearch_excluded_observatories = elasticsearch_excluded_observatories.split(',')
+        else:
+            self.elasticsearch_excluded_observatories = []
 
 
 class SchedulingInputFactory(object):
