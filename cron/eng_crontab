@@ -1,1 +1,0 @@
-0 20 * * * /bin/nice -n 10 /lco/adaptive_scheduler/scripts/archive_logs.sh >> /var/log/archive_logs.log 2>&1

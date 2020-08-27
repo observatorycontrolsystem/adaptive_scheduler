@@ -44,9 +44,14 @@ class TestOfflineResourceMonitor(object):
 class TestAvailableForSchedulingMonitor(object):
 
     def setUp(self):
-        self.monitor = AvailableForScheduling(configdb_interface=ConfigDBInterface(configdb_url='',
-                                                                               telescopes_file='test/telescopes.json',
-                                                                               active_instruments_file='test/active_instruments.json'))
+        self.monitor = AvailableForScheduling(
+            configdb_interface=ConfigDBInterface(configdb_url='',
+                                                 telescopes_file='test/telescopes.json',
+                                                 active_instruments_file='test/active_instruments.json'),
+            elasticsearch_url='',
+            es_index='',
+            es_excluded_observatories=[]
+        )
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_we_are_okay_to_open(self, mock_get_datum):
@@ -122,7 +127,7 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                  'value':value})
 
 
-def _mocked_get_datum_consistent(datum, instance=None):
+def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=[], instance=None):
     if datum == 'Available For Scheduling':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]

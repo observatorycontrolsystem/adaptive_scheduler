@@ -11,7 +11,6 @@ from datetime import datetime, timedelta
 import collections
 import itertools
 
-from lcogt import dateutil
 from adaptive_scheduler.monitoring.elasticearch_telemetry import get_datum
 
 # Set up and configure a module scope logger
@@ -110,7 +109,7 @@ class ElasticsearchDataMonitor(NetworkStateMonitor):
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, configdb_interface, elasticsearch_url, es_index, es_excluded_observatories):
-        super(NetworkStateMonitor, self).__init__(configdb_interface)
+        super(ElasticsearchDataMonitor, self).__init__(configdb_interface)
         self.elasticsearch_url = elasticsearch_url
         self.es_index = es_index
         self.es_excluded_observatories = es_excluded_observatories
