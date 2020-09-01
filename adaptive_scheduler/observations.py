@@ -48,7 +48,7 @@ class ObservationScheduleInterface(object):
 
     def __init__(self, host=None):
         self.host = host
-        self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
+        self.headers = {'Authorization': 'Token ' + os.getenv("OBSERVATION_PORTAL_API_TOKEN", '')}
         self.running_observations_by_telescope = None
         self.running_intervals_by_telescope = None
         self.rr_intervals_by_telescope = None

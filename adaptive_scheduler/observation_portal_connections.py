@@ -18,7 +18,7 @@ class ObservationPortalInterface(SendMetricMixin):
         self.obs_portal_url = obs_portal_url
         self.debug = debug
         self.log = logging.getLogger(__name__)
-        self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
+        self.headers = {'Authorization': 'Token ' + os.getenv("OBSERVATION_PORTAL_API_TOKEN", '')}
         self.current_semester_details = None
 
     def get_proposals(self):
