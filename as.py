@@ -43,12 +43,12 @@ run_flag = True
 
 def ctrl_c_handler(signal, frame):
     global run_flag
-    print 'Received Ctrl+C - terminating on loop completion.'
+    print('Received Ctrl+C - terminating on loop completion.')
     run_flag = False
 
 def kill_handler(signal, frame):
     global run_flag
-    print 'Received SIGTERM (kill) - terminating on loop completion.'
+    print('Received SIGTERM (kill) - terminating on loop completion.')
     run_flag = False
 
 # import signal

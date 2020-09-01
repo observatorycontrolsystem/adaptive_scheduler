@@ -183,13 +183,13 @@ class TestKernelMappings(object):
         rs_target = self.make_constrained_request().configurations[0].target.in_rise_set_format()
 
         assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance),
-                     '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.iteritems()))))
+                     '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.items()))))
 
     def test_compute_request_availability_half_downtime(self):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
         visibilities = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)),]}
+        downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
         compute_request_availability(request, intervals_for_resource, {})
@@ -395,7 +395,7 @@ class TestKernelMappings(object):
                            )
 
         # Verify we get the intervals we expect
-        for resource_name, received_intervals in received.iteritems():
+        for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
                 assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
@@ -448,7 +448,7 @@ class TestKernelMappings(object):
 
 
         # Verify we get the intervals we expect
-        for resource_name, received_intervals in received.iteritems():
+        for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
                 assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
@@ -495,7 +495,7 @@ class TestKernelMappings(object):
                            )
 
         # Verify we get the intervals we expect
-        for resource_name, received_intervals in received.iteritems():
+        for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
                 assert_equal(received_tp['time'], rise_set_dark_intervals[i])
 
@@ -503,8 +503,8 @@ class TestKernelMappings(object):
     def test_visibility_intervals_are_limited_by_hour_angle(self):
 
         window_dict = {
-                        'start' : datetime(2013, 03, 22, 0, 0, 0),
-                        'end'   : datetime(2013, 03, 23, 0, 0, 0),
+                        'start' : datetime(2013, 3, 22, 0, 0, 0),
+                        'end'   : datetime(2013, 3, 23, 0, 0, 0),
                       }
 
         tel_name = '1m0a.doma.coj'
@@ -541,8 +541,8 @@ class TestKernelMappings(object):
                        id='1',
                        duration        = 10,
                      )
-        sem_start = datetime(2013, 03, 1, 0, 0, 0)
-        sem_end   = datetime(2013, 03, 31, 0, 0, 0)
+        sem_start = datetime(2013, 3, 1, 0, 0, 0)
+        sem_end   = datetime(2013, 3, 31, 0, 0, 0)
 
         visibilities = construct_visibilities(tels, sem_start, sem_end)
 
@@ -570,8 +570,8 @@ class TestKernelMappings(object):
     def test_visibility_intervals_at_low_horizon_are_allowed_by_hour_angle(self):
 
         window_dict = {
-                        'start' : datetime(2013, 03, 22, 0, 0, 0),
-                        'end'   : datetime(2013, 03, 23, 0, 0, 0),
+                        'start' : datetime(2013, 3, 22, 0, 0, 0),
+                        'end'   : datetime(2013, 3, 23, 0, 0, 0),
                       }
 
         tel_name = '1m0a.doma.coj'
@@ -609,8 +609,8 @@ class TestKernelMappings(object):
                        id='1',
                        duration        = 10,
                      )
-        sem_start = datetime(2013, 03, 1, 0, 0, 0)
-        sem_end   = datetime(2013, 03, 31, 0, 0, 0)
+        sem_start = datetime(2013, 3, 1, 0, 0, 0)
+        sem_end   = datetime(2013, 3, 31, 0, 0, 0)
 
         visibilities = construct_visibilities(tels, sem_start, sem_end)
 

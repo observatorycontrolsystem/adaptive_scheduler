@@ -4,8 +4,8 @@ import time
 import logging
 import itertools
 import json
+from functools import cmp_to_key
 
-from collections import defaultdict
 from datetime import datetime, timedelta
 
 from adaptive_scheduler.feedback         import TimingLogger
@@ -32,7 +32,7 @@ from adaptive_scheduler.observation_portal_connections import ObservationPortalC
 from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInterface
 
 
-class Scheduler(object, SendMetricMixin):
+class Scheduler(SendMetricMixin):
 
     def __init__(self, kernel_class, sched_params, event_bus):
         self.kernel_class = kernel_class
@@ -82,7 +82,7 @@ class Scheduler(object, SendMetricMixin):
             permutations.extend(itertools.permutations(large_list, i + 1))
             
         for x in permutations:
-            combinations = zip_combinations(x)
+            combinations = list(zip_combinations(x))
             value = 0
             invalid_combination = False
             for combination in combinations:
@@ -527,13 +527,16 @@ class SchedulerResult(object):
         return scheduled_requests_by_request_group_id
 
     def resources_scheduled(self):
-        return self.schedule.keys()
+        return list(self.schedule.keys())
 
     def earliest_reservation(self, resource):
         earliest = None
         reservations = list(self.schedule.get(resource, []))
         if reservations:
-            reservations.sort(cmp=lambda x, y: cmp(x.scheduled_start, y.scheduled_start))
+            reservations = sorted(
+                reservations,
+                key=cmp_to_key(lambda x, y: ((x.scheduled_start > y.scheduled_start) - (x.scheduled_start < y.scheduled_start)))
+            )
             earliest = reservations[0]
 
         return earliest
@@ -584,7 +587,7 @@ class SchedulerRunner(object):
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
         available_telescopes = []
-        for telescope_name, telescope in self.network_model.iteritems():
+        for telescope_name, telescope in self.network_model.items():
             if telescope_name in current_events:
                 telescope['events'].extend(current_events[telescope_name])
                 msg = "Found network event for '%s' - removing from consideration (%s)" % (
@@ -642,7 +645,7 @@ class SchedulerRunner(object):
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
-        self.log.info("Estimated scheduler run time is %.2f seconds", scheduler_input.estimated_scheduler_runtime.total_seconds())
+        self.log.info("Estimated scheduler run time is {:.2f} seconds".format(scheduler_input.estimated_scheduler_runtime.total_seconds()))
         self.log.info("Estimated scheduler end %s", estimated_scheduler_end)
         n_rgs, n_rs = n_requests(scheduler_input.request_groups)
         self.summary_events.append("Received %d %s (%d %s) from the Observation Portal" % (pl(n_rgs, 'Request Group') + pl(n_rs, 'Request')))
@@ -759,7 +762,7 @@ class SchedulerRunner(object):
             semester_end = self.semester_details['end']
 
             all_cancelation_date_list_by_resource = self._determine_schedule_cancelation_start_dates(
-                self.network_model.keys(),
+                list(self.network_model.keys()),
                 scheduler_result.schedule,
                 scheduler_input.resource_usage_snapshot,
                 apply_deadline,
@@ -811,7 +814,7 @@ class SchedulerRunner(object):
                 abort_requests_by_resource[resource] = to_abort
 
             n_deleted, n_aborted, n_submitted = 0, 0, 0
-            for resource in set(new_schedule_resources + resources_to_clear):
+            for resource in sorted(set(new_schedule_resources + resources_to_clear)):
                 # These are resources at which the schedule must be updated in some way. Save and abort will
                 # have the same resources. Cancel might be different, for example if a resource just became
                 # unavailable, the schedule there would need to be canceled but no new schedule submitted. For this
@@ -868,7 +871,7 @@ class SchedulerRunner(object):
                 self.log.info("Rapid Response scheduling took %.2f seconds" % rr_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Rapid Response Scheduling Summary")
 
-            except EstimateExceededException, eee:
+            except EstimateExceededException as eee:
                 self.log.warn("Not enough time left to apply schedule before estimated scheduler end. Schedule will not be saved.")
                 rr_scheduling_timedelta = eee.new_estimate - rr_scheduling_start
                 self.estimated_rr_run_timedelta = estimate_runtime(self.estimated_rr_run_timedelta, rr_scheduling_timedelta)
@@ -899,7 +902,7 @@ class SchedulerRunner(object):
                 prof.dump_stats('call_scheduler.pstat')
             else:
                 scheduler_result = self.call_scheduler(scheduler_input, deadline)
-            resources_to_clear = self.network_model.keys()
+            resources_to_clear = list(self.network_model.keys())
             try:
                 before_apply = datetime.utcnow()
                 self.normal_scheduled_requests_by_rg = scheduler_result.get_scheduled_requests_by_request_group_id()

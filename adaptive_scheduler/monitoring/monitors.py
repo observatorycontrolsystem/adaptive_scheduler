@@ -44,7 +44,7 @@ class NetworkStateMonitor(object):
                 event = self.create_event(datum)
                 resource_list = self.create_resource(datum)
 
-                if isinstance(resource_list, basestring):
+                if isinstance(resource_list, str):
                     resource_list = (resource_list,)
                 for resource in resource_list:
                     events.append((resource, event))
@@ -84,7 +84,7 @@ class OfflineResourceMonitor(NetworkStateMonitor):
         super(OfflineResourceMonitor, self).__init__(configdb_interface=configdb_interface)
 
     def retrieve_data(self):
-        return self.configdb_interface.get_telescope_info().values()
+        return list(self.configdb_interface.get_telescope_info().values())
 
     def create_event(self, datum):
         event = Event(

@@ -249,7 +249,6 @@ def timeit(method):
         result = method(*args, **kwargs)
         end    = time.time()
 
-        #print 'TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start)
         log.info('TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start))
         return result
 

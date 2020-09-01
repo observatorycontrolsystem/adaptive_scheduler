@@ -2,13 +2,12 @@
 
 from __future__ import division
 
-from nose.tools import assert_equal, assert_not_equal, raises
+from nose.tools import assert_equal, assert_not_equal
 from mock       import patch, Mock
 from datetime   import datetime, timedelta
-from copy       import deepcopy
 
 from adaptive_scheduler.models          import (RequestGroup, Request, Windows)
-import helpers
+import test.helpers as helpers
 
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (

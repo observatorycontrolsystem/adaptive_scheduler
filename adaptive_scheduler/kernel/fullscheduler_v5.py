@@ -15,25 +15,21 @@ Sept 2012
 Dec 2012: changed to work with Reservation_v3
 '''
 
-from reservation_v3 import *
-#from contracts_v2 import *
-import copy
+from adaptive_scheduler.kernel.reservation_v3 import *
 import numpy
 from openopt import LP
 from scipy.sparse import coo_matrix
-#from slicedipscheduler import *
-from slicedipscheduler_v2 import *
+from adaptive_scheduler.kernel.slicedipscheduler_v2 import *
 from adaptive_scheduler.utils import timeit
 
-#class FullScheduler_v5(SlicedIPScheduler):
+
 class FullScheduler_v5(SlicedIPScheduler_v2):
 
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
                  slice_size_seconds):
-#        SlicedIPScheduler.__init__(self, compound_reservation_list, 
-        SlicedIPScheduler_v2.__init__(self, compound_reservation_list, 
+        SlicedIPScheduler_v2.__init__(self, compound_reservation_list,
                                    globally_possible_windows_dict, 
                                    contractual_obligation_list, 
                                    slice_size_seconds)
@@ -59,7 +55,7 @@ class FullScheduler_v5(SlicedIPScheduler_v2):
 #        try:
 #            A = numpy.zeros((A_numrows, len(self.Yik)), dtype=numpy.int)
 #        except ValueError:
-#            print "Number of A rows: ", A_numrows
+#            print("Number of A rows: {}".format(A_numrows))
         b = numpy.zeros(A_numrows, dtype=numpy.int16)
         # build A & b
         row = 0
@@ -139,7 +135,7 @@ class FullScheduler_v5(SlicedIPScheduler_v2):
                     left_idx += 1
                     right_idx += 1
                     row += 1
-#            print Aeq_numrows
+#            print(Aeq_numrows)
             Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))
 
         # bounds:
@@ -207,11 +203,11 @@ def sm_size(m):
     return m.getnnz() * m.dtype.itemsize
 
 def print_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.nbytes * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.nbytes * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))
 
 def print_sparse_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.getnnz() * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.getnnz() * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))

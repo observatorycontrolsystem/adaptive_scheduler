@@ -341,13 +341,13 @@ class Windows(EqualityMixin):
 
     def size(self):
         all_windows_size = 0
-        for resource_name, windows in self.windows_for_resource.iteritems():
+        for resource_name, windows in self.windows_for_resource.items():
             all_windows_size += len(windows)
 
         return all_windows_size
 
     def __iter__(self):
-        for resource_name, windows in self.windows_for_resource.iteritems():
+        for resource_name, windows in self.windows_for_resource.items():
             yield resource_name, windows
 
 
@@ -432,7 +432,7 @@ class RequestGroup(EqualityMixin):
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid operator types are:\n")
 
-            for res_type, help_txt in RequestGroup.valid_types.iteritems():
+            for res_type, help_txt in RequestGroup.valid_types.items():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise RequestError(error_msg)
@@ -704,7 +704,7 @@ class ModelBuilder(object):
             except RequestError as e:
                 log.warn(e)
                 log.warn('Invalid Request: {}'.format(generate_request_description(ur_dict, req_dict)))
-                invalid_requests.append((req_dict, e.message))
+                invalid_requests.append((req_dict, str(e)))
 
         return requests, invalid_requests
 
@@ -737,7 +737,7 @@ class ModelBuilder(object):
             )
             msg = "Request {} wants cameras [{}], which are not available on the subnetwork '{}'".format(
                 req_dict['id'],
-                ', '.join(instrument_types_to_requirements.keys()),
+                ', '.join(list(instrument_types_to_requirements.keys())),
                 req_location
             )
             raise RequestError(msg)

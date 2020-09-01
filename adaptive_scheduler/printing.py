@@ -72,7 +72,7 @@ def log_full_rg(rg, now):
 
 def print_reservation(res):
     log.debug(res)
-    for resource, interval in res.possible_windows_dict.iteritems():
+    for resource, interval in res.possible_windows_dict.items():
         log.debug("Possible windows: %s -> %s" % ( resource, interval ))
 
     return
@@ -102,9 +102,9 @@ def print_compound_reservation(compound_res):
 
 def print_resource_windows(resource_windows):
     for resource in resource_windows:
-        print resource
+        print(resource)
         for i in resource_windows[resource].toDictList():
-            print i['time'], i['type']
+            print("{}: {}".format(i['time'], i['type']))
 
     return
 
@@ -135,4 +135,4 @@ def print_schedule(schedule, semester_start=None, semester_end=None):
 
 
 def iprint(string, indent_level=0):
-    print (indent_level * INDENT) + string
+    print("{}{}".format((indent_level * INDENT), string))

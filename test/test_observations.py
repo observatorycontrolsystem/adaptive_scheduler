@@ -150,7 +150,7 @@ class TestObservationInteractions(object):
     @responses.activate
     def test_cancel_blocks_called_when_dry_run_not_set(self):
         reason = 'Superceded by new schedule'
-        ids = range(10)
+        ids = list(range(10))
         host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)

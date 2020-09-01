@@ -43,7 +43,7 @@ class TestSchedulingInputProvider(object):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_rr_input=True)
         input_provider.refresh()
         assert_equal(['1m0a.doma.elp'], input_provider.available_resources)
-        assert_equal(['1m0a.doma.elp', '1m0a.doma.lsc'], self.network_interface.resource_usage_snapshot.call_args[0][0])
+        assert_equal(set(['1m0a.doma.elp', '1m0a.doma.lsc']), set(self.network_interface.resource_usage_snapshot.call_args[0][0]))
 
     def test_input_scheduler_now_when_not_provided_by_parameter(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model, is_rr_input=True)

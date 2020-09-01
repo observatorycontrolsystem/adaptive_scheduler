@@ -75,10 +75,10 @@ class ResourceUsageSnapshot(object):
         self.extra_blocked_intervals = extra_block_intervals
         
     def running_request_group_ids(self):
-        return self.running_request_groups_by_id.keys()
+        return list(self.running_request_groups_by_id.keys())
     
     def running_request_groups(self):
-        return self.running_request_groups_by_id.values()
+        return list(self.running_request_groups_by_id.values())
     
     def running_request_group(self, request_group_id):
         return self.running_request_groups_by_id.get(request_group_id, None)
@@ -191,7 +191,7 @@ class NetworkInterface(object):
         self.network_schedule_interface.fetch_data(resources, snapshot_start, snapshot_end)
         
         return ResourceUsageSnapshot(now,
-                                     self._running_request_groups_by_id().values(),
+                                     list(self._running_request_groups_by_id().values()),
                                      {})
 
 

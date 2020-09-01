@@ -13,12 +13,9 @@ Sept 2012
 Dec 2012: changed to work with Reservation_v3
 '''
 
-from reservation_v3 import *
-#from contracts_v2 import *
-import copy
-import numpy
+from adaptive_scheduler.kernel.reservation_v3 import *
 import math
-from scheduler import *
+from adaptive_scheduler.kernel.scheduler import *
 
 class PossibleStart(object):
     def __init__(self, resource, slice_starts, internal_start):
@@ -113,7 +110,7 @@ class SlicedIPScheduler_v2(Scheduler):
 
 
     def unpack_result(self, r):
-        #        print r.xf
+        #        print(r.xf)
         idx = 0
         for value in r.xf:
             if value == 1:
@@ -145,7 +142,7 @@ class SlicedIPScheduler_v2(Scheduler):
 
         ps_list = []
         # Make sure the resource is available.  If it is not in the time slicing dict, it's not available
-        if self.time_slicing_dict.has_key(resource):
+        if resource in self.time_slicing_dict:
             slice_alignment = self.time_slicing_dict[resource][0]
             slice_length = self.time_slicing_dict[resource][1]
             slices = []

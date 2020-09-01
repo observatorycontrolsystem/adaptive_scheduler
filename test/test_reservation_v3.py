@@ -30,20 +30,20 @@ class TestReservation_v3(object):
     def test_create_reservation(self):
         assert_equal(self.r1.priority, 1)
         assert_equal(self.r1.duration, 1)
-        assert_equal(self.r1.possible_windows_dict.keys(), ['foo'])
+        assert_equal(list(self.r1.possible_windows_dict.keys()), ['foo'])
 
 
     def test_create_reservation_2(self):
-        assert_equal(self.r4.possible_windows_dict.keys(), ['foo', 'bar'])
+        assert_equal(set(self.r4.possible_windows_dict.keys()), set(['foo', 'bar']))
 
 
     def test_print(self):
-        print self.r1
+        print(self.r1)
 
     
     def test_print_2(self):
         self.r1.schedule(1, 1, 'foo', 'test')
-        print self.r1
+        print(self.r1)
 
 
     def test_remove_from_free_windows_1(self):

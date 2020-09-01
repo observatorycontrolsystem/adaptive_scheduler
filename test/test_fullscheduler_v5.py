@@ -99,9 +99,7 @@ class TestFullScheduler_v5(object):
 
 
     def test_schedule_all_4inarow(self):
-#        print self.fs8.reservation_list
         self.fs8.schedule_all()
-#        print self.fs8.reservation_list
         assert_equal(self.r11.scheduled, True)
         assert_equal(self.r12.scheduled, True)
         assert_equal(self.r13.scheduled, True)

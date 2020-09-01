@@ -1,6 +1,6 @@
 #!/usr/bin/python
 from __future__ import division
-
+from nose import SkipTest
 from datetime import datetime, timedelta
 
 # Import the modules to test
@@ -8,8 +8,12 @@ from adaptive_scheduler.models      import (ICRSTarget, Proposal, Configuration,
                                             Request, RequestGroup,
                                             Windows, Window)
 
-from test_scheduler import create_scheduler_input_factory, create_running_request_group
-from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
+from test.test_scheduler import create_scheduler_input_factory, create_running_request_group
+try:
+    from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
+except ImportError:
+    raise SkipTest('Gurobi is not properly installed, skipping these tests.')
+
 from adaptive_scheduler.scheduler_input import  SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.utils import get_reservation_datetimes
@@ -157,7 +161,7 @@ class TestIntegration(object):
     def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
                            block_schedule_by_resource={}, running_request_groups=[], rapid_response_ids=[],
                            semester_details={}):
-        sched_params = SchedulerParameters(run_once=True, dry_run=True)
+        sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
         network_interface_mock = Mock()
@@ -186,7 +190,7 @@ class TestIntegration(object):
 
     def test_changing_semester_details_clears_visibility_cache(self):
         scheduler_time = self.base_time - timedelta(hours=10)
-        sched_params = SchedulerParameters(run_once=True, dry_run=True)
+        sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
         network_interface_mock = Mock()

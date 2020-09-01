@@ -15,7 +15,6 @@ Additionally, it is allowed to explicitly specify the resID, so as to
 keep a uniform ID space between this and other parts of the scheduler.
 '''
 
-from time_intervals.intervals import Intervals
 import copy
 
 class Reservation_v3(object):
@@ -176,19 +175,19 @@ class CompoundReservation_v2(object):
             msg = ( "Initializing a CompoundReservation as 'single' but with %d "
                     "individual reservations. Ignoring all but the first."
                     % self.size )
-            print msg
+            print(msg)
             self.size = 1
             self.reservation_list = [reservation_list.pop(0)]
         if (type == 'and') and (self.size == 1):
             msg = ( "Initializing a CompoundReservation as 'and' but with %d "
                     "individual reservation."
                     % self.size )
-            print msg
+            print(msg)
         if type == 'oneof' and self.size == 1:
             msg = ( "Initializing a CompoundReservation as 'oneof' but with %d "
                     "individual reservation."
                     % self.size )
-            print msg
+            print(msg)
         self.scheduled = False
 
 

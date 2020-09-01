@@ -15,10 +15,8 @@ Author: Jason Eastman (jeastman@lcogt.net)
 January 2014
 '''
 
-from reservation_v3 import *
-#from contracts_v2 import *
-import copy
-from slicedipscheduler_v2 import SlicedIPScheduler_v2
+from adaptive_scheduler.kernel.reservation_v3 import *
+from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit, metric_timer
 
 from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
@@ -27,6 +25,7 @@ from gurobipy import Model, tuplelist, GRB, quicksum
 
 class Result(object):
     pass
+
 
 class FullScheduler_gurobi(SlicedIPScheduler_v2):
     @metric_timer('kernel.init')
@@ -90,7 +89,7 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
 
     @timeit
     @metric_timer('kernel.scheduling')
-    def schedule_all(self, timelimit=None):
+    def schedule_all(self, timelimit=0):
 
         if not self.reservation_list:
             return self.schedule_dict
@@ -235,18 +234,22 @@ def dump_matrix_sizes(f, A, Aeq, b, beq, n_res):
 
     out_fh.close()
 
+
 def m_size(m):
     return m.nbytes * m.dtype.itemsize
+
 
 def sm_size(m):
     return m.getnnz() * m.dtype.itemsize
 
+
 def print_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.nbytes * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.nbytes * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))
+
 
 def print_sparse_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.getnnz() * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.getnnz() * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))

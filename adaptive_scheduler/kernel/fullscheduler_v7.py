@@ -16,9 +16,7 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 Feb 2014
 '''
 
-from reservation_v3 import *
-#from contracts_v2 import *
-import copy
+from adaptive_scheduler.kernel.reservation_v3 import *
 import numpy
 from openopt import MILP
 from scipy.sparse import coo_matrix
@@ -57,7 +55,7 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
 #        try:
 #            A = numpy.zeros((A_numrows, len(self.Yik)), dtype=numpy.int)
 #        except ValueError:
-#            print "Number of A rows: ", A_numrows
+#            print("Number of A rows: {}".format(A_numrows)
         b = numpy.zeros(A_numrows, dtype=numpy.int16)
         # build A & b
         row = 0
@@ -137,7 +135,7 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                     left_idx += 1
                     right_idx += 1
                     row += 1
-#            print Aeq_numrows
+#            print(Aeq_numrows)
             Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))
 
         # bounds:
@@ -198,18 +196,22 @@ def dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub, n_res):
 
     out_fh.close()
 
+
 def m_size(m):
     return m.nbytes * m.dtype.itemsize
+
 
 def sm_size(m):
     return m.getnnz() * m.dtype.itemsize
 
+
 def print_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.nbytes * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.nbytes * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))
+
 
 def print_sparse_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.getnnz() * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.getnnz() * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))

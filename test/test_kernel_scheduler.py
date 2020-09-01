@@ -68,7 +68,7 @@ class TestScheduler(object):
         
 
     def test_create_2(self):
-        assert_equal(self.sched2.resource_list, ['foo', 'bar'])
+        assert_equal(set(self.sched2.resource_list), set(['foo', 'bar']))
         assert_equal(self.sched2.schedule_dict['foo'], [])
         assert_equal(self.sched2.schedule_dict['bar'], [])
 
@@ -105,7 +105,7 @@ class TestScheduler(object):
 
     def test_uncommit_reservation_from_schedule(self):
         assert self.r1 in self.sched2.unscheduled_reservation_list
-	self.r1.schedule(1, 1, 'foo', 'test')
+        self.r1.schedule(1, 1, 'foo', 'test')
         self.sched2.commit_reservation_to_schedule(self.r1)
         assert self.r1 not in self.sched2.unscheduled_reservation_list
         self.sched2.uncommit_reservation_from_schedule(self.r1)

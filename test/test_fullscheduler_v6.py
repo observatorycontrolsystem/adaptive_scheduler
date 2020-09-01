@@ -13,6 +13,7 @@ from adaptive_scheduler.kernel.fullscheduler_v6 import *
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 import copy
 
+
 class TestFullScheduler_v6(object):
 
     def setup(self):
@@ -114,9 +115,7 @@ class TestFullScheduler_v6(object):
         assert_equal(self.r18.scheduled,True)
 
     def test_schedule_all_4inarow(self):
-#        print self.fs8.reservation_list
         self.fs8.schedule_all()
-#        print self.fs8.reservation_list
         assert_equal(self.r11.scheduled, True)
         assert_equal(self.r12.scheduled, True)
         assert_equal(self.r13.scheduled, True)
@@ -216,7 +215,6 @@ class TestFullScheduler_v6(object):
         
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['goo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -229,7 +227,6 @@ class TestFullScheduler_v6(object):
 
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['goo']))
         
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -243,7 +240,6 @@ class TestFullScheduler_v6(object):
         
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['foo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -257,8 +253,7 @@ class TestFullScheduler_v6(object):
         
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
-        assert_equal(1, len(schedule['foo'])) 
+        assert_equal(1, len(schedule['foo']))
         
         
     def test_schedule_no_available_windows(self):

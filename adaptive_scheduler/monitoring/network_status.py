@@ -50,7 +50,7 @@ def flatten(events_dict):
     '''
     flattened_list = []
 
-    for resource, events in events_dict.iteritems():
+    for resource, events in events_dict.items():
         for event in events:
             flattened_list.append((resource, event.reason))
 
@@ -123,7 +123,7 @@ class Network(object):
         for monitor in self.monitors:
             new_events = monitor.monitor()
 
-            for resource, event in new_events.iteritems():
+            for resource, event in new_events.items():
                 events.setdefault(resource, []).append(event)
 
         return events

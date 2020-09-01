@@ -17,7 +17,11 @@ if os.uname()[4] != 'x86_64':
 
 from nose.tools import assert_equal, assert_true
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.fullscheduler_gurobi import *
+try:
+    from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
+except ImportError:
+    raise SkipTest('Gurobi is not properly installed, skipping these tests.')
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 
 
 class TestFullScheduler_gurobi(object):
@@ -150,9 +154,7 @@ class TestFullScheduler_gurobi(object):
         assert_equal(self.r18.scheduled,True)
 
     def test_schedule_all_4inarow(self):
-#        print self.fs8.reservation_list
         self.fs8.schedule_all()
-#        print self.fs8.reservation_list
         assert_equal(self.r11.scheduled, True)
         assert_equal(self.r12.scheduled, True)
         assert_equal(self.r13.scheduled, True)
@@ -248,7 +250,7 @@ class TestFullScheduler_gurobi(object):
         
         fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
+        print(schedule)
         assert_equal(1, len(schedule['goo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -261,7 +263,7 @@ class TestFullScheduler_gurobi(object):
 
         fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
+        print(schedule)
         assert_equal(1, len(schedule['goo']))
         
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -275,7 +277,7 @@ class TestFullScheduler_gurobi(object):
         
         fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
+        print(schedule)
         assert_equal(1, len(schedule['foo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -289,7 +291,7 @@ class TestFullScheduler_gurobi(object):
         
         fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
+        print(schedule)
         assert_equal(1, len(schedule['foo'])) 
         
         
@@ -303,4 +305,3 @@ class TestFullScheduler_gurobi(object):
         
         fs = FullScheduler_gurobi([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        

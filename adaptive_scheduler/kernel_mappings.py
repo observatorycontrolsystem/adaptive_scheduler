@@ -43,7 +43,7 @@ from adaptive_scheduler.log         import RequestGroupLogger
 
 from multiprocessing import Pool, cpu_count, current_process, TimeoutError
 from redis import Redis
-import cPickle
+import pickle
 import os
 
 # Set up and configure a module scope logger
@@ -113,14 +113,14 @@ def cache_rise_set_timepoint_intervals(args):
         throws an exception, the calling code should catch this and fall back to compute rise sets synchronously
     '''
     try:
-	log.info('process {} is calculating a rise set'.format(current_process().pid))
+        log.info('process {} is calculating a rise set'.format(current_process().pid))
         (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
         intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
         cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
-        redis.set(cache_key, cPickle.dumps(intervals))
-	log.info('process {} finished calculating rise set'.format(current_process().pid))
+        redis.set(cache_key, pickle.dumps(intervals))
+        log.info('process {} finished calculating rise set'.format(current_process().pid))
     except Exception as e:
-	log.warn('received an error when trying to cache rise set value {}'.format(repr(e)))
+        log.warn('received an error when trying to cache rise set value {}'.format(repr(e)))
         # Catch and reraise the exception as a base Exception to make sure it is pickleable and doesn't hang the process
         raise Exception(repr(e))
 
@@ -209,7 +209,7 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
     window_dict = {}
 
     # Build the normalised Windows data structure for the kernel
-    for resource_name, dark_up_intervals in intersection_dict.iteritems():
+    for resource_name, dark_up_intervals in intersection_dict.items():
         # Convert timepoints into normalised epoch time
         epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
 
@@ -292,8 +292,7 @@ def filter_for_kernel(request_groups, visibility_for_resource, downtime_interval
 
 
 def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
-    return str(resource) + '_' + str(max_airmass) + '_'  + str(min_lunar_distance) + '_' + repr(sorted(rs_target.iteritems()))
-
+    return str(resource) + '_' + str(max_airmass) + '_'  + str(min_lunar_distance) + '_' + repr(sorted(rs_target.items()))
 
 
 def update_cached_semester(semester_start, semester_end):
@@ -332,7 +331,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                     if cache_key not in local_cache:
                         try:
                             # put intersections from the redis cache into the local cache for use later
-                            local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+                            local_cache[cache_key] = pickle.loads(redis.get(cache_key))
                         except Exception:
                             # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
                             rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
@@ -358,7 +357,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
         log.info("finished closing thread pool")
         for cache_key in rise_sets_to_compute_later.keys():
             try:
-                local_cache[cache_key] = cPickle.loads(redis.get(cache_key))
+                local_cache[cache_key] = pickle.loads(redis.get(cache_key))
             except Exception:
                 # failed to load this cache_key from redis, maybe redis is down. Will run synchronously.
                 (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = rise_sets_to_compute_later[cache_key]
@@ -413,7 +412,7 @@ def compute_request_availability(req, target_intervals_by_resource, downtime_int
 
 def intervals_to_windows(req, intersections_for_resource):
     windows = Windows()
-    for resource_name, intervals in intersections_for_resource.iteritems():
+    for resource_name, intervals in intersections_for_resource.items():
         windows_for_resource = req.windows.windows_for_resource[resource_name]
         # TODO: This needs cleanup
         # It's possible there are no windows for this resource so we can't
@@ -465,7 +464,7 @@ def construct_resource_windows(visibility_for_resource, semester_start, availabi
        resource is available.'''
 
     resource_windows = {}
-    for tel_name, visibility in visibility_for_resource.iteritems():
+    for tel_name, visibility in visibility_for_resource.items():
         if tel_name in availabile_resources:
             rs_dark_intervals = visibility.get_dark_intervals()
             dark_intervals    = rise_set_to_kernel_intervals(rs_dark_intervals)
@@ -479,7 +478,7 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
     '''Construct Visibility objects for each telescope.'''
 
     visibility_for_resource = {}
-    for tel_name, tel in tels.iteritems():
+    for tel_name, tel in tels.items():
         rs_telescope = telescope_to_rise_set_telescope(tel)
         visibility = Visibility(rs_telescope, semester_start,
                                 semester_end, tel['horizon'],

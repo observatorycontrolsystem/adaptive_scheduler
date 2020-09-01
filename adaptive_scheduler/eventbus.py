@@ -204,7 +204,7 @@ if __name__ == '__main__':
             return cls._Event(message)
 
         def on_message_update(self, message):
-            print message
+            print(message)
 
     # Create eventbus
     eventbus = get_eventbus()

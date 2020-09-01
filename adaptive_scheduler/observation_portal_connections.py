@@ -12,7 +12,7 @@ class ObservationPortalConnectionError(Exception):
     pass
 
 
-class ObservationPortalInterface(object, SendMetricMixin):
+class ObservationPortalInterface(SendMetricMixin):
     
     def __init__(self, obs_portal_url, debug=False):
         self.obs_portal_url = obs_portal_url

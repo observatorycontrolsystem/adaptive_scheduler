@@ -1,5 +1,5 @@
 from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
-from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput, SchedulingInputUtils
+from adaptive_scheduler.scheduler_input import  SchedulerParameters, SchedulingInputProvider, SchedulingInput
 from adaptive_scheduler.models import RequestGroup, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningRequestGroup, ResourceUsageSnapshot
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -14,7 +14,7 @@ from mock import Mock, patch
 from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
 
 from datetime import datetime, timedelta
-
+from functools import reduce
 
 class TestScheduler(object):
 
@@ -125,13 +125,13 @@ class TestScheduler(object):
 
         expected_combinations = [('tel1', 1), ('tel2', 2)]
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
     def test_optimal_schedule_one_of_two_rgs_possible(self):
         tel_rg_value_dict = {
                                   ('tel1', 1) : 6,
                                   ('tel2', 1) : 8,
-                                  }
+                            }
 
         request_group_ids = [1, 2]
         telescopes = ['tel1', 'tel2']
@@ -142,7 +142,7 @@ class TestScheduler(object):
 
         expected_combinations = [('tel1', 1)]
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
     def test_optimal_schedule_zero_of_two_rgs_possible(self):
         tel_rg_value_dict = {
@@ -157,7 +157,7 @@ class TestScheduler(object):
 
         expected_combinations = []
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
     def test_optimal_schedule_more_telescopes_than_rgs(self):
         tel_rg_value_dict = {
@@ -178,7 +178,7 @@ class TestScheduler(object):
 
         expected_combinations = [('tel2', 1), ('tel3', 2)]
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
     def test_optimal_schedule_more_telescopes_than_rgs_not_all_telescopes_possible(self):
         tel_rg_value_dict = {
@@ -197,7 +197,7 @@ class TestScheduler(object):
 
         expected_combinations = [('tel1', 1), ('tel2', 2)]
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
 
     # TODO: Not sure if this case really needs to work.  If scheduler can only put in a single
@@ -221,7 +221,7 @@ class TestScheduler(object):
 
         expected_combinations = [('tel1', 1), ('tel1', 2)]
 
-        assert_equal(combinations, expected_combinations)
+        assert_equal(list(combinations), expected_combinations)
 
     def test_create_resource_mask_no_running_requests(self):
         mock_kernel_class = Mock()
@@ -673,8 +673,10 @@ class TestScheduler(object):
         rr_request_groups = [new_rr_single_rg, old_low_priority_rr_single_rg, old_high_priority_rr_single_rg]
 
         # Make the normal user request appear to be running
-        low_priority_running_request = RunningRequest('1m0a.doma.lsc', old_low_priority_rr_request_id, Mock(), Mock())
-        high_priority_running_request = RunningRequest('1m0a.doma.elp', old_high_priority_rr_request_id, Mock(), Mock())
+        test_start = datetime.utcnow() - timedelta(days=1)
+        test_end = test_start + timedelta(minutes=15)
+        low_priority_running_request = RunningRequest('1m0a.doma.lsc', old_low_priority_rr_request_id, test_start, test_end)
+        high_priority_running_request = RunningRequest('1m0a.doma.elp', old_high_priority_rr_request_id, test_start, test_end)
         low_priority_running_request_group = RunningRequestGroup(old_low_prioirty_rr_request_group_id, low_priority_running_request)
         high_priority_running_request_group = RunningRequestGroup(old_high_prioirty_rr_request_group_id, high_priority_running_request)
         resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(),
@@ -765,7 +767,7 @@ class TestScheduler(object):
         assert_equal([], prepare_for_kernel_mock.call_args[0][0])
 
     def is_scheduled(self, request_id, schedule):
-        for resource, reservations in schedule.iteritems():
+        for resource, reservations in schedule.items():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     return True
@@ -774,7 +776,7 @@ class TestScheduler(object):
 
     def number_of_times_scheduled(self, request_id, schedule):
         times_scheduled = 0
-        for resource, reservations in schedule.iteritems():
+        for resource, reservations in schedule.items():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     times_scheduled += 1
@@ -789,7 +791,7 @@ class TestScheduler(object):
         return False
 
     def doesnt_start_before(self, request_id, schedule, when, normalize_to):
-        for resource, reservations in schedule.iteritems():
+        for resource, reservations in schedule.items():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if normalize_to + timedelta(seconds=reservation.scheduled_start) < when:
@@ -798,7 +800,7 @@ class TestScheduler(object):
         return True
 
     def doesnt_start_after(self, request_id, schedule, when, normalize_to):
-        for resource, reservations in schedule.iteritems():
+        for resource, reservations in schedule.items():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if normalize_to + timedelta(seconds=reservation.scheduled_start) > when:
@@ -807,8 +809,8 @@ class TestScheduler(object):
         return True
 
     def scheduled_duration_is(self, request_id, schedule, slice_size, request_duration):
-        expected_duration = (((request_duration - 1) / slice_size) + 1) * slice_size
-        for resource, reservations in schedule.iteritems():
+        expected_duration = (((request_duration - 1) // slice_size) + 1) * slice_size
+        for resource, reservations in schedule.items():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if reservation.scheduled_quantum != expected_duration:
@@ -897,6 +899,7 @@ def create_request(request_id, duration, windows, possible_telescopes, is_rr=Fal
 def create_scheduler_input(request_groups, block_schedule_by_resource, running_request_groups, rr_request_group_ids):
     input_mock = Mock()
     input_mock.scheduler_now = datetime.utcnow()
+    input_mock.estimated_scheduler_runtime = timedelta(seconds=120)
     input_mock.estimated_scheduler_end = datetime.utcnow()
     input_mock.request_groups = request_groups
     input_mock.resource_usage_snapshot = ResourceUsageSnapshot(datetime.utcnow(), running_request_groups, {})
@@ -1288,11 +1291,11 @@ class TestSchedulerRunner(object):
         rr_reservation.duration = 3600
         rr_scheduler_result = SchedulerResult(
                                 resource_schedules_to_cancel=['1m0a.doma.lsc'],
-                                schedule={'1m0a.doma.lsc':[rr_reservation]}
+                                schedule={'1m0a.doma.lsc': [rr_reservation]}
                                 )
         normal_scheduler_result = SchedulerResult(
                                     resource_schedules_to_cancel=['1m0a.doma.lsc', '1m0a.doma.elp'],
-                                    schedule={'1m0a.doma.lsc':[Mock()], '1m0a.doma.elp':[Mock()]}
+                                    schedule={'1m0a.doma.lsc': [Mock()], '1m0a.doma.elp': [Mock()]}
                                 )
         scheduler_runner.call_scheduler = Mock(side_effect=lambda scheduler_input, estimated_scheduler_end: rr_scheduler_result if scheduler_input.is_rr_input else normal_scheduler_result)
 
@@ -1302,7 +1305,6 @@ class TestSchedulerRunner(object):
 
         assert_equal(2, scheduler_runner.call_scheduler.call_count)
         assert_equal(4, self.network_interface_mock.cancel.call_count)
-
         assert_true('1m0a.doma.lsc' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         assert_false('1m0a.doma.elp' in self.network_interface_mock.cancel.call_args_list[0][0][0])
         # RR loop cancels just the time it has reserved on a resource
@@ -1397,12 +1399,14 @@ class TestSchedulerRunnerUseOfRunTimes(object):
     def setup_mock_create_input_factory(self, request_groups):
         snapshot = ResourceUsageSnapshot(datetime.utcnow, [], [])
         rr_scheduling_input = Mock(request_groups=request_groups,
-                                    scheduler_now=datetime.utcnow(),
-                                    estimated_scheduler_end=datetime.utcnow(),
-                                    resource_usage_snapshot=snapshot)
+                                   scheduler_now=datetime.utcnow(),
+                                   estimated_scheduler_runtime=timedelta(seconds=120),
+                                   estimated_scheduler_end=datetime.utcnow(),
+                                   resource_usage_snapshot=snapshot)
         rr_scheduling_input.get_scheduling_start = Mock(return_value=datetime.utcnow())
         normal_scheduling_input = Mock(request_groups=request_groups,
                                        scheduler_now=datetime.utcnow(),
+                                       estimated_scheduler_runtime=timedelta(seconds=120),
                                        estimated_scheduler_end=datetime.utcnow(),
                                        resource_usage_snapshot=snapshot)
         normal_scheduling_input.get_scheduling_start = Mock(return_value=datetime.utcnow())

@@ -7,8 +7,10 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 Dec 2012
 '''
 
-from reservation_v3 import *
+from adaptive_scheduler.kernel.reservation_v3 import *
 import copy
+from time_intervals.intervals import Intervals
+
 
 class Scheduler(object):
     
@@ -31,7 +33,7 @@ class Scheduler(object):
         # sanity check: walk through and make sure none of the globally
         # possible windows are empty. Do the iteration over keys, because
         # we're modifying the dict as we go.
-        for r in globally_possible_windows_dict.keys():
+        for r in list(globally_possible_windows_dict.keys()):
             if globally_possible_windows_dict[r].is_empty():
                 del globally_possible_windows_dict[r]
         # resource_list holds the schedulable resources.
@@ -39,7 +41,7 @@ class Scheduler(object):
         # resources not on this list, but we cannot schedule them because
         # we do not know their globally possible windows.
                 
-        self.resource_list = globally_possible_windows_dict.keys()
+        self.resource_list = list(globally_possible_windows_dict.keys())
 
         for resource in self.resource_list:
             # reservation list
@@ -103,7 +105,7 @@ class Scheduler(object):
         # if there are no more free_windows in a specific resource, then 
         # remove that resource from the free_windows_dict.
         # if there are NO MORE resources, then return False.
-        for resource in reservation.free_windows_dict.keys():
+        for resource in list(reservation.free_windows_dict.keys()):
             reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect([self.globally_possible_windows_dict.get(resource, Intervals([]))])
             reservation.clean_up_free_windows(resource)
             if reservation.free_windows_dict[resource].is_empty():
@@ -144,10 +146,9 @@ class Scheduler(object):
                         reservation_dict[r.resID] = r
         return reservation_list, reservation_dict
 
-
     def commit_reservation_to_schedule(self, r):
         if not r.scheduled:
-            print "error: trying to commit unscheduled reservation"
+            print("error: trying to commit unscheduled reservation")
             return
         else:
             interval = Intervals(r.scheduled_timepoints)

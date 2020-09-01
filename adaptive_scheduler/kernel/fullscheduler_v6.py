@@ -15,31 +15,25 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 January 2014
 '''
 
-# from reservation_v3 import *
-#from contracts_v2 import *
-# import copy
 import numpy
-#from openopt import LP
-from scipy.sparse import coo_matrix
-#from slicedipscheduler import *
-from slicedipscheduler_v2 import SlicedIPScheduler_v2
+from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit
 
 import cvxopt
 from cvxopt.glpk import ilp
 
+
 class Result(object):
     pass
 
-#class FullScheduler_v5(SlicedIPScheduler):
+
 class FullScheduler_v6(SlicedIPScheduler_v2):
 
     def __init__(self, compound_reservation_list, 
                  globally_possible_windows_dict, 
                  contractual_obligation_list, 
                  slice_size_seconds):
-#        SlicedIPScheduler.__init__(self, compound_reservation_list, 
-        SlicedIPScheduler_v2.__init__(self, compound_reservation_list, 
+        SlicedIPScheduler_v2.__init__(self, compound_reservation_list,
                                    globally_possible_windows_dict, 
                                    contractual_obligation_list, 
                                    slice_size_seconds)
@@ -170,7 +164,7 @@ class FullScheduler_v6(SlicedIPScheduler_v2):
 #        cvxopt.glpk.options['LPX_K_TOLOBJ'] = 10e-15 # tolerance for objective function (default=10e-7, 10e-15 ~< x ~< 10e-4) -- don't touch
 
         (status, x) = ilp(f, A, b, Aeq, beq, set(range(len(self.Yik))), set(range(len(self.Yik))))
-#        print "GLPK status: "+status
+#        print("GLPK status: {}".format(status))
         r = Result()
         r.xf = numpy.array(x).flatten()
         r.ff = f.T*x
@@ -216,18 +210,22 @@ def dump_matrix_sizes(f, A, Aeq, b, beq, n_res):
 
     out_fh.close()
 
+
 def m_size(m):
     return m.nbytes * m.dtype.itemsize
+
 
 def sm_size(m):
     return m.getnnz() * m.dtype.itemsize
 
+
 def print_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.nbytes * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.nbytes * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))
+
 
 def print_sparse_matrix_size(matrix):
-    print "Matrix shape:", matrix.shape
-    print "Matrix size (bytes):", matrix.getnnz() * matrix.dtype.itemsize
-    print "Matrix type:", matrix.dtype
+    print("Matrix shape: {}".format(matrix.shape))
+    print("Matrix size (bytes): {}".format(matrix.getnnz() * matrix.dtype.itemsize))
+    print("Matrix type: {}".format(matrix.dtype))

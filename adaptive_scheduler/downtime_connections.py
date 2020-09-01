@@ -13,7 +13,7 @@ class DowntimeError(Exception):
     pass
 
 
-class DowntimeInterface(object, SendMetricMixin):
+class DowntimeInterface(SendMetricMixin):
     ''' Class for providing access to information in downtime.lco.gtn. It provides a set of datetimes on resources that
         should be used to exclude scheduling on those resources during those times.
     '''

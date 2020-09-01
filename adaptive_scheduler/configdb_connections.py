@@ -14,7 +14,7 @@ class ConfigDBError(Exception):
     pass
 
 
-class ConfigDBInterface(object, SendMetricMixin):
+class ConfigDBInterface(SendMetricMixin):
     """ Class for providing access to information in configdb. Used to replace both the camera_mappings file and
         the telescopes file. It saves/loads a local file of each from disk to use in case configdb is down.
         Proper usage is to call the update_configdb_structures once each scheduling run, then get the loaded
@@ -254,7 +254,7 @@ class ConfigDBInterface(object, SendMetricMixin):
                             telescope_sets[instrument_type].add(
                                 instrument_location['telescope_location'])
 
-        telescope_sets = telescope_sets.values()
+        telescope_sets = list(telescope_sets.values())
         if len(telescope_sets) > 1:
             return telescope_sets[0].intersection(*telescope_sets[1:])
         else:

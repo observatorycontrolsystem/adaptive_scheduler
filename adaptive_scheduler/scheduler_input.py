@@ -5,7 +5,7 @@ from adaptive_scheduler.observation_portal_connections import ObservationPortalC
 
 import os
 import logging
-import cPickle as pickle
+import pickle
 from datetime import datetime, timedelta
 
 
@@ -22,14 +22,14 @@ class SchedulerParameters(object):
                  kernel='gurobi', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
-                 observation_portal_url='',
-                 configdb_url='',
-                 downtime_url='',
+                 observation_portal_url='http://127.0.0.1:8000',
+                 configdb_url='http://127.0.0.1:7000',
+                 downtime_url='http://127.0.0.1:7500',
                  elasticsearch_url='',
                  elasticsearch_index='live-telemetry',
                  elasticsearch_excluded_observatories='',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
-                 normal_runtime_seconds=360.0, rr_runtime_seconds=120, debug=False):
+                 normal_runtime_seconds=360.0, rr_runtime_seconds=120.0, debug=False):
         self.dry_run = dry_run
         self.no_weather = no_weather
         self.no_singles = no_singles
@@ -164,7 +164,7 @@ class SchedulingInputFactory(object):
         return self._create_scheduling_input(self.input_provider, False, block_schedule=rr_schedule)
 
 
-class SchedulingInputUtils(object, SendMetricMixin):
+class SchedulingInputUtils(SendMetricMixin):
 
     def __init__(self, model_builder):
         self.model_builder = model_builder
@@ -240,8 +240,8 @@ class SchedulingInputUtils(object, SendMetricMixin):
         outfile = open(filename, 'w')
         try:
             pickle.dump(output, outfile)
-        except pickle.PickleError, pe:
-            print pe
+        except pickle.PickleError as pe:
+            print(pe)
 
         outfile.close()
 
@@ -387,14 +387,14 @@ class SchedulingInputProvider(object):
 
     def _get_available_resources(self):
         resources = []
-        for resource_name, resource in self.network_model.iteritems():
+        for resource_name, resource in self.network_model.items():
             if not resource['events']:
                 resources.append(resource_name)
 
         return resources
 
     def _all_resources(self):
-        return self.network_model.keys()
+        return list(self.network_model.keys())
 
     def _get_resource_usage_snapshot(self):
         snapshot_start = self.last_known_state_timestamp if self.last_known_state_timestamp else self.scheduler_now
