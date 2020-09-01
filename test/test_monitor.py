@@ -117,14 +117,14 @@ class TestAvailableForSchedulingMonitor(object):
 def _create_event(self, value, site='lsc', observatory=None, telescope=None):
     observatory = observatory if observatory else site
     telescope = telescope if telescope else observatory
-    return Datum(**{'site':site,
-                 'observatory':observatory,
-                 'telescope':telescope,
-                 'instance':'1',
-                 'timestamp_changed':datetime(2013, 4, 26, 0, 0, 0),
-                 'timestamp_measured':datetime(2013, 4, 26, 0, 0, 0),
-                 'timestamp_recorded':datetime.utcnow(),
-                 'value':value})
+    return Datum(**{'site': site,
+                    'observatory': observatory,
+                    'telescope': telescope,
+                    'instance': '1',
+                    'timestamp_changed': datetime(2013, 4, 26, 0, 0, 0),
+                    'timestamp_measured': datetime(2013, 4, 26, 0, 0, 0),
+                    'timestamp_recorded': datetime.utcnow(),
+                    'value': value})
 
 
 def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=[], instance=None):

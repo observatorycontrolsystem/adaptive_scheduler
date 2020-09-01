@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 SlicedIPScheduler class for co-scheduling reservations 
 across multiple resources using time-slicing and an integer program.
@@ -13,9 +12,9 @@ Sept 2012
 Dec 2012: changed to work with Reservation_v3
 '''
 
-from adaptive_scheduler.kernel.reservation_v3 import *
 import math
 from adaptive_scheduler.kernel.scheduler import *
+
 
 class PossibleStart(object):
     def __init__(self, resource, slice_starts, internal_start):
@@ -35,40 +34,37 @@ class PossibleStart(object):
 
 
 class SlicedIPScheduler_v2(Scheduler):
-    
-    def __init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
+
+    def __init__(self, compound_reservation_list,
+                 globally_possible_windows_dict,
                  contractual_obligation_list,
                  slice_size_seconds):
-        Scheduler.__init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
-                 contractual_obligation_list)
+        Scheduler.__init__(self, compound_reservation_list,
+                           globally_possible_windows_dict,
+                           contractual_obligation_list)
         # time_slicing_dict is a dictionary that maps: 
         # resource-> [slice_alignment, slice_length]
-#         self.resource_list = resource_list
+        #         self.resource_list = resource_list
         self.slice_size_seconds = slice_size_seconds
         self.time_slicing_dict = {}
         # these are the structures we need for the linear programming solver
-        self.Yik = [] # maps idx -> [resID, window idx, priority, resource]
-        self.aikt = {} # maps slice -> Yik idxs
+        self.Yik = []  # maps idx -> [resID, window idx, priority, resource]
+        self.aikt = {}  # maps slice -> Yik idxs
         self.schedulerIDstring = 'slicedIPscheduler'
         self.hashes = set()
-        
+
         for r in self.resource_list:
             self.time_slicing_dict[r] = [0, self.slice_size_seconds]
 
-
     def hash_slice(self, start, resource, slice_length):
-        string = "resource_"+resource+"_start_"+repr(start)+"_length_"+repr(slice_length)
+        string = "resource_" + resource + "_start_" + repr(start) + "_length_" + repr(slice_length)
         exists = string in self.hashes
         self.hashes.add(string)
         return string, exists
-        
 
     def unhash_slice(self, mystr):
         l = mystr.split("_")
         return [l[1], int(l[3]), int(l[5])]
-
 
     def build_data_structures(self):
         # first we need to build up the list of discretized slices that each
@@ -83,7 +79,7 @@ class SlicedIPScheduler_v2(Scheduler):
             r.Yik_entries = []
             r.possible_starts = []
             for resource in r.free_windows_dict.keys():
-                r.possible_starts.extend(self.get_slices( r.free_windows_dict[resource], resource, r.duration))
+                r.possible_starts.extend(self.get_slices(r.free_windows_dict[resource], resource, r.duration))
             # reorder PossibleStarts
             r.possible_starts.sort()
             # build aikt
@@ -102,12 +98,11 @@ class SlicedIPScheduler_v2(Scheduler):
                 # build aikt
                 for s in ps.all_slice_starts:
                     key, exists = self.hash_slice(s, ps.resource, self.time_slicing_dict[ps.resource][1])
-    #                        if key in self.aikt:
+                    #                        if key in self.aikt:
                     if exists:
                         self.aikt[key].append(Yik_idx)
                     else:
                         self.aikt[key] = [Yik_idx]
-
 
     def unpack_result(self, r):
         #        print(r.xf)
@@ -121,12 +116,12 @@ class SlicedIPScheduler_v2(Scheduler):
                 # use the internal_start for the start  
                 start = reservation.possible_starts[start_idx].internal_start
                 # the quantum is the length of all the slices we've occupied
-                quantum = reservation.possible_starts[start_idx].all_slice_starts[-1] + self.time_slicing_dict[resource][1] - reservation.possible_starts[start_idx].first_slice_start
+                quantum = reservation.possible_starts[start_idx].all_slice_starts[-1] + \
+                          self.time_slicing_dict[resource][1] - reservation.possible_starts[start_idx].first_slice_start
                 reservation.schedule(start, quantum, resource, self.schedulerIDstring)
                 self.commit_reservation_to_schedule(reservation)
             idx += 1
         return self.schedule_dict
-        
 
     def get_slices(self, intervals, resource, duration):
         ''' Creates two things: 
@@ -154,7 +149,8 @@ class SlicedIPScheduler_v2(Scheduler):
                         internal_start = slice_alignment
                     else:
                         # figure out start so it aligns with slice_alignment 
-                        start = int(slice_alignment + math.floor(float(t['time'] - slice_alignment)/float(slice_length))*slice_length)
+                        start = int(slice_alignment + math.floor(
+                            float(t['time'] - slice_alignment) / float(slice_length)) * slice_length)
                         # use the actual start as an internal start (may or may not align w/ slice_alignment)
                         internal_start = t['time']
                     end_time = internal_start + duration
@@ -162,17 +158,17 @@ class SlicedIPScheduler_v2(Scheduler):
                     if t['time'] < slice_alignment:
                         continue
                     while t['time'] - start >= duration:
-                        tmp = range(start, internal_start+duration, slice_length)
+                        tmp = range(start, internal_start + duration, slice_length)
                         slices.append(tmp)
                         internal_starts.append(internal_start)
                         start += slice_length
                         internal_start = start
-            
+
             # return slices, internal_starts
             ps_list = []
             idx = 0
             for w in slices:
                 ps_list.append(PossibleStart(resource, w, internal_starts[idx]))
                 idx += 1
-            
+
         return ps_list

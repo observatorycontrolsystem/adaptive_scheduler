@@ -1,6 +1,6 @@
-from adaptive_scheduler.models           import ModelBuilder, RequestError, n_base_requests
-from adaptive_scheduler.utils            import iso_string_to_datetime
-from adaptive_scheduler.utils            import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
+from adaptive_scheduler.models import ModelBuilder, RequestError, n_base_requests
+from adaptive_scheduler.utils import iso_string_to_datetime
+from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 
 import os
@@ -95,7 +95,7 @@ class SchedulingInputFactory(object):
             if rg.id in scheduled_requests_by_rg:
                 rg.set_scheduled_reservations(scheduled_requests_by_rg[rg.id])
 
-    def _create_scheduling_input(self, input_provider, is_rr_input, block_schedule = None):
+    def _create_scheduling_input(self, input_provider, is_rr_input, block_schedule=None):
         if not block_schedule:
             block_schedule = {}
         scheduler_input = SchedulingInput(input_provider.sched_params,
@@ -121,10 +121,10 @@ class SchedulingInputFactory(object):
             network_state_timestamp = datetime.utcnow()
         if scheduled_requests_by_rg is None:
             scheduled_requests_by_rg = {}
-        
+
         if estimated_scheduling_seconds:
             self.input_provider.set_rr_run_time(estimated_scheduling_seconds)
-        
+
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_rr_mode()
         self._convert_json_request_groups_to_scheduler_model(scheduled_requests_by_rg)
@@ -151,7 +151,7 @@ class SchedulingInputFactory(object):
 
         if estimated_scheduling_seconds:
             self.input_provider.set_normal_run_time(estimated_scheduling_seconds)
-            
+
         self.input_provider.set_last_known_state(network_state_timestamp)
         self.input_provider.set_normal_mode()
         self._set_model_request_groups_scheduled_set(scheduled_requests_by_rg)
@@ -182,7 +182,9 @@ class SchedulingInputUtils(SendMetricMixin):
                 scheduled_requests = {}
                 if json_rg['id'] in scheduled_requests_by_rg:
                     scheduled_requests = scheduled_requests_by_rg[json_rg['id']]
-                scheduler_model_rg, invalid_children = self.model_builder.build_request_group(json_rg, scheduled_requests, ignore_ipp=ignore_ipp)
+                scheduler_model_rg, invalid_children = self.model_builder.build_request_group(json_rg,
+                                                                                              scheduled_requests,
+                                                                                              ignore_ipp=ignore_ipp)
 
                 scheduler_model_rgs.append(scheduler_model_rg)
                 invalid_json_requests.extend(invalid_children)
@@ -197,9 +199,9 @@ class SchedulingInputUtils(SendMetricMixin):
 
     def sort_scheduler_models_rgs_by_type(self, scheduler_model_request_groups):
         scheduler_models_rgs_by_type = {
-                                        'rr': [],
-                                        'normal': []
-                                        }
+            'rr': [],
+            'normal': []
+        }
         for scheduler_model_rg in scheduler_model_request_groups:
             if scheduler_model_rg.is_rapid_response():
                 scheduler_models_rgs_by_type['rr'].append(scheduler_model_rg)
@@ -357,7 +359,8 @@ class SchedulingInputProvider(object):
             try:
                 now = iso_string_to_datetime(self.sched_params.simulate_now)
             except ValueError as e:
-                raise SchedulingInputException("Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
+                raise SchedulingInputException(
+                    "Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
         # ...otherwise offset 'now' to account for the duration of the scheduling run
         else:
             now = datetime.utcnow()
@@ -375,12 +378,14 @@ class SchedulingInputProvider(object):
     def _get_json_request_group_list(self):
         now = self.get_scheduler_now()
         try:
-            semester_details = self.network_interface.observation_portal_interface.get_semester_details(self._get_estimated_scheduler_end())
+            semester_details = self.network_interface.observation_portal_interface.get_semester_details(
+                self._get_estimated_scheduler_end())
         except ObservationPortalConnectionError as e:
             raise SchedulingInputException("Can't retrieve current semester to get request groups.")
         rg_list = self.network_interface.get_all_request_groups(semester_details['start'],
-                                                               min(now + timedelta(days=self.sched_params.horizon_days),
-                                                               semester_details['end']))
+                                                                min(now + timedelta(
+                                                                    days=self.sched_params.horizon_days),
+                                                                    semester_details['end']))
         logging.getLogger(__name__).warning("_get_json_request_group_list got {} rgs".format(len(rg_list)))
 
         return rg_list
@@ -398,7 +403,8 @@ class SchedulingInputProvider(object):
 
     def _get_resource_usage_snapshot(self):
         snapshot_start = self.last_known_state_timestamp if self.last_known_state_timestamp else self.scheduler_now
-        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start, self._get_estimated_scheduler_end())
+        snapshot = self.network_interface.resource_usage_snapshot(self._all_resources(), snapshot_start,
+                                                                  self._get_estimated_scheduler_end())
 
         return snapshot
 
@@ -442,11 +448,11 @@ class FileBasedSchedulingInputProvider(object):
     def set_normal_run_time(self, seconds):
         # Do nothing, we want to use whatever came from the input file
         pass
-    
+
     def set_last_known_state(self, timestamp):
         # Do nothing, we want to use whatever came from the input file
         pass
-    
+
     def estimated_scheduler_runtime(self):
         return self._estimated_scheduler_runtime
 

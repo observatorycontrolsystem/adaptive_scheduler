@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 FullScheduler_v7 class for co-scheduling reservations 
 across multiple resources using time-slicing and an integer program.
@@ -16,25 +15,24 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 Feb 2014
 '''
 
-from adaptive_scheduler.kernel.reservation_v3 import *
 import numpy
 from openopt import MILP
 from scipy.sparse import coo_matrix
 from slicedipscheduler_v2 import *
 from adaptive_scheduler.utils import timeit
 
+
 class FullScheduler_v7(SlicedIPScheduler_v2):
 
-    def __init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
-                 contractual_obligation_list, 
+    def __init__(self, compound_reservation_list,
+                 globally_possible_windows_dict,
+                 contractual_obligation_list,
                  resource_list, slice_size_seconds):
-        SlicedIPScheduler_v2.__init__(self, compound_reservation_list, 
-                                   globally_possible_windows_dict, 
-                                   contractual_obligation_list, 
-                                   resource_list, slice_size_seconds)
+        SlicedIPScheduler_v2.__init__(self, compound_reservation_list,
+                                      globally_possible_windows_dict,
+                                      contractual_obligation_list,
+                                      resource_list, slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
-
 
     @timeit
     def schedule_all(self, timelimit=None):
@@ -52,10 +50,10 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
         A_rows = []
         A_cols = []
         A_data = []
-#        try:
-#            A = numpy.zeros((A_numrows, len(self.Yik)), dtype=numpy.int)
-#        except ValueError:
-#            print("Number of A rows: {}".format(A_numrows)
+        #        try:
+        #            A = numpy.zeros((A_numrows, len(self.Yik)), dtype=numpy.int)
+        #        except ValueError:
+        #            print("Number of A rows: {}".format(A_numrows)
         b = numpy.zeros(A_numrows, dtype=numpy.int16)
         # build A & b
         row = 0
@@ -67,12 +65,12 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                     A_rows.append(row)
                     A_cols.append(entry)
                     A_data.append(1)
-#                    A[row,entry] = 1
+                #                    A[row,entry] = 1
                 r.skip_constraint2 = True
             b[row] = 1
-            row += 1    
+            row += 1
 
-        # constraint 2: each res should have one start:
+            # constraint 2: each res should have one start:
         # optimization: 
         # if the reservation participates in a oneof, then this is 
         # redundant with the oneof constraint added above, so don't add it.
@@ -83,7 +81,7 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                 A_rows.append(row)
                 A_cols.append(entry)
                 A_data.append(1)
-                #A[row,entry] = 1
+                # A[row,entry] = 1
             b[row] = 1
             row += 1
 
@@ -93,10 +91,10 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                 A_rows.append(row)
                 A_cols.append(entry)
                 A_data.append(1)
-#                A[row,entry] = 1
+            #                A[row,entry] = 1
             b[row] = 1
             row += 1
-        
+
         A = coo_matrix((A_data, (A_rows, A_cols)), shape=(A_numrows, len(self.Yik)))
         # constraint 6: and       
         # figure out size of constraint matrix
@@ -107,9 +105,9 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
         else:
             Aeq_numrows = 0
             for c in self.and_constraints:
-                Aeq_numrows += len(c)-1
-        # allocate Aeq and beq
-#        Aeq = numpy.zeros((Aeq_numrows, len(self.Yik)), dtype=numpy.int)
+                Aeq_numrows += len(c) - 1
+            # allocate Aeq and beq
+            #        Aeq = numpy.zeros((Aeq_numrows, len(self.Yik)), dtype=numpy.int)
             Aeq_rows = []
             Aeq_cols = []
             Aeq_data = []
@@ -123,7 +121,7 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                     left_r = c[left_idx]
                     right_r = c[right_idx]
                     for entry in left_r.Yik_entries:
-#                    Aeq[row, entry] = 1
+                        #                    Aeq[row, entry] = 1
                         Aeq_rows.append(row)
                         Aeq_cols.append(entry)
                         Aeq_data.append(1)
@@ -131,11 +129,11 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
                         Aeq_rows.append(row)
                         Aeq_cols.append(entry)
                         Aeq_data.append(-1)
-#                    Aeq[row, entry] = -1
+                    #                    Aeq[row, entry] = -1
                     left_idx += 1
                     right_idx += 1
                     row += 1
-#            print(Aeq_numrows)
+            #            print(Aeq_numrows)
             Aeq = coo_matrix((Aeq_data, (Aeq_rows, Aeq_cols)), shape=(Aeq_numrows, len(self.Yik)))
 
         # bounds:
@@ -146,21 +144,21 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
         f = numpy.zeros(len(self.Yik))
         row = 0
         for entry in self.Yik:
-            f[row] = entry[2] #priority
+            f[row] = entry[2]  # priority
             row += 1
 
         dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub,
                           len(self.compound_reservation_list))
-        p = MILP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub, intVars=list(range(len(self.Yik))), binVars=list(range(len(self.Yik))))
+        p = MILP(f=f, A=A, Aeq=Aeq, b=b, beq=beq, lb=lb, ub=ub, intVars=list(range(len(self.Yik))),
+                 binVars=list(range(len(self.Yik))))
 
         r = p.maximize('glpk', iprint=-1)
-#        r = p.maximize('bintprog') 
-#        r = p.maximize('lpsolve')
+        #        r = p.maximize('bintprog')
+        #        r = p.maximize('lpsolve')
         return self.unpack_result(r)
 
 
 def dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub, n_res):
-
     # Don't write the header if the file already exists
     import os.path
     path_to_file = 'matrix_sizes.dat'
@@ -173,20 +171,20 @@ def dump_matrix_sizes(f, A, Aeq, b, beq, lb, ub, n_res):
     now = datetime.utcnow()
     now_str = now.strftime(date_time_fmt)
 
-    out_fh  = open(path_to_file, 'a')
+    out_fh = open(path_to_file, 'a')
     fmt_str = "%-6s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-16s %-13s\n"
 
     out_hdr = fmt_str % ('N_res',
-                         'F_shape',  'F_size',
-                         'A_shape',  'A_size',
-                         'b_shape',  'b_size',
+                         'F_shape', 'F_size',
+                         'A_shape', 'A_size',
+                         'b_shape', 'b_size',
                          'lb_shape', 'lb_size',
                          'ub_shape', 'ub_size',
                          'Ran_at')
     out_str = fmt_str % (n_res,
-                         f.shape,  m_size(f),
-                         A.shape,  sm_size(A),
-                         b.shape,  m_size(b),
+                         f.shape, m_size(f),
+                         A.shape, sm_size(A),
+                         b.shape, m_size(b),
                          lb.shape, m_size(lb),
                          ub.shape, m_size(ub),
                          now_str)

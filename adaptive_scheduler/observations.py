@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 observations.py - Facilitates getting, submitting, and cancelling observations from the Observation Portal.
 
@@ -11,19 +10,19 @@ March 2019
 from __future__ import division
 import os
 
-from datetime import timedelta, datetime
+from datetime import timedelta
 from collections import defaultdict
 
-from adaptive_scheduler.utils          import (get_reservation_datetimes, timeit, split_location)
+from adaptive_scheduler.utils import (get_reservation_datetimes, timeit, split_location)
 
-from adaptive_scheduler.printing       import pluralise as pl
-from adaptive_scheduler.log            import RequestGroupLogger
-from adaptive_scheduler.interfaces     import RunningRequest, RunningRequestGroup, ScheduleException
+from adaptive_scheduler.printing import pluralise as pl
+from adaptive_scheduler.log import RequestGroupLogger
+from adaptive_scheduler.interfaces import RunningRequest, RunningRequestGroup, ScheduleException
 from adaptive_scheduler.configdb_connections import ConfigDBError
 
 # Set up and configure a module scope logger
 import logging
-from adaptive_scheduler.utils            import metric_timer
+from adaptive_scheduler.utils import metric_timer
 from time_intervals.intervals import Intervals
 
 import requests
@@ -36,7 +35,7 @@ rg_log = RequestGroupLogger(multi_rg_log)
 
 
 class ObservationRunningRequest(RunningRequest):
-    
+
     def __init__(self, telescope, id, observation_id, start, end):
         RunningRequest.__init__(self, telescope, id, start, end)
         self.observation_id = observation_id
@@ -46,19 +45,20 @@ class ObservationRunningRequest(RunningRequest):
 
 
 class ObservationScheduleInterface(object):
-    
+
     def __init__(self, host=None):
         self.host = host
         self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
         self.running_observations_by_telescope = None
         self.running_intervals_by_telescope = None
         self.rr_intervals_by_telescope = None
-        
+
         self.log = logging.getLogger(__name__)
-    
+
     def fetch_data(self, telescopes, running_window_start, running_window_end):
-        #Fetch the data
-        self.running_observations_by_telescope = self._fetch_running_observations(telescopes, running_window_start, running_window_end)
+        # Fetch the data
+        self.running_observations_by_telescope = self._fetch_running_observations(telescopes, running_window_start,
+                                                                                  running_window_end)
         self.running_intervals_by_telescope = get_network_running_intervals(self.running_observations_by_telescope)
         # TODO: Possible inefficency here.  Might be able to determine running RR intervals from running blocks wihtout another call
         self.rr_intervals_by_telescope = self._fetch_rr_intervals(telescopes, running_window_start, running_window_end)
@@ -72,17 +72,17 @@ class ObservationScheduleInterface(object):
             all_running_observations += observations
         for observation in all_running_observations:
             msg = "Request %d has a running observation (id=%d, finishing at %s)" % (
-                                                         observation['request']['id'],
-                                                         observation['id'],
-                                                         observation['end']
-                                                       )
+                observation['request']['id'],
+                observation['id'],
+                observation['end']
+            )
             self.log.debug(msg)
         return running_observations
 
     @metric_timer('observation_portal.get_rr_intervals')
     def _fetch_rr_intervals(self, telescopes, end_after, start_before):
         rr_observations = self._get_rr_intervals_by_telescope(telescopes, end_after, start_before)
-        
+
         return rr_observations
 
     def running_request_groups_by_id(self):
@@ -98,24 +98,24 @@ class ObservationScheduleInterface(object):
                 if any([conf['state'] == 'FAILED' for conf in observation['request']['configurations']]):
                     running_request.add_error("Observation has failed configurations")
                 running_rg.add_running_request(running_request)
-            
+
         return running_rgs
-        
+
     def rr_request_group_intervals_by_telescope(self):
         ''' Return the schedule RR intervals for the supplied telescope
         '''
         return self.rr_intervals_by_telescope
-    
+
     @metric_timer('observation_portal.cancel_observations', num_requests=lambda x: x, rate=lambda x: x)
     def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
         ''' Cancel the current scheduler between start and end
-        ''' 
+        '''
         n_deleted = 0
         if cancelation_date_list_by_resource:
             n_deleted += self._cancel_schedule(cancelation_date_list_by_resource, include_rr,
-                                              include_normal)
+                                               include_normal)
         return n_deleted
-    
+
     def abort(self, running_request):
         ''' Abort a running request
         '''
@@ -130,7 +130,7 @@ class ObservationScheduleInterface(object):
         n_submitted = self._send_schedule_to_observation_portal(schedule, semester_start,
                                                                 configdb_interface, dry_run)
         return n_submitted
-    
+
     # Already timed by the save method
     @timeit
     def _send_schedule_to_observation_portal(self, schedule, semester_start, configdb_interface, dry_run=False):
@@ -149,7 +149,8 @@ class ObservationScheduleInterface(object):
                     continue
                 observations_by_resource[resource_name].append(observation)
             _, observation_str = pl(len(observations_by_resource[resource_name]), 'observation')
-            msg = 'Will send {} {} to {}'.format(len(observations_by_resource[resource_name]), observation_str, resource_name)
+            msg = 'Will send {} {} to {}'.format(len(observations_by_resource[resource_name]), observation_str,
+                                                 resource_name)
             log_info_dry_run(msg, dry_run)
         n_submitted_total = self._send_observations_to_observation_portal(observations_by_resource, dry_run)
 
@@ -160,10 +161,12 @@ class ObservationScheduleInterface(object):
         num_created = len(observations)
         if not dry_run and num_created > 0:
             try:
-                response = requests.post(self.host + '/api/observations/', json=observations, headers=self.headers, timeout=120)
+                response = requests.post(self.host + '/api/observations/', json=observations, headers=self.headers,
+                                         timeout=120)
                 response.raise_for_status()
                 num_created = response.json()['num_created']
-                self._log_bad_observations(observations, response.json()['errors'] if 'errors' in response.json() else {})
+                self._log_bad_observations(observations,
+                                           response.json()['errors'] if 'errors' in response.json() else {})
             except Exception as e:
                 log.error("_send_observations_to_observation_portal error: {}".format(repr(e)))
 
@@ -263,7 +266,8 @@ class ObservationScheduleInterface(object):
                 }
 
                 try:
-                    results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers, timeout=120)
+                    results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers,
+                                            timeout=120)
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
@@ -277,35 +281,36 @@ class ObservationScheduleInterface(object):
     def _cancel_observations(self, observation_ids):
         try:
             data = {'ids': observation_ids}
-            results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers, timeout=120)
+            results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers,
+                                    timeout=120)
             results.raise_for_status()
             num_canceled = results.json()['canceled']
         except Exception as e:
             raise ScheduleException("Failed to abort observations in Observation Portal: {}".format(repr(e)))
-    
+
         return num_canceled
-    
+
     def _get_network_running_observations(self, tels, ends_after, starts_before):
         n_running_total = 0
         running_at_tel = {}
         for full_tel_name in tels:
             tel_name, obs_name, site_name = full_tel_name.split('.')
             log.debug("Acquiring running observations and first availability at %s",
-                                                              full_tel_name)
-    
+                      full_tel_name)
+
             running = self._get_running_observations(ends_after, starts_before,
                                                      site_name, obs_name, tel_name)
-    
+
             running_at_tel[full_tel_name] = running
-    
+
             n_running = len(running)
             _, observation_str = pl(n_running, 'observation')
             log.debug("Found %d running %s at %s", n_running, observation_str, full_tel_name)
             n_running_total += n_running
-    
+
         _, observation_str = pl(n_running_total, 'observation')
         log.info("Network-wide, found %d running %s", n_running_total, observation_str)
-    
+
         return running_at_tel
 
     def _get_running_observations(self, ends_after, starts_before, site, obs, tel):

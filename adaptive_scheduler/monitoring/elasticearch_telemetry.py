@@ -25,9 +25,11 @@ def get_datum(datum_name, elasticsearch_url, es_index, es_excluded_observatories
         try:
             results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
         except Exception as ex:
-            raise ConnectionError("Failed to get datum {} from Elasticsearch after 2 attempts: {}".format(datum_name, repr(ex)))
+            raise ConnectionError(
+                "Failed to get datum {} from Elasticsearch after 2 attempts: {}".format(datum_name, repr(ex)))
 
-    return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if dat['_source']['observatory'] not in es_excluded_observatories]
+    return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if
+            dat['_source']['observatory'] not in es_excluded_observatories]
 
 
 def _get_datum_query(datumname, datuminstance=None, originator=None):
@@ -80,6 +82,7 @@ def _convert_datum(datum):
 def _timestamp(value):
     ''' Convert time (s) to datetime instance. '''
     return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
+
 
 NULL_CONVERSION = lambda x: str(x)
 MAPPING = {

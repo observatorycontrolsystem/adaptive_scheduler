@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 test_moving_object_utils.py - summary line
 
@@ -9,10 +8,10 @@ Author: Eric Saunders
 December 2013
 '''
 
-from adaptive_scheduler.moving_object_utils import InvalidElements, required_fields_from_scheme
+from adaptive_scheduler.moving_object_utils import InvalidElements
 from adaptive_scheduler.models import OrbitalElementsTarget
 
-from nose.tools import assert_equal, raises
+from nose.tools import raises
 
 
 class TestMovingObjectUtils(object):
@@ -34,4 +33,3 @@ class TestMovingObjectUtils(object):
     def test_invalid_scheme_raises_exception(self):
         self.elements['scheme'] = 'nonsense'
         target = OrbitalElementsTarget(self.elements)
-

@@ -4,21 +4,22 @@ from nose import SkipTest
 from datetime import datetime, timedelta
 
 # Import the modules to test
-from adaptive_scheduler.models      import (ICRSTarget, Proposal, Configuration,
-                                            Request, RequestGroup,
-                                            Windows, Window)
+from adaptive_scheduler.models import (ICRSTarget, Proposal, Configuration,
+                                       Request, RequestGroup,
+                                       Windows, Window)
 
 from test.test_scheduler import create_scheduler_input_factory, create_running_request_group
+
 try:
     from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
 except ImportError:
     raise SkipTest('Gurobi is not properly installed, skipping these tests.')
 
-from adaptive_scheduler.scheduler_input import  SchedulerParameters
+from adaptive_scheduler.scheduler_input import SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.utils import get_reservation_datetimes
 
-from nose.tools import assert_equal, assert_not_equal, assert_true, assert_false
+from nose.tools import assert_equal, assert_true, assert_false
 from mock import Mock
 
 
@@ -27,38 +28,36 @@ class TestIntegration(object):
 
     def setup(self):
         self.target = ICRSTarget(
-                                      name  = 'deneb',
-                                      #ra  = '20 41 25.91',
-                                      #dec = '+45 16 49.22',
-                                      ra  = 310.35795833333333,
-                                      dec = 45.280338888888885,
-                                      epoch = 2000,
-                                     )
+            name='deneb',
+            ra=310.35795833333333,
+            dec=45.280338888888885,
+            epoch=2000,
+        )
 
         self.telescope = dict(
-                                    name      = '1m0a.doma.ogg',
-                                    latitude  = 20.7069444444,
-                                    longitude = -156.258055556,
-                                    tel_class = '1m0',
-                                    horizon = 15,
-                                    status = 'online',
-                                    ha_limit_neg = -4.6,
-                                    ha_limit_pos = 4.6,
-                                    zenith_blind_spot=0.0
-                                  )
+            name='1m0a.doma.ogg',
+            latitude=20.7069444444,
+            longitude=-156.258055556,
+            tel_class='1m0',
+            horizon=15,
+            status='online',
+            ha_limit_neg=-4.6,
+            ha_limit_pos=4.6,
+            zenith_blind_spot=0.0
+        )
         self.telescopes = {'1m0a.doma.ogg': self.telescope}
 
         self.proposal = Proposal(
-                                  id  = 'LCOSchedulerTest',
-                                  pi           = 'Eric Saunders',
-                                  tag            = 'admin',
-                                  tac_priority       = 1
-                                )
+            id='LCOSchedulerTest',
+            pi='Eric Saunders',
+            tag='admin',
+            tac_priority=1
+        )
 
         self.instrument_config = dict(
             exposure_count=1,
             bin_x=2,
-            bin_y = 2,
+            bin_y=2,
             exposure_time=60 * 25,
             optical_elements={'filter': 'b'}
         )
@@ -103,35 +102,35 @@ class TestIntegration(object):
         self.windows_2 = Windows()
         self.windows_2.append(self.window_2)
         self.resource_3 = '1m0a.doma.ogg'
-        self.window_3 =  Window({'start': self.base_time + timedelta(hours=1, minutes=0),
-                                 'end': self.base_time + timedelta(hours=1, minutes=30)}, self.resource_3)
+        self.window_3 = Window({'start': self.base_time + timedelta(hours=1, minutes=0),
+                                'end': self.base_time + timedelta(hours=1, minutes=30)}, self.resource_3)
         self.windows_3 = Windows()
         self.windows_3.append(self.window_3)
 
-        self.request_1 = Request(configurations= [self.configuration],
-                                 windows        = self.windows_1,
-                                 id= 1,
-                                 duration       = 1750)
+        self.request_1 = Request(configurations=[self.configuration],
+                                 windows=self.windows_1,
+                                 id=1,
+                                 duration=1750)
 
-        self.request_2 = Request(configurations= [self.configuration],
-                                 windows        = self.windows_2,
-                                 id= 2,
-                                 duration       =1750)
+        self.request_2 = Request(configurations=[self.configuration],
+                                 windows=self.windows_2,
+                                 id=2,
+                                 duration=1750)
 
-        self.request_3 = Request(configurations= [self.configuration],
-                                 windows        = self.windows_2,
-                                 id= 3,
-                                 duration       =1750)
+        self.request_3 = Request(configurations=[self.configuration],
+                                 windows=self.windows_2,
+                                 id=3,
+                                 duration=1750)
 
-        self.request_4 = Request(configurations= [self.configuration],
-                                 windows        = self.windows_3,
-                                 id= 4,
-                                 duration       =1750)
+        self.request_4 = Request(configurations=[self.configuration],
+                                 windows=self.windows_3,
+                                 id=4,
+                                 duration=1750)
 
-        self.request_5 = Request(configurations= [self.configuration],
-                                 windows        = self.windows_3,
-                                 id= 5,
-                                 duration       =1750)
+        self.request_5 = Request(configurations=[self.configuration],
+                                 windows=self.windows_3,
+                                 id=5,
+                                 duration=1750)
 
         self.and_request_group_1 = RequestGroup(operator='and', requests=[self.request_1, self.request_2],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
@@ -181,7 +180,7 @@ class TestIntegration(object):
         scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
         if not semester_details:
             semester_details = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
-                             'end': scheduler_time + timedelta(days=150)}
+                                'end': scheduler_time + timedelta(days=150)}
 
         result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
                                          preemption_enabled=rr_loop)
@@ -204,7 +203,7 @@ class TestIntegration(object):
         scheduler_input.scheduler_now = scheduler_time
         scheduler_input.estimated_scheduler_end = scheduler_time + timedelta(minutes=15)
         semester_details = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
-                                'end': scheduler_time + timedelta(days=150)}
+                            'end': scheduler_time + timedelta(days=150)}
 
         result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
                                          preemption_enabled=False)
@@ -273,7 +272,7 @@ class TestIntegration(object):
         while days_out < 80:
             resource = '1m0a.doma.ogg'
             window = Window({'start': new_time + timedelta(days=days_out),
-                                    'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
+                             'end': new_time + timedelta(days=days_out, hours=0, minutes=30)}, resource)
             windows = Windows()
             windows.append(window)
             request = Request(configurations=[self.configuration],
@@ -302,7 +301,7 @@ class TestIntegration(object):
         ''' Verifies that a normal request will not schedule over a just scheduled RR request
         '''
         rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
-                                          self.base_time + timedelta(hours=1, minutes=25)),]}
+                                          self.base_time + timedelta(hours=1, minutes=25)), ]}
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          self.base_time - timedelta(hours=10), rr_loop=False,
                                          block_schedule_by_resource=rr_schedule)
@@ -317,10 +316,10 @@ class TestIntegration(object):
         '''
         rapid_response_id = 99
         running_request_group = create_running_request_group(request_group_id=rapid_response_id,
-                                                            request_id=99,
-                                                            resource=self.resource_3,
-                                                            start=self.base_time,
-                                                            end=self.base_time + timedelta(hours=2))
+                                                             request_id=99,
+                                                             resource=self.resource_3,
+                                                             start=self.base_time,
+                                                             end=self.base_time + timedelta(hours=2))
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          self.base_time - timedelta(hours=10), rr_loop=True,
                                          block_schedule_by_resource={},
@@ -337,10 +336,10 @@ class TestIntegration(object):
         '''
         rapid_response_id = 777
         running_request_group = create_running_request_group(request_group_id=99,
-                                                            request_id=99,
-                                                            resource=self.resource_3,
-                                                            start=self.base_time,
-                                                            end=self.base_time + timedelta(hours=2))
+                                                             request_id=99,
+                                                             resource=self.resource_3,
+                                                             start=self.base_time,
+                                                             end=self.base_time + timedelta(hours=2))
         scheduler_start = self.base_time - timedelta(hours=10)
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=True,
@@ -364,7 +363,8 @@ class TestIntegration(object):
                                                              request_id=99,
                                                              resource=self.resource_3,
                                                              start=self.base_time,
-                                                             end=self.base_time + timedelta(hours=1, minutes=0, seconds=30))
+                                                             end=self.base_time + timedelta(hours=1, minutes=0,
+                                                                                            seconds=30))
         scheduler_start = self.base_time - timedelta(hours=10)
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=True,
@@ -385,10 +385,10 @@ class TestIntegration(object):
         '''
         rr_request_group_id = 99
         running_request_group = create_running_request_group(request_group_id=rr_request_group_id,
-                                                            request_id=99,
-                                                            resource=self.resource_3,
-                                                            start=self.base_time,
-                                                            end=self.base_time + timedelta(hours=2))
+                                                             request_id=99,
+                                                             resource=self.resource_3,
+                                                             start=self.base_time,
+                                                             end=self.base_time + timedelta(hours=2))
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          self.base_time - timedelta(hours=10), rr_loop=False,
                                          block_schedule_by_resource={},
@@ -405,7 +405,7 @@ class TestIntegration(object):
             Ensures that the normal request starts after the end of the RR.
         '''
         rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
-                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)),]}
+                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)), ]}
         scheduler_start = self.base_time - timedelta(hours=10)
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=False,
@@ -426,10 +426,11 @@ class TestIntegration(object):
         '''
         rr_request_group_id = 99
         running_request_group = create_running_request_group(request_group_id=rr_request_group_id,
-                                                            request_id=99,
-                                                            resource=self.resource_3,
-                                                            start=self.base_time,
-                                                            end=self.base_time + timedelta(hours=1, minutes=0, seconds=30))
+                                                             request_id=99,
+                                                             resource=self.resource_3,
+                                                             start=self.base_time,
+                                                             end=self.base_time + timedelta(hours=1, minutes=0,
+                                                                                            seconds=30))
         scheduler_start = self.base_time - timedelta(hours=10)
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=False,
@@ -463,7 +464,8 @@ class TestIntegration(object):
         scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
         scheduler_runner.semester_details = {'id': '2015A', 'start': semester_start,
                                              'end': scheduler_start + timedelta(days=150)}
-        cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(result.schedule)
+        cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(
+            result.schedule)
 
         assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
         assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 1)
@@ -475,7 +477,8 @@ class TestIntegration(object):
             for the resource they are scheduled in when getting dates to cancel.
         '''
         scheduler_start = self.base_time - timedelta(hours=10)
-        result = self._schedule_requests([self.rr_request_group_2, self.rr_request_group_1], [self.many_request_group_2, ],
+        result = self._schedule_requests([self.rr_request_group_2, self.rr_request_group_1],
+                                         [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=True,
                                          block_schedule_by_resource={})
 
@@ -490,7 +493,8 @@ class TestIntegration(object):
         scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
         scheduler_runner.semester_details = {'id': '2015A', 'start': semester_start,
                                              'end': scheduler_start + timedelta(days=150)}
-        cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(result.schedule)
+        cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(
+            result.schedule)
         assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
         assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
         assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)

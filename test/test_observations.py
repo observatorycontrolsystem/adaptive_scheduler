@@ -1,20 +1,14 @@
 from __future__ import division
 
-from nose.tools import assert_equal, assert_almost_equal, raises
-from nose import SkipTest
-from mock import patch, Mock, MagicMock
+from nose.tools import assert_equal, raises
+from mock import patch, Mock
 
-from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument, resolve_autoguider,
-                                     ObservationScheduleInterface)
-from adaptive_scheduler.models import (Proposal, Target, SatelliteTarget,
-                                       ICRSTarget, Request, Configuration,
-                                       RequestGroup)
-from adaptive_scheduler.utils import datetime_to_normalised_epoch
+from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument,
+                                             resolve_autoguider, ObservationScheduleInterface)
+from adaptive_scheduler.models import (Proposal, ICRSTarget, Request, RequestGroup)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-
-from time_intervals.intervals import Intervals
 
 from datetime import datetime
 import responses

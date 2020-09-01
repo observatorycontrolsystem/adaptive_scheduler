@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-
 from __future__ import division
 
-from nose.tools import assert_equal, assert_not_equal, raises
-from mock       import patch, Mock
+from nose.tools import assert_equal
+from mock import patch
 
 from adaptive_scheduler.eventbus import get_eventbus
 from adaptive_scheduler.feedback import UserFeedbackLogger
@@ -21,16 +20,16 @@ class TestUserFeedbackLogger(object):
     @patch('adaptive_scheduler.feedback.rg_log.info')
     def test_userfeedbacklogger(self, mock_func):
         event_bus = get_eventbus()
-        listener  = UserFeedbackLogger()
+        listener = UserFeedbackLogger()
         event_bus.add_listener(listener)
 
         event = UserFeedbackLogger.create_event(
-                                                 timestamp=self.timestamp,
-                                                 originator=self.originator,
-                                                 msg=self.msg,
-                                                 tag=self.tag,
-                                                 request_group_id=self.request_group_id
-                                                )
+            timestamp=self.timestamp,
+            originator=self.originator,
+            msg=self.msg,
+            tag=self.tag,
+            request_group_id=self.request_group_id
+        )
 
         event_bus.fire_event(event)
 
@@ -38,18 +37,18 @@ class TestUserFeedbackLogger(object):
 
     def test_events_have_equality(self):
         event1 = UserFeedbackLogger.create_event(
-                                                  timestamp=self.timestamp,
-                                                  originator=self.originator,
-                                                  msg=self.msg,
-                                                  tag=self.tag,
-                                                  request_group_id=self.request_group_id
-                                                 )
+            timestamp=self.timestamp,
+            originator=self.originator,
+            msg=self.msg,
+            tag=self.tag,
+            request_group_id=self.request_group_id
+        )
         event2 = UserFeedbackLogger.create_event(
-                                                  timestamp=self.timestamp,
-                                                  originator=self.originator,
-                                                  msg=self.msg,
-                                                  tag=self.tag,
-                                                  request_group_id=self.request_group_id
-                                                 )
+            timestamp=self.timestamp,
+            originator=self.originator,
+            msg=self.msg,
+            tag=self.tag,
+            request_group_id=self.request_group_id
+        )
 
         assert_equal(event1, event2)

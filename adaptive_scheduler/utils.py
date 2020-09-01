@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 utils.py - Miscellaneous utility functions.
 
@@ -10,17 +9,14 @@ March 2012
 import calendar
 from datetime import datetime, timedelta
 import time
-from math import pi, cos, radians
+from math import cos, radians
 import logging
 from unidecode import unidecode
 from opentsdb_python_metrics import metric_wrappers
-from opentsdb_python_metrics.metric_wrappers import metric_timer
-from opentsdb_python_metrics.metric_wrappers import metric_wrapper
-
-from opentsdb_python_metrics.metric_wrappers import SendMetricMixin
+from opentsdb_python_metrics.metric_wrappers import metric_wrapper, SendMetricMixin, metric_timer
 
 log = logging.getLogger(__name__)
-fh  = logging.FileHandler('timings.dat')
+fh = logging.FileHandler('timings.dat')
 fh.setLevel(logging.INFO)
 formatter = logging.Formatter(fmt='%(asctime)s.%(msecs).03d %(levelname)7s: %(module)15s: %(message)s',
                               datefmt='%Y-%m-%d %H:%M:%S')
@@ -69,9 +65,9 @@ def set_schedule_type(schedule_type):
     :return:
     '''
     if schedule_type is NORMAL_OBSERVATION_TYPE:
-        metric_wrappers.global_tags = {'schedule_type':'normal'}
+        metric_wrappers.global_tags = {'schedule_type': 'normal'}
     elif schedule_type is RR_OBSERVATION_TYPE:
-        metric_wrappers.global_tags = {'schedule_type':'rr'}
+        metric_wrappers.global_tags = {'schedule_type': 'rr'}
     else:
         metric_wrappers.global_tags = None
 
@@ -127,7 +123,7 @@ def increment_dict_by_value(dictionary, key, value):
     if key in dictionary:
         dictionary[key] += value
     else:
-        dictionary[key]  = value
+        dictionary[key] = value
 
     return
 
@@ -135,7 +131,7 @@ def increment_dict_by_value(dictionary, key, value):
 def merge_dicts(*args):
     '''Merge any number of dictionaries. Duplicate keys, and their corresponding values
        are dropped (i.e. we assume unique keys).'''
-    return {k:v for d in args for k, v in d.items()}
+    return {k: v for d in args for k, v in d.items()}
 
 
 def merge_dicts_of_lists(*args):
@@ -203,11 +199,11 @@ def get_reservation_datetimes(reservation, semester_start):
        Reservation. The start of the semester must be provided to allow
        the kernel epoch times to be unnormalised.'''
 
-    epoch_start   = datetime_to_epoch(semester_start)
-    dt_start      = normalised_epoch_to_datetime(reservation.scheduled_start,
-                                                 epoch_start)
+    epoch_start = datetime_to_epoch(semester_start)
+    dt_start = normalised_epoch_to_datetime(reservation.scheduled_start,
+                                            epoch_start)
     scheduled_end = reservation.scheduled_start + reservation.duration
-    dt_end        = normalised_epoch_to_datetime(scheduled_end, epoch_start)
+    dt_end = normalised_epoch_to_datetime(scheduled_end, epoch_start)
 
     return dt_start, dt_end
 
@@ -245,9 +241,9 @@ def timeit(method):
     '''Decorator for timing methods.'''
 
     def timed(*args, **kwargs):
-        start  = time.time()
+        start = time.time()
         result = method(*args, **kwargs)
-        end    = time.time()
+        end = time.time()
 
         log.info('TIMER: %s (%s): %2.2f sec' % (method.__name__, method.__module__, end - start))
         return result
@@ -255,7 +251,7 @@ def timeit(method):
     return timed
 
 
-@metric_wrapper('estimate_runtime', value=lambda x: x.total_seconds()*1000.0)
+@metric_wrapper('estimate_runtime', value=lambda x: x.total_seconds() * 1000.0)
 def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_percent=5.0):
     '''Estimate the next scheduler runtime given a previous estimate and actual.
     If actual > estimate, new estimate = actual * backoff_rate
@@ -270,10 +266,10 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
         new_estimated_runtime += timedelta(seconds=backoff_rate * actual_runtime.total_seconds())
     else:
         # Scheduler run time was less than or equal to estimate
-        difference_from_estimate = estimated_runtime  - actual_runtime
+        difference_from_estimate = estimated_runtime - actual_runtime
         # Decrease the run time estimate by fraction of the difference and leave a pad
         delta_for_next_run = timedelta(seconds=difference_from_estimate.total_seconds() / backoff_rate)
-        minimum_runtime = timedelta(seconds=(1.0 + pad_percent/100.0) * actual_runtime.total_seconds())
+        minimum_runtime = timedelta(seconds=(1.0 + pad_percent / 100.0) * actual_runtime.total_seconds())
         new_estimated_runtime += max(estimated_runtime - delta_for_next_run,
                                      minimum_runtime)
 

@@ -6,18 +6,18 @@ time_intervals<2.0
 
 ocs-rise-set==0.5.1
 requests<=2.30.0
-redis<=3.3
+redis<=3.4
 retry<=0.10.0
 opentsdb_http_client>=0.2.0
 opentsdb_python_metrics>=0.2.0
 lcogt-logging
 python-dateutil
-unidecode<1.1.0
+unidecode<1.2.0
 elasticsearch<6.0,>=5.0
 
 # 2) Testing/debugging dependencies
 nose<=1.4.0
-mock<=2.1.0
+mock<=3.1.0
 responses<=0.11.0
 
 

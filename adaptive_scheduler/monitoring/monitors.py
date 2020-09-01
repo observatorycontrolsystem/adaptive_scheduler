@@ -142,6 +142,7 @@ class AvailableForScheduling(ElasticsearchDataMonitor):
         telemetry datum names are "Available For Scheduling" (a boolean), and "Available For Scheduling Reason" (a
         string reason for being unavailble).
     '''
+
     def retrieve_data(self):
         ''' The two datums of telemetry are flattened and merged, grouped by resource
         '''
@@ -163,7 +164,8 @@ class AvailableForScheduling(ElasticsearchDataMonitor):
         reason = 'No Reason Found'
         if 'available_for_scheduling_reason' in datum:
             reason = datum['available_for_scheduling_reason'].value
-            if (datetime.utcnow() - datum['available_for_scheduling_reason'].timestamp_recorded) > timedelta(minutes=15):
+            if (datetime.utcnow() - datum['available_for_scheduling_reason'].timestamp_recorded) > timedelta(
+                    minutes=15):
                 if reason:
                     reason += ". "
                 reason += "Telemetry: Out of date"

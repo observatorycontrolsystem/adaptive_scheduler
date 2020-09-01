@@ -12,9 +12,9 @@ October 2013
 import abc
 import weakref
 
-
 # Event bus instance
 __EVENTBUS_BY_NAME = {}
+
 
 def get_eventbus(name='default'):
     ''' Return an event bus instance. 
@@ -45,6 +45,7 @@ class BaseListener(object):
         '''
         return True
 
+
 class OnChangeListener(BaseListener):
     ''' On change event listener.
 
@@ -54,6 +55,7 @@ class OnChangeListener(BaseListener):
 
     def is_update_required(self, last_event, event):
         return last_event is not event
+
 
 class Event(object):
     ''' Event superclass.
@@ -71,6 +73,7 @@ class Event(object):
             can call the event-specific update method.
         '''
         pass
+
 
 class _EventBus(object):
     ''' EventBus implementation. 
@@ -163,7 +166,7 @@ class _EventBus(object):
                     event.dispatch(listener)
             else:
                 has_dead_listeners = True
-        
+
         return has_dead_listeners
 
     def _prune_dead_listeners(self, event_type):
@@ -177,17 +180,22 @@ class _EventBus(object):
 
         return
 
+
 def _strongref(x):
     ''' A simple closure to mimic the weakref.ref functionality. '''
+
     def wrapper():
         return x
+
     return wrapper
+
 
 if __name__ == '__main__':
     # Example usage.
 
     class MyListener(BaseListener):
         ''' Example listener. '''
+
         class _Event(Event):
             ''' Simple event. '''
 
@@ -205,6 +213,7 @@ if __name__ == '__main__':
 
         def on_message_update(self, message):
             print(message)
+
 
     # Create eventbus
     eventbus = get_eventbus()

@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division
+
 '''
 request_filters.py - Filtering of Requests for schedulability.
 
@@ -52,10 +53,9 @@ February 2013
 '''
 
 from datetime import datetime, timedelta
-from adaptive_scheduler.log      import RequestGroupLogger
+from adaptive_scheduler.log import RequestGroupLogger
 
 import logging
-import json
 
 log = logging.getLogger(__name__)
 
@@ -68,13 +68,12 @@ now = datetime.utcnow()
 
 def log_windows(fn):
     def wrap(rg_list, *args, **kwargs):
-
         n_windows_before = sum([rg.n_windows() for rg in rg_list])
-        rg_list          = fn(rg_list, *args, **kwargs)
-        n_windows_after  = sum([rg.n_windows() for rg in rg_list])
+        rg_list = fn(rg_list, *args, **kwargs)
+        n_windows_after = sum([rg.n_windows() for rg in rg_list])
 
         log.info("%s: windows in (%d); windows out (%d)", fn.__name__, n_windows_before,
-                                                                        n_windows_after)
+                 n_windows_after)
         return rg_list
 
     return wrap
@@ -82,8 +81,8 @@ def log_windows(fn):
 
 def log_rgs(fn):
     def wrap(rg_list, *args, **kwargs):
-        in_size  = len(rg_list)
-        rg_list  = fn(rg_list, *args, **kwargs)
+        in_size = len(rg_list)
+        rg_list = fn(rg_list, *args, **kwargs)
         out_size = len(rg_list)
 
         log.info("%s: RGs in (%d); RGs out (%d)", fn.__name__, in_size, out_size)
@@ -97,13 +96,12 @@ def _for_all_rg_windows(rg_list, filter_test):
     '''Loop over all Requests of each RequestGroup provided, and execute the supplied
        filter condition on each one.'''
     for rg in rg_list:
-            rg.filter_requests(filter_test)
+        rg.filter_requests(filter_test)
 
     return rg_list
 
 
 def filter_rgs(rg_list, running_request_ids):
-
     # Don't use sets here, unless you like non-deterministic orderings
     # The solve may be sensitive to order, so don't mess with it
     schedulable_rgs = run_all_filters(rg_list, running_request_ids)
@@ -146,11 +144,13 @@ def run_all_filters(rg_list, running_request_ids):
 @log_windows
 def filter_out_windows_for_running_requests(rg_list, running_request_ids):
     '''Case 1: Remove windows for requests that are already running'''
+
     def filter_test(w, rg, r):
         if r.id in running_request_ids:
             tag = 'RequestIsRunning'
-            msg = 'Request %d Window (at %s) %s -> %s removed because request is currently running' % (r.id, w.get_resource_name(),
-                                                               w.start, w.end)
+            msg = 'Request %d Window (at %s) %s -> %s removed because request is currently running' % (
+            r.id, w.get_resource_name(),
+            w.start, w.end)
             rg.emit_rg_feedback(msg, tag)
             return False
         else:
@@ -160,17 +160,18 @@ def filter_out_windows_for_running_requests(rg_list, running_request_ids):
 
 
 # A) Window Filters
-#------------------
+# ------------------
 @log_windows
 def filter_out_past_windows(rg_list):
     '''Case 2: The window exists entirely in the past.'''
+
     def filter_test(w, rg, r):
         if w.end > now:
             return True
         else:
             tag = 'WindowInPast'
             msg = 'Request %d Window (at %s) %s -> %s falls before %s' % (r.id, w.get_resource_name(),
-                                                               w.start, w.end, now)
+                                                                          w.start, w.end, now)
             rg.emit_rg_feedback(msg, tag)
             return False
 
@@ -186,7 +187,7 @@ def truncate_lower_crossing_windows(rg_list):
         if w.start < now < w.end:
             tag = 'WindowTruncatedLower'
             msg = 'Request %d Window (at %s) %s -> %s truncated to %s' % (r.id, w.get_resource_name(),
-                                                               w.start, w.end, now)
+                                                                          w.start, w.end, now)
             rg.emit_rg_feedback(msg, tag)
             w.start = now
 
@@ -213,7 +214,7 @@ def truncate_upper_crossing_windows(rg_list, horizon=None):
         if w.start < effective_horizon < w.end:
             tag = 'WindowTruncatedUpper'
             msg = 'Request %d Window (at %s) %s -> %s truncated to %s' % (r.id, w.get_resource_name(),
-                                                               w.start, w.end, effective_horizon)
+                                                                          w.start, w.end, effective_horizon)
             rg.emit_rg_feedback(msg, tag)
             w.end = effective_horizon
 
@@ -241,11 +242,11 @@ def filter_out_future_windows(rg_list, horizon=None):
         else:
             tag = 'WindowBeyondHorizon'
             msg = 'Request %d Window (at %s) %s -> %s starts after the scheduling horizon (%s)' % (
-                                                                                r.id,
-                                                                                w.get_resource_name(),
-                                                                                w.start,
-                                                                                w.end,
-                                                                                effective_horizon)
+                r.id,
+                w.get_resource_name(),
+                w.start,
+                w.end,
+                effective_horizon)
             rg.emit_rg_feedback(msg, tag)
             return False
 
@@ -257,6 +258,7 @@ def filter_out_future_windows(rg_list, horizon=None):
 @log_windows
 def filter_on_duration(rg_list, filter_executor=_for_all_rg_windows):
     '''Case 6: Return only windows which are larger than the RG's child R durations.'''
+
     def filter_on_duration(w, rg, r):
         # Transparently handle either float (in seconds) or datetime durations
         try:
@@ -269,8 +271,8 @@ def filter_on_duration(rg_list, filter_executor=_for_all_rg_windows):
         else:
             tag = 'WindowTooSmall'
             msg = "Request %d Window (at %s) %s -> %s too small for duration '%s'" % (r.id,
-                                                                           w.get_resource_name(),
-                                                                           w.start, w.end, duration)
+                                                                                      w.get_resource_name(),
+                                                                                      w.start, w.end, duration)
             rg.emit_rg_feedback(msg, tag)
             return False
 
@@ -279,9 +281,8 @@ def filter_on_duration(rg_list, filter_executor=_for_all_rg_windows):
     return filter_executor(rg_list, filter_test)
 
 
-
 # Request Filters
-#---------------------
+# ---------------------
 def drop_empty_requests(rg_list):
     '''Delete child Requests which have no windows remaining.'''
 
@@ -313,7 +314,7 @@ def filter_on_pending(rg_list):
 
 
 # Request Group Filters
-#---------------------
+# ---------------------
 @log_rgs
 def filter_on_expiry(rg_list):
     '''Case 8: Return only RGs which haven't expired.'''
@@ -330,6 +331,7 @@ def filter_on_expiry(rg_list):
 
     return not_expired
 
+
 @log_rgs
 def filter_on_type(rg_list, running_request_ids=()):
     '''Case 9: Only return RGs which can still be completed (have enough child
@@ -344,5 +346,3 @@ def filter_on_type(rg_list, running_request_ids=()):
             rg.emit_rg_feedback(msg, tag)
 
     return new_rg_list
-
-

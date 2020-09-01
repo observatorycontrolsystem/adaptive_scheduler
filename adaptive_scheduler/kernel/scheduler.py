@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 Scheduler is the base class for all schedulers. 
 
@@ -7,24 +6,23 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 Dec 2012
 '''
 
-from adaptive_scheduler.kernel.reservation_v3 import *
 import copy
 from time_intervals.intervals import Intervals
 
 
 class Scheduler(object):
-    
-    def __init__(self, compound_reservation_list, 
-                 globally_possible_windows_dict, 
+
+    def __init__(self, compound_reservation_list,
+                 globally_possible_windows_dict,
                  contractual_obligation_list):
-        self.compound_reservation_list   = compound_reservation_list
+        self.compound_reservation_list = compound_reservation_list
         self.contractual_obligation_list = contractual_obligation_list
         # globally_possible_windows_dict is a dictionary mapping:
         # resource -> globally possible windows (Intervals) on that resource. 
-        self.globally_possible_windows_dict   = globally_possible_windows_dict
+        self.globally_possible_windows_dict = globally_possible_windows_dict
         # these dictionaries hold:
         # scheduled reservations
-        self.schedule_dict      = {}
+        self.schedule_dict = {}
         # busy intervals
         self.schedule_dict_busy = {}
         # free intervals
@@ -40,20 +38,20 @@ class Scheduler(object):
         # possible windows specified by reservations may include
         # resources not on this list, but we cannot schedule them because
         # we do not know their globally possible windows.
-                
+
         self.resource_list = list(globally_possible_windows_dict.keys())
 
         for resource in self.resource_list:
             # reservation list
-            self.schedule_dict[resource]      = []
+            self.schedule_dict[resource] = []
             # busy intervals
             self.schedule_dict_busy[resource] = Intervals([], 'busy')
         # free intervals
         self.schedule_dict_free = copy.deepcopy(globally_possible_windows_dict)
-        
-        self.and_constraints   = []        
+
+        self.and_constraints = []
         self.oneof_constraints = []
-        self.reservation_list, self.reservation_dict  = self.convert_compound_to_simple()
+        self.reservation_list, self.reservation_dict = self.convert_compound_to_simple()
         self.unscheduled_reservation_list = copy.copy(self.reservation_list)
 
         self.reservations_by_resource_dict = {}
@@ -70,15 +68,14 @@ class Scheduler(object):
         (only multi-pass ones), so it's better to keep it separate.'''
         for reservation in reservation_list:
             for resource in reservation.free_windows_dict.keys():
-                reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].subtract(self.schedule_dict_busy[resource])
-
+                reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].subtract(
+                    self.schedule_dict_busy[resource])
 
     def order_equals(self, x):
         if (x.order == self.current_order):
             return True
         else:
             return False
-
 
     def resources_include(self, x):
         if (self.current_resource in x.free_windows_dict[resource]):
@@ -106,15 +103,15 @@ class Scheduler(object):
         # remove that resource from the free_windows_dict.
         # if there are NO MORE resources, then return False.
         for resource in list(reservation.free_windows_dict.keys()):
-            reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect([self.globally_possible_windows_dict.get(resource, Intervals([]))])
+            reservation.free_windows_dict[resource] = reservation.free_windows_dict[resource].intersect(
+                [self.globally_possible_windows_dict.get(resource, Intervals([]))])
             reservation.clean_up_free_windows(resource)
             if reservation.free_windows_dict[resource].is_empty():
-                del(reservation.free_windows_dict[resource])
+                del (reservation.free_windows_dict[resource])
         if reservation.free_windows_dict:
             return True
         else:
             return False
-
 
     def convert_compound_to_simple(self):
         reservation_list = []
@@ -156,12 +153,12 @@ class Scheduler(object):
 
             # add interval & remove free time
             self.schedule_dict_busy[r.scheduled_resource].add(r.scheduled_timepoints)
-            self.schedule_dict_free[r.scheduled_resource] = self.schedule_dict_free[r.scheduled_resource].subtract(interval)
+            self.schedule_dict_free[r.scheduled_resource] = self.schedule_dict_free[r.scheduled_resource].subtract(
+                interval)
             # remove from list of unscheduled reservations
             self.unscheduled_reservation_list.remove(r)
             # if we need to remove scheduled time from free windows of other 
             # reservations, then we need to call self.make_windows_consistent()
-
 
     def uncommit_reservation_from_schedule(self, r):
         resource = r.scheduled_resource
@@ -174,4 +171,4 @@ class Scheduler(object):
         # TODO?: add back the window to those reservations that originally
         # included it in their possible_windows list.
         # Not bothering with this now since there is no pass following 
-        # this that could benefit from this information. 
+        # this that could benefit from this information.

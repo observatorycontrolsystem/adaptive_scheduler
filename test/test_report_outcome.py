@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 test_report_outcome.py - Tests for the event_utils module report_scheduling_outcome.
 
@@ -12,7 +11,6 @@ August 2013
 from adaptive_scheduler.event_utils import report_scheduling_outcome
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 
-from nose.tools import assert_equal
 from mock import Mock
 
 
@@ -22,7 +20,6 @@ class TestReportOutcome(object):
         pass
 
     def test_report_scheduling_outcome(self):
-
         class Request(object):
             def __init__(self, request_id):
                 self.id = request_id
@@ -31,7 +28,6 @@ class TestReportOutcome(object):
             def __init__(self, request, mock_rg):
                 self.request = request
                 self.request_group = mock_rg
-
 
         mock_cr1 = Mock()
         mock_cr2 = Mock()
@@ -46,6 +42,6 @@ class TestReportOutcome(object):
 
         report_scheduling_outcome(to_schedule, scheduled_reservations)
 
-        mock_cr1.emit_rg_feedback.assert_called_with('This Request (request id=1) was not scheduled (it clashed)', 'WasNotScheduled')
+        mock_cr1.emit_rg_feedback.assert_called_with('This Request (request id=1) was not scheduled (it clashed)',
+                                                     'WasNotScheduled')
         mock_cr2.emit_rg_feedback.assert_called_with('This Request (request id=2) was scheduled', 'WasScheduled')
-
