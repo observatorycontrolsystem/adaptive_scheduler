@@ -75,15 +75,12 @@ class Network(object):
                 OfflineResourceMonitor(configdb_interface),
             ]
             if scheduling_input.elasticsearch_url and scheduling_input.elasticsearch_index:
-                es = Elasticsearch([scheduling_input.elasticsearch_url])
-                if es.ping():
-                    # Only add the elasticsearch telemetry monitors if your elasticsearch is accessible
-                    self.monitors.append(AvailableForScheduling(
-                        configdb_interface,
-                        scheduling_input.elasticsearch_url,
-                        scheduling_input.elasticsearch_index,
-                        scheduling_input.elasticsearch_excluded_observatories
-                    ))
+                self.monitors.append(AvailableForScheduling(
+                    configdb_interface,
+                    scheduling_input.elasticsearch_url,
+                    scheduling_input.elasticsearch_index,
+                    scheduling_input.elasticsearch_excluded_observatories
+                ))
 
         self.current_events = {}
         self.previous_events = {}
