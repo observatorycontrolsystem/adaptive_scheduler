@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 requests.py - A set of python classes to store Request data
 
@@ -12,31 +11,29 @@ July 2012
 # Required for true (non-integer) division
 from __future__ import division
 
-from rise_set.sky_coordinates                 import RightAscension, Declination
-from rise_set.astrometry                      import (make_ra_dec_target,
-                                                      make_minor_planet_target,
-                                                      make_major_planet_target,
-                                                      make_comet_target,
-                                                      make_satellite_target)
-from rise_set.angle                           import Angle
-from rise_set.exceptions                      import InvalidAngleError, AngleConfigError, RatesConfigError
-from rise_set.rates                           import ProperMotion
-from adaptive_scheduler.utils                 import (iso_string_to_datetime, convert_proper_motion,
-                                                      EqualityMixin, safe_unidecode)
-from adaptive_scheduler.printing              import plural_str as pl
+from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.astrometry import (make_ra_dec_target,
+                                 make_minor_planet_target,
+                                 make_major_planet_target,
+                                 make_comet_target,
+                                 make_satellite_target)
+from rise_set.angle import Angle
+from rise_set.exceptions import InvalidAngleError, AngleConfigError, RatesConfigError
+from rise_set.rates import ProperMotion
+from adaptive_scheduler.utils import (iso_string_to_datetime, convert_proper_motion,
+                                      EqualityMixin, safe_unidecode)
+from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.log                   import RequestGroupLogger
-from adaptive_scheduler.feedback              import UserFeedbackLogger
-from adaptive_scheduler.eventbus              import get_eventbus
-from adaptive_scheduler.moving_object_utils   import required_fields_from_scheme, scheme_mappings
-from adaptive_scheduler.observation_portal_connections  import ObservationPortalConnectionError
+from adaptive_scheduler.feedback import UserFeedbackLogger
+from adaptive_scheduler.eventbus import get_eventbus
+from adaptive_scheduler.moving_object_utils import required_fields_from_scheme
+from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 
-from datetime    import datetime
+from datetime import datetime
 from collections import defaultdict
 import ast
 import logging
 import random
-import numbers
 
 log = logging.getLogger(__name__)
 
@@ -73,11 +70,11 @@ def filter_out_compounds(request_groups):
 def filter_compounds_by_type(rgs):
     '''Given a list of RequestGroups, Return a dictionary that sorts them by type.'''
     rgs_by_type = {
-                    'single' : [],
-                    'many'   : [],
-                    'and'    : [],
-                    'oneof'  : [],
-                  }
+        'single': [],
+        'many': [],
+        'and': [],
+        'oneof': [],
+    }
 
     for rg in rgs:
         rgs_by_type[rg.operator].append(rg)
@@ -116,14 +113,14 @@ def generate_request_description(request_group_json, request_json):
         filter_string = '(' + ', '.join(filters) + ')' if len(filters) > 0 else ''
         target_string = '(' + ', '.join(target_names) + ')' if len(target_names) > 0 else ''
     return 'proposal={}, submitter={}, RG_id={}, R_id={}, telescope_class={}, target_names={}, inst_names={}, filters={}'.format(
-                    prop_id,
-                    user_id,
-                    request_group_json.get('id'),
-                    request_json.get('id'),
-                    telescope_class,
-                    target_string,
-                    inst_type,
-                    filter_string)
+        prop_id,
+        user_id,
+        request_group_json.get('id'),
+        request_json.get('id'),
+        telescope_class,
+        target_string,
+        inst_type,
+        filter_string)
 
 
 def differentiate_by_type(operator, rgs):
@@ -194,6 +191,7 @@ class NullTarget(Target):
 class ICRSTarget(Target):
     ''' SiderealTarget for targets with Sidereal parameters (ra/dec)
     '''
+
     def __init__(self, *initial_data, **kwargs):
         Target.__init__(self, ('name', 'ra', 'dec'), *initial_data, **kwargs)
 
@@ -202,11 +200,11 @@ class ICRSTarget(Target):
         return self._ra
 
     def set_ra(self, ra):
-        #TODO: Check units are accurate
+        # TODO: Check units are accurate
         self._ra = RightAscension(degrees=float(ra))
 
     def set_dec(self, dec):
-        #TODO: Check units are accurate
+        # TODO: Check units are accurate
         self._dec = Declination(float(dec))
 
     def get_dec(self):
@@ -220,8 +218,10 @@ class ICRSTarget(Target):
                                                               self.dec.in_degrees())
             # then set the target_dict with the target with proper motion
             target_dict = make_ra_dec_target(self.ra, self.dec,
-                ra_proper_motion=ProperMotion(Angle(degrees=(prop_mot_ra / 3600.0), units='arc'), time='year'),
-                dec_proper_motion=ProperMotion(Angle(degrees=(prop_mot_dec / 3600.0), units='arc'), time='year'))
+                                             ra_proper_motion=ProperMotion(
+                                                 Angle(degrees=(prop_mot_ra / 3600.0), units='arc'), time='year'),
+                                             dec_proper_motion=ProperMotion(
+                                                 Angle(degrees=(prop_mot_dec / 3600.0), units='arc'), time='year'))
         else:
             target_dict = make_ra_dec_target(self.ra, self.dec)
 
@@ -234,6 +234,7 @@ class ICRSTarget(Target):
 class OrbitalElementsTarget(Target):
     ''' NonSiderealTarget for targets with moving object parameters, like comets or minor planets
     '''
+
     def __init__(self, *initial_data, **kwargs):
         scheme = initial_data[0]['scheme']
 
@@ -266,6 +267,7 @@ class SatelliteTarget(Target):
     ''' SatelliteTarget for targets with satellite parameters and fixed windows. Rise-set just returns the
         dark intervals for these, so their parameters must be precomputed for their windows.
     '''
+
     def __init__(self, *initial_data, **kwargs):
         required_fields = ('altitude', 'azimuth', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
                            'diff_roll_acceleration', 'diff_pitch_acceleration')
@@ -273,7 +275,8 @@ class SatelliteTarget(Target):
 
     def in_rise_set_format(self):
         target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_pitch_rate, self.diff_roll_rate,
-                                            self.diff_pitch_acceleration, self.diff_roll_acceleration, self.diff_epoch_rate)
+                                            self.diff_pitch_acceleration, self.diff_roll_acceleration,
+                                            self.diff_epoch_rate)
 
         return target_dict
 
@@ -304,13 +307,14 @@ class Configuration(DataContainer):
 
 class Window(EqualityMixin):
     '''Accepts start and end times as datetimes or ISO strings.'''
+
     def __init__(self, window_dict, resource):
         try:
-            self.start  = iso_string_to_datetime(window_dict['start'])
-            self.end    = iso_string_to_datetime(window_dict['end'])
+            self.start = iso_string_to_datetime(window_dict['start'])
+            self.end = iso_string_to_datetime(window_dict['end'])
         except TypeError:
             self.start = window_dict['start']
-            self.end   = window_dict['end']
+            self.end = window_dict['end']
 
         self.resource = resource
 
@@ -341,13 +345,13 @@ class Windows(EqualityMixin):
 
     def size(self):
         all_windows_size = 0
-        for resource_name, windows in self.windows_for_resource.iteritems():
+        for resource_name, windows in self.windows_for_resource.items():
             all_windows_size += len(windows)
 
         return all_windows_size
 
     def __iter__(self):
-        for resource_name, windows in self.windows_for_resource.iteritems():
+        for resource_name, windows in self.windows_for_resource.items():
             yield resource_name, windows
 
 
@@ -432,7 +436,7 @@ class RequestGroup(EqualityMixin):
             error_msg = ("You've asked for a type of request that doesn't exist. "
                          "Valid operator types are:\n")
 
-            for res_type, help_txt in RequestGroup.valid_types.iteritems():
+            for res_type, help_txt in RequestGroup.valid_types.items():
                 error_msg += "    %9s - %s\n" % (res_type, help_txt)
 
             raise RequestError(error_msg)
@@ -540,7 +544,7 @@ class RequestGroup(EqualityMixin):
         # seeded with the request id so it is repeatable with tests
         random.seed(self.requests[request_index].id)
         perturbation_size = 0.01
-        ran = (1.0 - perturbation_size/2.0) + perturbation_size*random.random()
+        ran = (1.0 - perturbation_size / 2.0) + perturbation_size * random.random()
 
         req = self.requests[request_index]
 
@@ -554,9 +558,10 @@ class RequestGroup(EqualityMixin):
             effective_priority = self.get_base_priority()
         else:
             effective_priority = 0
-            log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(self.observation_type))
+            log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(
+                self.observation_type))
 
-        effective_priority = min(effective_priority, 32000.0)*ran
+        effective_priority = min(effective_priority, 32000.0) * ran
 
         return effective_priority
 
@@ -564,7 +569,7 @@ class RequestGroup(EqualityMixin):
         return self.proposal.tac_priority
 
     def get_ipp_modified_priority(self):
-        return self.get_base_priority()*self.ipp_value
+        return self.get_base_priority() * self.ipp_value
 
     # Define properties
     priority = property(get_priority)
@@ -616,7 +621,7 @@ class ModelBuilder(object):
         ipp_value = rg_dict.get('ipp_value', 1.0)
         submitter = rg_dict.get('submitter', '')
         if ignore_ipp:
-             # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
+            # if we want to ignore ipp in the scheduler, then set it to 1.0 here and it will not modify the priority
             ipp_value = 1.0
 
         requests, invalid_requests = self.build_requests(
@@ -704,7 +709,7 @@ class ModelBuilder(object):
             except RequestError as e:
                 log.warn(e)
                 log.warn('Invalid Request: {}'.format(generate_request_description(ur_dict, req_dict)))
-                invalid_requests.append((req_dict, e.message))
+                invalid_requests.append((req_dict, str(e)))
 
         return requests, invalid_requests
 
@@ -726,7 +731,8 @@ class ModelBuilder(object):
             site_str = req_dict['location']['site'] if 'site' in req_dict['location'] else ''
             obs_str = req_dict['location']['observatory'] if 'observatory' in req_dict['location'] else ''
             tel_str = req_dict['location']['telescope'] if 'telescope' in req_dict['location'] else ''
-            telescope_class = req_dict['location']['telescope_class'] if 'telescope_class' in req_dict['location'] else ''
+            telescope_class = req_dict['location']['telescope_class'] if 'telescope_class' in req_dict[
+                'location'] else ''
             req_location = '.'.join(
                 (
                     telescope_class,
@@ -737,7 +743,7 @@ class ModelBuilder(object):
             )
             msg = "Request {} wants cameras [{}], which are not available on the subnetwork '{}'".format(
                 req_dict['id'],
-                ', '.join(instrument_types_to_requirements.keys()),
+                ', '.join(list(instrument_types_to_requirements.keys())),
                 req_location
             )
             raise RequestError(msg)

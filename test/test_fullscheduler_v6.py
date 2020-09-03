@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 test_fullscheduler_v5.py
 
@@ -9,17 +8,18 @@ August 2012
 
 from nose.tools import assert_equal
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.fullscheduler_v6 import *
+from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 import copy
+
 
 class TestFullScheduler_v6(object):
 
     def setup(self):
         s1 = Intervals([{'time': 1, 'type': 'start'},
-                        {'time': 2, 'type': 'end'}]) # 1-2
+                        {'time': 2, 'type': 'end'}])  # 1-2
         s2 = Intervals([{'time': 2, 'type': 'start'},
-                        {'time': 4, 'type': 'end'}]) # --2--4
+                        {'time': 4, 'type': 'end'}])  # --2--4
         s3 = copy.copy(s1)
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
@@ -39,21 +39,19 @@ class TestFullScheduler_v6(object):
         self.r4 = Reservation_v3(1, 1, {'foo': s4})
         self.r5 = Reservation_v3(2, 2, {'bar': s5})
         self.r6 = Reservation_v3(1, 2, {'bar': s5})
-        self.r7 = Reservation_v3(1, 1, {'bar': s6, 'foo' : s5})
-        self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar' : s7})
+        self.r7 = Reservation_v3(1, 1, {'bar': s6, 'foo': s5})
+        self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar': s7})
         self.r9 = Reservation_v3(1, 1, {'foo': s8})
         self.r10 = Reservation_v3(2, 2, {'bar': s9})
         self.r11 = Reservation_v3(1, 1, {'bar': s10})
         self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})        
+        self.r13 = Reservation_v3(1, 1, {'bar': s12})
         self.r14 = Reservation_v3(1, 1, {'bar': s13})
-        
+
         self.r15 = Reservation_v3(1, 9, {'bar': s13})
         self.r16 = Reservation_v3(1, 9, {'foo': s13})
         self.r17 = Reservation_v3(2, 9, {'bar': s13})
         self.r18 = Reservation_v3(3, 9, {'foo': s13})
-
-
 
         self.cr1 = CompoundReservation_v2([self.r1])
         self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
@@ -72,7 +70,7 @@ class TestFullScheduler_v6(object):
         self.cr15 = CompoundReservation_v2([self.r13])
         self.cr16 = CompoundReservation_v2([self.r14])
 
-        self.cr17 = CompoundReservation_v2([self.r15,self.r16],'and')
+        self.cr17 = CompoundReservation_v2([self.r15, self.r16], 'and')
         self.cr18 = CompoundReservation_v2([self.r17])
         self.cr19 = CompoundReservation_v2([self.r18])
 
@@ -87,7 +85,7 @@ class TestFullScheduler_v6(object):
         self.gpw4 = {}
         self.gpw4['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
 
-        self.fs1 = FullScheduler_v6([self.cr1, self.cr2, self.cr3], 
+        self.fs1 = FullScheduler_v6([self.cr1, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs2 = FullScheduler_v6([self.cr1, self.cr4],
                                     self.gpw2, [], 1)
@@ -95,9 +93,9 @@ class TestFullScheduler_v6(object):
                                     self.gpw2, [], 1)
         self.fs4 = FullScheduler_v6([self.cr8, self.cr6, self.cr7],
                                     self.gpw2, [], 1)
-        self.fs5 = FullScheduler_v6([self.cr10, self.cr2, self.cr3], 
+        self.fs5 = FullScheduler_v6([self.cr10, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
-        self.fs6 = FullScheduler_v6([self.cr11, self.cr2, self.cr3], 
+        self.fs6 = FullScheduler_v6([self.cr11, self.cr2, self.cr3],
                                     self.gpw2, [], 1)
         self.fs7 = FullScheduler_v6([self.cr12],
                                     self.gpw3, [], 1)
@@ -108,20 +106,17 @@ class TestFullScheduler_v6(object):
 
     def test_schedule_noneofand(self):
         self.fs9.schedule_all()
-        assert_equal(self.r15.scheduled,False)
-        assert_equal(self.r16.scheduled,False)
-        assert_equal(self.r17.scheduled,True)
-        assert_equal(self.r18.scheduled,True)
+        assert_equal(self.r15.scheduled, False)
+        assert_equal(self.r16.scheduled, False)
+        assert_equal(self.r17.scheduled, True)
+        assert_equal(self.r18.scheduled, True)
 
     def test_schedule_all_4inarow(self):
-#        print self.fs8.reservation_list
         self.fs8.schedule_all()
-#        print self.fs8.reservation_list
         assert_equal(self.r11.scheduled, True)
         assert_equal(self.r12.scheduled, True)
         assert_equal(self.r13.scheduled, True)
         assert_equal(self.r14.scheduled, True)
-
 
     def test_schedule_all_1(self):
         d = self.fs1.schedule_all()
@@ -130,14 +125,12 @@ class TestFullScheduler_v6(object):
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
 
-
     def test_schedule_all_multi_resource(self):
         d = self.fs5.schedule_all()
         assert_equal(self.r7.scheduled, True)
         assert_equal(self.r2.scheduled, True)
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
-
 
     def test_schedule_all_multi_resource_2(self):
         d = self.fs6.schedule_all()
@@ -146,18 +139,15 @@ class TestFullScheduler_v6(object):
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
 
-
     def test_schedule_all_2(self):
         d = self.fs2.schedule_all()
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
-        
 
     def test_schedule_all_3(self):
         d = self.fs3.schedule_all()
         assert_equal(self.r4.scheduled, False)
         assert_equal(self.r5.scheduled, True)
-
 
     def test_schedule_all_4(self):
         d = self.fs4.schedule_all()
@@ -169,11 +159,10 @@ class TestFullScheduler_v6(object):
         else:
             assert_equal(self.r4.scheduled, True)
 
-
     def test_schedule_triple_oneof(self):
         slice_dict = {}
-        slice_dict['foo'] = [0,1]
-        slice_dict['bar'] = [0,1]
+        slice_dict['foo'] = [0, 1]
+        slice_dict['bar'] = [0, 1]
         fs = FullScheduler_v6([self.cr9],
                               self.gpw2, [], 1)
         s = fs.schedule_all()
@@ -188,7 +177,7 @@ class TestFullScheduler_v6(object):
         s2 = copy.copy(s1)
         r2 = Reservation_v3(1, 30, {'goo': s2})
 
-        cr = CompoundReservation_v2([r1,r2], 'oneof')
+        cr = CompoundReservation_v2([r1, r2], 'oneof')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
@@ -198,13 +187,11 @@ class TestFullScheduler_v6(object):
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
 
-
     def test_schedule_all_gaw(self):
         d = self.fs7.schedule_all()
         assert_equal(self.r9.scheduled, False)
         assert_equal(self.r10.scheduled, False)
-        
-    
+
     def test_schedule_order_dependent_resources(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -212,11 +199,10 @@ class TestFullScheduler_v6(object):
         cr = CompoundReservation_v2([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
-        gpw['foo'] = Intervals([])#[{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
-        
+        gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
+
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['goo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -229,9 +215,8 @@ class TestFullScheduler_v6(object):
 
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['goo']))
-        
+
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
@@ -240,10 +225,8 @@ class TestFullScheduler_v6(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
         assert_equal(1, len(schedule['foo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -254,13 +237,10 @@ class TestFullScheduler_v6(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()
-        print schedule
-        assert_equal(1, len(schedule['foo'])) 
-        
-        
+        assert_equal(1, len(schedule['foo']))
+
     def test_schedule_no_available_windows(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -268,6 +248,6 @@ class TestFullScheduler_v6(object):
         cr = CompoundReservation_v2([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
-        
+
         fs = FullScheduler_v6([cr], gpw, [], 60)
         schedule = fs.schedule_all()

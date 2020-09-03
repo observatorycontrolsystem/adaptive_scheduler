@@ -12,20 +12,21 @@ class ObservationPortalConnectionError(Exception):
     pass
 
 
-class ObservationPortalInterface(object, SendMetricMixin):
-    
+class ObservationPortalInterface(SendMetricMixin):
+
     def __init__(self, obs_portal_url, debug=False):
         self.obs_portal_url = obs_portal_url
         self.debug = debug
         self.log = logging.getLogger(__name__)
-        self.headers = {'Authorization': 'Token ' + os.getenv("API_TOKEN", '')}
+        self.headers = {'Authorization': 'Token ' + os.getenv("OBSERVATION_PORTAL_API_TOKEN", '')}
         self.current_semester_details = None
 
     def get_proposals(self):
         ''' Returns all active proposals using the bulk proposals API of the observation portal
         '''
         try:
-            response = requests.get(self.obs_portal_url + '/api/proposals/?active=True&limit=1000', headers=self.headers,
+            response = requests.get(self.obs_portal_url + '/api/proposals/?active=True&limit=1000',
+                                    headers=self.headers,
                                     timeout=120)
             response.raise_for_status()
             return response.json()['results']
@@ -60,9 +61,10 @@ class ObservationPortalInterface(object, SendMetricMixin):
                 self.current_semester_details['start'] = datetime.strptime(self.current_semester_details['start'],
                                                                            '%Y-%m-%dT%H:%M:%SZ')
                 self.current_semester_details['end'] = datetime.strptime(self.current_semester_details['end'],
-                                                                           '%Y-%m-%dT%H:%M:%SZ')
+                                                                         '%Y-%m-%dT%H:%M:%SZ')
             except (RequestException, ValueError, Timeout) as e:
-                raise ObservationPortalConnectionError("failed to retrieve semester info for date {}: {}".format(date, repr(e)))
+                raise ObservationPortalConnectionError(
+                    "failed to retrieve semester info for date {}: {}".format(date, repr(e)))
         return self.current_semester_details
 
     @timeit

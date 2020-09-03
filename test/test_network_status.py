@@ -8,16 +8,10 @@ Author: Martin Norbury
 May 2013
 '''
 from nose.tools import assert_true, assert_false, eq_
-from nose import SkipTest
 import mock
-import responses
-
 import datetime
-import socket
-import re
-import json
 
-from adaptive_scheduler.monitoring.monitors import NetworkStateMonitor, Event
+from adaptive_scheduler.monitoring.monitors import Event
 from adaptive_scheduler.monitoring.network_status import Network
 
 
@@ -26,7 +20,7 @@ class TestNetworkStatus(object):
     def setup(self):
         self.mock_monitor1 = mock.MagicMock()
         self.mock_monitor2 = mock.MagicMock()
-        self.network = Network(mock.MagicMock(), [self.mock_monitor1, self.mock_monitor2])
+        self.network = Network(mock.MagicMock(), mock.MagicMock(), [self.mock_monitor1, self.mock_monitor2])
         self.e1 = Event(
             type="NOT AVAILABLE",
             reason="Weather: DEWPOINT",
