@@ -3,7 +3,7 @@ from __future__ import division
 
 import mock
 import copy
-from nose.tools import assert_equal, assert_in, raises, nottest, assert_almost_equal, assert_dict_equal
+from nose.tools import assert_equal, assert_in, raises, assert_almost_equal
 from datetime import datetime
 
 # Import the modules to test

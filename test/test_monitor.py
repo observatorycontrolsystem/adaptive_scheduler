@@ -7,12 +7,12 @@ Author: Martin Norbury
 May 2013
 '''
 
-from nose.tools import eq_, assert_false, assert_true, assert_equals
-from datetime import datetime, timedelta
+from nose.tools import eq_, assert_false, assert_true
+from datetime import datetime
 import mock
-from StringIO import StringIO
+from io import StringIO
 
-from adaptive_scheduler.monitoring.telemetry import Datum
+from adaptive_scheduler.monitoring.elasticearch_telemetry import Datum
 from adaptive_scheduler.monitoring.monitors import (OfflineResourceMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
@@ -44,9 +44,14 @@ class TestOfflineResourceMonitor(object):
 class TestAvailableForSchedulingMonitor(object):
 
     def setUp(self):
-        self.monitor = AvailableForScheduling(configdb_interface=ConfigDBInterface(configdb_url='',
-                                                                               telescopes_file='test/telescopes.json',
-                                                                               active_instruments_file='test/active_instruments.json'))
+        self.monitor = AvailableForScheduling(
+            configdb_interface=ConfigDBInterface(configdb_url='',
+                                                 telescopes_file='test/telescopes.json',
+                                                 active_instruments_file='test/active_instruments.json'),
+            elasticsearch_url='',
+            es_index='',
+            es_excluded_observatories=[]
+        )
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_event_if_we_are_okay_to_open(self, mock_get_datum):
@@ -102,7 +107,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         events = self.monitor.monitor()
 
-        assert_true('lsc.lsc.lsc' in events.keys())
+        assert_true('lsc.lsc.lsc' in list(events.keys()))
 
     def _create_events(self, available, reason):
         return [[_create_event(self, available), ],
@@ -112,17 +117,17 @@ class TestAvailableForSchedulingMonitor(object):
 def _create_event(self, value, site='lsc', observatory=None, telescope=None):
     observatory = observatory if observatory else site
     telescope = telescope if telescope else observatory
-    return Datum(**{'site':site,
-                 'observatory':observatory,
-                 'telescope':telescope,
-                 'instance':'1',
-                 'timestamp_changed':datetime(2013, 04, 26, 0, 0, 0),
-                 'timestamp_measured':datetime(2013, 04, 26, 0, 0, 0),
-                 'timestamp_recorded':datetime.utcnow(),
-                 'value':value})
+    return Datum(**{'site': site,
+                    'observatory': observatory,
+                    'telescope': telescope,
+                    'instance': '1',
+                    'timestamp_changed': datetime(2013, 4, 26, 0, 0, 0),
+                    'timestamp_measured': datetime(2013, 4, 26, 0, 0, 0),
+                    'timestamp_recorded': datetime.utcnow(),
+                    'value': value})
 
 
-def _mocked_get_datum_consistent(datum, instance=None):
+def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=[], instance=None):
     if datum == 'Available For Scheduling':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]

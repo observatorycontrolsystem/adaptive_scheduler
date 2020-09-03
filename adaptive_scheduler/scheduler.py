@@ -4,35 +4,35 @@ import time
 import logging
 import itertools
 import json
+from functools import cmp_to_key
 
-from collections import defaultdict
 from datetime import datetime, timedelta
 
-from adaptive_scheduler.feedback         import TimingLogger
-from adaptive_scheduler.interfaces       import ScheduleException
-from adaptive_scheduler.event_utils      import report_scheduling_outcome
+from adaptive_scheduler.feedback import TimingLogger
+from adaptive_scheduler.interfaces import ScheduleException
+from adaptive_scheduler.event_utils import report_scheduling_outcome
 from time_intervals.intervals import Intervals
 
-from adaptive_scheduler.utils            import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
-                                                 metric_timer, set_schedule_type, NORMAL_OBSERVATION_TYPE, RR_OBSERVATION_TYPE,
-                                                 get_reservation_datetimes, time_in_capped_intervals, cap_intervals,
-                                                 merge_dicts_of_lists)
-from adaptive_scheduler.printing         import pluralise as pl
-from adaptive_scheduler.printing         import plural_str
-from adaptive_scheduler.printing         import print_compound_reservations,summarise_rgs, log_full_rg, log_windows
-from adaptive_scheduler.models           import filter_out_compounds, differentiate_by_type, n_requests, DataContainer
-from adaptive_scheduler.kernel_mappings  import (construct_visibilities,
-                                                 construct_resource_windows,
-                                                 make_compound_reservations,
-                                                 make_many_type_compound_reservations,
-                                                 filter_for_kernel,
-                                                 construct_global_availability)
-from adaptive_scheduler.request_filters  import filter_rgs, drop_empty_requests, set_now
+from adaptive_scheduler.utils import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
+                                      metric_timer, set_schedule_type, NORMAL_OBSERVATION_TYPE, RR_OBSERVATION_TYPE,
+                                      get_reservation_datetimes, time_in_capped_intervals, cap_intervals,
+                                      merge_dicts_of_lists)
+from adaptive_scheduler.printing import pluralise as pl
+from adaptive_scheduler.printing import plural_str
+from adaptive_scheduler.printing import print_compound_reservations, summarise_rgs, log_full_rg, log_windows
+from adaptive_scheduler.models import filter_out_compounds, differentiate_by_type, n_requests, DataContainer
+from adaptive_scheduler.kernel_mappings import (construct_visibilities,
+                                                construct_resource_windows,
+                                                make_compound_reservations,
+                                                make_many_type_compound_reservations,
+                                                filter_for_kernel,
+                                                construct_global_availability)
+from adaptive_scheduler.request_filters import filter_rgs, drop_empty_requests, set_now
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInterface
 
 
-class Scheduler(object, SendMetricMixin):
+class Scheduler(SendMetricMixin):
 
     def __init__(self, kernel_class, sched_params, event_bus):
         self.kernel_class = kernel_class
@@ -66,11 +66,11 @@ class Scheduler(object, SendMetricMixin):
         if len(request_group_ids) < len(resources):
             small_list = request_group_ids
             large_list = resources
-            zip_combinations = lambda x : zip(x, small_list)
+            zip_combinations = lambda x: zip(x, small_list)
         else:
             large_list = request_group_ids
             small_list = resources
-            zip_combinations = lambda x : zip(small_list, x)
+            zip_combinations = lambda x: zip(small_list, x)
 
         optimal_combination_value = -1
         optimal_combinations = []
@@ -80,9 +80,9 @@ class Scheduler(object, SendMetricMixin):
         permutations = []
         for i in range(len(small_list)):
             permutations.extend(itertools.permutations(large_list, i + 1))
-            
+
         for x in permutations:
-            combinations = zip_combinations(x)
+            combinations = list(zip_combinations(x))
             value = 0
             invalid_combination = False
             for combination in combinations:
@@ -124,7 +124,8 @@ class Scheduler(object, SendMetricMixin):
         '''
         return request_groups, []
 
-    def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details, extra_downtime_by_resource):
+    def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details,
+                             extra_downtime_by_resource):
         ''' Returns the set of RGs with windows adjusted to include only RGs with windows
         suitable for scheduling
         '''
@@ -190,14 +191,14 @@ class Scheduler(object, SendMetricMixin):
                 schedule_data['resources'][resource]['priority_value'] = priority_value
                 schedule_data['total_priority_value'] += priority_value
 
-                #also store the intervals at the site that were considered
+                # also store the intervals at the site that were considered
                 dark_intervals = self.visibility_cache[resource].get_dark_intervals()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + 7 days)
                 capped_dark_intervals = cap_intervals(dark_intervals, estimated_scheduler_end,
                                                       self.scheduling_horizon(estimated_scheduler_end))
                 for interval in capped_dark_intervals:
                     schedule_data['resources'][resource]['dark_intervals'].append({'start': interval[0].isoformat(),
-                                                                      'end': interval[1].isoformat()})
+                                                                                   'end': interval[1].isoformat()})
 
             if is_rr:
                 schedule_type = RR_OBSERVATION_TYPE
@@ -221,12 +222,13 @@ class Scheduler(object, SendMetricMixin):
                 dark_intervals = self.visibility_cache[resource].get_dark_intervals()
                 # get the dark intervals of the site, capped by the scheduled range of time (scheduler end + horizon)
                 available_seconds_for_horizon = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
-                                                             self.scheduling_horizon(estimated_scheduler_end))
+                                                                         self.scheduling_horizon(
+                                                                             estimated_scheduler_end))
 
                 # get the dark intervals time for a horizon of 1 day
                 if horizon_days != 1:
                     available_seconds_for_one_day = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
-                                                                   one_day_horizon)
+                                                                             one_day_horizon)
 
             # now get the scheduled seconds for that resource
             scheduled_seconds_for_horizon = 0
@@ -241,7 +243,8 @@ class Scheduler(object, SendMetricMixin):
             # log and record a metric for how full the telescope schedule is.
             self.log.info("telescope {} filled {} / {} hours".format(
                 resource, (scheduled_seconds_for_horizon / 3600.0), (available_seconds_for_horizon / 3600.0)))
-            self._send_schedule_metrics(resource, scheduled_seconds_for_horizon, available_seconds_for_horizon, horizon_days)
+            self._send_schedule_metrics(resource, scheduled_seconds_for_horizon, available_seconds_for_horizon,
+                                        horizon_days)
             if horizon_days != 1:
                 self._send_schedule_metrics(resource, scheduled_seconds_for_one_day, available_seconds_for_one_day, 1)
 
@@ -257,25 +260,28 @@ class Scheduler(object, SendMetricMixin):
         self.send_metric('scheduled_time.utilization_percent', utilization, telescope=telescope,
                          observatory=observatory, site=site, horizon_days=horizon_days)
 
-    def create_resource_mask(self, available_resources, resource_usage_snapshot, rr_request_group_ids, preemption_enabled):
+    def create_resource_mask(self, available_resources, resource_usage_snapshot, rr_request_group_ids,
+                             preemption_enabled):
         resource_interval_mask = {}
         for resource_name in available_resources:
             running_request_groups = resource_usage_snapshot.request_groups_for_resource(resource_name)
             # Limit to only RR running request group when preemption is enabled
             if preemption_enabled:
                 running_request_groups = [rg for rg in running_request_groups if rg.id in rr_request_group_ids]
-            
+
             masked_timepoints_for_resource = []
             for rg in running_request_groups:
                 for r in rg.running_requests:
                     if r.should_continue():
                         masked_timepoints_for_resource.extend(r.timepoints())
             resource_interval_mask[resource_name] = Intervals(masked_timepoints_for_resource)
-            resource_interval_mask[resource_name].add(resource_usage_snapshot.blocked_intervals(resource_name).toDictList())
-            
-        return resource_interval_mask 
+            resource_interval_mask[resource_name].add(
+                resource_usage_snapshot.blocked_intervals(resource_name).toDictList())
 
-    # TODO: refactor into smaller chunks
+        return resource_interval_mask
+
+        # TODO: refactor into smaller chunks
+
     @timeit
     @metric_timer('scheduling', num_requests=lambda x: x.count_reservations())
     def run_scheduler(self, scheduler_input, estimated_scheduler_end, semester_details, preemption_enabled=False):
@@ -339,7 +345,7 @@ class Scheduler(object, SendMetricMixin):
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
             # Limit canceled resources to those where request groups were canceled
-            if(preemption_enabled):
+            if (preemption_enabled):
                 for resource in available_resources:
                     if scheduler_result.schedule.get(resource, []) == []:
                         scheduler_result.resource_schedules_to_cancel.remove(resource)
@@ -377,7 +383,7 @@ class LCOGTNetworkScheduler(Scheduler):
         n_rgs, n_rs = n_requests(request_groups)
 
         self.log.info("Deserialised %s (%s) from Observation Portal", plural_str(n_rgs, 'Request Group'),
-                                                         plural_str(n_rs, 'Request'))
+                      plural_str(n_rs, 'Request'))
 
         summarise_rgs(request_groups, log_msg="Received from Observation Portal")
         for rg in request_groups:
@@ -398,7 +404,8 @@ class LCOGTNetworkScheduler(Scheduler):
         return schedulable_rgs, unschedulable_rgs
 
     @metric_timer('apply_window_filters', num_requests=lambda x: len(x))
-    def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details, extra_downtime_by_resource):
+    def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details,
+                             extra_downtime_by_resource):
         ''' Returns the set of RGs with windows adjusted to include only RGs with windows
         suitable for scheduling
         '''
@@ -409,15 +416,17 @@ class LCOGTNetworkScheduler(Scheduler):
         downtime_interface = DowntimeInterface(self.sched_params.downtime_url)
         try:
             downtime_intervals = downtime_interface.get_downtime_intervals_by_resource(start=estimated_scheduler_end,
-                                                                                      end=self.scheduling_horizon(estimated_scheduler_end))
+                                                                                       end=self.scheduling_horizon(
+                                                                                           estimated_scheduler_end))
         except DowntimeError as e:
             self.log.warning("Problem getting downtime intervals: {}".format(repr(e)))
             downtime_intervals = {}
 
         combined_downtime_intervals = merge_dicts_of_lists(downtime_intervals, extra_downtime_by_resource)
-        filtered_window_request_groups = filter_for_kernel(request_groups, self.visibility_cache, combined_downtime_intervals,
-                                                      semester_details['start'], semester_end,
-                                                      self.scheduling_horizon(estimated_scheduler_end))
+        filtered_window_request_groups = filter_for_kernel(request_groups, self.visibility_cache,
+                                                           combined_downtime_intervals,
+                                                           semester_details['start'], semester_end,
+                                                           self.scheduling_horizon(estimated_scheduler_end))
 
         return filtered_window_request_groups
 
@@ -442,7 +451,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         # Translate when telescopes are available into kernel speak
         resource_windows = construct_resource_windows(self.visibility_cache, semester_start, available_resources)
-        
+
         # Intersect and mask out time where Blocks are currently running
         global_windows = construct_global_availability(resource_interval_mask, semester_start,
                                                        resource_windows)
@@ -456,7 +465,8 @@ class LCOGTNetworkScheduler(Scheduler):
         semester_start = semester_details['start']
         semester_end = semester_details['end']
         # Clear the visibility cache if the semester has changed
-        if semester_details['start'] != self.saved_semester['start'] or semester_details['end'] != self.saved_semester['end']:
+        if semester_details['start'] != self.saved_semester['start'] or semester_details['end'] != self.saved_semester[
+            'end']:
             self.visibility_cache = {}
         self.saved_semester = semester_details.copy()
 
@@ -484,7 +494,8 @@ class LCOGTNetworkScheduler(Scheduler):
         '''
         scheduled_compound_reservations = []
         [scheduled_compound_reservations.extend(a) for a in new_schedule.values()]
-        self.log.info("Scheduling completed. Final schedule has %d Reservations." % len(scheduled_compound_reservations))
+        self.log.info(
+            "Scheduling completed. Final schedule has %d Reservations." % len(scheduled_compound_reservations))
 
         report_scheduling_outcome(compound_reservations, scheduled_compound_reservations)
 
@@ -527,13 +538,17 @@ class SchedulerResult(object):
         return scheduled_requests_by_request_group_id
 
     def resources_scheduled(self):
-        return self.schedule.keys()
+        return list(self.schedule.keys())
 
     def earliest_reservation(self, resource):
         earliest = None
         reservations = list(self.schedule.get(resource, []))
         if reservations:
-            reservations.sort(cmp=lambda x, y: cmp(x.scheduled_start, y.scheduled_start))
+            reservations = sorted(
+                reservations,
+                key=cmp_to_key(
+                    lambda x, y: ((x.scheduled_start > y.scheduled_start) - (x.scheduled_start < y.scheduled_start)))
+            )
             earliest = reservations[0]
 
         return earliest
@@ -584,12 +599,12 @@ class SchedulerRunner(object):
     def update_network_model(self):
         current_events = self.network_interface.get_current_events()
         available_telescopes = []
-        for telescope_name, telescope in self.network_model.iteritems():
+        for telescope_name, telescope in self.network_model.items():
             if telescope_name in current_events:
                 telescope['events'].extend(current_events[telescope_name])
                 msg = "Found network event for '%s' - removing from consideration (%s)" % (
-                                                                    telescope_name,
-                                                                    current_events[telescope_name])
+                    telescope_name,
+                    current_events[telescope_name])
                 self.log.info(msg)
             else:
                 available_telescopes.append(telescope_name)
@@ -642,10 +657,12 @@ class SchedulerRunner(object):
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
-        self.log.info("Estimated scheduler run time is %.2f seconds", scheduler_input.estimated_scheduler_runtime.total_seconds())
+        self.log.info("Estimated scheduler run time is {:.2f} seconds".format(
+            scheduler_input.estimated_scheduler_runtime.total_seconds()))
         self.log.info("Estimated scheduler end %s", estimated_scheduler_end)
         n_rgs, n_rs = n_requests(scheduler_input.request_groups)
-        self.summary_events.append("Received %d %s (%d %s) from the Observation Portal" % (pl(n_rgs, 'Request Group') + pl(n_rs, 'Request')))
+        self.summary_events.append(
+            "Received %d %s (%d %s) from the Observation Portal" % (pl(n_rgs, 'Request Group') + pl(n_rs, 'Request')))
         scheduler_result = None
         try:
             scheduler_result = self.scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
@@ -673,7 +690,8 @@ class SchedulerRunner(object):
 
         return n_submitted
 
-    def _determine_resource_cancelation_start_date(self, scheduled_reservations, running_request_groups, default_cancelation_start_date):
+    def _determine_resource_cancelation_start_date(self, scheduled_reservations, running_request_groups,
+                                                   default_cancelation_start_date):
         cancelation_start_date = default_cancelation_start_date
         for running_request_group in running_request_groups:
             for running_request in running_request_group.running_requests:
@@ -682,13 +700,17 @@ class SchedulerRunner(object):
 
         return cancelation_start_date
 
-    def _determine_schedule_cancelation_start_dates(self, resources_to_cancel, schedule_by_resource, resource_usage_snapshot, default_cancelation_start, default_cancelation_end):
+    def _determine_schedule_cancelation_start_dates(self, resources_to_cancel, schedule_by_resource,
+                                                    resource_usage_snapshot, default_cancelation_start,
+                                                    default_cancelation_end):
         cancelation_date_list_by_resource = {}
         for resource in resources_to_cancel:
             scheduled_at_resource = schedule_by_resource.get(resource, [])
-            start = self._determine_resource_cancelation_start_date(scheduled_at_resource, resource_usage_snapshot.request_groups_for_resource(resource), default_cancelation_start)
+            start = self._determine_resource_cancelation_start_date(scheduled_at_resource,
+                                                                    resource_usage_snapshot.request_groups_for_resource(
+                                                                        resource), default_cancelation_start)
             end = default_cancelation_end
-            cancelation_date_list_by_resource[resource] = [(start, end),]
+            cancelation_date_list_by_resource[resource] = [(start, end), ]
 
         return cancelation_date_list_by_resource
 
@@ -717,9 +739,11 @@ class SchedulerRunner(object):
 
                 # if it interferes with the new schedule, cancel it
                 if earliest_reservation:
-                    earliest_res_denormalized_start = schedule_denoramlization_date + timedelta(seconds=earliest_reservation.scheduled_start)
+                    earliest_res_denormalized_start = schedule_denoramlization_date + timedelta(
+                        seconds=earliest_reservation.scheduled_start)
                     if running_request.end > earliest_res_denormalized_start:
-                            abort_reasons.append("Request interrupted to observe request: %d" % earliest_reservation.request.id)
+                        abort_reasons.append(
+                            "Request interrupted to observe request: %d" % earliest_reservation.request.id)
             if abort_reasons:
                 abort_requests.append((running_request, abort_reasons))
 
@@ -759,7 +783,7 @@ class SchedulerRunner(object):
             semester_end = self.semester_details['end']
 
             all_cancelation_date_list_by_resource = self._determine_schedule_cancelation_start_dates(
-                self.network_model.keys(),
+                list(self.network_model.keys()),
                 scheduler_result.schedule,
                 scheduler_input.resource_usage_snapshot,
                 apply_deadline,
@@ -805,13 +829,14 @@ class SchedulerRunner(object):
             abort_requests_by_resource = {}
             for resource in new_schedule_resources:
                 earliest_reservation = scheduler_result.earliest_reservation(resource)
-                to_abort = self._determine_abort_requests(scheduler_input.resource_usage_snapshot.request_groups_for_resource(resource),
-                                                          semester_start,
-                                                          earliest_reservation)
+                to_abort = self._determine_abort_requests(
+                    scheduler_input.resource_usage_snapshot.request_groups_for_resource(resource),
+                    semester_start,
+                    earliest_reservation)
                 abort_requests_by_resource[resource] = to_abort
 
             n_deleted, n_aborted, n_submitted = 0, 0, 0
-            for resource in set(new_schedule_resources + resources_to_clear):
+            for resource in sorted(set(new_schedule_resources + resources_to_clear)):
                 # These are resources at which the schedule must be updated in some way. Save and abort will
                 # have the same resources. Cancel might be different, for example if a resource just became
                 # unavailable, the schedule there would need to be canceled but no new schedule submitted. For this
@@ -848,9 +873,9 @@ class SchedulerRunner(object):
         self.log.info("Scheduling complete.")
         self.summary_events = []
 
-
     @timeit
-    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(),
+                  rate=lambda x: x.count_reservations())
     def create_rr_schedule(self, scheduler_input):
         rr_scheduler_result = SchedulerResult()
         if scheduler_input.request_groups:
@@ -864,15 +889,19 @@ class SchedulerRunner(object):
                 self.apply_rr_result(rr_scheduler_result, scheduler_input, deadline)
                 rr_scheduling_end = datetime.utcnow()
                 rr_scheduling_timedelta = rr_scheduling_end - rr_scheduling_start
-                self.estimated_rr_run_timedelta = estimate_runtime(self.estimated_rr_run_timedelta, rr_scheduling_timedelta)
+                self.estimated_rr_run_timedelta = estimate_runtime(self.estimated_rr_run_timedelta,
+                                                                   rr_scheduling_timedelta)
                 self.log.info("Rapid Response scheduling took %.2f seconds" % rr_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Rapid Response Scheduling Summary")
 
-            except EstimateExceededException, eee:
-                self.log.warn("Not enough time left to apply schedule before estimated scheduler end. Schedule will not be saved.")
+            except EstimateExceededException as eee:
+                self.log.warn(
+                    "Not enough time left to apply schedule before estimated scheduler end. Schedule will not be saved.")
                 rr_scheduling_timedelta = eee.new_estimate - rr_scheduling_start
-                self.estimated_rr_run_timedelta = estimate_runtime(self.estimated_rr_run_timedelta, rr_scheduling_timedelta)
-                self.log.warn("Skipping normal scheduling loop to try Rapid Response scheduling again with new runtime estimate")
+                self.estimated_rr_run_timedelta = estimate_runtime(self.estimated_rr_run_timedelta,
+                                                                   rr_scheduling_timedelta)
+                self.log.warn(
+                    "Skipping normal scheduling loop to try Rapid Response scheduling again with new runtime estimate")
                 raise eee
             finally:
                 self.log.info("New runtime estimate is %.2f seconds" % self.estimated_rr_run_timedelta.total_seconds())
@@ -881,17 +910,17 @@ class SchedulerRunner(object):
             self.log.warn("Received no Rapid Respond Request Groups! Skipping RR scheduling cycle")
         return rr_scheduler_result
 
-
     @timeit
-    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('create_schedule', num_reservations=lambda x: x.count_reservations(),
+                  rate=lambda x: x.count_reservations())
     def create_normal_schedule(self, scheduler_input):
         # Run the scheduling loop, if there are any Request Groups
         scheduler_result = SchedulerResult()
         if scheduler_input.request_groups:
             self.log.info("Start Normal Scheduling")
-            normal_scheduling_start =  datetime.utcnow()
+            normal_scheduling_start = datetime.utcnow()
             deadline = scheduler_input.get_scheduling_start() + self.estimated_normal_run_timedelta
-            
+
             if self.sched_params.profiling_enabled:
                 import cProfile
                 prof = cProfile.Profile()
@@ -899,29 +928,35 @@ class SchedulerRunner(object):
                 prof.dump_stats('call_scheduler.pstat')
             else:
                 scheduler_result = self.call_scheduler(scheduler_input, deadline)
-            resources_to_clear = self.network_model.keys()
+            resources_to_clear = list(self.network_model.keys())
             try:
                 before_apply = datetime.utcnow()
                 self.normal_scheduled_requests_by_rg = scheduler_result.get_scheduled_requests_by_request_group_id()
                 n_submitted = self.apply_normal_result(scheduler_result,
-                                            scheduler_input,
-                                            resources_to_clear, deadline)
+                                                       scheduler_input,
+                                                       resources_to_clear, deadline)
                 after_apply = datetime.utcnow()
-                if(n_submitted > 0):
-                    self.avg_save_time_per_reservation_timedelta = timedelta(seconds=(after_apply - before_apply).total_seconds() / n_submitted)
-                    self.log.info("Avg save time per reservation was %.2f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
+                if (n_submitted > 0):
+                    self.avg_save_time_per_reservation_timedelta = timedelta(
+                        seconds=(after_apply - before_apply).total_seconds() / n_submitted)
+                    self.log.info(
+                        "Avg save time per reservation was %.2f seconds" % self.avg_save_time_per_reservation_timedelta.total_seconds())
                 normal_scheduling_end = datetime.utcnow()
                 normal_scheduling_timedelta = normal_scheduling_end - normal_scheduling_start
-                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta,
+                                                                       normal_scheduling_timedelta)
                 self.log.info("Normal scheduling took %.2f seconds" % normal_scheduling_timedelta.total_seconds())
                 self._write_scheduling_summary_log("Normal Scheduling Summary")
             except EstimateExceededException as eee:
-                self.log.warn("Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
+                self.log.warn(
+                    "Not enough time left to apply schedule before estimated scheduler end.  Schedule will not be saved.")
                 normal_scheduling_timedelta = eee.new_estimate - normal_scheduling_start
-                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta, normal_scheduling_timedelta)
+                self.estimated_normal_run_timedelta = estimate_runtime(self.estimated_normal_run_timedelta,
+                                                                       normal_scheduling_timedelta)
                 raise eee
             finally:
-                self.log.info("New runtime estimate is %.2f seconds" % self.estimated_normal_run_timedelta.total_seconds())
+                self.log.info(
+                    "New runtime estimate is %.2f seconds" % self.estimated_normal_run_timedelta.total_seconds())
                 self.log.info("End Normal Scheduling")
         else:
             self.log.warn("Received no Normal Request Groups! Skipping Normal scheduling cycle")
@@ -937,20 +972,23 @@ class SchedulerRunner(object):
         self.scheduling_cycle(NORMAL_OBSERVATION_TYPE, network_state_timestamp, rr_scheduler_result)
         set_schedule_type(None)
 
-    @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(), rate=lambda x: x.count_reservations())
+    @metric_timer('scheduling_cycle', num_reservations=lambda x: x.count_reservations(),
+                  rate=lambda x: x.count_reservations())
     def scheduling_cycle(self, schedule_type, network_state_timestamp, rr_schedule_result=None):
         set_schedule_type(schedule_type)
         result = None
         if schedule_type == NORMAL_OBSERVATION_TYPE:
-            scheduler_input = self.input_factory.create_normal_scheduling_input(self.estimated_normal_run_timedelta.total_seconds(),
-                                                                                scheduled_requests_by_rg=self.normal_scheduled_requests_by_rg,
-                                                                                rr_schedule=rr_schedule_result.schedule,
-                                                                                network_state_timestamp=network_state_timestamp)
+            scheduler_input = self.input_factory.create_normal_scheduling_input(
+                self.estimated_normal_run_timedelta.total_seconds(),
+                scheduled_requests_by_rg=self.normal_scheduled_requests_by_rg,
+                rr_schedule=rr_schedule_result.schedule,
+                network_state_timestamp=network_state_timestamp)
             result = self.create_normal_schedule(scheduler_input)
         elif schedule_type == RR_OBSERVATION_TYPE:
-            scheduler_input = self.input_factory.create_rr_scheduling_input(self.estimated_rr_run_timedelta.total_seconds(),
-                                                                            scheduled_requests_by_rg=self.rr_scheduled_requests_by_rg,
-                                                                            network_state_timestamp=network_state_timestamp)
+            scheduler_input = self.input_factory.create_rr_scheduling_input(
+                self.estimated_rr_run_timedelta.total_seconds(),
+                scheduled_requests_by_rg=self.rr_scheduled_requests_by_rg,
+                network_state_timestamp=network_state_timestamp)
             result = self.create_rr_schedule(scheduler_input)
         return result
 

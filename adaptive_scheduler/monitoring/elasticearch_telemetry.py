@@ -6,37 +6,30 @@ import logging
 
 log = logging.getLogger('adaptive_scheduler')
 
-ES_HOSTS = [
-    'http://es1.lco.gtn:9200',
-    'http://es2.lco.gtn:9200',
-    'http://es3.lco.gtn:9200',
-    'http://es4.lco.gtn:9200'
-]
-
-ES_TELEMETRY_INDEX = 'live-telemetry'
-EXCLUDED_OBSERVATORIES = ['igla']
 
 class ConnectionError(Exception):
     pass
 
 
-def get_datum(datum, instance=None, originator=None):
+def get_datum(datum_name, elasticsearch_url, es_index, es_excluded_observatories, instance=None, originator=None):
     ''' Get data from live telemetry index in ES, ordered by timestamp ascending (i.e.
         newest value is last). '''
-    es = Elasticsearch(ES_HOSTS)
+    es = Elasticsearch([elasticsearch_url])
 
-    datum_query = _get_datum_query(datum, instance, originator)
+    datum_query = _get_datum_query(datum_name, instance, originator)
 
     try:
-        results = es.search(index=ES_TELEMETRY_INDEX, request_timeout=60, body=datum_query, size=1000)
+        results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
     except Exception as e:
-        # retry one time in case this was a momentary outage
+        # retry one time in case this was a momentary outage which happens occasionally
         try:
-            results = es.search(index=ES_TELEMETRY_INDEX, request_timeout=60, body=datum_query, size=1000)
-        except Exception as e2:
-            raise ConnectionError("Failed to get datum {} from ES after 2 attempts: {}".format(datum, repr(e2)))
+            results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
+        except Exception as ex:
+            raise ConnectionError(
+                "Failed to get datum {} from Elasticsearch after 2 attempts: {}".format(datum_name, repr(ex)))
 
-    return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if dat['_source']['observatory'] not in EXCLUDED_OBSERVATORIES]
+    return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if
+            dat['_source']['observatory'] not in es_excluded_observatories]
 
 
 def _get_datum_query(datumname, datuminstance=None, originator=None):
@@ -90,6 +83,7 @@ def _timestamp(value):
     ''' Convert time (s) to datetime instance. '''
     return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
 
+
 NULL_CONVERSION = lambda x: str(x)
 MAPPING = {
     'datuminstance': ('instance', NULL_CONVERSION),
@@ -102,4 +96,4 @@ MAPPING = {
     'value_string': ('value', NULL_CONVERSION)
 }
 
-Datum = collections.namedtuple('Datum', [ key for key,_ in MAPPING.values() ] )
+Datum = collections.namedtuple('Datum', [key for key, _ in MAPPING.values()])

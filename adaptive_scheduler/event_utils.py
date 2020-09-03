@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 event_utils.py - Useful event emitters for common tests
 

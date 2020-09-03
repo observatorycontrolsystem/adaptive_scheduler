@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 logging.py - Scheduler-specific logging classes
 
@@ -28,7 +27,7 @@ class MultiFileHandler(logging.FileHandler):
 
     def should_change_file(self, record):
         if not hasattr(record, 'file_id') or record.file_id == self.baseFilename:
-             return False
+            return False
         return True
 
     def change_file(self, file_id):
@@ -39,11 +38,11 @@ class MultiFileHandler(logging.FileHandler):
 
 
 class RequestGroupHandler(MultiFileHandler):
-    def __init__(self, request_group_id, mode='a', logdir = '.', encoding=None, delay=0):
+    def __init__(self, request_group_id, mode='a', logdir='.', encoding=None, delay=0):
         filename = os.path.join(logdir, str(int(request_group_id)) + '.log')
         MultiFileHandler.__init__(self, filename, mode, encoding, delay)
         self.logdir = logdir
-        self.request_group_id  = request_group_id
+        self.request_group_id = request_group_id
 
     def emit(self, record):
         if hasattr(record, 'id'):
@@ -74,7 +73,6 @@ class RequestGroupLogger(object):
 
 
 if __name__ == '__main__':
-
     logger = logging.getLogger('request_logger')
     logger.setLevel(logging.DEBUG)
 
@@ -87,12 +85,11 @@ if __name__ == '__main__':
     logger.info('info message')
 
     # These messages are logged to a different UR tracking number
-    logger.debug('debug message',       extra={'request_group_id':'300'})
-    logger.info('info message',         extra={'request_group_id':'300'})
-    logger.warn('warn message',         extra={'request_group_id':'300'})
-    logger.error('error message',       extra={'request_group_id':'300'})
-    logger.critical('critical message', extra={'request_group_id':'300'})
+    logger.debug('debug message', extra={'request_group_id': '300'})
+    logger.info('info message', extra={'request_group_id': '300'})
+    logger.warn('warn message', extra={'request_group_id': '300'})
+    logger.error('error message', extra={'request_group_id': '300'})
+    logger.critical('critical message', extra={'request_group_id': '300'})
 
     rg_logger = RequestGroupLogger(logger)
     rg_logger.critical('critical message 2', '300')
-

@@ -1,20 +1,14 @@
 from __future__ import division
 
-from nose.tools import assert_equal, assert_almost_equal, raises
-from nose import SkipTest
-from mock import patch, Mock, MagicMock
+from nose.tools import assert_equal, raises
+from mock import patch, Mock
 
-from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument, resolve_autoguider,
-                                     ObservationScheduleInterface)
-from adaptive_scheduler.models import (Proposal, Target, SatelliteTarget,
-                                       ICRSTarget, Request, Configuration,
-                                       RequestGroup)
-from adaptive_scheduler.utils import datetime_to_normalised_epoch
+from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument,
+                                             resolve_autoguider, ObservationScheduleInterface)
+from adaptive_scheduler.models import (Proposal, ICRSTarget, Request, RequestGroup)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-
-from time_intervals.intervals import Intervals
 
 from datetime import datetime
 import responses
@@ -81,7 +75,7 @@ class TestObservations(object):
         start = datetime(2013, 10, 3)
         end = datetime(2013, 11, 3)
 
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
         get_endpoint = host + '/api/observations/'
         responses.add(responses.GET, get_endpoint,
                       json={"error": 'failed to get Observation Portal observations'}, status=500)
@@ -150,8 +144,8 @@ class TestObservationInteractions(object):
     @responses.activate
     def test_cancel_blocks_called_when_dry_run_not_set(self):
         reason = 'Superceded by new schedule'
-        ids = range(10)
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
+        ids = list(range(10))
+        host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint, json={"canceled": "yay"}, status=200)
 
@@ -163,7 +157,7 @@ class TestObservationInteractions(object):
         start_end_by_resource = {'1m0a.doma.lsc': [(self.start, self.end), ]}
 
         delete_list = [Mock(id=1), Mock(id=2), Mock(id=3)]
-        host = os.getenv('OBSERVATION_PORTAL_HOST', 'http://observation-portal-dev.lco.gtn')
+        host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
         responses.add(responses.POST, cancel_endpoint,
                       json={"canceled": len(delete_list)}, status=200)

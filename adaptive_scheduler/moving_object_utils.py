@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 '''
 moving_objects_utils.py - Utility methods for moving object targets
 
@@ -14,28 +13,28 @@ December 2013
 '''
 
 scheme_mappings = {
-                    'ASA_MAJOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'longofperih', 'meandist',
-                                         'eccentricity', 'meanlong', 'dailymot'),
-                    'ASA_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'meandist',
-                                         'eccentricity', 'meananom'),
-                    'ASA_COMET':        ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'perihdist',
-                                         'eccentricity', 'epochofperih'),
-                    'JPL_MAJOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'meandist',
-                                         'eccentricity', 'meananom', 'dailymot'),
-                    'JPL_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'perihdist',
-                                         'eccentricity', 'epochofperih'),
-                    'MPC_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'meandist',
-                                         'eccentricity', 'meananom'),
-                    'MPC_COMET':        ('name', 'scheme', 'epochofel', 'orbinc',
-                                         'longascnode', 'argofperih', 'perihdist',
-                                         'eccentricity', 'epochofperih')
-                  }
+    'ASA_MAJOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
+                         'longascnode', 'longofperih', 'meandist',
+                         'eccentricity', 'meanlong', 'dailymot'),
+    'ASA_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
+                         'longascnode', 'argofperih', 'meandist',
+                         'eccentricity', 'meananom'),
+    'ASA_COMET': ('name', 'scheme', 'epochofel', 'orbinc',
+                  'longascnode', 'argofperih', 'perihdist',
+                  'eccentricity', 'epochofperih'),
+    'JPL_MAJOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
+                         'longascnode', 'argofperih', 'meandist',
+                         'eccentricity', 'meananom', 'dailymot'),
+    'JPL_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
+                         'longascnode', 'argofperih', 'perihdist',
+                         'eccentricity', 'epochofperih'),
+    'MPC_MINOR_PLANET': ('name', 'scheme', 'epochofel', 'orbinc',
+                         'longascnode', 'argofperih', 'meandist',
+                         'eccentricity', 'meananom'),
+    'MPC_COMET': ('name', 'scheme', 'epochofel', 'orbinc',
+                  'longascnode', 'argofperih', 'perihdist',
+                  'eccentricity', 'epochofperih')
+}
 
 
 def required_fields_from_scheme(scheme):

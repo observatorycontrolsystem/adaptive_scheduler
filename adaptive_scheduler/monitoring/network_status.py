@@ -20,15 +20,9 @@ Author: Martin Norbury
 May 2013
 '''
 from adaptive_scheduler.monitoring.monitors import OfflineResourceMonitor, AvailableForScheduling
-from adaptive_scheduler.monitoring.telemetry import ConnectionError
+from adaptive_scheduler.monitoring.elasticearch_telemetry import ConnectionError
 
-import datetime as dt
-import socket
-import requests
-from retry import retry
-import collections
-
-DEFAULT_MONITORS = [OfflineResourceMonitor, AvailableForScheduling]
+from elasticsearch import Elasticsearch
 
 import logging
 
@@ -56,7 +50,7 @@ def flatten(events_dict):
     '''
     flattened_list = []
 
-    for resource, events in events_dict.iteritems():
+    for resource, events in events_dict.items():
         for event in events:
             flattened_list.append((resource, event.reason))
 
@@ -68,7 +62,7 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, configdb_interface, monitors=None):
+    def __init__(self, configdb_interface, scheduling_input=None, monitors=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
@@ -77,9 +71,17 @@ class Network(object):
         if monitors:
             self.monitors = monitors
         else:
-            self.monitors = []
-            for monitor in DEFAULT_MONITORS:
-                self.monitors.append(monitor(configdb_interface))
+            self.monitors = [
+                OfflineResourceMonitor(configdb_interface),
+            ]
+            if scheduling_input.elasticsearch_url and scheduling_input.elasticsearch_index:
+                self.monitors.append(AvailableForScheduling(
+                    configdb_interface,
+                    scheduling_input.elasticsearch_url,
+                    scheduling_input.elasticsearch_index,
+                    scheduling_input.elasticsearch_excluded_observatories
+                ))
+
         self.current_events = {}
         self.previous_events = {}
 
@@ -118,7 +120,7 @@ class Network(object):
         for monitor in self.monitors:
             new_events = monitor.monitor()
 
-            for resource, event in new_events.iteritems():
+            for resource, event in new_events.items():
                 events.setdefault(resource, []).append(event)
 
         return events

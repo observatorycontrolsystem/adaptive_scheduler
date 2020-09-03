@@ -6,7 +6,6 @@ import requests
 
 from adaptive_scheduler.utils import SendMetricMixin, case_insensitive_equals, join_location
 
-
 log = logging.getLogger(__name__)
 
 
@@ -14,12 +13,13 @@ class ConfigDBError(Exception):
     pass
 
 
-class ConfigDBInterface(object, SendMetricMixin):
+class ConfigDBInterface(SendMetricMixin):
     """ Class for providing access to information in configdb. Used to replace both the camera_mappings file and
         the telescopes file. It saves/loads a local file of each from disk to use in case configdb is down.
         Proper usage is to call the update_configdb_structures once each scheduling run, then get the loaded
         in data as needed.
     """
+
     def __init__(self, configdb_url, telescopes_file='/data/adaptive_scheduler/telescopes.json',
                  active_instruments_file='/data/adaptive_scheduler/active_instruments.json'):
         self.configdb_url = configdb_url
@@ -111,9 +111,9 @@ class ConfigDBInterface(object, SendMetricMixin):
                     split_string = instrument['__str__'].lower().split('.')
                     temp_site, temp_observatory, temp_telescope, _ = split_string
                     if (
-                        case_insensitive_equals(site, temp_site) and
-                        case_insensitive_equals(enclosure, temp_observatory) and
-                        case_insensitive_equals(telescope, temp_telescope)
+                            case_insensitive_equals(site, temp_site) and
+                            case_insensitive_equals(enclosure, temp_observatory) and
+                            case_insensitive_equals(telescope, temp_telescope)
                     ):
                         if instrument['state'] == 'SCHEDULABLE':
                             return instrument['code']
@@ -125,7 +125,7 @@ class ConfigDBInterface(object, SendMetricMixin):
 
         raise ConfigDBError(
             'get_specific_instrument failed: unable to find instrument type {} at location {}'
-            .format(instrument_type_code, '.'.join([site, enclosure, telescope]))
+                .format(instrument_type_code, '.'.join([site, enclosure, telescope]))
         )
 
     def get_autoguider_for_instrument(self, instrument_name, self_guide):
@@ -159,7 +159,7 @@ class ConfigDBInterface(object, SendMetricMixin):
 
         raise ConfigDBError(
             'get_autoguider_for_instrument failed: unable to find autoguider for instrument {} where self_guide={}'
-            .format(instrument_name, self_guide)
+                .format(instrument_name, self_guide)
         )
 
     @staticmethod
@@ -178,8 +178,8 @@ class ConfigDBInterface(object, SendMetricMixin):
     def _location_available(location_info, location_constraints):
         for constraint in ['telescope_class', 'site', 'enclosure', 'telescope']:
             if (
-                constraint in location_constraints and
-                not case_insensitive_equals(location_info[constraint], location_constraints[constraint])
+                    constraint in location_constraints and
+                    not case_insensitive_equals(location_info[constraint], location_constraints[constraint])
             ):
                 return False
         return True
@@ -246,15 +246,15 @@ class ConfigDBInterface(object, SendMetricMixin):
                             continue
 
                         if (
-                            self._elements_available(instrument_requirements['science_optical_elements'],
-                                                     these_imager_element_groups) and
-                            self._elements_available(instrument_requirements['guiding_optical_elements'],
-                                                     these_guider_element_groups)
+                                self._elements_available(instrument_requirements['science_optical_elements'],
+                                                         these_imager_element_groups) and
+                                self._elements_available(instrument_requirements['guiding_optical_elements'],
+                                                         these_guider_element_groups)
                         ):
                             telescope_sets[instrument_type].add(
                                 instrument_location['telescope_location'])
 
-        telescope_sets = telescope_sets.values()
+        telescope_sets = list(telescope_sets.values())
         if len(telescope_sets) > 1:
             return telescope_sets[0].intersection(*telescope_sets[1:])
         else:

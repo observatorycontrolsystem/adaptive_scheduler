@@ -11,6 +11,7 @@ from adaptive_scheduler import eventbus
 
 import gc
 
+
 class FakeListener1(eventbus.BaseListener):
     class _Event(eventbus.Event):
         def __init__(self, number):
@@ -32,9 +33,11 @@ class FakeListener1(eventbus.BaseListener):
     def on_number_update(self, number):
         self.last_update = number
 
+
 # Module level test variables
 event_type = FakeListener1.event_type()
-listener   = FakeListener1()
+listener = FakeListener1()
+
 
 class TestEventBus(object):
 
@@ -60,12 +63,12 @@ class TestEventBus(object):
 
     def test_listener_removed_after_garbage_collection(self):
         listener1 = FakeListener1()
-        event     = FakeListener1.create_event(10)
+        event = FakeListener1.create_event(10)
 
         self.eventbus.add_listener(listener1)
 
         # Force the listener to be garbage collected
-        del(listener1)
+        del (listener1)
         gc.collect()
         self.eventbus.fire_event(event)
 
@@ -73,17 +76,16 @@ class TestEventBus(object):
 
     def test_listener_not_removed_after_garbage_collection_if_persistent(self):
         listener1 = FakeListener1()
-        event     = FakeListener1.create_event(10)
+        event = FakeListener1.create_event(10)
 
         self.eventbus.add_listener(listener1, persist=True)
 
         # Force the listener to be garbage collected
-        del(listener1)
+        del (listener1)
         gc.collect()
         self.eventbus.fire_event(event)
 
         eq_(self.eventbus.number_of_listeners(event_type), 1)
-
 
     def test_adding_multiple_listeners(self):
         listener1 = FakeListener1()

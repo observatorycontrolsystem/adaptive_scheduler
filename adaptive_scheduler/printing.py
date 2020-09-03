@@ -9,15 +9,14 @@ December 2011
 '''
 
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
-from adaptive_scheduler.log   import RequestGroupLogger
-from datetime import timedelta
+from adaptive_scheduler.log import RequestGroupLogger
 
 INDENT = "    "
 
 # Set up and configure a module scope logger
 import logging
-log = logging.getLogger(__name__)
 
+log = logging.getLogger(__name__)
 
 multi_rg_log = logging.getLogger('rg_logger')
 rg_log = RequestGroupLogger(multi_rg_log)
@@ -26,7 +25,7 @@ rg_log = RequestGroupLogger(multi_rg_log)
 def summarise_rgs(request_groups, log_msg):
     log.debug("Request Group breakdown:")
     for rg in request_groups:
-        r_nums  = [r.id for r in rg.requests]
+        r_nums = [r.id for r in rg.requests]
         w_total = sum([r.n_windows() for r in rg.requests])
         _, w_str = pluralise(w_total, 'Window')
         r_total, r_str = pluralise(len(rg.requests), 'Request')
@@ -72,8 +71,8 @@ def log_full_rg(rg, now):
 
 def print_reservation(res):
     log.debug(res)
-    for resource, interval in res.possible_windows_dict.iteritems():
-        log.debug("Possible windows: %s -> %s" % ( resource, interval ))
+    for resource, interval in res.possible_windows_dict.items():
+        log.debug("Possible windows: %s -> %s" % (resource, interval))
 
     return
 
@@ -102,9 +101,9 @@ def print_compound_reservation(compound_res):
 
 def print_resource_windows(resource_windows):
     for resource in resource_windows:
-        print resource
+        print(resource)
         for i in resource_windows[resource].toDictList():
-            print i['time'], i['type']
+            print("{}: {}".format(i['time'], i['type']))
 
     return
 
@@ -119,10 +118,9 @@ def print_compound_reservations(to_schedule):
 
 
 def print_schedule(schedule, semester_start=None, semester_end=None):
-
     if semester_start and semester_end:
         epoch_start = datetime_to_normalised_epoch(semester_start, semester_start)
-        epoch_end   = datetime_to_normalised_epoch(semester_end, semester_start)
+        epoch_end = datetime_to_normalised_epoch(semester_end, semester_start)
 
         log.info("Scheduling for semester %s to %s" % (semester_start, semester_end))
         log.info("Scheduling for normalised epoch %s to %s" % (epoch_start, epoch_end))
@@ -135,4 +133,4 @@ def print_schedule(schedule, semester_start=None, semester_end=None):
 
 
 def iprint(string, indent_level=0):
-    print (indent_level * INDENT) + string
+    print("{}{}".format((indent_level * INDENT), string))

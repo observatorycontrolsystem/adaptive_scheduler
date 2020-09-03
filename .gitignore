@@ -1,5 +1,7 @@
 # Vim temp files
 *.swp
+data
+logs
 
 # Python #
 ##########
