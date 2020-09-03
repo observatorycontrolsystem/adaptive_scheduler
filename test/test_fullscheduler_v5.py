@@ -7,9 +7,11 @@ August 2012
 '''
 
 from nose.tools import assert_equal, nottest
+from time_intervals import Intervals
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 
 try:
-    from adaptive_scheduler.kernel.fullscheduler_v5 import *
+    from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5
 except Exception:
     pass
 import copy

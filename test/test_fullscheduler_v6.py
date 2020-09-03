@@ -8,7 +8,7 @@ August 2012
 
 from nose.tools import assert_equal
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.fullscheduler_v6 import *
+from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 import copy
 

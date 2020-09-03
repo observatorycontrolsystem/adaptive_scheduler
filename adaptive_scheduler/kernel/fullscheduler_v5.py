@@ -17,7 +17,7 @@ Dec 2012: changed to work with Reservation_v3
 import numpy
 from openopt import LP
 from scipy.sparse import coo_matrix
-from adaptive_scheduler.kernel.slicedipscheduler_v2 import *
+from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit
 
 

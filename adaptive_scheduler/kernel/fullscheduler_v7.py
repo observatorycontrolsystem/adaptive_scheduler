@@ -18,7 +18,7 @@ Feb 2014
 import numpy
 from openopt import MILP
 from scipy.sparse import coo_matrix
-from slicedipscheduler_v2 import *
+from slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit
 
 

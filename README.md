@@ -38,7 +38,7 @@ The scheduler can either be run directly on a machine, or in the provided Docker
 ### Native Run
 
 First install the requirements into a python3.4 virtualenv. There are a large number of input arguments, with defaults 
-defined in the *SchedulerParameters* class in **scheduling_input.py**.
+defined in the *SchedulerParameters* class in **adaptive_scheduler/scheduler_input.py**.
 
 `python as.py --help`
 
@@ -46,7 +46,7 @@ defined in the *SchedulerParameters* class in **scheduling_input.py**.
 
 You can build the **Dockerfile** locally with local changes by running
 
-`docker build -t name_of_my_container`
+`docker build -t name_of_my_container .`
 
 You can then update the container name in the supplied **docker-compose.yml** and run the tests using 
 

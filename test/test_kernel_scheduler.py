@@ -8,8 +8,10 @@ Dec 2012
 # TODO: write test for make_windows_consistent()
 
 from nose.tools import assert_equal
-from adaptive_scheduler.kernel.scheduler import *
-from adaptive_scheduler.kernel.reservation_v3 import *
+import copy
+from time_intervals import Intervals
+from adaptive_scheduler.kernel.scheduler import Scheduler
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 
 
 class TestScheduler(object):

@@ -9,7 +9,7 @@ November 2011
 from nose.tools import assert_equal
 
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.reservation_v3 import *
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 
 
 class TestReservation_v3(object):

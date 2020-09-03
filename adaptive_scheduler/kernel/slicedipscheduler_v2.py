@@ -13,7 +13,7 @@ Dec 2012: changed to work with Reservation_v3
 '''
 
 import math
-from adaptive_scheduler.kernel.scheduler import *
+from adaptive_scheduler.kernel.scheduler import Scheduler
 
 
 class PossibleStart(object):
