@@ -19,7 +19,7 @@ services:
 install:
 - pip install -U coverage coveralls
 - pip install 'numpy<1.17.0'
-- CVXOPT_BUILD_GLPK=1 pip install -r requirements.txt
+- CVXOPT_BUILD_GLPK=1 pip install -r requirements.pip
 script: coverage run nosetests --logging-level=WARNING test --ignore-files=requires_gurobi
 after_success: coveralls
 before_deploy:
