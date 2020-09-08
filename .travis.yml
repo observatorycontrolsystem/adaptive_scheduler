@@ -1,0 +1,34 @@
+language: python
+dist: trusty  # for Python 3.4 support
+python:
+- '3.4'
+env:
+  global:
+  - DOCKER_USERNAME='ocstravisci'
+  - secure: to-fill-in
+addons:
+  apt:
+    packages:
+    - gfortran
+    - libblas-dev
+    - liblapack-dev
+    - libglpk-dev
+    - libsuitesparse-dev
+services:
+- docker
+install:
+- pip install -U coverage coveralls
+- pip install 'numpy<1.17.0'
+- CVXOPT_BUILD_GLPK=1 pip install -r requirements.txt
+script: coverage run nosetests --logging-level=WARNING test --ignore-files=requires_gurobi
+after_success: coveralls
+before_deploy:
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+- export IMAGE=observatorycontrolsystem/adaptive_scheduler:${TRAVIS_TAG}
+- docker build -t $IMAGE .
+#deploy:
+#- provider: script
+#  script: docker push $IMAGE
+#  skip_cleanup: true
+#  on:
+#    tags: true
