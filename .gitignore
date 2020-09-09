@@ -78,3 +78,7 @@ Thumbs.db
 # Intellij #
 ############
 .idea
+
+# VS Code #
+###########
+.vscode

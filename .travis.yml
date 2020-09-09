@@ -1,0 +1,37 @@
+language: python
+dist: trusty  # for Python 3.4 support
+python:
+- '3.4'
+env:
+  global:
+  - DOCKER_USERNAME='ocstravisci'
+  - secure: to-fill-in
+addons:
+  apt:
+    packages:
+    - gfortran
+    - libblas-dev
+    - liblapack-dev
+    - libglpk-dev
+    - libsuitesparse-dev
+services:
+- docker
+install:
+- wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.2.0.tar.gz
+- tar -xf v5.2.0.tar.gz
+- pip install -U coverage coveralls
+- pip install 'numpy<1.17.0'
+- mkdir logs
+- CVXOPT_BUILD_GLPK=1 CVXOPT_SUITESPARSE_SRC_DIR=$(pwd)/SuiteSparse-5.2.0 pip install -r requirements.pip
+script: nosetests --logging-level=WARNING test --ignore-files=requires_gurobi --with-coverage
+after_success: coveralls
+before_deploy:
+- echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+- export IMAGE=observatorycontrolsystem/adaptive_scheduler:${TRAVIS_TAG}
+- docker build -t $IMAGE .
+#deploy:
+#- provider: script
+#  script: docker push $IMAGE
+#  skip_cleanup: true
+#  on:
+#    tags: true
