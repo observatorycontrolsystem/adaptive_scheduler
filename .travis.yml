@@ -1,11 +1,11 @@
 language: python
-dist: trusty  # for Python 3.4 support
+dist: trusty
 python:
 - '3.4'
 env:
   global:
   - DOCKER_USERNAME='ocstravisci'
-  - secure: to-fill-in
+  - secure: Ho25dkqDdLbE0IRl2azR4Kucvw08gYjMRuuGUFQaG/iacwOdz/MLlhtLvEvsJPX1TBc3jIBggKxgq9CzcURQbQqPUWPjOdtzs2qiQ2W3eh7PTAbLz3arfAiIPt3kh5HyzLfPRj17S6a6HS1W1Gf7VPN0bXUW9I45zR6EmOtGsDiroWKEcR4azzmSioefrzBEDNSUTo+6hWONW4Fw3V/aAdHV/NTteFDyebDkosnrQqPdXPEYVUjfAIE3WDpyRH4tnZso+1+MDNSLyBnG4Y0mQil888LG4+rlqsUWlxrXpmQvyHrfz2lTzqmPOwo6hv7XHhwvAVCOPlS3XhF09Yma00QfSKU4FFGxAZ1yWn7bmY9eU5QuBXtCmBWpv/QoPU9hi4MjVFs9P35dqf/lj9HhtK4LzNcNpEis0LOe79OM/9w6NH1wIdUKLZwVKXdl1a62t1Rbt2yPqPfnfyz4XG03xFzIUVomq7Tjqgsg8fyMpRa0pFNLgMjWBtYDLtnooiyChondjoDWP6EbqZepj4hqdHfWjlhsHOImKHrvVzH/vMYbjL/idhJhpo0WTb/cYFN2m5Ijz3l2U1D5Gaa77xnqyVEOiEwHectyLcT+sbC4y3DSKvlyJwKHfp+bpVif29xfnQqw+89qrd4maXHiPeIWC7XnzU1jaEY91ko+WlzmdRg=
 addons:
   apt:
     packages:
@@ -22,16 +22,17 @@ install:
 - pip install -U coverage coveralls
 - pip install 'numpy<1.17.0'
 - mkdir logs
-- CVXOPT_BUILD_GLPK=1 CVXOPT_SUITESPARSE_SRC_DIR=$(pwd)/SuiteSparse-5.2.0 pip install -r requirements.pip
+- CVXOPT_BUILD_GLPK=1 CVXOPT_SUITESPARSE_SRC_DIR=$(pwd)/SuiteSparse-5.2.0 pip install
+  -r requirements.pip
 script: nosetests --logging-level=WARNING test --ignore-files=requires_gurobi --with-coverage
 after_success: coveralls
 before_deploy:
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - export IMAGE=observatorycontrolsystem/adaptive_scheduler:${TRAVIS_TAG}
 - docker build -t $IMAGE .
-#deploy:
-#- provider: script
-#  script: docker push $IMAGE
-#  skip_cleanup: true
-#  on:
-#    tags: true
+deploy:
+- provider: script
+  script: docker push $IMAGE
+  skip_cleanup: true
+  on:
+    tags: true

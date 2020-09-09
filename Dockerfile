@@ -1,4 +1,4 @@
-FROM adaptive_scheduler_base:test
+FROM observatorycontrolsystem/adaptive_scheduler_base:1.0.0
 MAINTAINER Jon Nation <jnation@lco.global>
 
 # setup the python environment
