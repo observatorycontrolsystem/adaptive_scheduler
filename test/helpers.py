@@ -31,7 +31,7 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', c
         r = Request(
             configurations=configurations,
             windows=windows,
-            id=next_request_id
+            request_id=next_request_id
         )
 
         r.get_duration = Mock(return_value=duration)
@@ -51,7 +51,7 @@ def create_request_group(window_dicts, operator='and', resource_name='Martin', c
         requests=req_list,
         proposal=proposal,
         expires=None,
-        id=request_group_id,
+        rg_id=request_group_id,
         is_staff=False,
         name=None,
         ipp_value=1.0,

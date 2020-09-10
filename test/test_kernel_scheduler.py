@@ -107,6 +107,6 @@ class TestScheduler(object):
         assert self.r1 in self.sched2.unscheduled_reservation_list
 
     def test_get_reservation_by_ID(self):
-        id = self.r1.get_ID()
-        r = self.sched.get_reservation_by_ID(id)
+        request_id = self.r1.get_ID()
+        r = self.sched.get_reservation_by_ID(request_id)
         assert_equal(r, self.r1)

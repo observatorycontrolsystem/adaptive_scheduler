@@ -36,8 +36,8 @@ rg_log = RequestGroupLogger(multi_rg_log)
 
 class ObservationRunningRequest(RunningRequest):
 
-    def __init__(self, telescope, id, observation_id, start, end):
-        RunningRequest.__init__(self, telescope, id, start, end)
+    def __init__(self, telescope, request_id, observation_id, start, end):
+        RunningRequest.__init__(self, telescope, request_id, start, end)
         self.observation_id = observation_id
 
     def __str__(self):
@@ -63,7 +63,7 @@ class ObservationScheduleInterface(object):
         # TODO: Possible inefficency here.  Might be able to determine running RR intervals from running blocks wihtout another call
         self.rr_intervals_by_telescope = self._fetch_rr_intervals(telescopes, running_window_start, running_window_end)
 
-    @metric_timer('observation_portal.get_running_observations', num_blocks=lambda x: len(x))
+    @metric_timer('observation_portal.get_running_observations', num_blocks=len)
     def _fetch_running_observations(self, telescopes, end_after, start_before):
         running_observations = self._get_network_running_observations(telescopes, end_after, start_before)
         # This is just logging held over from when this was in the scheduling loop
@@ -371,7 +371,7 @@ def build_observation(reservation, semester_start, configdb_interface):
     telescope, enclosure, site = split_location(reservation.scheduled_resource)
 
     configuration_statuses = []
-    for i, configuration in enumerate(request.configurations):
+    for configuration in request.configurations:
         specific_camera = resolve_instrument(configuration.instrument_type, site,
                                              enclosure, telescope, configdb_interface)
         configuration_status = {

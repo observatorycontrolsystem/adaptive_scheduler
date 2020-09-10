@@ -7,7 +7,7 @@ Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
 more argument than usual. 
 
-This implementation uses a SPARSE matrix representation. 
+This implementation uses a SPARSE matrix representation.
 
 This implementation uses OpenOpt.MILP which gives access to CVXOPT->glpk.ilp()
 
@@ -71,8 +71,8 @@ class FullScheduler_v7(SlicedIPScheduler_v2):
             row += 1
 
             # constraint 2: each res should have one start:
-        # optimization: 
-        # if the reservation participates in a oneof, then this is 
+        # optimization:
+        # if the reservation participates in a oneof, then this is
         # redundant with the oneof constraint added above, so don't add it.
         for r in self.reservation_list:
             if hasattr(r, 'skip_constraint2'):

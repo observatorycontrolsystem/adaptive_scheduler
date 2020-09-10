@@ -151,9 +151,9 @@ def iso_string_to_datetime(iso_string):
        representation of datetime objects.'''
 
     # Set the format to the string representation of a datetime
-    format = '%Y-%m-%dT%H:%M:%SZ'
+    date_format = '%Y-%m-%dT%H:%M:%SZ'
     try:
-        d = datetime.strptime(iso_string, format)
+        d = datetime.strptime(iso_string, date_format)
     except ValueError:
         format_milli = '%Y-%m-%dT%H:%M:%S.%fZ'
         d = datetime.strptime(iso_string, format_milli)

@@ -106,38 +106,38 @@ class TestFullScheduler_v5(object):
         assert_equal(self.r14.scheduled, True)
 
     def test_schedule_all_1(self):
-        d = self.fs1.schedule_all()
+        self.fs1.schedule_all()
         assert_equal(self.r1.scheduled, False)
         assert_equal(self.r2.scheduled, True)
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
 
     def test_schedule_all_multi_resource(self):
-        d = self.fs5.schedule_all()
+        self.fs5.schedule_all()
         assert_equal(self.r7.scheduled, True)
         assert_equal(self.r2.scheduled, True)
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
 
     def test_schedule_all_multi_resource_2(self):
-        d = self.fs6.schedule_all()
+        self.fs6.schedule_all()
         assert_equal(self.r8.scheduled, True)
         assert_equal(self.r2.scheduled, True)
         assert_equal(self.r3.scheduled, True)
         assert_equal(self.r4.scheduled, False)
 
     def test_schedule_all_2(self):
-        d = self.fs2.schedule_all()
+        self.fs2.schedule_all()
         assert_equal(self.r1.scheduled, True)
         assert_equal(self.r5.scheduled, True)
 
     def test_schedule_all_3(self):
-        d = self.fs3.schedule_all()
+        self.fs3.schedule_all()
         assert_equal(self.r4.scheduled, False)
         assert_equal(self.r5.scheduled, True)
 
     def test_schedule_all_4(self):
-        d = self.fs4.schedule_all()
+        self.fs4.schedule_all()
         assert_equal(self.r2.scheduled, True)
         assert_equal(self.r6.scheduled, False)
         # either r3 or r4 should be scheduled, not both
@@ -152,7 +152,7 @@ class TestFullScheduler_v5(object):
         slice_dict['bar'] = [0, 1]
         fs = FullScheduler_v5([self.cr9],
                               self.gpw2, [], 1)
-        s = fs.schedule_all()
+        fs.schedule_all()
         # only one should be scheduled
 
     def test_schedule_5_7_2012(self):
@@ -171,9 +171,9 @@ class TestFullScheduler_v5(object):
         gpw['goo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
         fs = FullScheduler_v5([cr], gpw, [], 60)
-        schedule = fs.schedule_all()
+        fs.schedule_all()
 
     def test_schedule_all_gaw(self):
-        d = self.fs7.schedule_all()
+        self.fs7.schedule_all()
         assert_equal(self.r9.scheduled, False)
         assert_equal(self.r10.scheduled, False)

@@ -223,7 +223,7 @@ def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
 
 
 @timeit
-@metric_timer('filter_on_scheduling_horizon', num_requests=lambda x: len(x))
+@metric_timer('filter_on_scheduling_horizon', num_requests=len)
 def filter_on_scheduling_horizon(request_groups, scheduling_horizon):
     '''Filter out windows in user requests that extend beyond the scheduling
        horizon for types (single, many)
@@ -243,7 +243,7 @@ def filter_on_scheduling_horizon(request_groups, scheduling_horizon):
     # Clean up Requests without any windows
     horizon_limited_rgs = filter_on_type(horizon_limited_rgs)
     # Many's may have children with no windows that should be removed from consideration
-    removed_requests = drop_empty_requests(horizon_limited_rgs)
+    drop_empty_requests(horizon_limited_rgs)
     log.info("After filtering, %d horizon-limited rgs remain" % len(horizon_limited_rgs))
 
     # Compounds (and/oneof) are not constrained to the short-term scheduling horizon
@@ -348,7 +348,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
         pool = Pool(processes=num_processes)
         try:
             pool.map_async(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values()).get(300)
-        except TimeoutError as te:
+        except TimeoutError:
             pool.terminate()
             log.warn(
                 '300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
@@ -435,7 +435,7 @@ def intervals_to_windows(req, intersections_for_resource):
 
 
 @timeit
-@metric_timer('make_compound_reservations', num_requests=lambda x: len(x))
+@metric_timer('make_compound_reservations', num_requests=len)
 def make_compound_reservations(request_groups, semester_start):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''

@@ -115,7 +115,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[configuration],
             windows=dt_windows,
-            id=1,
+            request_id=1,
             duration=10
         )
 
@@ -124,7 +124,7 @@ class TestKernelMappings(object):
     def make_request_group(self, requests, operator='single'):
         proposal = Proposal({'id': 'TestProposal', 'tag': 'Test Proposal', 'pi': '', 'tac_priority': 10})
         rg = RequestGroup(operator=operator, requests=requests, proposal=proposal, submitter='',
-                          expires=datetime(2999, 1, 1), id=1, is_staff=False, name='test group id', ipp_value=1.0,
+                          expires=datetime(2999, 1, 1), rg_id=1, is_staff=False, name='test group id', ipp_value=1.0,
                           observation_type='NORMAL')
 
         return rg
@@ -366,7 +366,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[self.configuration],
             windows=dt_windows,
-            id='1'
+            request_id='1'
         )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -375,12 +375,12 @@ class TestKernelMappings(object):
         compute_request_availability(req, intervals_for_resource, {})
         received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
 
-        format = '%Y-%m-%d %H:%M:%S.%f'
+        date_format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
-            datetime.strptime('2011-11-01 02:02:43.257196', format),
-            datetime.strptime('2011-11-01 07:52:00.564199', format),
-            datetime.strptime('2011-11-02 02:01:50.423880', format),
-            datetime.strptime('2011-11-02 07:48:04.692316', format)
+            datetime.strptime('2011-11-01 02:02:43.257196', date_format),
+            datetime.strptime('2011-11-01 07:52:00.564199', date_format),
+            datetime.strptime('2011-11-02 02:01:50.423880', date_format),
+            datetime.strptime('2011-11-02 07:48:04.692316', date_format)
         )
 
         # Verify we get the intervals we expect
@@ -415,7 +415,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[self.configuration],
             windows=dt_windows,
-            id='1'
+            request_id='1'
         )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -426,12 +426,12 @@ class TestKernelMappings(object):
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
-        format = '%Y-%m-%d %H:%M:%S.%f'
+        date_format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
-            datetime.strptime('2011-11-01 06:00:00.0', format),
-            datetime.strptime('2011-11-01 07:52:00.564199', format),
-            datetime.strptime('2011-11-02 02:01:50.423880', format),
-            datetime.strptime('2011-11-02 06:00:00.0', format),
+            datetime.strptime('2011-11-01 06:00:00.0', date_format),
+            datetime.strptime('2011-11-01 07:52:00.564199', date_format),
+            datetime.strptime('2011-11-02 02:01:50.423880', date_format),
+            datetime.strptime('2011-11-02 06:00:00.0', date_format),
         )
 
         # Verify we get the intervals we expect
@@ -460,7 +460,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[self.configuration],
             windows=dt_windows,
-            id='1'
+            request_id='1'
         )
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -471,12 +471,12 @@ class TestKernelMappings(object):
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
-        format = '%Y-%m-%d %H:%M:%S.%f'
+        date_format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
-            datetime.strptime('2011-11-01 06:00:00.0', format),
-            datetime.strptime('2011-11-01 07:52:00.564199', format),
-            datetime.strptime('2011-11-02 02:01:50.423880', format),
-            datetime.strptime('2011-11-02 04:00:00.0', format),
+            datetime.strptime('2011-11-01 06:00:00.0', date_format),
+            datetime.strptime('2011-11-01 07:52:00.564199', date_format),
+            datetime.strptime('2011-11-02 02:01:50.423880', date_format),
+            datetime.strptime('2011-11-02 04:00:00.0', date_format),
         )
 
         # Verify we get the intervals we expect
@@ -522,7 +522,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[configuration],
             windows=dt_windows,
-            id='1',
+            request_id='1',
             duration=10,
         )
         sem_start = datetime(2013, 3, 1, 0, 0, 0)
@@ -589,7 +589,7 @@ class TestKernelMappings(object):
         req = Request(
             configurations=[configuration],
             windows=dt_windows,
-            id='1',
+            request_id='1',
             duration=10,
         )
         sem_start = datetime(2013, 3, 1, 0, 0, 0)
@@ -622,7 +622,6 @@ class TestKernelMappings(object):
         sem_start = datetime(2012, 10, 1)
 
         # Resource is available from 3-7
-
         dt0 = datetime(2013, 3, 22, 3)
         dt1 = datetime(2013, 3, 22, 7)
 
@@ -656,8 +655,8 @@ class TestKernelMappings(object):
                                           datetime_to_epoch(sem_start))
         r1 = normalised_epoch_to_datetime(timepoints[1]['time'],
                                           datetime_to_epoch(sem_start))
-        r2 = normalised_epoch_to_datetime(timepoints[2]['time'],
-                                          datetime_to_epoch(sem_start))
+        # r2 = normalised_epoch_to_datetime(timepoints[2]['time'],
+        #                                   datetime_to_epoch(sem_start))
         r3 = normalised_epoch_to_datetime(timepoints[3]['time'],
                                           datetime_to_epoch(sem_start))
         assert_equal(r0, dt0)

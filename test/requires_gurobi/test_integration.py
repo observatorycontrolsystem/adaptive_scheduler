@@ -109,57 +109,65 @@ class TestIntegration(object):
 
         self.request_1 = Request(configurations=[self.configuration],
                                  windows=self.windows_1,
-                                 id=1,
+                                 request_id=1,
                                  duration=1750)
 
         self.request_2 = Request(configurations=[self.configuration],
                                  windows=self.windows_2,
-                                 id=2,
+                                 request_id=2,
                                  duration=1750)
 
         self.request_3 = Request(configurations=[self.configuration],
                                  windows=self.windows_2,
-                                 id=3,
+                                 request_id=3,
                                  duration=1750)
 
         self.request_4 = Request(configurations=[self.configuration],
                                  windows=self.windows_3,
-                                 id=4,
+                                 request_id=4,
                                  duration=1750)
 
         self.request_5 = Request(configurations=[self.configuration],
                                  windows=self.windows_3,
-                                 id=5,
+                                 request_id=5,
                                  duration=1750)
 
         self.and_request_group_1 = RequestGroup(operator='and', requests=[self.request_1, self.request_2],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                id=1, is_staff=False, observation_type='NORMAL',
+                                                rg_id=1, is_staff=False, observation_type='NORMAL',
                                                 ipp_value=1.0, name='ur 1', submitter='')
         self.and_request_group_2 = RequestGroup(operator='and', requests=[self.request_3, self.request_4],
                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                id=2, is_staff=False, observation_type='NORMAL',
+                                                rg_id=2, is_staff=False, observation_type='NORMAL',
                                                 ipp_value=1.0, name='ur 2', submitter='')
         self.many_request_group_1 = RequestGroup(operator='many', requests=[self.request_1, self.request_2],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                 id=3, is_staff=False, observation_type='NORMAL',
+                                                 rg_id=3, is_staff=False, observation_type='NORMAL',
                                                  ipp_value=1.5, name='ur 3', submitter='')
         self.many_request_group_2 = RequestGroup(operator='many', requests=[self.request_3, self.request_4],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                                 id=4, is_staff=False, observation_type='NORMAL',
+                                                 rg_id=4, is_staff=False, observation_type='NORMAL',
                                                  ipp_value=1.5, name='ur 4', submitter='')
         self.rr_request_group_1 = RequestGroup(operator='many', requests=[self.request_5],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                               id=5, is_staff=False, observation_type='RAPID_RESPONSE',
+                                               rg_id=5, is_staff=False, observation_type='RAPID_RESPONSE',
                                                ipp_value=1.5, name='ur 5', submitter='')
         self.rr_request_group_2 = RequestGroup(operator='many', requests=[self.request_1, self.request_3],
                                                proposal=self.proposal, expires=datetime(2050, 1, 1),
-                                               id=6, is_staff=False, observation_type='RAPID_RESPONSE',
+                                               rg_id=6, is_staff=False, observation_type='RAPID_RESPONSE',
                                                ipp_value=1.5, name='ur 6', submitter='')
 
     def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
-                           block_schedule_by_resource={}, running_request_groups=[], rapid_response_ids=[],
-                           semester_details={}):
+                           block_schedule_by_resource=None, running_request_groups=None, rapid_response_ids=None,
+                           semester_details=None):
+        if block_schedule_by_resource is None:
+            block_schedule_by_resource = {}
+        if running_request_groups is None:
+            running_request_groups = []
+        if rapid_response_ids is None:
+            rapid_response_ids = []
+        if semester_details is None:
+            semester_details = {}
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
         scheduler = LCOGTNetworkScheduler(FullScheduler_gurobi, sched_params, event_bus_mock, self.telescopes)
@@ -205,13 +213,13 @@ class TestIntegration(object):
         semester_details = {'id': '2015A', 'start': scheduler_time - timedelta(days=150),
                             'end': scheduler_time + timedelta(days=150)}
 
-        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
+        scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
                                          preemption_enabled=False)
         assert scheduler.visibility_cache != {}
         saved_visibility_cache = scheduler.visibility_cache
         # Now run again with a different semester to clear visibility cache
         semester_details['start'] = scheduler_time - timedelta(days=149)
-        result = scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
+        scheduler.run_scheduler(scheduler_input, scheduler_time + timedelta(minutes=15), semester_details,
                                          preemption_enabled=False)
         assert scheduler.visibility_cache != {}
         assert scheduler.visibility_cache != saved_visibility_cache
@@ -277,13 +285,13 @@ class TestIntegration(object):
             windows.append(window)
             request = Request(configurations=[self.configuration],
                               windows=windows,
-                              id=int("11{}".format(days_out).rjust(10, '0')),
+                              request_id=int("11{}".format(days_out).rjust(10, '0')),
                               duration=1750)
             request_list.append(request)
             days_out += 1
 
         request_group = RequestGroup(operator='and', requests=request_list, proposal=self.proposal,
-                                     expires=datetime(2050, 1, 1), id=100, is_staff=False,
+                                     expires=datetime(2050, 1, 1), rg_id=100, is_staff=False,
                                      ipp_value=1.0, name='large ur', submitter='', observation_type='NORMAL')
 
         normal_request_list = [request_group, ]

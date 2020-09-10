@@ -35,7 +35,7 @@ class TestReportOutcome(object):
         res1 = Reservation(Request(1), mock_cr1)
         res2 = Reservation(Request(2), mock_cr2)
         reservation_list1 = [res1, res2]
-        compound_reservation1 = CompoundReservation(reservation_list1, type='and')
+        compound_reservation1 = CompoundReservation(reservation_list1, cr_type='and')
         to_schedule = [compound_reservation1]
 
         scheduled_reservations = [res2]

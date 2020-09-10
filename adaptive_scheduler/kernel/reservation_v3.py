@@ -25,13 +25,13 @@ class Reservation_v3(object):
         self.duration = int(duration)
         self.previous_solution_reservation = previous_solution_reservation
         self.possible_windows_dict = possible_windows_dict
-        # free_windows keeps track of which of the possible_windows 
+        # free_windows keeps track of which of the possible_windows
         # are free.
         self.free_windows_dict = copy.deepcopy(self.possible_windows_dict)
         # clean up free windows by removing ones that are too small:
         for resource in self.free_windows_dict.keys():
             self.clean_up_free_windows(resource)
-        # set a unique resID. 
+        # set a unique resID.
         # ALERT: possible pitfall! Mixing incremented resID's and assigned
         # resID's is unsafe, because they can clash. Pick one and stick with
         # it. Either always let the class do IDs or always assign them.
@@ -82,7 +82,7 @@ class Reservation_v3(object):
             self.compound_reservation_parent.unschedule()
 
     def __str__(self):
-        str = "Reservation ID: {0} \
+        msg = "Reservation ID: {0} \
         \n\tpriority: {1} \
         \n\tduration: {2} \
         \n\tpossible windows dict: {3}\
@@ -91,9 +91,9 @@ class Reservation_v3(object):
                                         self.possible_windows_dict,
                                         self.scheduled)
         if self.scheduled:
-            str += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n".format(
+            msg += "\t\tscheduled start: {0}\n\t\tscheduled quantum: {1}\n\t\tscheduled resource: {2}\n\t\tscheduled by: {3}\n".format(
                 self.scheduled_start, self.scheduled_quantum, self.scheduled_resource, self.scheduled_by)
-        return str
+        return msg
 
     def __repr__(self):
         return str(self.serialise())
@@ -150,29 +150,29 @@ class CompoundReservation_v2(object):
         'many': 'Any of the provided blocks are to be scheduled individually'
     }
 
-    def __init__(self, reservation_list, type='single'):
+    def __init__(self, reservation_list, cr_type='single'):
         self.reservation_list = reservation_list
         for r in self.reservation_list:
             r.compound_reservation_parent = self
-        self.type = type
+        self.type = cr_type
         # allowed types are:
         # single
         # oneof
         # and
         self.size = len(reservation_list)
-        if type == 'single' and self.size > 1:
+        if cr_type == 'single' and self.size > 1:
             msg = ("Initializing a CompoundReservation as 'single' but with %d "
                    "individual reservations. Ignoring all but the first."
                    % self.size)
             print(msg)
             self.size = 1
             self.reservation_list = [reservation_list.pop(0)]
-        if (type == 'and') and (self.size == 1):
+        if (cr_type == 'and') and (self.size == 1):
             msg = ("Initializing a CompoundReservation as 'and' but with %d "
                    "individual reservation."
                    % self.size)
             print(msg)
-        if type == 'oneof' and self.size == 1:
+        if cr_type == 'oneof' and self.size == 1:
             msg = ("Initializing a CompoundReservation as 'oneof' but with %d "
                    "individual reservation."
                    % self.size)

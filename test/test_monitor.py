@@ -127,7 +127,7 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                     'value': value})
 
 
-def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=[], instance=None):
+def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=None, instance=None):
     if datum == 'Available For Scheduling':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]

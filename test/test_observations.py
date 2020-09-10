@@ -143,7 +143,6 @@ class TestObservationInteractions(object):
 
     @responses.activate
     def test_cancel_blocks_called_when_dry_run_not_set(self):
-        reason = 'Superceded by new schedule'
         ids = list(range(10))
         host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
         cancel_endpoint = host + '/api/observations/cancel/'
@@ -206,7 +205,7 @@ class TestObservationInteractions(object):
             requests=None,
             proposal=proposal,
             expires=None,
-            id=333333,
+            rg_id=333333,
             is_staff=False,
             name=None,
             ipp_value=1.0,
@@ -225,7 +224,7 @@ class TestObservationInteractions(object):
         request = Request(
             configurations=[configuration],
             windows=None,
-            id=22222
+            request_id=22222
         )
 
         reservation.request = request
@@ -258,7 +257,7 @@ class TestObservationInteractions(object):
             requests=None,
             proposal=proposal,
             expires=None,
-            id=333333,
+            rg_id=333333,
             is_staff=False,
             name=None,
             ipp_value=1.0,
@@ -277,7 +276,7 @@ class TestObservationInteractions(object):
         request = Request(
             configurations=[configuration],
             windows=None,
-            id=22223,
+            request_id=22223,
         )
 
         reservation.request = request

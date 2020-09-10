@@ -18,8 +18,8 @@ class ScheduleException(Exception):
 
 class RunningRequestGroup(object):
 
-    def __init__(self, id, *running_requests):
-        self.id = int(id)
+    def __init__(self, rg_id, *running_requests):
+        self.id = int(rg_id)
         self.running_requests = list(running_requests)
 
     def add_running_request(self, running_request):
@@ -34,9 +34,9 @@ class RunningRequestGroup(object):
 
 class RunningRequest(object):
 
-    def __init__(self, resource, id, start, end):
+    def __init__(self, resource, r_id, start, end):
         self.resource = resource
-        self.id = int(id)
+        self.id = int(r_id)
         self.start = start
         self.end = end
         self._errors = []

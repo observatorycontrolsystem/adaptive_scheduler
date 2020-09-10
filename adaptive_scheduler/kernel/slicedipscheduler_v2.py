@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-SlicedIPScheduler class for co-scheduling reservations 
+SlicedIPScheduler class for co-scheduling reservations
 across multiple resources using time-slicing and an integer program.
 
 Because time is discretized into time slices, this scheduler requires
@@ -70,10 +70,10 @@ class SlicedIPScheduler_v2(Scheduler):
         # first we need to build up the list of discretized slices that each
         # reservation can begin in. These are represented as attributes
         # that get attached to the reservation object. 
-        # The new attributes are: 
+        # The new attributes are:
         # slices_dict
         # internal_starts_dict
-        # and the dicts are keyed by resource. 
+        # and the dicts are keyed by resource.
         # the description of slices and internal starts is in intervals.py
         for r in self.reservation_list:
             r.Yik_entries = []
@@ -113,7 +113,7 @@ class SlicedIPScheduler_v2(Scheduler):
                 start_idx = self.Yik[idx][1]
                 resource = self.Yik[idx][3]
                 reservation = self.get_reservation_by_ID(resID)
-                # use the internal_start for the start  
+                # use the internal_start for the start
                 start = reservation.possible_starts[start_idx].internal_start
                 # the quantum is the length of all the slices we've occupied
                 quantum = reservation.possible_starts[start_idx].all_slice_starts[-1] + \
@@ -124,14 +124,14 @@ class SlicedIPScheduler_v2(Scheduler):
         return self.schedule_dict
 
     def get_slices(self, intervals, resource, duration):
-        ''' Creates two things: 
-        * slices: list of lists. Each inner list is a window. The first 
+        ''' Creates two things:
+        * slices: list of lists. Each inner list is a window. The first
         element is the initial slice, and each subsequent slice is also
-        occupied. All slices are aligned with slice_alignment, and are 
+        occupied. All slices are aligned with slice_alignment, and are
         slice_length long.
-        * internal_starts: list of values, one per inner list of slices. 
-        Each internal_start can be either equal to the corresponding 
-        slices[0], in which case it's not internal, or > than it, being 
+        * internal_starts: list of values, one per inner list of slices.
+        Each internal_start can be either equal to the corresponding
+        slices[0], in which case it's not internal, or > than it, being
         internal.
         Returns: a list of PossibleStart objects'''
 
@@ -153,7 +153,6 @@ class SlicedIPScheduler_v2(Scheduler):
                             float(t['time'] - slice_alignment) / float(slice_length)) * slice_length)
                         # use the actual start as an internal start (may or may not align w/ slice_alignment)
                         internal_start = t['time']
-                    end_time = internal_start + duration
                 elif t['type'] == 'end':
                     if t['time'] < slice_alignment:
                         continue

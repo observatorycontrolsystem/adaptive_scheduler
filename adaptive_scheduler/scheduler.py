@@ -59,7 +59,7 @@ class Scheduler(SendMetricMixin):
     def compute_optimal_combination(self, value_dict, request_group_ids, resources):
         '''
         Compute combination of telescope to request group id that has the highest value
-    
+
         NOTE: This schedule assumes that each request group only needs one
               telescope to run (no compound requests).
         '''
@@ -105,7 +105,7 @@ class Scheduler(SendMetricMixin):
     def remove_singles(self, request_groups):
         self.log.info("Compound Request support (single) disabled at the command line")
         self.log.info("Compound Requests of type 'single' will be ignored")
-        singles, others = differentiate_by_type(cr_type='single', crs=request_groups)
+        _, others = differentiate_by_type(operator='single', rgs=request_groups)
 
         return others
 
@@ -403,7 +403,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return schedulable_rgs, unschedulable_rgs
 
-    @metric_timer('apply_window_filters', num_requests=lambda x: len(x))
+    @metric_timer('apply_window_filters', num_requests=len)
     def apply_window_filters(self, request_groups, estimated_scheduler_end, semester_details,
                              extra_downtime_by_resource):
         ''' Returns the set of RGs with windows adjusted to include only RGs with windows
@@ -430,7 +430,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         return filtered_window_request_groups
 
-    @metric_timer('prepare_for_kernel', num_requests=lambda x: len(x))
+    @metric_timer('prepare_for_kernel', num_requests=len)
     def prepare_for_kernel(self, window_adjusted_rgs, semester_details):
         ''' Convert RG model to formalization expected by the scheduling kernel
         '''
@@ -507,16 +507,16 @@ class SchedulerResult(object):
     def __init__(self, schedule=None, resource_schedules_to_cancel=None):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
-        resource_schedules_to_cancel - List of resources to cancel schedules on - this is the list of all available 
-            resources that have any request scheduled on them. Resources with no requests scheduled on them will be 
-            removed from the list.
+        resource_schedules_to_cancel - List of resources to cancel schedules on - this is the list of all available
+        resources that have any request scheduled on them. Resources with no requests scheduled on them will be
+        removed from the list.
         '''
         self.schedule = schedule if schedule else {}
         self.resource_schedules_to_cancel = resource_schedules_to_cancel if resource_schedules_to_cancel else []
 
     def count_reservations(self):
         reservation_cnt = 0
-        for resource, reservations in self.schedule.items():
+        for reservations in self.schedule.values():
             reservation_cnt += len(reservations)
 
         return reservation_cnt
@@ -680,7 +680,7 @@ class SchedulerRunner(object):
 
     def abort_running_requests(self, abort_requests):
         n_aborted = 0
-        for rr, reasons in abort_requests:
+        for rr, _ in abort_requests:
             n_aborted += self.network_interface.abort(rr)
 
         return n_aborted

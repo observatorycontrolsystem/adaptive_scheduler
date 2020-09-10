@@ -32,4 +32,4 @@ class TestMovingObjectUtils(object):
     @raises(InvalidElements)
     def test_invalid_scheme_raises_exception(self):
         self.elements['scheme'] = 'nonsense'
-        target = OrbitalElementsTarget(self.elements)
+        OrbitalElementsTarget(self.elements)

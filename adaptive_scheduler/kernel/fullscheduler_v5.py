@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 '''
-FullScheduler_v5 class for co-scheduling reservations 
+FullScheduler_v5 class for co-scheduling reservations
 across multiple resources using time-slicing and an integer program.
 
 Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
-more argument than usual. 
+more argument than usual.
 
-This implementation uses a SPARSE matrix representation. 
+This implementation uses a SPARSE matrix representation.
 
 Author: Sotiria Lampoudi (slampoud@gmail.com)
 Sept 2012
@@ -71,7 +71,7 @@ class FullScheduler_v5(SlicedIPScheduler_v2):
 
             # constraint 2: each res should have one start:
         # optimization: 
-        # if the reservation participates in a oneof, then this is 
+        # if the reservation participates in a oneof, then this is
         # redundant with the oneof constraint added above, so don't add it.
         for r in self.reservation_list:
             if hasattr(r, 'skip_constraint2'):

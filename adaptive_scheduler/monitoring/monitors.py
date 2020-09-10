@@ -116,7 +116,7 @@ class ElasticsearchDataMonitor(NetworkStateMonitor):
 
     @staticmethod
     def _sort_by_site_and_observatory(datum_tuple):
-        datum_name, datum = datum_tuple
+        _, datum = datum_tuple
         return datum.site, datum.observatory
 
     @staticmethod

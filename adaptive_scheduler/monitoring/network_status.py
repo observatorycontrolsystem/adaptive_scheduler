@@ -22,8 +22,6 @@ May 2013
 from adaptive_scheduler.monitoring.monitors import OfflineResourceMonitor, AvailableForScheduling
 from adaptive_scheduler.monitoring.elasticearch_telemetry import ConnectionError
 
-from elasticsearch import Elasticsearch
-
 import logging
 
 log = logging.getLogger(__name__)
