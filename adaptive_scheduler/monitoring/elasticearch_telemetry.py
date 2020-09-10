@@ -20,7 +20,7 @@ def get_datum(datum_name, elasticsearch_url, es_index, es_excluded_observatories
 
     try:
         results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
-    except Exception as e:
+    except Exception:
         # retry one time in case this was a momentary outage which happens occasionally
         try:
             results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
@@ -84,7 +84,7 @@ def _timestamp(value):
     return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
 
 
-NULL_CONVERSION = lambda x: str(x)
+NULL_CONVERSION = str
 MAPPING = {
     'datuminstance': ('instance', NULL_CONVERSION),
     'site': ('site', NULL_CONVERSION),

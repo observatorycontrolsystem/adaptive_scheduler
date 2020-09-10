@@ -358,7 +358,7 @@ class SchedulingInputProvider(object):
         if self.sched_params.simulate_now:
             try:
                 now = iso_string_to_datetime(self.sched_params.simulate_now)
-            except ValueError as e:
+            except ValueError:
                 raise SchedulingInputException(
                     "Invalid datetime provided on command line. Try e.g. '2012-03-03 09:05:00'.")
         # ...otherwise offset 'now' to account for the duration of the scheduling run

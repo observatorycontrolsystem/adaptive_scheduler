@@ -95,21 +95,21 @@ class TestRequest(object):
         junk_res_type = 'chocolate'
         request = Request(configurations=[self.configuration],
                           windows=self.windows,
-                          id=self.id,
+                          request_id=self.id,
                           )
-        request_group = RequestGroup(operator=junk_res_type, requests=[request], name='Group 1', proposal=Proposal(),
-                                     id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
-                                     expires=datetime(2999, 1, 1), submitter='')
+        RequestGroup(operator=junk_res_type, requests=[request], name='Group 1', proposal=Proposal(),
+                     rg_id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
+                     expires=datetime(2999, 1, 1), submitter='')
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
         request = Request(configurations=[self.configuration],
                           windows=self.windows,
-                          id=self.id,
+                          request_id=self.id,
                           )
-        request_group = RequestGroup(operator=valid_res_type, requests=[request], name='Group 1', proposal=Proposal(),
-                                     id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
-                                     expires=datetime(2999, 1, 1), submitter='')
+        RequestGroup(operator=valid_res_type, requests=[request], name='Group 1', proposal=Proposal(),
+                     rg_id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
+                     expires=datetime(2999, 1, 1), submitter='')
 
 
 class TestRequestGroup(object):
@@ -127,7 +127,7 @@ class TestRequestGroup(object):
             requests=[],
             proposal=None,
             expires=None,
-            id=request_group_id,
+            rg_id=request_group_id,
             is_staff=False,
             name=None,
             ipp_value=1.0,
@@ -211,7 +211,7 @@ class TestRequestGroup(object):
         r = Request(
             configurations=[configuration1],
             windows=windows,
-            id='0000000003',
+            request_id='0000000003',
             duration=10
         )
 
@@ -220,7 +220,7 @@ class TestRequestGroup(object):
             requests=[r],
             proposal=proposal,
             expires=None,
-            id=4,
+            rg_id=4,
             is_staff=False,
             ipp_value=ipp_value,
             observation_type='NORMAL',
@@ -251,7 +251,7 @@ class TestRequestGroup(object):
         r_mock2.has_windows.return_value = False
 
         rg = RequestGroup(operator='many', requests=[r_mock1, r_mock2], name='Group 1', proposal=Proposal(),
-                          id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
+                          rg_id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0, expires=datetime(2999, 1, 1),
                           submitter='')
 
         rg.drop_empty_children()
@@ -437,7 +437,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
 
-        request = self.mb.build_request(req_dict, is_staff=False)
+        self.mb.build_request(req_dict, is_staff=False)
 
     @raises(RequestError)
     def test_build_request_2m_sbig_doesnt_resolve_when_location_not_set(self):
@@ -456,7 +456,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
 
-        request = self.mb.build_request(req_dict, is_staff=True)
+        self.mb.build_request(req_dict, is_staff=True)
 
     def test_build_request_2m_sbig_resolves_when_staff(self):
         location = self.location.copy()
@@ -532,7 +532,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
 
-        request = self.mb.build_request(req_dict)
+        self.mb.build_request(req_dict)
 
     @raises(RequestError)
     def test_dont_accept_cameras_not_present_on_a_subnetwork(self):
@@ -547,7 +547,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
 
-        request = self.mb.build_request(req_dict)
+        self.mb.build_request(req_dict)
 
     @raises(RequestError)
     def test_dont_accept_filters_not_present_on_a_subnetwork(self):
@@ -562,7 +562,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
 
-        request = self.mb.build_request(req_dict)
+        self.mb.build_request(req_dict)
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
@@ -589,7 +589,7 @@ class TestModelBuilder(object):
             'observation_type': 'NORMAL',
         }
 
-        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
+        request_group_model, _ = self.mb.build_request_group(cr_dict)
         assert_equal(request_group_model.observation_type, 'NORMAL')
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
@@ -646,7 +646,7 @@ class TestModelBuilder(object):
             'observation_type': 'ABNORMAL',
         }
 
-        request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
+        self.mb.build_request_group(cr_dict)
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')

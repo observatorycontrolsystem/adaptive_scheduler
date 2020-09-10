@@ -85,7 +85,7 @@ class ObservationPortalInterface(SendMetricMixin):
         return last_changed
 
     @timeit
-    @metric_timer('requestdb.get_requests', num_requests=lambda x: len(x))
+    @metric_timer('requestdb.get_requests', num_requests=len)
     def get_all_request_groups(self, start, end):
         ''' Get all user requests waiting for scheduling between
             start and end date

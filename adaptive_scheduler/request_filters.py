@@ -263,7 +263,7 @@ def filter_on_duration(rg_list, filter_executor=_for_all_rg_windows):
         # Transparently handle either float (in seconds) or datetime durations
         try:
             duration = timedelta(seconds=r.duration)
-        except TypeError as e:
+        except TypeError:
             duration = r.duration
 
         if w.end - w.start > duration:

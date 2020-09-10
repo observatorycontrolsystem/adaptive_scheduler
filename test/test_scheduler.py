@@ -17,6 +17,36 @@ from datetime import datetime, timedelta
 from functools import reduce
 
 
+def build_rg_list(*request_group_ids):
+    rg_list = []
+    for request_group_id in request_group_ids:
+        rg = RequestGroup(
+            operator='single',
+            requests=None,
+            proposal=None,
+            rg_id=request_group_id,
+            is_staff=False,
+            observation_type='NORMAL',
+            name=None,
+            expires=None,
+            ipp_value=1.0,
+            submitter=''
+        )
+
+        rg_list.append(rg)
+
+    return rg_list
+
+
+def is_scheduled(request_id, schedule):
+    for resource, reservations in schedule.items():
+        for reservation in reservations:
+            if reservation.request.id == request_id:
+                return True
+
+    return False
+
+
 class TestScheduler(object):
 
     def __init__(self):
@@ -43,24 +73,6 @@ class TestScheduler(object):
                               'start': (datetime.utcnow() - timedelta(days=30)),
                               'end': (datetime.utcnow() + timedelta(days=30))}
 
-    def build_rg_list(self, *request_group_ids):
-        rg_list = []
-        for request_group_id in request_group_ids:
-            rg = RequestGroup(
-                operator='single',
-                requests=None,
-                proposal=None,
-                id=request_group_id,
-                is_staff=False,
-                name=None,
-                expires=None,
-                ipp_value=1.0
-            )
-
-            rg_list.append(rg)
-
-        return rg_list
-
     def test_run_scheduler_with_mocked_interfaces(self):
         event_bus_mock = Mock()
         sched_params = SchedulerParameters()
@@ -72,7 +84,6 @@ class TestScheduler(object):
         network_snapshot_mock.blocked_intervals = Mock(return_value=Intervals())
         network_snapshot_mock.running_requests_for_resources = Mock(return_value=[])
         network_snapshot_mock.request_groups_for_resource = Mock(return_value=[])
-        network_model = ['', ]
         estimated_scheduler_runtime = timedelta(seconds=300)
 
         kernel_class_mock = Mock()
@@ -421,7 +432,7 @@ class TestScheduler(object):
                                                    self.fake_semester, preemption_enabled=False)
 
         # Start assertions
-        assert_true(self.is_scheduled(1, scheduler_result.schedule))
+        assert_true(is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(request_id, scheduler_result.schedule))
         assert_true(self.is_schedule_on_resource(request_id, scheduler_result.schedule, target_telescope))
         assert_true(
@@ -490,7 +501,7 @@ class TestScheduler(object):
                                                    self.fake_semester, preemption_enabled=True)
 
         # Start assertions
-        assert_true(self.is_scheduled(1, scheduler_result.schedule))
+        assert_true(is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(request_id, scheduler_result.schedule))
         assert_true(
             self.doesnt_start_before(request_id, scheduler_result.schedule, available_start, self.normalize_windows_to))
@@ -538,10 +549,9 @@ class TestScheduler(object):
             available_intervals)
 
         # Create unmocked Scheduler parameters
-        scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
+        datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
         rr_request_groups = [rr_single_rg]
         normal_request_groups = [normal_single_rg]
-        normal_request_groups_priority_by_id = {rg.id: rg.priority for rg in normal_request_groups}
 
         # Make the normal user request appear to be running
         running_request = RunningRequest('1m0a.doma.lsc', normal_request_id, Mock(), Mock())
@@ -574,7 +584,7 @@ class TestScheduler(object):
         # This checks to see that windows are only created for the correct telescope resources
         assert_equal(1, prepare_for_kernel_mock.call_count)
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
-        assert_true(self.is_scheduled(1, scheduler_result.schedule))
+        assert_true(is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(rr_request_id, scheduler_result.schedule))
         assert_true(self.is_schedule_on_resource(rr_request_id, scheduler_result.schedule, '1m0a.doma.elp'))
         assert_true(self.doesnt_start_before(rr_request_id, scheduler_result.schedule, available_start,
@@ -633,10 +643,9 @@ class TestScheduler(object):
             available_intervals)
 
         # Create unmocked Scheduler parameters
-        scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
+        datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
         rr_request_groups = [rr_single_rg]
         normal_request_groups = [low_priority_normal_single_rg, high_priority_normal_single_rg]
-        normal_request_groups_priority_by_id = {rg.id: rg.priority for rg in normal_request_groups}
 
         # Make the normal user request appear to be running
         low_priority_running_request = RunningRequest('1m0a.doma.lsc', low_priority_normal_request_id, Mock(), Mock())
@@ -675,7 +684,7 @@ class TestScheduler(object):
         assert_equal(1, prepare_for_kernel_mock.call_count)
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
 
-        assert_true(self.is_scheduled(1, scheduler_result.schedule))
+        assert_true(is_scheduled(1, scheduler_result.schedule))
         assert_equal(1, self.number_of_times_scheduled(rr_request_id, scheduler_result.schedule))
         assert_true(self.is_schedule_on_resource(rr_request_id, scheduler_result.schedule, '1m0a.doma.lsc'))
         assert_true(self.doesnt_start_before(rr_request_id, scheduler_result.schedule, available_start,
@@ -731,7 +740,7 @@ class TestScheduler(object):
             available_intervals)
 
         # Create unmocked Scheduler parameters
-        scheduler_run_end = datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
+        datetime.strptime("2013-05-22 00:00:00", '%Y-%m-%d %H:%M:%S')
         rr_request_groups = [new_rr_single_rg, old_low_priority_rr_single_rg, old_high_priority_rr_single_rg]
 
         # Make the normal user request appear to be running
@@ -774,9 +783,9 @@ class TestScheduler(object):
         assert_equal(1, prepare_for_kernel_mock.call_count)
         assert_equal(1, prepare_available_windows_for_kernel_mock.call_count)
 
-        assert_false(self.is_scheduled(1, scheduler_result.schedule))
-        assert_false(self.is_scheduled(2, scheduler_result.schedule))
-        assert_false(self.is_scheduled(3, scheduler_result.schedule))
+        assert_false(is_scheduled(1, scheduler_result.schedule))
+        assert_false(is_scheduled(2, scheduler_result.schedule))
+        assert_false(is_scheduled(3, scheduler_result.schedule))
 
         assert_equal([], scheduler_result.resource_schedules_to_cancel)
 
@@ -829,24 +838,16 @@ class TestScheduler(object):
 
         # Start assertions
         assert_equal({}, scheduler_result.schedule)
-        assert_false(self.is_scheduled(request_id, scheduler_result.schedule))
+        assert_false(is_scheduled(request_id, scheduler_result.schedule))
         assert_equal([], sorted(scheduler_result.resource_schedules_to_cancel))
 
         # Make sure the prepare_for_kernel_mock is called once with empty Request Group list
         assert_equal(1, prepare_for_kernel_mock.call_count)
         assert_equal([], prepare_for_kernel_mock.call_args[0][0])
 
-    def is_scheduled(self, request_id, schedule):
-        for resource, reservations in schedule.items():
-            for reservation in reservations:
-                if reservation.request.id == request_id:
-                    return True
-
-        return False
-
     def number_of_times_scheduled(self, request_id, schedule):
         times_scheduled = 0
-        for resource, reservations in schedule.items():
+        for reservations in schedule.values():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     times_scheduled += 1
@@ -861,7 +862,7 @@ class TestScheduler(object):
         return False
 
     def doesnt_start_before(self, request_id, schedule, when, normalize_to):
-        for resource, reservations in schedule.items():
+        for reservations in schedule.values():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if normalize_to + timedelta(seconds=reservation.scheduled_start) < when:
@@ -870,7 +871,7 @@ class TestScheduler(object):
         return True
 
     def doesnt_start_after(self, request_id, schedule, when, normalize_to):
-        for resource, reservations in schedule.items():
+        for reservations in schedule.values():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if normalize_to + timedelta(seconds=reservation.scheduled_start) > when:
@@ -880,7 +881,7 @@ class TestScheduler(object):
 
     def scheduled_duration_is(self, request_id, schedule, slice_size, request_duration):
         expected_duration = (((request_duration - 1) // slice_size) + 1) * slice_size
-        for resource, reservations in schedule.items():
+        for reservations in schedule.values():
             for reservation in reservations:
                 if reservation.request.id == request_id:
                     if reservation.scheduled_quantum != expected_duration:
@@ -895,15 +896,9 @@ class TestScheduler(object):
             for resource, windows in request.windows:
                 start_end_tuples = []
                 for window in windows:
-                    #                     start = datetime.strptime(window.start, '%Y-%m-%d %H:%M:%S')
-                    #                     end = datetime.strptime(window.end, '%Y-%m-%d %H:%M:%S')
                     start_end_tuples.append((window.start, window.end))
                     intervals = self.build_intervals(start_end_tuples, normalize_windows_to)
                     intervals_by_resource[resource] = intervals
-
-            #             window_dict = {}
-            #             for resource in resources:
-            #                 window_dict[resource] = intervals
 
             res = Reservation(rg.priority, request.duration, intervals_by_resource)
             res.request = request
@@ -984,8 +979,14 @@ def create_scheduler_input(request_groups, block_schedule_by_resource, running_r
     return input_mock
 
 
-def create_scheduler_input_factory(rr_request_groups, normal_request_groups, block_schedule_by_resource={},
-                                   running_request_groups=[], rr_request_group_ids=[]):
+def create_scheduler_input_factory(rr_request_groups, normal_request_groups, block_schedule_by_resource=None,
+                                   running_request_groups=None, rr_request_group_ids=None):
+    if running_request_groups is None:
+        running_request_groups = []
+    if rr_request_group_ids is None:
+        rr_request_group_ids = []
+    if block_schedule_by_resource is None:
+        block_schedule_by_resource = {}
     rr_input_mock = create_scheduler_input(rr_request_groups, {}, running_request_groups, rr_request_group_ids)
     normal_input_mock = create_scheduler_input(normal_request_groups, block_schedule_by_resource,
                                                running_request_groups,

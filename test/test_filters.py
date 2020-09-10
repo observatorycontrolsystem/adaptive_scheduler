@@ -42,7 +42,7 @@ class TestExpiryFilter(object):
             requests=None,
             proposal=None,
             expires=expiry_dt,
-            id='0000000005',
+            rg_id='0000000005',
             is_staff=False,
             name=None,
             ipp_value=1.0,
@@ -185,7 +185,7 @@ class TestWindowFilters(object):
             'end': "2013-03-01T01:00:00Z",
         }
         windows = [(window_dict1,)]
-        rg1, window_list = self.create_request_group(windows)
+        rg1, _ = self.create_request_group(windows)
 
         received_rg_list = truncate_lower_crossing_windows([rg1])
 
@@ -208,7 +208,7 @@ class TestWindowFilters(object):
         window_end = datetime.strptime(window_dict1['end'], '%Y-%m-%dT%H:%M:%SZ')
         expire_time = min(window_end, self.semester_end)
 
-        rg1, window_list = self.create_request_group(windows, expires=expire_time)
+        rg1, _ = self.create_request_group(windows, expires=expire_time)
         rg1.expires = datetime(2013, 12, 1)
         received_rg_list = truncate_upper_crossing_windows([rg1])
 
@@ -383,7 +383,7 @@ class TestWindowFilters(object):
             'end': "2013-03-01T00:30:00Z",
         }
         windows = [(window_dict1,), (window_dict2,)]
-        rg1, window_list = self.create_request_group(windows, operator='and')
+        rg1, _ = self.create_request_group(windows, operator='and')
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
@@ -436,7 +436,7 @@ class TestWindowFilters(object):
             'end': "2013-03-01T00:30:00Z",
         }
         windows = [(window_dict1,), (window_dict2,)]
-        rg1, window_list = self.create_request_group(windows, operator='oneof')
+        rg1, _ = self.create_request_group(windows, operator='oneof')
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
@@ -480,7 +480,7 @@ class TestWindowFilters(object):
 
     def test_filter_on_type_SINGLE_no_window_one_request(self):
         windows = [()]
-        rg1, window_list = self.create_request_group(windows, operator='single')
+        rg1, _ = self.create_request_group(windows, operator='single')
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
@@ -554,19 +554,14 @@ class TestWindowFilters(object):
         r = Request(
             configurations=None,
             windows=Windows(),
-            id=request_id
-        )
-        r2 = Request(
-            configurations=None,
-            windows=Windows(),
-            id=9
+            request_id=request_id
         )
         rg1 = RequestGroup(
             operator='single',
             requests=[r],
             proposal=None,
             expires=None,
-            id=1,
+            rg_id=1,
             is_staff=False,
             name=None,
             ipp_value=1.0,
@@ -581,13 +576,13 @@ class TestWindowFilters(object):
         r1 = Request(
             configurations=None,
             windows=Windows(),
-            id=request_id,
+            request_id=request_id,
             state='PENDING'
         )
         r2 = Request(
             configurations=None,
             windows=Windows(),
-            id=9,
+            request_id=9,
             state='UNSCHEDULABLE'
         )
         rg1 = RequestGroup(
@@ -595,7 +590,7 @@ class TestWindowFilters(object):
             requests=[r1, r2],
             proposal=None,
             expires=None,
-            id=1,
+            rg_id=1,
             is_staff=False,
             name=None,
             ipp_value=1.0,

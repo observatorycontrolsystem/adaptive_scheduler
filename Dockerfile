@@ -1,5 +1,4 @@
 FROM observatorycontrolsystem/adaptive_scheduler_base:1.0.0
-MAINTAINER Jon Nation <jnation@lco.global>
 
 # setup the python environment
 ENV APPLICATION_ROOT /lco/adaptive_scheduler

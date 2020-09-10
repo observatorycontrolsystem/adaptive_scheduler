@@ -165,7 +165,7 @@ class Target(DataContainer):
         for field in self.required_fields:
             try:
                 getattr(self, field)
-            except:
+            except Exception:
                 missing_fields.append(field)
 
         return missing_fields
@@ -345,7 +345,7 @@ class Windows(EqualityMixin):
 
     def size(self):
         all_windows_size = 0
-        for resource_name, windows in self.windows_for_resource.items():
+        for windows in self.windows_for_resource.values():
             all_windows_size += len(windows)
 
         return all_windows_size
@@ -380,15 +380,15 @@ class Request(EqualityMixin):
                     is eligible to be performed. For user observations with no
                     time constraints, this should be the planning window of the
                     scheduler (e.g. the semester bounds).
-        id - The unique id of the Request
+        request_id - The unique id of the Request
         state          - the initial state of the Request
     '''
 
-    def __init__(self, configurations, windows, id, state='PENDING',
+    def __init__(self, configurations, windows, request_id, state='PENDING',
                  duration=0, scheduled_reservation=None):
         self.configurations = configurations
         self.windows = windows
-        self.id = id
+        self.id = request_id
         self.state = state
         self.req_duration = duration
         self.scheduled_reservation = scheduled_reservation
@@ -413,10 +413,10 @@ class RequestGroup(EqualityMixin):
     valid_types = dict(CompoundReservation.valid_types)
     valid_types.update(_many_type)
 
-    def __init__(self, operator, requests, proposal, id, is_staff, observation_type, ipp_value, name, expires,
+    def __init__(self, operator, requests, proposal, rg_id, is_staff, observation_type, ipp_value, name, expires,
                  submitter):
         self.proposal = proposal
-        self.id = id
+        self.id = rg_id
         self.is_staff = is_staff
         self.name = name
         self.ipp_value = ipp_value
@@ -517,14 +517,14 @@ class RequestGroup(EqualityMixin):
         return is_ok_to_return
 
     @staticmethod
-    def emit_request_group_feedback(id, msg, tag, timestamp=None):
+    def emit_request_group_feedback(rg_id, msg, tag, timestamp=None):
         if not timestamp:
             timestamp = datetime.utcnow()
 
         originator = 'scheduler'
 
         event = UserFeedbackLogger.create_event(timestamp, originator, msg,
-                                                tag, id)
+                                                tag, rg_id)
 
         event_bus.fire_event(event)
 
@@ -629,7 +629,7 @@ class ModelBuilder(object):
         if invalid_requests:
             msg = "Found %s." % pl(len(invalid_requests), 'invalid Request')
             log.warn(msg)
-            for invalid_request, error_msg in invalid_requests:
+            for _, error_msg in invalid_requests:
                 tag = "InvalidRequest"
                 RequestGroup.emit_request_group_feedback(rg_id, error_msg, tag)
             if operator.lower() == 'and':
@@ -669,7 +669,7 @@ class ModelBuilder(object):
             operator=operator,
             requests=requests,
             proposal=proposal,
-            id=rg_id,
+            rg_id=rg_id,
             is_staff=rg_dict.get('is_staff', False),
             observation_type=observation_type,
             ipp_value=ipp_value,
@@ -759,7 +759,7 @@ class ModelBuilder(object):
         req = Request(
             configurations=configurations,
             windows=windows,
-            id=int(req_dict['id']),
+            request_id=int(req_dict['id']),
             state=req_dict['state'],
             duration=req_dict['duration'],
             scheduled_reservation=scheduled_reservation

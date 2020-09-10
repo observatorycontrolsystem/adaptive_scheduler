@@ -67,8 +67,8 @@ class FullScheduler_v6(SlicedIPScheduler_v2):
             row += 1
 
         # constraint 2: each res should have one start:
-        # optimization: 
-        # if the reservation participates in a oneof, then this is 
+        # optimization:
+        # if the reservation participates in a oneof, then this is
         # redundant with the oneof constraint added above, so don't add it.
         for r in self.reservation_list:
             if hasattr(r, 'skip_constraint2'):
@@ -166,8 +166,6 @@ class FullScheduler_v6(SlicedIPScheduler_v2):
         r = Result()
         r.xf = numpy.array(x).flatten()
         r.ff = f.T * x
-        return self.unpack_result(r)
-
         return self.unpack_result(r)
 
 

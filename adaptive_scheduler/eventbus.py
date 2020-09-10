@@ -26,7 +26,7 @@ def get_eventbus(name='default'):
 
 
 class BaseListener(object):
-    ''' Main listener superclass. 
+    ''' Main listener superclass.
 
         User-defined listeners should subclass BaseListener, define an _Event
         inner-class and provide an event update API.
@@ -88,14 +88,14 @@ class _EventBus(object):
         self.last_events = {}
 
     def add_listener(self, listener, persist=False, event_type=None):
-        ''' Add a listener to the event bus. 
+        ''' Add a listener to the event bus.
 
             The event type this listener is registered against is determined
             via the listener_event_type classmethod.
 
             By default listeners are stored as weak references to prevent the
             event bus holding on to instances which are eligible for garbage
-            collection. If persist is True then the reference is stored as a 
+            collection. If persist is True then the reference is stored as a
             regular strong reference.
         '''
         listener_event_type = event_type or listener.__class__.event_type()
@@ -133,7 +133,7 @@ class _EventBus(object):
         return len(self.listeners_by_type.get(event_type, []))
 
     def fire_event(self, event):
-        ''' Fire an event to all registered listeners. 
+        ''' Fire an event to all registered listeners.
 
             This method updates all registered listeners and then prunes
             any dead weak references.

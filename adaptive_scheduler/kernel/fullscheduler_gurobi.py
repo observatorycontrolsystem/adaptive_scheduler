@@ -5,7 +5,7 @@ across multiple resources using time-slicing and an integer program.
 
 Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
-more argument than usual. 
+more argument than usual.
 
 This implementation uses a SPARSE matrix representation and direct binding
 to the Gurobi solver.
@@ -59,31 +59,28 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
 
         return self.possible_starts[winidx]
 
-        return 0.0
-
     # A stub to optimize requests by airmass
     def weight_by_airmass(self):
         return
-
-        for request in self.Yik:
-            ra, dec = self.get_target_coords_by_reqID(request[0])
-            lat, lon = self.get_earth_coords_by_resource(request[3])
-            utc = self.get_utc_by_winidx(request[1])
-
-            local_hour_angle = calc_local_hour_angle(ra, lon, utc)
-            alt = calculate_altitude(lat, dec, local_hour_angle)
-            airmass = 1.0 / cos(pi / 2.0 - alt)
-
-            # map the airmass to a minimal weighting function
-            maxairmass = 3
-            minairmass = 1
-            maxweight = 0.05
-            minweight = -0.05
-            slope = (maxweight - minweight) / (minairmass - maxairmass)
-            intercept = maxweight - slope * minairmass
-
-            weight = airmass * slope + intercept
-            request[2] = request[2] + weight
+        # for request in self.Yik:
+        #     ra, dec = self.get_target_coords_by_reqID(request[0])
+        #     lat, lon = self.get_earth_coords_by_resource(request[3])
+        #     utc = self.get_utc_by_winidx(request[1])
+        #
+        #     local_hour_angle = calc_local_hour_angle(ra, lon, utc)
+        #     alt = calculate_altitude(lat, dec, local_hour_angle)
+        #     airmass = 1.0 / cos(pi / 2.0 - alt)
+        #
+        #     # map the airmass to a minimal weighting function
+        #     maxairmass = 3
+        #     minairmass = 1
+        #     maxweight = 0.05
+        #     minweight = -0.05
+        #     slope = (maxweight - minweight) / (minairmass - maxairmass)
+        #     intercept = maxweight - slope * minairmass
+        #
+        #     weight = airmass * slope + intercept
+        #     request[2] = request[2] + weight
 
     @timeit
     @metric_timer('kernel.scheduling')

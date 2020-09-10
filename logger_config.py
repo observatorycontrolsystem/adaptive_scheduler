@@ -4,7 +4,7 @@
 # is that logging levels are the responsibility of the client.
 
 import logging
-from adaptive_scheduler.log import RequestGroupHandler, RequestGroupLogger
+from adaptive_scheduler.log import RequestGroupHandler
 from lcogt_logging import LCOGTFormatter
 
 log = logging.getLogger('adaptive_scheduler')
