@@ -17,7 +17,7 @@ January 2014
 from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit, metric_timer
 
-from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
+#from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
 from gurobipy import Model, tuplelist, GRB, quicksum
 
 
