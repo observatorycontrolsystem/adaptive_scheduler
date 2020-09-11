@@ -1,5 +1,7 @@
 # Adaptive Scheduler
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/c41dca92a76f4ea9a284698d26772e91)](https://app.codacy.com/gh/observatorycontrolsystem/adaptive_scheduler?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/adaptive_scheduler&utm_campaign=Badge_Grade_Dashboard)
+
 The adaptive scheduler works with the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 to get the set of schedulable requests, and cancel and submit sets of observations on sites. It solves an optimization
 problem using a mixed integer programming solver to maximize the priority of scheduled observations. It supports the 
