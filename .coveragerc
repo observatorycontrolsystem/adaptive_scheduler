@@ -2,7 +2,8 @@
 source = adaptive_scheduler
 
 [report]
+include =
+    adaptive_scheduler/*
 omit =
     *.json
     *.sh
-
