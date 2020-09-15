@@ -25,7 +25,7 @@ install:
 - CVXOPT_BUILD_GLPK=1 CVXOPT_SUITESPARSE_SRC_DIR=$(pwd)/SuiteSparse-5.2.0 pip install
   -r requirements.pip
 script: nosetests --logging-level=WARNING test --ignore-files=requires_gurobi --with-coverage
-after_success: coveralls
+after_success: coveralls -b adaptive_scheduler
 before_deploy:
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
 - export IMAGE=observatorycontrolsystem/adaptive_scheduler:${TRAVIS_TAG}
