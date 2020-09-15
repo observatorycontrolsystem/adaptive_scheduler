@@ -27,11 +27,11 @@ Optional prerequisites can be skipped for reduced functionality.
 
 |                        | Variable                | Description                                                         | Default                                                 |
 | ---------------------- | ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
-| Gurobi                 | `GRB_LICENSE_FILE`      | The location of the gurobi license file within your container       | ``                                                      |
-| Metrics                | `OPENTSDB_HOSTNAME`     | The host name for an opentsdb server, for metrics                   | ``                                                      |
+| Gurobi                 | `GRB_LICENSE_FILE`      | The location of the gurobi license file within your container       | _`Empty string`_                                                      |
+| Metrics                | `OPENTSDB_HOSTNAME`     | The host name for an opentsdb server, for metrics                   | _`Empty string`_                                                      |
 | External Services      | `CONFIGDB_URL`          | The url to the configuration database                               | `http://127.0.0.1:7500`                                 |
 |                        | `DOWNTIMEDB_URL`        | The url to the downtime database                                    | `http://127.0.0.1:7000`                                 |
-|                        | `ELASTICSEARCH_URL`     | The url to the elasticsearch cluster                                | ``                                                      |
+|                        | `ELASTICSEARCH_URL`     | The url to the elasticsearch cluster                                | _`Empty string`_                                                      |
 |                        | `OBSERVATION_PORTAL_URL`| The url to the observation portal                                   | `http://127.0.0.1:8000`                                 |
 |                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis`                                                 |
 
