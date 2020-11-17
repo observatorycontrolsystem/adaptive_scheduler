@@ -179,7 +179,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
 
         # impose a time limit (ms) on the solve
         if timelimit > 0:
-            solver.SetTimeLimit((int)(timelimit * 1000))
+            solver.SetTimeLimit(int(timelimit * 1000))
 
         params = pywraplp.MPSolverParameters()
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
