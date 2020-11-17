@@ -20,7 +20,7 @@ install:
 - pip install ortools
 - mkdir logs
 - pip install -r requirements.pip
-script: nosetests --logging-level=WARNING test --exclude-dir=requires_third_party --with-coverage
+script: nosetests --logging-level=WARNING test --exclude-dir=test/requires_third_party --with-coverage
 after_success: coveralls
 before_deploy:
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
