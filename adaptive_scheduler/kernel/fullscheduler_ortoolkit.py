@@ -108,13 +108,6 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
-        with open('/data/adaptive_scheduler/input_states/kernel_input.json', 'w') as kernel_input:
-            kernel_input_data = {
-                'Yik': self.Yik,
-                'aikt': self.aikt
-            }
-            json.dump(kernel_input_data, kernel_input)
-
         # Instantiate a Gurobi Model object
         solver = pywraplp.Solver('adaptive_scheduler', self.algorithm)
 
