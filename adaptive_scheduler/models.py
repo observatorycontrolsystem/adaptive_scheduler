@@ -157,7 +157,7 @@ class DataContainer(EqualityMixin):
 class Target(DataContainer):
 
     def __init__(self, required_fields, *initial_data, **kwargs):
-        DataContainer.__init__(self, *initial_data, **kwargs)
+        super().__init__(*initial_data, **kwargs)
         self.required_fields = required_fields
 
     def list_missing_fields(self):
@@ -185,7 +185,7 @@ class Target(DataContainer):
 
 class NullTarget(Target):
     def __init__(self, *initial_data, **kwargs):
-        Target.__init__(self, (), *initial_data, **kwargs)
+        super().__init__((), *initial_data, **kwargs)
 
 
 class ICRSTarget(Target):
@@ -193,7 +193,7 @@ class ICRSTarget(Target):
     '''
 
     def __init__(self, *initial_data, **kwargs):
-        Target.__init__(self, ('name', 'ra', 'dec'), *initial_data, **kwargs)
+        super().__init__(('name', 'ra', 'dec'), *initial_data, **kwargs)
 
     # Use accessors to ensure we always have valid coordinates
     def get_ra(self):
@@ -239,7 +239,7 @@ class OrbitalElementsTarget(Target):
         scheme = initial_data[0]['scheme']
 
         required_fields = required_fields_from_scheme(scheme)
-        Target.__init__(self, required_fields, *initial_data, **kwargs)
+        super().__init__(required_fields, *initial_data, **kwargs)
 
     def in_rise_set_format(self):
         if self.scheme.lower() == 'mpc_comet':
@@ -271,7 +271,7 @@ class SatelliteTarget(Target):
     def __init__(self, *initial_data, **kwargs):
         required_fields = ('altitude', 'azimuth', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
                            'diff_roll_acceleration', 'diff_pitch_acceleration')
-        Target.__init__(self, required_fields, *initial_data, **kwargs)
+        super().__init__(required_fields, *initial_data, **kwargs)
 
     def in_rise_set_format(self):
         target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_pitch_rate, self.diff_roll_rate,
@@ -283,7 +283,7 @@ class SatelliteTarget(Target):
 
 class Configuration(DataContainer):
     def __init__(self, *initial_data, **kwargs):
-        DataContainer.__init__(self, *initial_data, **kwargs)
+        super().__init__(*initial_data, **kwargs)
 
     def get_instrument_requirements(self):
         ''' Return a dictionary of instrument requirements for this configuration '''

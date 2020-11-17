@@ -1,109 +1,44 @@
 #!/usr/bin/env python
 '''
-test_fullscheduler_v5.py
+test_fullscheduler_gurobi.py
 
 Author: Sotiria Lampoudi
 August 2012
 '''
 
-from nose.tools import assert_equal
-from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
 import copy
+import os
+
+# Gurobi requires 64-bit OS
+from nose import SkipTest
+
+if os.uname()[4] != 'x86_64':
+    raise SkipTest('ortoolkit requires a 64-bit OS')
+
+from nose.tools import assert_equal, assert_true
+from time_intervals.intervals import Intervals
+
+try:
+    from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
+except ImportError:
+    raise SkipTest('ORToolkit is not properly installed, skipping these tests.')
+from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
+from test.requires_third_party.fullscheduler_ortoolkit_helper import Fullscheduler_ortoolkit_helper
 
 
-class TestFullScheduler_v6(object):
-
+class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
     def setup(self):
-        s1 = Intervals([{'time': 1, 'type': 'start'},
-                        {'time': 2, 'type': 'end'}])  # 1-2
-        s2 = Intervals([{'time': 2, 'type': 'start'},
-                        {'time': 4, 'type': 'end'}])  # --2--4
-        s3 = copy.copy(s1)
-        s4 = copy.copy(s1)
-        s5 = copy.copy(s2)
-        s6 = copy.copy(s1)
-        s7 = copy.copy(s1)
-        s8 = copy.copy(s1)
-        s9 = copy.copy(s2)
-        s10 = Intervals([{'time': 1, 'type': 'start'},
-                         {'time': 10, 'type': 'end'}])
-        s11 = copy.copy(s10)
-        s12 = copy.copy(s10)
-        s13 = copy.copy(s10)
+        self.algorithm = 'CBC'
+        super().setup(self.algorithm)
 
-        self.r1 = Reservation_v3(1, 1, {'foo': s1})
-        self.r2 = Reservation_v3(2, 2, {'bar': s2})
-        self.r3 = Reservation_v3(1, 1, {'foo': s3})
-        self.r4 = Reservation_v3(1, 1, {'foo': s4})
-        self.r5 = Reservation_v3(2, 2, {'bar': s5})
-        self.r6 = Reservation_v3(1, 2, {'bar': s5})
-        self.r7 = Reservation_v3(1, 1, {'bar': s6, 'foo': s5})
-        self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar': s7})
-        self.r9 = Reservation_v3(1, 1, {'foo': s8})
-        self.r10 = Reservation_v3(2, 2, {'bar': s9})
-        self.r11 = Reservation_v3(1, 1, {'bar': s10})
-        self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})
-        self.r14 = Reservation_v3(1, 1, {'bar': s13})
+    # This is testing that we schedule earlier rather than later if given the choice
+    def test_schedule_early(self):
+        self.fs10.schedule_all()
+        assert_true(self.r19.scheduled_start <= 3)
+        assert_true(self.r20.scheduled_start <= 3)
+        assert_true(self.r21.scheduled_start <= 3)
 
-        self.r15 = Reservation_v3(1, 9, {'bar': s13})
-        self.r16 = Reservation_v3(1, 9, {'foo': s13})
-        self.r17 = Reservation_v3(2, 9, {'bar': s13})
-        self.r18 = Reservation_v3(3, 9, {'foo': s13})
-
-        self.cr1 = CompoundReservation_v2([self.r1])
-        self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
-        self.cr3 = CompoundReservation_v2([self.r4])
-        self.cr4 = CompoundReservation_v2([self.r5])
-        self.cr5 = CompoundReservation_v2([self.r4, self.r5], 'oneof')
-        self.cr6 = CompoundReservation_v2([self.r3])
-        self.cr7 = CompoundReservation_v2([self.r2])
-        self.cr8 = CompoundReservation_v2([self.r4, self.r6], 'oneof')
-        self.cr9 = CompoundReservation_v2([self.r4, self.r1, self.r3], 'oneof')
-        self.cr10 = CompoundReservation_v2([self.r7])
-        self.cr11 = CompoundReservation_v2([self.r8])
-        self.cr12 = CompoundReservation_v2([self.r9, self.r10], 'oneof')
-        self.cr13 = CompoundReservation_v2([self.r11])
-        self.cr14 = CompoundReservation_v2([self.r12])
-        self.cr15 = CompoundReservation_v2([self.r13])
-        self.cr16 = CompoundReservation_v2([self.r14])
-
-        self.cr17 = CompoundReservation_v2([self.r15, self.r16], 'and')
-        self.cr18 = CompoundReservation_v2([self.r17])
-        self.cr19 = CompoundReservation_v2([self.r18])
-
-        self.gpw2 = {}
-        self.gpw2['foo'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
-        self.gpw2['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
-
-        self.gpw3 = {}
-        self.gpw3['foo'] = Intervals([{'time': 5, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
-        self.gpw3['bar'] = Intervals([{'time': 5, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
-
-        self.gpw4 = {}
-        self.gpw4['bar'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
-
-        self.fs1 = FullScheduler_v6([self.cr1, self.cr2, self.cr3],
-                                    self.gpw2, [], 1)
-        self.fs2 = FullScheduler_v6([self.cr1, self.cr4],
-                                    self.gpw2, [], 1)
-        self.fs3 = FullScheduler_v6([self.cr5],
-                                    self.gpw2, [], 1)
-        self.fs4 = FullScheduler_v6([self.cr8, self.cr6, self.cr7],
-                                    self.gpw2, [], 1)
-        self.fs5 = FullScheduler_v6([self.cr10, self.cr2, self.cr3],
-                                    self.gpw2, [], 1)
-        self.fs6 = FullScheduler_v6([self.cr11, self.cr2, self.cr3],
-                                    self.gpw2, [], 1)
-        self.fs7 = FullScheduler_v6([self.cr12],
-                                    self.gpw3, [], 1)
-        self.fs8 = FullScheduler_v6([self.cr13, self.cr14, self.cr15, self.cr16],
-                                    self.gpw4, [], 1)
-        self.fs9 = FullScheduler_v6([self.cr17, self.cr18, self.cr19],
-                                    self.gpw2, [], 1)
-
+    # This should schedule the two separate over the two "and"ed blocks
     def test_schedule_noneofand(self):
         self.fs9.schedule_all()
         assert_equal(self.r15.scheduled, False)
@@ -160,12 +95,10 @@ class TestFullScheduler_v6(object):
             assert_equal(self.r4.scheduled, True)
 
     def test_schedule_triple_oneof(self):
-        slice_dict = {}
-        slice_dict['foo'] = [0, 1]
-        slice_dict['bar'] = [0, 1]
-        fs = FullScheduler_v6([self.cr9],
-                              self.gpw2, [], 1)
-        s = fs.schedule_all()
+        slice_size_seconds = 1
+        fs = FullScheduler_ortoolkit(self.algorithm, [self.cr9],
+                                     self.gpw2, [], slice_size_seconds)
+        fs.schedule_all()
         # only one should be scheduled
 
     def test_schedule_5_7_2012(self):
@@ -183,8 +116,8 @@ class TestFullScheduler_v6(object):
                                 {'time': 201000, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
-
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        slice_size_seconds = 300
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], slice_size_seconds)
         fs.schedule_all()
 
     def test_schedule_all_gaw(self):
@@ -201,8 +134,9 @@ class TestFullScheduler_v6(object):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60)
         schedule = fs.schedule_all()
+        print(schedule)
         assert_equal(1, len(schedule['goo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -213,8 +147,9 @@ class TestFullScheduler_v6(object):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60)
         schedule = fs.schedule_all()
+        print(schedule)
         assert_equal(1, len(schedule['goo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -225,8 +160,9 @@ class TestFullScheduler_v6(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60)
         schedule = fs.schedule_all()
+        print(schedule)
         assert_equal(1, len(schedule['foo']))
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
@@ -237,8 +173,9 @@ class TestFullScheduler_v6(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60)
         schedule = fs.schedule_all()
+        print(schedule)
         assert_equal(1, len(schedule['foo']))
 
     def test_schedule_no_available_windows(self):
@@ -249,5 +186,5 @@ class TestFullScheduler_v6(object):
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
 
-        fs = FullScheduler_v6([cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60)
         fs.schedule_all()

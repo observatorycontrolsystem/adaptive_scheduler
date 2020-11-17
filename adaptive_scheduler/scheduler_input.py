@@ -19,7 +19,7 @@ class SchedulerParameters(object):
                  no_singles=False, no_compounds=False, no_rr=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
-                 kernel='gurobi', input_file_name=None, pickle=False,
+                 kernel='CBC', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360,
                  save_output=False, request_logs=False,
                  observation_portal_url='http://127.0.0.1:8000',
@@ -239,7 +239,7 @@ class SchedulingInputUtils(SendMetricMixin):
         }
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
         filename = os.path.join(output_path, 'scheduling_input_{}.pickle'.format(file_timestamp))
-        outfile = open(filename, 'w')
+        outfile = open(filename, 'wb')
         try:
             pickle.dump(output, outfile)
         except pickle.PickleError as pe:
@@ -458,7 +458,9 @@ class FileBasedSchedulingInputProvider(object):
 
     @staticmethod
     def _get_pickled_input(filename):
-        with open(filename, 'r') as input_file:
+        logging.getLogger(__name__).warning("Trying to open {}".format(filename))
+        print("Trying to open {}".format(filename))
+        with open(filename, 'rb') as input_file:
             pickle_input = pickle.load(input_file)
 
         return pickle_input

@@ -17,6 +17,7 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import SchedulingInputFactory, SchedulingInputProvider, \
     FileBasedSchedulingInputProvider, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status import Network
+from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
 
 import argparse
 import logging
@@ -67,8 +68,8 @@ def parse_args(argv):
                             help="Treat Rapid Response Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
-    arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
-                            help="Options are v5, v6, gurobi, mock. Default is gurobi")
+    arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
+                            help="Options are GUROBI, CBC, or GLPK. Default is CBC")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
@@ -121,29 +122,13 @@ def parse_args(argv):
 
 def get_kernel_class(sched_params):
     kernel_class = None
-    if sched_params.kernel == 'v5':
-        from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5
-        kernel_class = FullScheduler_v5
-        # Use -1 for no timelimit
-        if sched_params.timelimit_seconds == None:
-            sched_params.timelimit_seconds = -1
-    elif sched_params.kernel == 'v6':
-        from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
-        kernel_class = FullScheduler_v6
-        # Use -1 for no timelimit
-        if sched_params.timelimit_seconds == None:
-            sched_params.timelimit_seconds = -1
-    elif sched_params.kernel == 'gurobi':
-        from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
-        kernel_class = FullScheduler_gurobi
-    elif sched_params.kernel == 'mock':
+    if sched_params.kernel == 'mock':
         from mock import Mock
         kernel_mock = Mock()
         kernel_mock.schedule_all = Mock(return_value={})
         kernel_class = Mock(return_value=kernel_mock)
     else:
-        raise Exception("Unknown kernel version %s" % sched_params.kernel)
-
+        kernel_class = FullScheduler_ortoolkit
     return kernel_class
 
 

@@ -39,7 +39,7 @@ class SlicedIPScheduler_v2(Scheduler):
                  globally_possible_windows_dict,
                  contractual_obligation_list,
                  slice_size_seconds):
-        Scheduler.__init__(self, compound_reservation_list,
+        super().__init__(compound_reservation_list,
                            globally_possible_windows_dict,
                            contractual_obligation_list)
         # time_slicing_dict is a dictionary that maps: 

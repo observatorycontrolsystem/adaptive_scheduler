@@ -5,7 +5,7 @@ from adaptive_scheduler.interfaces import RunningRequest, RunningRequestGroup, R
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
 from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
 from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
-from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
+from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.utils import datetime_to_normalised_epoch
 from nose.tools import nottest
@@ -426,7 +426,7 @@ class TestScheduler(object):
                                     )
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=False)
@@ -495,7 +495,7 @@ class TestScheduler(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300))
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -575,7 +575,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = normal_request_groups
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -674,7 +674,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = normal_request_groups
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -773,7 +773,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = []
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -831,7 +831,7 @@ class TestScheduler(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300))
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_v6, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)

@@ -339,7 +339,7 @@ class Scheduler(SendMetricMixin):
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations,
+            kernel = self.kernel_class(self.sched_params.kernel, compound_reservations, available_windows, contractual_obligations,
                                        self.sched_params.slicesize_seconds)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
 
@@ -364,7 +364,7 @@ class Scheduler(SendMetricMixin):
 
 class LCOGTNetworkScheduler(Scheduler):
     def __init__(self, kernel_class, sched_params, event_bus, network_model):
-        Scheduler.__init__(self, kernel_class, sched_params, event_bus)
+        super().__init__(kernel_class, sched_params, event_bus)
 
         self.visibility_cache = {}
         self.date_fmt = '%Y-%m-%d'
@@ -996,5 +996,5 @@ class SchedulerRunner(object):
 class EstimateExceededException(Exception):
 
     def __init__(self, msg, new_estimate):
-        Exception.__init__(self, msg)
+        super().__init__(msg)
         self.new_estimate = new_estimate

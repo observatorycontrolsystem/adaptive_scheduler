@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 '''
-FullScheduler_gurobi class for co-scheduling reservations 
+FullScheduler_ortoolkit class for co-scheduling reservations 
 across multiple resources using time-slicing and an integer program.
 
 Because time is discretized into time slices, this scheduler requires
 information about how to generate the slices, so its signature has one
 more argument than usual.
 
-This implementation uses a SPARSE matrix representation and direct binding
-to the Gurobi solver.
+This implementation uses a SPARSE matrix representation and the ortoolkit solver
+which can be configured to use Gurobi, GLPK, or CBC algorithms.
 
 Author: Jason Eastman (jeastman@lcogt.net)
 January 2014
@@ -17,25 +17,38 @@ January 2014
 from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
 from adaptive_scheduler.utils import timeit, metric_timer
 
-#from rise_set.astrometry import calc_local_hour_angle, calculate_altitude
-from gurobipy import Model, tuplelist, GRB, quicksum
+from ortools.linear_solver import pywraplp
 
+from collections import defaultdict
+import json
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+ALGORITHMS = {
+    'CBC': pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING,
+    'GUROBI': pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING,
+    'GLPK': pywraplp.Solver.GLPK_MIXED_INTEGER_PROGRAMMING
+}
 
 class Result(object):
     pass
 
 
-class FullScheduler_gurobi(SlicedIPScheduler_v2):
+class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
     @metric_timer('kernel.init')
-    def __init__(self, compound_reservation_list,
+    def __init__(self, kernel, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
                  slice_size_seconds):
-        SlicedIPScheduler_v2.__init__(self, compound_reservation_list,
+        super().__init__(compound_reservation_list,
                                       globally_possible_windows_dict,
                                       contractual_obligation_list,
                                       slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
+        self.kernel = kernel
+        self.algorithm = ALGORITHMS[kernel.upper()]
 
     # A stub to get the RA/dec by request ID
     # (REQUIRED FOR AIRMASS OPTIMIZATION)
@@ -95,102 +108,108 @@ class FullScheduler_gurobi(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
+        with open('/data/adaptive_scheduler/input_states/kernel_input.json', 'w') as kernel_input:
+            kernel_input_data = {
+                'Yik': self.Yik,
+                'aikt': self.aikt
+            }
+            json.dump(kernel_input_data, kernel_input)
+
         # Instantiate a Gurobi Model object
-        m = Model("LCOGT Schedule")
+        solver = pywraplp.Solver('adaptive_scheduler', self.algorithm)
 
         # Constraint: Decision variable (isScheduled) must be binary (eq 4)
-        requestLocations = tuplelist()
+        requestLocations = []
+        vars_by_req_id = defaultdict(list)
         scheduled_vars = []
+        solution_hints = []
         for r in self.Yik:
-            # convert self.Yik to a tuplelist for optimized searches
+            # create a lut of req_id to decision vars for building the constraints later
             # [(reqID, window idx, priority, resource, isScheduled)]
-            var = m.addVar(vtype=GRB.BINARY, name=str(r[0]))
+            var = solver.BoolVar(name=f"bool_var_{r[0]}_{len(scheduled_vars)}")
             scheduled_vars.append(var)
+            vars_by_req_id[r[0]].append((r[0], r[1], r[2], r[3], var))
             requestLocations.append((r[0], r[1], r[2], r[3], var))
+            solution_hints.append(r[4])
 
-        # update the Gurobi model to use isScheduled variables in constraints
-        m.update()
-
-        for i, r in enumerate(self.Yik):
-            scheduled_vars[i].start = r[4]
-
-        m.update()
+        # The warm-start hints (not supported in older ortools)
+        # solver.SetHint(variables=scheduled_vars, values=solution_hints)
 
         # Constraint: One-of (eq 5)
         i = 0
         for oneof in self.oneof_constraints:
-            match = tuplelist()
+            match = []
             for r in oneof:
                 reqid = r.get_ID()
-                match += requestLocations.select(reqid, '*', '*', '*', '*')
+                match.extend(vars_by_req_id[reqid])
                 r.skip_constraint2 = True  # does this do what I think it does?
-            nscheduled = quicksum(isScheduled for reqid, winidx, priority, resource, isScheduled in match)
-            m.addConstr(nscheduled <= 1, "oneof_constraint_" + str(i))
+            nscheduled_one = solver.Sum([isScheduled for reqid, winidx, priority, resource, isScheduled in match])
+            solver.Add(nscheduled_one <= 1, 'oneof_constraint_' + str(i))
             i = i + 1
 
         # Constraint: And (all or nothing) (eq 6)
         i = 0
-        andtuple = tuplelist()
         for andconstraint in self.and_constraints:
             # add decision variable that must be equal to all "and"ed blocks
-            andVar = m.addVar(vtype=GRB.BINARY, name="and_var_" + str(i))
-            m.update()
+            andVar = solver.BoolVar(name=f"and_var_{str(i)}")
             j = 0
             for r in andconstraint:
                 reqid = r.get_ID()
-                match = requestLocations.select(reqid, '*', '*', '*', '*')
-                nscheduled = quicksum(isScheduled for reqid, winidx, priority, resource, isScheduled in match)
-                m.addConstr(andVar == nscheduled, "and_constraint_" + str(i) + "_" + str(j))
+                match = vars_by_req_id[reqid]
+                nscheduled_and = solver.Sum([isScheduled for reqid, winidx, priority, resource, isScheduled in match])
+                solver.Add(andVar == nscheduled_and, 'and_constraint_' + str(i) + "_" + str(j))
                 j = j + 1
             i = i + 1
 
         # Constraint: No more than one request should be scheduled in each (timeslice, resource) (eq 3)
         # self.aikt.keys() indexes the requests that occupy each (timeslice, resource)
-        #        for s in self.aikt: # faster??
         for s in self.aikt.keys():
-            match = tuplelist()
+            match = []
             for timeslice in self.aikt[s]:
                 match.append(requestLocations[timeslice])
-            nscheduled = quicksum(isScheduled for reqid, winidx, priority, resource, isScheduled in match)
-            m.addConstr(nscheduled <= 1, 'one_per_slice_constraint_' + s)
+            nscheduled1 = solver.Sum([isScheduled for reqid, winidx, priority, resource, isScheduled in match])
+            solver.Add(nscheduled1 <= 1, 'one_per_slice_constraint_' + s)
 
         # Constraint: No request should be scheduled more than once (eq 2)
         # skip if One-of (redundant)
         for r in self.reservation_list:
             if not hasattr(r, 'skip_constraint2'):
                 reqid = r.get_ID()
-                match = requestLocations.select(reqid, '*', '*', '*', '*')
-                nscheduled = quicksum(isScheduled for reqid, winidx, priority, resource, isScheduled in match)
-                m.addConstr(nscheduled <= 1, 'one_per_reqid_constraint_' + str(reqid))
+                match = vars_by_req_id[reqid]
+                nscheduled2 = solver.Sum([isScheduled for reqid, winidx, priority, resource, isScheduled in match])
+                solver.Add(nscheduled2 <= 1, 'one_per_reqid_constraint_' + str(reqid))
 
         # Objective: Maximize the merit functions of all scheduled requests (eq 1);
-        objective = quicksum(
-            [isScheduled * (priority + 0.1 / (winidx + 1.0)) for req, winidx, priority, resource, isScheduled in
-             requestLocations])
+        objective = solver.Maximize(solver.Sum(
+            [isScheduled * (priority + (0.1 / (winidx + 1.0))) for req, winidx, priority, resource, isScheduled in
+             requestLocations]))
 
-        # set the objective, and maximize it
-        m.setObjective(objective)
-        m.modelSense = GRB.MAXIMIZE
-
-        # impose a time limit on the solve
+        # impose a time limit (ms) on the solve
         if timelimit > 0:
-            m.params.timeLimit = timelimit
+            solver.SetTimeLimit((int)(timelimit * 1000))
+
+        params = pywraplp.MPSolverParameters()
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
-        m.params.MIPGap = 0.01
+        params.SetDoubleParam(pywraplp.MPSolverParameters.RELATIVE_MIP_GAP, 0.01)
 
         # Set the Method of solving the root relaxation of the MIPs model to concurrent (default is dual simplex)
-        m.params.Method = 3
-
-        # add all the constraints to the model
-        m.update()
+        # Set it to Barrier for now, since concurrent isnt supported in this ortoolkit version
+        # Only set this for GUROBI kernel
+        if self.kernel == 'GUROBI':
+            params.SetIntegerParam(pywraplp.MPSolverParameters.LP_ALGORITHM, pywraplp.MPSolverParameters.BARRIER)
 
         # Solve the model
-        m.optimize()
+        solver.EnableOutput()
+        solver.Solve(params)
+        logger.warn("Finished solving schedule")
 
         # Return the optimally-scheduled windows
         r = Result()
         r.xf = []
-        for request, winidx, priority, resource, isScheduled in requestLocations: r.xf.append(isScheduled.x)
+        for request, winidx, priority, resource, isScheduled in requestLocations: 
+            r.xf.append(isScheduled.SolutionValue())
+        logger.warn("Set SolutionValues of isScheduled")
+
         return self.unpack_result(r)
 
 
