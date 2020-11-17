@@ -17,7 +17,7 @@ services:
 install:
 - pip install -U coverage coveralls
 - pip install 'numpy<1.20.0'
-- pip install ortoolkit
+- pip install ortools
 - mkdir logs
 - pip install -r requirements.pip
 script: nosetests --logging-level=WARNING test --exclude-dir=requires_third_party --with-coverage
