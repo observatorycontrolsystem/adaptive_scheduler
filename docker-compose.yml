@@ -1,7 +1,6 @@
 adaptive_scheduler:
     user: "eng:eng"
     image: my_adaptive_scheduler_image_name:test
-    mac_address: 00:1f:29:69:bd:8a
     links:
       -  redis:redis
     environment:
