@@ -14,7 +14,7 @@ of schedulable instruments.
 
 [Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. Currently, we
 are using an older version of ORTools in order to support LCO's older Gurobi license. The base dockerfile is
-configured to support the CBC and GLPK free algorithms, as well as LCO's specific version of GUROBI for now. The latest_ortools
+configured to support the CBC and GLPK free algorithms, as well as LCO's specific version of GUROBI for now. The latest_ortoolkit
 branch contains a version of the scheduler which supports the latest version of ORTools and CBC and GLPK and GUROBI - it also
 contains a docker-compose file to run the scheduler. The default kernel algorithm is now CBC, but GUROBI or GLPK can be 
 specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
@@ -59,7 +59,7 @@ You can build the **Dockerfile** locally with local changes by running
 
 `docker build -t name_of_my_container .`
 
-You can then update the container name in the supplied **docker-compose.yml** and run the tests using (only in the latest_ortools branch for now)
+You can then update the container name in the supplied **docker-compose.yml** and run the tests using (only in the latest_ortoolkit branch for now)
 
 `docker-compose up`
 
