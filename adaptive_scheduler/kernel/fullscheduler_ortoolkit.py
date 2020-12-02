@@ -156,7 +156,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
 
         # Constraint: No more than one request should be scheduled in each (timeslice, resource) (eq 3)
         # self.aikt.keys() indexes the requests that occupy each (timeslice, resource)
-        for s in self.aikt.keys():
+        for s in sorted(self.aikt.keys()):
             match = []
             for timeslice in self.aikt[s]:
                 match.append(requestLocations[timeslice])

@@ -461,7 +461,7 @@ class FileBasedSchedulingInputProvider(object):
         logging.getLogger(__name__).warning("Trying to open {}".format(filename))
         print("Trying to open {}".format(filename))
         with open(filename, 'rb') as input_file:
-            pickle_input = pickle.load(input_file)
+            pickle_input = pickle.load(input_file, encoding='latin1')
 
         return pickle_input
 
