@@ -996,5 +996,5 @@ class SchedulerRunner(object):
 class EstimateExceededException(Exception):
 
     def __init__(self, msg, new_estimate):
-        super().__init__(msg)
+        super().__init__(self, msg)
         self.new_estimate = new_estimate

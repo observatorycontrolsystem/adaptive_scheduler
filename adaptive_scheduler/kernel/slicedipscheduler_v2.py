@@ -78,7 +78,7 @@ class SlicedIPScheduler_v2(Scheduler):
         for r in self.reservation_list:
             r.Yik_entries = []
             r.possible_starts = []
-            for resource in r.free_windows_dict.keys():
+            for resource in sorted(r.free_windows_dict.keys()):
                 r.possible_starts.extend(self.get_slices(r.free_windows_dict[resource], resource, r.duration))
             # reorder PossibleStarts
             r.possible_starts.sort()

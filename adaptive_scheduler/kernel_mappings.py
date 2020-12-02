@@ -306,6 +306,9 @@ def update_cached_semester(semester_start, semester_end):
             log.error("current semester is not in the local cache, and redis is unavailable. Please restart redis.")
     else:
         current_semester = local_cache['current_semester']
+    if type(current_semester) == bytes:
+        # This is needed in case we are loading an old python2 saved pickle input
+        current_semester = current_semester.decode('utf-8')
     if str(current_semester) != '{}_{}'.format(semester_start, semester_end):
         # if the current semester has changed from what redis previously knew, clear redis entirely and re-cache
         local_cache.clear()
