@@ -69,7 +69,7 @@ def parse_args(argv):
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
-                            help="Options are GUROBI, CBC, or GLPK. Default is CBC")
+                            help="Options are GUROBI, CBC, GLPK, or SCIP. Default is CBC")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',

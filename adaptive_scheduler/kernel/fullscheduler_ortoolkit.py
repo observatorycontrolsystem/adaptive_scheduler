@@ -29,7 +29,8 @@ logger = logging.getLogger(__name__)
 ALGORITHMS = {
     'CBC': pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING,
     'GUROBI': pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING,
-    'GLPK': pywraplp.Solver.GLPK_MIXED_INTEGER_PROGRAMMING
+    'GLPK': pywraplp.Solver.GLPK_MIXED_INTEGER_PROGRAMMING,
+    'SCIP': pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING
 }
 
 class Result(object):
