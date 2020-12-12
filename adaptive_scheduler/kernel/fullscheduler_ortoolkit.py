@@ -41,13 +41,14 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
     def __init__(self, kernel, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
-                 slice_size_seconds):
+                 slice_size_seconds, mip_gap):
         super().__init__(compound_reservation_list,
-                                      globally_possible_windows_dict,
-                                      contractual_obligation_list,
-                                      slice_size_seconds)
+                         globally_possible_windows_dict,
+                         contractual_obligation_list,
+                         slice_size_seconds)
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
         self.kernel = kernel
+        self.mip_gap = mip_gap
         self.algorithm = ALGORITHMS[kernel.upper()]
 
     # A stub to get the RA/dec by request ID
@@ -183,13 +184,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
 
         params = pywraplp.MPSolverParameters()
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution
-        params.SetDoubleParam(pywraplp.MPSolverParameters.RELATIVE_MIP_GAP, 0.01)
-
-        # Set the Method of solving the root relaxation of the MIPs model to concurrent (default is dual simplex)
-        # Set it to Barrier for now, since concurrent isnt supported in this ortoolkit version
-        # Only set this for GUROBI kernel
-        if self.kernel == 'GUROBI':
-            params.SetIntegerParam(pywraplp.MPSolverParameters.LP_ALGORITHM, pywraplp.MPSolverParameters.BARRIER)
+        params.SetDoubleParam(pywraplp.MPSolverParameters.RELATIVE_MIP_GAP, self.mip_gap)
 
         # Solve the model
         solver.EnableOutput()
@@ -199,7 +194,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
         # Return the optimally-scheduled windows
         r = Result()
         r.xf = []
-        for request, winidx, priority, resource, isScheduled in requestLocations: 
+        for request, winidx, priority, resource, isScheduled in requestLocations:
             r.xf.append(isScheduled.SolutionValue())
         logger.warn("Set SolutionValues of isScheduled")
 
