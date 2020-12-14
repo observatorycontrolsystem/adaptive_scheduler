@@ -11,7 +11,7 @@ from adaptive_scheduler.models import (ICRSTarget, Proposal, Configuration,
 from test.test_scheduler import create_scheduler_input_factory, create_running_request_group
 
 try:
-    from adaptive_scheduler.kernel.fullscheduler_ortoolkit import Fullscheduler_ortoolkit
+    from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
 except ImportError:
     raise SkipTest('ORToolkit is not properly installed, skipping these tests.')
 
@@ -170,7 +170,7 @@ class TestIntegration(object):
             semester_details = {}
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(Fullscheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
+        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
