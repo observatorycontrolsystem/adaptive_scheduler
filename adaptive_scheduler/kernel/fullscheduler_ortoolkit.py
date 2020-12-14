@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-FullScheduler_ortoolkit class for co-scheduling reservations 
+FullScheduler_ortoolkit class for co-scheduling reservations
 across multiple resources using time-slicing and an integer program.
 
 Because time is discretized into time slices, this scheduler requires
@@ -20,7 +20,6 @@ from adaptive_scheduler.utils import timeit, metric_timer
 from ortools.linear_solver import pywraplp
 
 from collections import defaultdict
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -38,6 +37,8 @@ class Result(object):
 
 
 class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
+    """ Performs scheduling using an algorithm from ORToolkit
+    """
     @metric_timer('kernel.init')
     def __init__(self, kernel, compound_reservation_list,
                  globally_possible_windows_dict,
