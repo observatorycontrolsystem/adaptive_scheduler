@@ -59,9 +59,9 @@ class ObservationPortalInterface(SendMetricMixin):
                 response.raise_for_status()
                 self.current_semester_details = response.json()['results'][0]
                 self.current_semester_details['start'] = datetime.strptime(self.current_semester_details['start'],
-                                                                           '%Y-%m-%dT%H:%M:%SZ')
+                                                                           '%Y-%m-%dT%H:%M:%S.%fZ')
                 self.current_semester_details['end'] = datetime.strptime(self.current_semester_details['end'],
-                                                                         '%Y-%m-%dT%H:%M:%SZ')
+                                                                         '%Y-%m-%dT%H:%M:%S.%fZ')
             except (RequestException, ValueError, Timeout) as e:
                 raise ObservationPortalConnectionError(
                     "failed to retrieve semester info for date {}: {}".format(date, repr(e)))
