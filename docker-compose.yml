@@ -1,0 +1,37 @@
+adaptive_scheduler:
+    user: "eng:eng"
+    image: my_adaptive_scheduler_image_name:test
+    links:
+      -  redis:redis
+    environment:
+      -  OPENTSDB_HOSTNAME=opentsdb-path
+      -  OPENTSDB_PYTHON_METRICS_TEST_MODE=True
+      -  OBSERVATION_PORTAL_URL=http://127.0.0.1:8000
+      -  CONFIGDB_URL=http://127.0.0.1:7000
+      -  DOWNTIMEDB_URL=http://127.0.0.1:7500
+      -  ELASTICSEARCH_URL=http://elasticsearch-path:9200
+      -  REDIS_URL=redis
+      -  SCHEDULER_SLEEP=30
+      -  SCHEDULER_TIMELIMIT=1200
+      -  SCHEDULER_HORIZON=2
+      -  SCHEDULER_SLICESIZE=300
+      -  "SCHEDULER_NOW="
+      -  "SCHEDULER_EXTRA_VARS= -o -d -w --normal_runtime_seconds 500 --rr_runtime_seconds 30 --save_output -k SCIP"
+      -  OBSERVATION_PORTAL_API_TOKEN=obs-portal-token
+    volumes:
+      # Edit these volume maps to wherever you want to store the log files and input/output data sets
+      -  ./data/input:/data/adaptive_scheduler/input_states/
+      -  ./data/output:/data/adaptive_scheduler/output_schedule/
+      -  ./data/:/data/adaptive_scheduler/
+      -  ./logs:/ocs/adaptive_scheduler/logs/
+    working_dir: /ocs/adaptive_scheduler/
+    entrypoint: /ocs/adaptive_scheduler/docker-test-no-third-party-entrypoint.sh
+    # entrypoint: /ocs/adaptive_scheduler/docker-entrypoint.sh
+redis:
+    image: redis:3.2
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: always
+    ports:
+      -  6379:6379
+    volumes:
+      -  ./data/redis:/data

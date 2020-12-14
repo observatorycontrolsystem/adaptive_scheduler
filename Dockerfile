@@ -1,28 +1,50 @@
-FROM observatorycontrolsystem/adaptive_scheduler_base:1.0.0
+FROM centos:centos8
 
 # setup the python environment
-ENV APPLICATION_ROOT /lco/adaptive_scheduler
+ENV APPLICATION_ROOT /ocs
 
-# set up env variables for gurobi
-ENV GUROBI_HOME /lco/adaptive_scheduler/gurobi
-ENV PATH ${PATH}:${GUROBI_HOME}/bin
-ENV LD_LIBRARY_PATH ${LD_LIBRARY_PATH}:${GUROBI_HOME}/lib
-
-# install and update packages
-RUN yum -y install epel-release \
-        && yum -y install gcc glpk-devel fftw-devel gsl-devel suitesparse-devel openblas-devel lapack-devel blas-devel supervisor\
-        && yum -y update \
-        && yum -y clean all
-
-# install python libs (and set cvxopt to install glpk)
-COPY requirements.pip $APPLICATION_ROOT/requirements.pip
-RUN pip3.4 install 'numpy<1.17.0' && CVXOPT_BUILD_GLPK=1 pip install -r $APPLICATION_ROOT/requirements.pip
-
-# copy the stuff
-COPY . $APPLICATION_ROOT
+RUN yum -y groupinstall 'Development Tools'
+RUN yum -y install pkgconfig epel-release
+RUN yum -y install python36-devel python3-wheel gcc gcc-gfortran fftw-devel gsl-devel swig which cmake autoconf zlib-devel wget glpk redhat-lsb-core maven protobuf
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
 # create eng user necessary to run scheduler and use gurobi
-RUN useradd -ms /bin/bash eng
-RUN chown -R eng:eng /lco/
-
 WORKDIR $APPLICATION_ROOT
+RUN useradd -ms /bin/bash eng
+RUN chown -R eng:eng /ocs/
+
+RUN git clone https://github.com/google/or-tools
+
+RUN wget http://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
+RUN tar -xzvf glpk-4.65.tar.gz
+WORKDIR $APPLICATION_ROOT/glpk-4.65
+RUN ./configure
+RUN make prefix=/ocs/glpk CFLAGS=-fPIC install
+ENV UNIX_GLPK_DIR /ocs/glpk
+
+WORKDIR $APPLICATION_ROOT/or-tools
+RUN git checkout v7.8
+COPY Makefile.local .
+
+RUN make third_party
+RUN make python
+RUN make install_python
+
+WORKDIR /ocs/or-tools/temp_python3.6/ortools/
+RUN mkdir -p /usr/local/lib64/python3.6/site-packages
+RUN python3 setup.py install
+
+ENV SCHEDULER_ROOT /ocs/adaptive_scheduler
+# install python libs (numpy needed for pyslalib)
+COPY requirements.pip $SCHEDULER_ROOT/requirements.pip
+RUN pip3 install numpy
+RUN pip3 install -r $SCHEDULER_ROOT/requirements.pip
+
+# copy the stuff
+COPY . $SCHEDULER_ROOT
+
+# # eng user will run scheduler and use gurobi
+RUN chown -R eng:eng /ocs/adaptive_scheduler
+
+WORKDIR $SCHEDULER_ROOT

@@ -19,13 +19,13 @@ class SchedulerParameters(object):
                  no_singles=False, no_compounds=False, no_rr=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
-                 kernel='gurobi', input_file_name=None, pickle=False,
-                 rr_run_time=120, normal_run_time=360,
+                 kernel='SCIP', input_file_name=None, pickle=False,
+                 rr_run_time=120, normal_run_time=360, mip_gap=0.01,
                  save_output=False, request_logs=False,
                  observation_portal_url='http://127.0.0.1:8000',
                  configdb_url='http://127.0.0.1:7000',
                  downtime_url='http://127.0.0.1:7500',
-                 elasticsearch_url='',
+                 elasticsearch_url='', telescope_class='all',
                  elasticsearch_index='live-telemetry',
                  elasticsearch_excluded_observatories='',
                  profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
@@ -52,8 +52,10 @@ class SchedulerParameters(object):
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.rr_runtime_seconds = rr_runtime_seconds
+        self.mip_gap = 0.01
         self.ignore_ipp = ignore_ipp
         self.debug = debug
+        self.telescope_class = telescope_class
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
@@ -239,7 +241,7 @@ class SchedulingInputUtils(SendMetricMixin):
         }
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
         filename = os.path.join(output_path, 'scheduling_input_{}.pickle'.format(file_timestamp))
-        outfile = open(filename, 'w')
+        outfile = open(filename, 'wb')
         try:
             pickle.dump(output, outfile)
         except pickle.PickleError as pe:
@@ -391,9 +393,11 @@ class SchedulingInputProvider(object):
         return rg_list
 
     def _get_available_resources(self):
+        # perform filtering out telescope classes here for now, but longterm should happen when querying requests
         resources = []
         for resource_name, resource in self.network_model.items():
-            if not resource['events']:
+            telescope_class = resource_name[:3].lower()  # telescope class is first 3 characters of the resource
+            if not resource['events'] and self.sched_params.telescope_class.lower() in ['all', telescope_class]:
                 resources.append(resource_name)
 
         return resources
@@ -458,8 +462,9 @@ class FileBasedSchedulingInputProvider(object):
 
     @staticmethod
     def _get_pickled_input(filename):
-        with open(filename, 'r') as input_file:
-            pickle_input = pickle.load(input_file)
+        logging.getLogger(__name__).info("Opening input file {}".format(filename))
+        with open(filename, 'rb') as input_file:
+            pickle_input = pickle.load(input_file, encoding='latin1')
 
         return pickle_input
 
@@ -517,5 +522,4 @@ class FileBasedSchedulingInputProvider(object):
                           self.network_interface.configdb_interface,
                           proposals_by_id=self.proposals_by_id,
                           semester_details=self.semester_details)
-
         return mb

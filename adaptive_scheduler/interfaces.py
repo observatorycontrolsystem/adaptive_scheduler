@@ -200,8 +200,8 @@ class CachedInputNetworkInterface(object):
 
     def __init__(self, input_file_name):
         self.input_file_name = input_file_name
-        input_file = open(self.input_file_name, 'r')
-        input_data = pickle.load(input_file)
+        input_file = open(self.input_file_name, 'rb')
+        input_data = pickle.load(input_file, encoding='latin1')
         input_file.close()
         self.json_request_group_list = input_data['json_request_group_list']
         self.resource_usage_snapshot_data = input_data['resource_usage_snapshot']

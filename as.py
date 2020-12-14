@@ -17,12 +17,13 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import SchedulingInputFactory, SchedulingInputProvider, \
     FileBasedSchedulingInputProvider, SchedulerParameters
 from adaptive_scheduler.monitoring.network_status import Network
+from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
 
 import argparse
 import logging
 import sys
 
-VERSION = '1.1.0'
+VERSION = '2.0.0'
 
 # Set up and configure an application scope logger
 import logger_config
@@ -67,16 +68,20 @@ def parse_args(argv):
                             help="Treat Rapid Response Requests like Normal Requests")
     arg_parser.add_argument("-o", "--run-once", action="store_true",
                             help="Only run the scheduling loop once, then exit")
-    arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel,
-                            help="Options are v5, v6, gurobi, mock. Default is gurobi")
+    arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
+                            help="Options are GUROBI, CBC, GLPK, or SCIP. Default is SCIP")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
+    arg_parser.add_argument("-g", "--mip_gap", type=float, default=defaults.mip_gap,
+                            help="The acceptable MIP GAP threshold used in the solver. Defaults to 0.01 (1%). Recommended range 0.01-0.0001")
     arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
                             help="Enable storing pickled files of scheduling run input")
     arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
                             help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
                             help="Enable saving the per-request log files")
+    arg_parser.add_argument("--telescope_class", type=str, default=defaults.telescope_class,
+                            help="Only schedule observations on the specified telescope_class. Expects 3 character telescope class, default is 'all'")
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                             help="Downtime endpoint url", default=defaults.downtime_url)
     arg_parser.add_argument("--elasticsearch_url", type=str, dest='elasticsearch_url',
@@ -121,29 +126,13 @@ def parse_args(argv):
 
 def get_kernel_class(sched_params):
     kernel_class = None
-    if sched_params.kernel == 'v5':
-        from adaptive_scheduler.kernel.fullscheduler_v5 import FullScheduler_v5
-        kernel_class = FullScheduler_v5
-        # Use -1 for no timelimit
-        if sched_params.timelimit_seconds == None:
-            sched_params.timelimit_seconds = -1
-    elif sched_params.kernel == 'v6':
-        from adaptive_scheduler.kernel.fullscheduler_v6 import FullScheduler_v6
-        kernel_class = FullScheduler_v6
-        # Use -1 for no timelimit
-        if sched_params.timelimit_seconds == None:
-            sched_params.timelimit_seconds = -1
-    elif sched_params.kernel == 'gurobi':
-        from adaptive_scheduler.kernel.fullscheduler_gurobi import FullScheduler_gurobi
-        kernel_class = FullScheduler_gurobi
-    elif sched_params.kernel == 'mock':
+    if sched_params.kernel == 'mock':
         from mock import Mock
         kernel_mock = Mock()
         kernel_mock.schedule_all = Mock(return_value={})
         kernel_class = Mock(return_value=kernel_mock)
     else:
-        raise Exception("Unknown kernel version %s" % sched_params.kernel)
-
+        kernel_class = FullScheduler_ortoolkit
     return kernel_class
 
 

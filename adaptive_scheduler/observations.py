@@ -37,7 +37,7 @@ rg_log = RequestGroupLogger(multi_rg_log)
 class ObservationRunningRequest(RunningRequest):
 
     def __init__(self, telescope, request_id, observation_id, start, end):
-        RunningRequest.__init__(self, telescope, request_id, start, end)
+        super().__init__(telescope, request_id, start, end)
         self.observation_id = observation_id
 
     def __str__(self):

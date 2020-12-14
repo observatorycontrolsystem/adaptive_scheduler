@@ -4,6 +4,7 @@ import time
 import logging
 import itertools
 import json
+from collections import defaultdict
 from functools import cmp_to_key
 
 from datetime import datetime, timedelta
@@ -215,6 +216,7 @@ class Scheduler(SendMetricMixin):
         semester_start = semester_details['start']
         horizon_days = self.sched_params.horizon_days
         one_day_horizon = estimated_scheduler_end + timedelta(days=1)
+
         for resource, reservations in schedule.items():
             available_seconds_for_horizon = 0
             available_seconds_for_one_day = 0
@@ -241,12 +243,54 @@ class Scheduler(SendMetricMixin):
                     scheduled_seconds_for_one_day += (capped_end - reservation_start).total_seconds()
 
             # log and record a metric for how full the telescope schedule is.
-            self.log.info("telescope {} filled {} / {} hours".format(
+            self.log.info("telescope {} filled {:.3f} / {:.3f} hours".format(
                 resource, (scheduled_seconds_for_horizon / 3600.0), (available_seconds_for_horizon / 3600.0)))
             self._send_schedule_metrics(resource, scheduled_seconds_for_horizon, available_seconds_for_horizon,
                                         horizon_days)
             if horizon_days != 1:
                 self._send_schedule_metrics(resource, scheduled_seconds_for_one_day, available_seconds_for_one_day, 1)
+
+    def produce_unscheduled_metrics(self, input_reservations, schedule):
+        # Compute the # of unscheduled and length of unscheduled observations per telescope class
+        scheduled_reservations = []
+        [scheduled_reservations.extend(a) for a in schedule.values()]
+        to_schedule_res = []
+        for comp_res in input_reservations:
+            to_schedule_res.extend(comp_res.reservation_list)
+
+        not_scheduled_reservations = set(to_schedule_res) - set(scheduled_reservations)
+        unscheduled_reqs_per_class = defaultdict(int)
+        unscheduled_hours_per_class = defaultdict(float)
+        for reservation in not_scheduled_reservations:
+            # We don't currently save telescope_class, so have to parse it from beginning of inst type
+            telescope_class = reservation.request.configurations[0].instrument_type[:3].lower()
+            unscheduled_reqs_per_class[telescope_class] += 1
+            unscheduled_hours_per_class[telescope_class] += (reservation.duration / 3600.0)
+        total_reqs_per_class = defaultdict(int)
+        total_hours_per_class = defaultdict(float)
+        for reservation in to_schedule_res:
+            telescope_class = reservation.request.configurations[0].instrument_type[:3].lower()
+            total_reqs_per_class[telescope_class] += 1
+            total_hours_per_class[telescope_class] += (reservation.duration / 3600.0)
+
+        # log the results and record metrics
+        for telescope_class in total_reqs_per_class.keys():
+            self.log.info("telescope class {} left with {} / {} unscheduled reservations".format(
+                telescope_class, unscheduled_reqs_per_class[telescope_class],
+                total_reqs_per_class[telescope_class]
+            ))
+            self.log.info("telescope class {} left with {:.3f} / {:.3f} unscheduled hours".format(
+                telescope_class, unscheduled_hours_per_class[telescope_class],
+                total_hours_per_class[telescope_class]
+            ))
+            self.send_metric('unscheduled_requests.duration_hours', unscheduled_hours_per_class[telescope_class],
+                             telescope_class=telescope_class)
+            self.send_metric('unscheduled_requests.number', unscheduled_reqs_per_class[telescope_class],
+                             telescope_class=telescope_class)
+            self.send_metric('total_requests.duration_hours', total_hours_per_class[telescope_class],
+                             telescope_class=telescope_class)
+            self.send_metric('total_requests.number', total_reqs_per_class[telescope_class],
+                             telescope_class=telescope_class)
 
     def _send_schedule_metrics(self, resource, scheduled_seconds, available_seconds, horizon_days):
         ''' Helper function to submit available, scheduled and % utilization metrics to opentsdb.
@@ -339,8 +383,9 @@ class Scheduler(SendMetricMixin):
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            kernel = self.kernel_class(compound_reservations, available_windows, contractual_obligations,
-                                       self.sched_params.slicesize_seconds)
+            kernel = self.kernel_class(self.sched_params.kernel, compound_reservations, available_windows,
+                                       contractual_obligations, self.sched_params.slicesize_seconds,
+                                       self.sched_params.mip_gap)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
@@ -352,8 +397,8 @@ class Scheduler(SendMetricMixin):
 
             # Do post scheduling stuff
             self.save_schedule(scheduler_result.schedule, estimated_scheduler_end, semester_details, preemption_enabled)
-            self.produce_schedule_metrics(scheduler_result.schedule, estimated_scheduler_end,
-                                          semester_details)
+            self.produce_schedule_metrics(scheduler_result.schedule, estimated_scheduler_end, semester_details)
+            self.produce_unscheduled_metrics(compound_reservations, scheduler_result.schedule)
             self.on_new_schedule(scheduler_result.schedule, compound_reservations, estimated_scheduler_end)
         else:
             self.log.info("Nothing to schedule! Skipping kernel call...")
@@ -364,7 +409,7 @@ class Scheduler(SendMetricMixin):
 
 class LCOGTNetworkScheduler(Scheduler):
     def __init__(self, kernel_class, sched_params, event_bus, network_model):
-        Scheduler.__init__(self, kernel_class, sched_params, event_bus)
+        super().__init__(kernel_class, sched_params, event_bus)
 
         self.visibility_cache = {}
         self.date_fmt = '%Y-%m-%d'
@@ -996,5 +1041,5 @@ class SchedulerRunner(object):
 class EstimateExceededException(Exception):
 
     def __init__(self, msg, new_estimate):
-        Exception.__init__(self, msg)
+        super().__init__(self, msg)
         self.new_estimate = new_estimate

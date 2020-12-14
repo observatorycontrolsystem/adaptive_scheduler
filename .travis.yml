@@ -1,7 +1,7 @@
 language: python
-dist: trusty
+dist: bionic
 python:
-- '3.4'
+- '3.6'
 env:
   global:
   - DOCKER_USERNAME='ocstravisci'
@@ -12,19 +12,15 @@ addons:
     - gfortran
     - libblas-dev
     - liblapack-dev
-    - libglpk-dev
-    - libsuitesparse-dev
 services:
 - docker
 install:
-- wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.2.0.tar.gz
-- tar -xf v5.2.0.tar.gz
 - pip install -U coverage coveralls
-- pip install 'numpy<1.17.0'
+- pip install 'numpy<1.20.0'
+- pip install ortools
 - mkdir logs
-- CVXOPT_BUILD_GLPK=1 CVXOPT_SUITESPARSE_SRC_DIR=$(pwd)/SuiteSparse-5.2.0 pip install
-  -r requirements.pip
-script: nosetests --logging-level=WARNING test --ignore-files=requires_gurobi --with-coverage
+- pip install -r requirements.pip
+script: nosetests --logging-level=WARNING test --exclude-dir=test/requires_third_party --with-coverage
 after_success: coveralls
 before_deploy:
 - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin

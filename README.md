@@ -12,11 +12,13 @@ support to query elasticsearch to incorporate telescope telemetry into it's deci
 It connects to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb) to get the set 
 of schedulable instruments.
 
+[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the SCIP, CBC and GLPK free algorithms, and should support the latest GUROBI if you have a license. The docker-compose file is an example of how to run the container - the environment variables will need to be set to point to the proper services for it to function correctly. The default kernel algorithm is now SCIP, but CBC or GLPK can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
+
 ## Prerequisites
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python == 3.4 (for now, due to our current gurobi license. This dependency will be removed in a future update)
+-   Python == 3.6.x
 -   A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
 -   A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 -   (Optional) A running [Downtime Database](https://github.com/observatorycontrolsystem/downtime)
@@ -41,27 +43,21 @@ The scheduler can either be run directly on a machine, or in the provided Docker
 
 ### Native Run
 
-First install the requirements into a python3.4 virtualenv. There are a large number of input arguments, with defaults 
+First install the requirements into a python3.6 virtualenv. There are a large number of input arguments, with defaults 
 defined in the *SchedulerParameters* class in **adaptive_scheduler/scheduler_input.py**.
 
 `python as.py --help`
 
-### Docker Run
+### Docker Run 
 
 You can build the **Dockerfile** locally with local changes by running
 
 `docker build -t name_of_my_container .`
 
-You can then update the container name in the supplied **docker-compose.yml** and run the tests using 
+You can then update the container name in the supplied **docker-compose.yml** and run the tests using
 
 `docker-compose up`
 
 To run the actual scheduler instead of its unit tests, change the entrypoint in the **docker-compose.yml** file to 
 invoke the main entrypoint `python as.py` with the desired arguments. Currently this will only work if you have a Gurobi 
 license for Gurobi 6.0.2 mounted into the container and linked appropriately, or switch the code to not use Gurobi.
-
-## Future
-
-In the near future, we will be migrating away from the direct Gurobi dependency and try to use 
-[Google's OR-Tools](https://developers.google.com/optimization). This should allow easy trial of several free 
-optimization algorithms, along with Gurobi if a license is provided. 

@@ -18,12 +18,12 @@ import os.path
 class MultiFileHandler(logging.FileHandler):
 
     def __init__(self, filename, mode, encoding=None, delay=0):
-        logging.FileHandler.__init__(self, filename, mode, encoding, delay)
+        super().__init__(filename, mode, encoding, delay)
 
     def emit(self, record):
         if self.should_change_file(record):
             self.change_file(record.file_id)
-        logging.FileHandler.emit(self, record)
+        super().emit(record)
 
     def should_change_file(self, record):
         if not hasattr(record, 'file_id') or record.file_id == self.baseFilename:
@@ -40,7 +40,7 @@ class MultiFileHandler(logging.FileHandler):
 class RequestGroupHandler(MultiFileHandler):
     def __init__(self, request_group_id, mode='a', logdir='.', encoding=None, delay=0):
         filename = os.path.join(logdir, str(int(request_group_id)) + '.log')
-        MultiFileHandler.__init__(self, filename, mode, encoding, delay)
+        super().__init__(filename, mode, encoding, delay)
         self.logdir = logdir
         self.request_group_id = request_group_id
 
