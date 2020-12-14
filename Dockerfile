@@ -1,14 +1,41 @@
-FROM observatorycontrolsystem/adaptive_scheduler_base:1.1.0
+FROM centos:centos8
 
 # setup the python environment
+ENV APPLICATION_ROOT /ocs
+
+RUN yum -y groupinstall 'Development Tools'
+RUN yum -y install pkgconfig epel-release
+RUN yum -y install python36-devel python3-wheel gcc gcc-gfortran fftw-devel gsl-devel swig which cmake autoconf zlib-devel wget glpk redhat-lsb-core maven protobuf
+RUN ln -s /usr/bin/python3 /usr/bin/python
+RUN ln -s /usr/bin/pip3 /usr/bin/pip
+
+# create eng user necessary to run scheduler and use gurobi
+WORKDIR $APPLICATION_ROOT
+RUN useradd -ms /bin/bash eng
+RUN chown -R eng:eng /ocs/
+
+RUN git clone https://github.com/google/or-tools
+
+RUN wget http://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
+RUN tar -xzvf glpk-4.65.tar.gz
+WORKDIR $APPLICATION_ROOT/glpk-4.65
+RUN ./configure
+RUN make prefix=/ocs/glpk CFLAGS=-fPIC install
+ENV UNIX_GLPK_DIR /ocs/glpk
+
+WORKDIR $APPLICATION_ROOT/or-tools
+RUN git checkout v7.8
+COPY Makefile.local .
+
+RUN make third_party
+RUN make python
+RUN make install_python
+
+WORKDIR /ocs/or-tools/temp_python3.6/ortools/
+RUN mkdir -p /usr/local/lib64/python3.6/site-packages
+RUN python3 setup.py install
+
 ENV SCHEDULER_ROOT /ocs/adaptive_scheduler
-
-# install and update packages
-RUN yum -y install epel-release \
-        && yum -y install gcc gcc-gfortran fftw-devel gsl-devel \
-        && yum -y update \
-        && yum -y clean all
-
 # install python libs (numpy needed for pyslalib)
 COPY requirements.pip $SCHEDULER_ROOT/requirements.pip
 RUN pip3 install numpy

@@ -12,18 +12,13 @@ support to query elasticsearch to incorporate telescope telemetry into it's deci
 It connects to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb) to get the set 
 of schedulable instruments.
 
-[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. Currently, we
-are using an older version of ORTools in order to support LCO's older Gurobi license. The base dockerfile is
-configured to support the CBC and GLPK free algorithms, as well as LCO's specific version of GUROBI for now. The latest_ortoolkit
-branch contains a version of the scheduler which supports the latest version of ORTools and CBC and GLPK and GUROBI - it also
-contains a docker-compose file to run the scheduler. The default kernel algorithm is now CBC, but GUROBI or GLPK can be 
-specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
+[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the SCIP, CBC and GLPK free algorithms, and should support the latest GUROBI if you have a license. The docker-compose file is an example of how to run the container - the environment variables will need to be set to point to the proper services for it to function correctly. The default kernel algorithm is now SCIP, but CBC or GLPK can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
 
 ## Prerequisites
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python == 3.6.x (for now, due to our current gurobi license. This dependency will be removed in a future update)
+-   Python == 3.6.x
 -   A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
 -   A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 -   (Optional) A running [Downtime Database](https://github.com/observatorycontrolsystem/downtime)
@@ -59,7 +54,7 @@ You can build the **Dockerfile** locally with local changes by running
 
 `docker build -t name_of_my_container .`
 
-You can then update the container name in the supplied **docker-compose.yml** and run the tests using (only in the latest_ortoolkit branch for now)
+You can then update the container name in the supplied **docker-compose.yml** and run the tests using
 
 `docker-compose up`
 
