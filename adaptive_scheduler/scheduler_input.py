@@ -462,8 +462,7 @@ class FileBasedSchedulingInputProvider(object):
 
     @staticmethod
     def _get_pickled_input(filename):
-        logging.getLogger(__name__).warning("Trying to open {}".format(filename))
-        print("Trying to open {}".format(filename))
+        logging.getLogger(__name__).info("Opening input file {}".format(filename))
         with open(filename, 'rb') as input_file:
             pickle_input = pickle.load(input_file, encoding='latin1')
 
