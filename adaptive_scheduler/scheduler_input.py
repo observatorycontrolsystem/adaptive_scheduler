@@ -19,7 +19,7 @@ class SchedulerParameters(object):
                  no_singles=False, no_compounds=False, no_rr=False,
                  timelimit_seconds=None, slicesize_seconds=300,
                  horizon_days=7.0, sleep_seconds=60, simulate_now=None,
-                 kernel='SCIP', input_file_name=None, pickle=False,
+                 kernel='CBC', input_file_name=None, pickle=False,
                  rr_run_time=120, normal_run_time=360, mip_gap=0.01,
                  save_output=False, request_logs=False,
                  observation_portal_url='http://127.0.0.1:8000',

@@ -12,7 +12,7 @@ support to query elasticsearch to incorporate telescope telemetry into it's deci
 It connects to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb) to get the set 
 of schedulable instruments.
 
-[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the SCIP, CBC and GLPK free algorithms, and should support the latest GUROBI if you have a license. The docker-compose file is an example of how to run the container - the environment variables will need to be set to point to the proper services for it to function correctly. The default kernel algorithm is now SCIP, but CBC or GLPK can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
+[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the CBC and GLPK free algorithms, and version 6.x of GUROBI if you have a license. The default kernel algorithm is now CBC, but GLPK or GUROBI can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
 
 ## Prerequisites
 
