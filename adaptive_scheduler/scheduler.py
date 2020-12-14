@@ -383,8 +383,9 @@ class Scheduler(SendMetricMixin):
             # Instantiate and run the scheduler
             contractual_obligations = []
 
-            kernel = self.kernel_class(self.sched_params.kernel, compound_reservations, available_windows, contractual_obligations,
-                                       self.sched_params.slicesize_seconds)
+            kernel = self.kernel_class(self.sched_params.kernel, compound_reservations, available_windows,
+                                       contractual_obligations, self.sched_params.slicesize_seconds,
+                                       self.sched_params.mip_gap)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level

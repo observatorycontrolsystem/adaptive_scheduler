@@ -94,23 +94,23 @@ class Fullscheduler_ortoolkit_helper(object):
         slice_size_seconds = 1
 
         self.fs1 = FullScheduler_ortoolkit(algorithm, [self.cr1, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs2 = FullScheduler_ortoolkit(algorithm, [self.cr1, self.cr4],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs3 = FullScheduler_ortoolkit(algorithm, [self.cr5],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs4 = FullScheduler_ortoolkit(algorithm, [self.cr8, self.cr6, self.cr7],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs5 = FullScheduler_ortoolkit(algorithm, [self.cr10, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs6 = FullScheduler_ortoolkit(algorithm, [self.cr11, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs7 = FullScheduler_ortoolkit(algorithm, [self.cr12],
-                                           self.gpw3, [], slice_size_seconds)
+                                           self.gpw3, [], slice_size_seconds, 0.01)
         self.fs8 = FullScheduler_ortoolkit(algorithm, [self.cr13, self.cr14, self.cr15, self.cr16],
-                                           self.gpw4, [], slice_size_seconds)
+                                           self.gpw4, [], slice_size_seconds, 0.01)
         self.fs9 = FullScheduler_ortoolkit(algorithm, [self.cr17, self.cr18, self.cr19],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs10 = FullScheduler_ortoolkit(algorithm, [self.cr20, self.cr21, self.cr22],
-                                            self.gpw2, [], slice_size_seconds)
+                                            self.gpw2, [], slice_size_seconds, 0.01)
 

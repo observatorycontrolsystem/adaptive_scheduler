@@ -111,25 +111,25 @@ class TestFullScheduler_gurobi(object):
         slice_size_seconds = 1
 
         self.fs1 = FullScheduler_ortoolkit('GUROBI', [self.cr1, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs2 = FullScheduler_ortoolkit('GUROBI', [self.cr1, self.cr4],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs3 = FullScheduler_ortoolkit('GUROBI', [self.cr5],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs4 = FullScheduler_ortoolkit('GUROBI', [self.cr8, self.cr6, self.cr7],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs5 = FullScheduler_ortoolkit('GUROBI', [self.cr10, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs6 = FullScheduler_ortoolkit('GUROBI', [self.cr11, self.cr2, self.cr3],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs7 = FullScheduler_ortoolkit('GUROBI', [self.cr12],
-                                           self.gpw3, [], slice_size_seconds)
+                                           self.gpw3, [], slice_size_seconds, 0.01)
         self.fs8 = FullScheduler_ortoolkit('GUROBI', [self.cr13, self.cr14, self.cr15, self.cr16],
-                                           self.gpw4, [], slice_size_seconds)
+                                           self.gpw4, [], slice_size_seconds, 0.01)
         self.fs9 = FullScheduler_ortoolkit('GUROBI', [self.cr17, self.cr18, self.cr19],
-                                           self.gpw2, [], slice_size_seconds)
+                                           self.gpw2, [], slice_size_seconds, 0.01)
         self.fs10 = FullScheduler_ortoolkit('GUROBI', [self.cr20, self.cr21, self.cr22],
-                                            self.gpw2, [], slice_size_seconds)
+                                            self.gpw2, [], slice_size_seconds, 0.01)
 
     # This is testing that we schedule earlier rather than later if given the choice
     def test_schedule_early(self):
@@ -197,7 +197,7 @@ class TestFullScheduler_gurobi(object):
     def test_schedule_triple_oneof(self):
         slice_size_seconds = 1
         fs = FullScheduler_ortoolkit('GUROBI', [self.cr9],
-                                     self.gpw2, [], slice_size_seconds)
+                                     self.gpw2, [], slice_size_seconds, 0.01)
         fs.schedule_all()
         # only one should be scheduled
 
@@ -217,7 +217,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
         slice_size_seconds = 300
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], slice_size_seconds)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], slice_size_seconds, 0.01)
         fs.schedule_all()
 
     def test_schedule_all_gaw(self):
@@ -234,7 +234,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60, 0.01)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['goo']))
@@ -247,7 +247,7 @@ class TestFullScheduler_gurobi(object):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60, 0.01)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['goo']))
@@ -260,7 +260,7 @@ class TestFullScheduler_gurobi(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60, 0.01)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['foo']))
@@ -273,7 +273,7 @@ class TestFullScheduler_gurobi(object):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60, 0.01)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['foo']))
@@ -286,5 +286,5 @@ class TestFullScheduler_gurobi(object):
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60)
+        fs = FullScheduler_ortoolkit('GUROBI', [cr], gpw, [], 60, 0.01)
         fs.schedule_all()

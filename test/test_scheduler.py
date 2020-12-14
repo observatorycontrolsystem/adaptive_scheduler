@@ -956,6 +956,7 @@ def create_request(request_id, duration, windows, possible_telescopes, is_rr=Fal
     if is_rr:
         observation_type = "RAPID_RESPONSE"
     mock_request = Mock(id=request_id, duration=duration, windows=model_windows, observation_type=observation_type)
+    mock_request.configurations = [Mock(instrument_type="1M0-SCICAM-TEST")]
     mock_request.get_duration = Mock(return_value=duration)
     mock_request.n_windows = Mock(return_value=len(windows))
 
