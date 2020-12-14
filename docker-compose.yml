@@ -32,6 +32,6 @@ redis:
     command: ["redis-server", "--appendonly", "yes"]
     restart: always
     ports:
-      -  6373:6379
+      -  6379:6379
     volumes:
       -  ./data/redis:/data
