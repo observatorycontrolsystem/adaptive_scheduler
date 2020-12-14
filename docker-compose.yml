@@ -16,7 +16,7 @@ adaptive_scheduler:
       -  SCHEDULER_HORIZON=2
       -  SCHEDULER_SLICESIZE=300
       -  "SCHEDULER_NOW="
-      -  "SCHEDULER_EXTRA_VARS= -o -d -w --normal_runtime_seconds 500 --rr_runtime_seconds 30 --save_output -k CBC"
+      -  "SCHEDULER_EXTRA_VARS= -o -d -w --normal_runtime_seconds 500 --rr_runtime_seconds 30 --save_output -k SCIP"
       -  OBSERVATION_PORTAL_API_TOKEN=obs-portal-token
     volumes:
       # Edit these volume maps to wherever you want to store the log files and input/output data sets
