@@ -26,7 +26,7 @@ class DowntimeInterface(SendMetricMixin):
         ''' Function calls the downtime endpoint and returns the json list of downtime intervals back.
         '''
         try:
-            r = requests.get(self.downtime_url + '?start={}&end={}'.format(start.isoformat(), end.isoformat()),
+            r = requests.get(self.downtime_url + 'api/?ends_after={}&starts_before={}'.format(start.isoformat(), end.isoformat()),
                              timeout=120)
         except requests.exceptions.RequestException as e:
             msg = "{}: {}".format(e.__class__.__name__, "_get_downtime_json failed: {} connection down: {}".format(
@@ -52,7 +52,7 @@ class DowntimeInterface(SendMetricMixin):
 
         for interval in downtime_json:
             resource = '.'.join(
-                [interval['telescope'].lower(), interval['observatory'].lower(), interval['site'].lower()])
+                [interval['telescope'].lower(), interval['enclosure'].lower(), interval['site'].lower()])
             if resource not in downtime_intervals:
                 downtime_intervals[resource] = []
             downtime_intervals[resource].append((datetime.strptime(interval['start'], DOWNTIME_DATE_FORMAT),
