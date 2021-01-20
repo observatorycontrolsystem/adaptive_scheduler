@@ -40,7 +40,7 @@ class DowntimeInterface(SendMetricMixin):
         if not r.status_code == 200:
             raise DowntimeError("_get_downtime_json failed: {} status code {}".format(self.downtime_url, r.status_code))
         json_results = r.json()
-        return json_results
+        return json_results['results']
 
     @timeit
     @metric_timer('downtime.get_downtime_intervals')
