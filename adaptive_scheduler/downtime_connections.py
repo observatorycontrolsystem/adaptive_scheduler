@@ -26,8 +26,12 @@ class DowntimeInterface(SendMetricMixin):
         ''' Function calls the downtime endpoint and returns the json list of downtime intervals back.
         '''
         try:
-            r = requests.get(self.downtime_url + '?start={}&end={}'.format(start.isoformat(), end.isoformat()),
-                             timeout=120)
+            r = requests.get(
+                self.downtime_url + 'api/?ends_after={}&starts_before={}'.format(
+                    start.strftime('%Y-%m-%d %H:%M:%S'), end.strftime('%Y-%m-%d %H:%M:%S')
+                ),
+                timeout=120
+            )
         except requests.exceptions.RequestException as e:
             msg = "{}: {}".format(e.__class__.__name__, "_get_downtime_json failed: {} connection down: {}".format(
                 self.downtime_url, repr(e)))
@@ -40,7 +44,7 @@ class DowntimeInterface(SendMetricMixin):
         if not r.status_code == 200:
             raise DowntimeError("_get_downtime_json failed: {} status code {}".format(self.downtime_url, r.status_code))
         json_results = r.json()
-        return json_results
+        return json_results['results']
 
     @timeit
     @metric_timer('downtime.get_downtime_intervals')
@@ -52,7 +56,7 @@ class DowntimeInterface(SendMetricMixin):
 
         for interval in downtime_json:
             resource = '.'.join(
-                [interval['telescope'].lower(), interval['observatory'].lower(), interval['site'].lower()])
+                [interval['telescope'].lower(), interval['enclosure'].lower(), interval['site'].lower()])
             if resource not in downtime_intervals:
                 downtime_intervals[resource] = []
             downtime_intervals[resource].append((datetime.strptime(interval['start'], DOWNTIME_DATE_FORMAT),
