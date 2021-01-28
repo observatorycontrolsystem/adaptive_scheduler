@@ -1,6 +1,6 @@
 # Adaptive Scheduler
 
-[![Build Status](https://travis-ci.com/observatorycontrolsystem/adaptive_scheduler.svg?branch=master)](https://travis-ci.com/observatorycontrolsystem/adaptive_scheduler)
+![Build](https://github.com/observatorycontrolsystem/adaptive_scheduler/workflows/Build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/observatorycontrolsystem/adaptive_scheduler/badge.svg?branch=master)](https://coveralls.io/github/observatorycontrolsystem/adaptive_scheduler?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/c41dca92a76f4ea9a284698d26772e91)](https://app.codacy.com/gh/observatorycontrolsystem/adaptive_scheduler?utm_source=github.com&utm_medium=referral&utm_content=observatorycontrolsystem/adaptive_scheduler&utm_campaign=Badge_Grade_Dashboard)
 
