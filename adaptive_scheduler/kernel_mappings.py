@@ -24,6 +24,7 @@ March 2012
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 from rise_set.utils import is_static_target
+from rise_set.exceptions import MovingViolation
 
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
@@ -130,8 +131,14 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     '''
     # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
     rs_dark_intervals = visibility.get_dark_intervals()
-    rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
-                                                      airmass=max_airmass)
+    rs_up_intervals = []
+    try:
+        rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
+                                                          airmass=max_airmass)
+    except MovingViolation as mv:
+        log.warn("rise-set failed on target")
+        log.warn(rise_set_target)
+
     if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
         if min_lunar_distance > 0.0:
