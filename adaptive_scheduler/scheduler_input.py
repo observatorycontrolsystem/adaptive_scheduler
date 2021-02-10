@@ -387,7 +387,8 @@ class SchedulingInputProvider(object):
         rg_list = self.network_interface.get_all_request_groups(semester_details['start'],
                                                                 min(now + timedelta(
                                                                     days=self.sched_params.horizon_days),
-                                                                    semester_details['end']))
+                                                                    semester_details['end']),
+                                                                self.sched_params.telescope_class)
         logging.getLogger(__name__).warning("_get_json_request_group_list got {} rgs".format(len(rg_list)))
 
         return rg_list
