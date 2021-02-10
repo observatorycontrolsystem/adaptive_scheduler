@@ -32,6 +32,8 @@ ALGORITHMS = {
     'SCIP': pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING
 }
 
+FALLBACK_ALGORITHM = ALGORITHMS['SCIP']
+
 class Result(object):
     pass
 
@@ -111,8 +113,17 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
-        # Instantiate a Gurobi Model object
-        solver = pywraplp.Solver('adaptive_scheduler', self.algorithm)
+        # Instantiate the ORTools solver
+        try:
+            solver = pywraplp.Solver('adaptive_scheduler', self.algorithm)
+            if not solver:
+                logger.warn(f"Failed to get a valid solver for {self.kernel}.")
+                logger.warn("Defaulting to SCIP solver")
+                solver = pywraplp.Solver('adaptive_scheduler', FALLBACK_ALGORITHM)
+        except Exception as e:
+            logger.warn(f"Failed to create a valid solver for {self.kernel}: {repr(e)}")
+            logger.warn("Defaulting to SCIP solver")
+            solver = pywraplp.Solver('adaptive_scheduler', FALLBACK_ALGORITHM)
 
         # Constraint: Decision variable (isScheduled) must be binary (eq 4)
         requestLocations = []
