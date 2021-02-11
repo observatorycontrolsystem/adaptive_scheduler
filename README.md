@@ -42,7 +42,7 @@ Optional prerequisites can be skipped for reduced functionality.
 | Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
 |                       | `KERNEL_TIMELIMIT`     | Max amount of time for the kernel to try to find an optimal solution      | _None_                                                 |
 |                       | `KERNEL_MIPGAP`     | MIP Gap tolerance for kernel to optimize to.      | 0.01                                                 |
-|                       | `MODEL_SLICESIZE`     | Size of time chunks to discretize window starts into for the solver in seconds      | 300.0                                                 |
+|                       | `MODEL_SLICESIZE`     | Size of time chunks to discretize window starts into for the solver in whole seconds      | 300                                                 |
 |                       | `MODEL_HORIZON`     | Number of days in the future to generate the schedule for      | 7.0                                                 |
 | General Settings       | `DRY_RUN`             | If True, scheduler will run but no output will be saved to the Observation Portal          | `False`                                                 |
 |                        | `RUN_ONCE`             | Terminate after running a single scheduling loop          | `False`                                                 |

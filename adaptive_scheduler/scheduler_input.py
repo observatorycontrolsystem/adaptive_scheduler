@@ -23,7 +23,7 @@ class SchedulerParameters(object):
                  no_compounds=os.getenv('NO_COMPOUNDS', False),
                  no_rr=os.getenv('NO_RAPID_RESPONSE', False),
                  timelimit_seconds=os.getenv('KERNEL_TIMELIMIT', None),
-                 slicesize_seconds=float(os.getenv('MODEL_SLICESIZE', 300.0)),
+                 slicesize_seconds=int(os.getenv('MODEL_SLICESIZE', 300)),
                  horizon_days=float(os.getenv('MODEL_HORIZON', 7.0)),
                  sleep_seconds=float(os.getenv('TIME_BETWEEN_RUNS', 60.0)),
                  simulate_now=os.getenv('CURRENT_TIME_OVERRIDE', None),
