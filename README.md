@@ -27,15 +27,41 @@ Optional prerequisites can be skipped for reduced functionality.
 
 ## Environment Variables
 
-|                        | Variable                | Description                                                         | Default                                                 |
+| Category               | Variable                | Description                                                         | Default                                                 |
 | ---------------------- | ----------------------- | ------------------------------------------------------------------- | ------------------------------------------------------- |
 | Gurobi                 | `GRB_LICENSE_FILE`      | The location of the gurobi license file within your container       | _`Empty string`_                                                      |
 | Metrics                | `OPENTSDB_HOSTNAME`     | The host name for an opentsdb server, for metrics                   | _`Empty string`_                                                      |
+|                        | `OPENTSDB_PYTHON_METRICS_TEST_MODE`| Set to any value to turn off metrics collection                   | `False`                                                       |
 | External Services      | `CONFIGDB_URL`          | The url to the configuration database                               | `http://127.0.0.1:7500`                                 |
 |                        | `DOWNTIMEDB_URL`        | The url to the downtime database                                    | `http://127.0.0.1:7000`                                 |
 |                        | `ELASTICSEARCH_URL`     | The url to the elasticsearch cluster                                | _`Empty string`_                                                      |
+|                        | `ELASTICSEARCH_INDEX`     | The elasticsearch index for telescope telemetry                                | `live-telemetry`                                                      |
+|                        | `ELASTICSEARCH_EXCLUDED_OBSERVATORIES`| Comma delimited list of enclosure codes to ignore telemetry from                                | _`Empty string`_                                                      |
 |                        | `OBSERVATION_PORTAL_URL`| The url to the observation portal                                   | `http://127.0.0.1:8000`                                 |
 |                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis`                                                 |
+| Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
+|                       | `KERNEL_TIMELIMIT`     | Max amount of time for the kernel to try to find an optimal solution      | _None_                                                 |
+|                       | `KERNEL_MIPGAP`     | MIP Gap tolerance for kernel to optimize to.      | 0.01                                                 |
+|                       | `MODEL_SLICESIZE`     | Size of time chunks to discretize window starts into for the solver in seconds      | 300.0                                                 |
+|                       | `MODEL_HORIZON`     | Number of days in the future to generate the schedule for      | 7.0                                                 |
+| General Settings       | `DRY_RUN`             | If True, scheduler will run but no output will be saved to the Observation Portal          | `False`                                                 |
+|                        | `RUN_ONCE`             | Terminate after running a single scheduling loop          | `False`                                                 |
+|                        | `NO_WEATHER`             | Ignore any telescope telemetry - assume all telescopes are available          | `False`                                                 |
+|                        | `NO_SINGLES`             | Do not consider `SINGLE` type RequestGroups for scheduling          | `False`                                                 |
+|                        | `NO_COMPOUNDS`             | Do not consider `MANY` type RequestGroups for scheduling          | `False`                                                 |
+|                        | `NO_RAPID_RESPONSE`             | Skip the Rapid Response scheduling loop (only perform Normal scheduling)          | `False`                                                 |
+|                        | `TIME_BETWEEN_RUNS`             | Seconds to sleep between each scheduling loop          | 60.0                                                 |
+|                        | `IGNORE_IPP_VALUES`             | If True, ignore IPP values when considering request priority          | `False`                                                   |
+|                        | `INITIAL_PER_RESERVATION_SAVE_TIME`             | Initial estimate of time taken per reservation to save to the web portal          | 60.0                                                 |
+|                        | `TELESCOPE_CLASS`             | Restrict the scheduler to only operate on a single telescope class (e.g. `1m0`)       | `all`                                                 |
+|                        | `INITIAL_NORMAL_RUNTIME`             | Initial estimate of duration of normal scheduling cycle in seconds         | 360.0                                                 |
+|                        | `INITIAL_RAPID_RESPONSE_RUNTIME`  | Initial estimate of duration of rapid response scheduling cycle in seconds      | 120.0                                                 |
+| Debugging Settings     | `SAVE_PICKLE_INPUT_FILES`     | If True, stores pickled scheduler input files each run in `/data/adaptive_scheduler/input_states` | `False`                                                   |
+|                        | `SAVE_JSON_OUTPUT_FILES`      | If True, stores json scheduler output files each run in `/data/adaptive_scheduler/output_schedule` | `False`                                                   |
+|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `/logs/` | `False`                                                   |
+|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `/logs/` | `False`                                                   |
+|                        | `SCHEDULER_INPUT_FILE`      | Full path to scheduler pickle input file. If present, scheduler will run on the input file rather than getting current requests. | _`Empty string`_                                                 |
+|                        | `CURRENT_TIME_OVERRIDE`      | Overrides the current time during scheduling. Useful for debugging things in the past | _None_                                                 |
 
 ## How to Run
 

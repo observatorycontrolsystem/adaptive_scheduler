@@ -23,15 +23,15 @@ class SchedulerParameters(object):
                  no_compounds=os.getenv('NO_COMPOUNDS', False),
                  no_rr=os.getenv('NO_RAPID_RESPONSE', False),
                  timelimit_seconds=os.getenv('KERNEL_TIMELIMIT', None),
-                 slicesize_seconds=os.getenv('MODEL_SLICESIZE', 300.0),
-                 horizon_days=os.getenv('MODEL_HORIZON', 7.0),
-                 sleep_seconds=os.getenv('TIME_BETWEEN_RUNS', 60.0),
+                 slicesize_seconds=float(os.getenv('MODEL_SLICESIZE', 300.0)),
+                 horizon_days=float(os.getenv('MODEL_HORIZON', 7.0)),
+                 sleep_seconds=float(os.getenv('TIME_BETWEEN_RUNS', 60.0)),
                  simulate_now=os.getenv('CURRENT_TIME_OVERRIDE', None),
                  kernel=os.getenv('KERNEL_ALGORITHM', 'SCIP'),
                  input_file_name=os.getenv('SCHEDULER_INPUT_FILE', None),
                  pickle=os.getenv('SAVE_PICKLE_INPUT_FILES', False),
-                 mip_gap=os.getenv('KERNEL_MIPGAP', 0.01),
-                 save_output=os.getenv('SAVE_JSON_OUTPUT', False),
+                 mip_gap=float(os.getenv('KERNEL_MIPGAP', 0.01)),
+                 save_output=os.getenv('SAVE_JSON_OUTPUT_FILES', False),
                  request_logs=os.getenv('SAVE_PER_REQUEST_LOGS', False),
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
@@ -42,15 +42,18 @@ class SchedulerParameters(object):
                  elasticsearch_excluded_observatories=os.getenv('ELASTICSEARCH_EXCLUDED_OBSERVATORIES', ''),
                  profiling_enabled=os.getenv('CPROFILE_ENABLED', False),
                  ignore_ipp=os.getenv('IGNORE_IPP_VALUES', False),
-                 avg_reservation_save_time_seconds=os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05),
-                 normal_runtime_seconds=os.getenv('INITIAL_NORMAL_RUNTIME', 360.0),
-                 rr_runtime_seconds=os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0)):
+                 avg_reservation_save_time_seconds=float(os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05)),
+                 normal_runtime_seconds=float(os.getenv('INITIAL_NORMAL_RUNTIME', 360.0)),
+                 rr_runtime_seconds=float(os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0))):
         self.dry_run = dry_run
         self.no_weather = no_weather
         self.no_singles = no_singles
         self.no_compounds = no_compounds
         self.no_rr = no_rr
-        self.timelimit_seconds = timelimit_seconds
+        if timelimit_seconds:
+            self.timelimit_seconds = float(timelimit_seconds)
+        else:
+            self.timelimit_seconds = None
         self.slicesize_seconds = slicesize_seconds
         self.horizon_days = horizon_days
         self.run_once = run_once
