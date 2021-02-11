@@ -15,21 +15,36 @@ class SchedulingInputException(Exception):
 
 class SchedulerParameters(object):
 
-    def __init__(self, dry_run=False, run_once=False, no_weather=False,
-                 no_singles=False, no_compounds=False, no_rr=False,
-                 timelimit_seconds=None, slicesize_seconds=300,
-                 horizon_days=7.0, sleep_seconds=60, simulate_now=None,
-                 kernel='SCIP', input_file_name=None, pickle=False,
-                 rr_run_time=120, normal_run_time=360, mip_gap=0.01,
-                 save_output=False, request_logs=False,
-                 observation_portal_url='http://127.0.0.1:8000',
-                 configdb_url='http://127.0.0.1:7000',
-                 downtime_url='http://127.0.0.1:7500',
-                 elasticsearch_url='', telescope_class='all',
-                 elasticsearch_index='live-telemetry',
-                 elasticsearch_excluded_observatories='',
-                 profiling_enabled=False, ignore_ipp=False, avg_reservation_save_time_seconds=0.05,
-                 normal_runtime_seconds=360.0, rr_runtime_seconds=120.0, debug=False):
+    def __init__(self,
+                 dry_run=os.getenv('DRY_RUN', False),
+                 run_once=os.getenv('RUN_ONCE', False),
+                 no_weather=os.getenv('NO_WEATHER', False),
+                 no_singles=os.getenv('NO_SINGLES', False),
+                 no_compounds=os.getenv('NO_COMPOUNDS', False),
+                 no_rr=os.getenv('NO_RAPID_RESPONSE', False),
+                 timelimit_seconds=os.getenv('KERNEL_TIMELIMIT', None),
+                 slicesize_seconds=os.getenv('MODEL_SLICESIZE', 300.0),
+                 horizon_days=os.getenv('MODEL_HORIZON', 7.0),
+                 sleep_seconds=os.getenv('TIME_BETWEEN_RUNS', 60.0),
+                 simulate_now=os.getenv('CURRENT_TIME_OVERRIDE', None),
+                 kernel=os.getenv('KERNEL_ALGORITHM', 'SCIP'),
+                 input_file_name=os.getenv('SCHEDULER_INPUT_FILE', None),
+                 pickle=os.getenv('SAVE_PICKLE_INPUT_FILES', False),
+                 mip_gap=os.getenv('KERNEL_MIPGAP', 0.01),
+                 save_output=os.getenv('SAVE_JSON_OUTPUT', False),
+                 request_logs=os.getenv('SAVE_PER_REQUEST_LOGS', False),
+                 observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
+                 configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
+                 downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
+                 elasticsearch_url=os.getenv('ELASTICSEARCH_URL', ''),
+                 telescope_class=os.getenv('TELESCOPE_CLASS', 'all'),
+                 elasticsearch_index=os.getenv('ELASTICSEARCH_INDEX', 'live-telemetry'),
+                 elasticsearch_excluded_observatories=os.getenv('ELASTICSEARCH_EXCLUDED_OBSERVATORIES', ''),
+                 profiling_enabled=os.getenv('CPROFILE_ENABLED', False),
+                 ignore_ipp=os.getenv('IGNORE_IPP_VALUES', False),
+                 avg_reservation_save_time_seconds=os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05),
+                 normal_runtime_seconds=os.getenv('INITIAL_NORMAL_RUNTIME', 360.0),
+                 rr_runtime_seconds=os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0)):
         self.dry_run = dry_run
         self.no_weather = no_weather
         self.no_singles = no_singles
@@ -46,15 +61,12 @@ class SchedulerParameters(object):
         self.pickle = pickle
         self.save_output = save_output
         self.request_logs = request_logs
-        self.rr_run_time = rr_run_time
-        self.normal_run_time = normal_run_time
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.rr_runtime_seconds = rr_runtime_seconds
         self.mip_gap = 0.01
         self.ignore_ipp = ignore_ipp
-        self.debug = debug
         self.telescope_class = telescope_class
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
@@ -312,8 +324,8 @@ class SchedulingInputProvider(object):
         self.network_interface = network_interface
         self.network_model = network_model
         self.is_rr_input = is_rr_input
-        self.estimated_rr_run_time = timedelta(seconds=self.sched_params.rr_run_time)
-        self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_run_time)
+        self.estimated_rr_run_time = timedelta(seconds=self.sched_params.rr_runtime_seconds)
+        self.estimated_normal_run_time = timedelta(seconds=self.sched_params.normal_runtime_seconds)
 
         # TODO: Hide these behind read only properties
         self.scheduler_now = None

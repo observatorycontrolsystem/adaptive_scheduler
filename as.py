@@ -106,9 +106,6 @@ def parse_args(argv):
     arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
                             help="Ignore intra-proposal priority when computing request priority",
                             default=defaults.ignore_ipp)
-    arg_parser.add_argument("--debug", action="store_true", dest='debug',
-                            help="Sets debug mode in the requestdb client calls to save error output to a file.",
-                            default=defaults.debug)
 
     # Handle command line arguments
     args, unknown = arg_parser.parse_known_args(argv)
@@ -150,8 +147,7 @@ def main(argv):
                            event_type=TimingLogger._EndEvent)
 
     schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
-    observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url,
-                                                              debug=sched_params.debug)
+    observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
     network_state_interface = Network(configdb_interface, sched_params)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,

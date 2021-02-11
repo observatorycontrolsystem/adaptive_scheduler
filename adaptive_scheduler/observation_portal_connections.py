@@ -14,9 +14,8 @@ class ObservationPortalConnectionError(Exception):
 
 class ObservationPortalInterface(SendMetricMixin):
 
-    def __init__(self, obs_portal_url, debug=False):
+    def __init__(self, obs_portal_url):
         self.obs_portal_url = obs_portal_url
-        self.debug = debug
         self.log = logging.getLogger(__name__)
         self.headers = {'Authorization': 'Token ' + os.getenv("OBSERVATION_PORTAL_API_TOKEN", '')}
         self.current_semester_details = None
