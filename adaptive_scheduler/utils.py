@@ -32,6 +32,16 @@ NORMAL_OBSERVATION_TYPE = 'normal'
 RR_OBSERVATION_TYPE = 'rr'
 
 
+def toBool(str_or_bool):
+    if isinstance(str_or_bool, str):
+        if 'false' in str_or_bool.lower():
+            return False
+        else:
+            return True
+    else:
+        return str_or_bool
+
+
 def safe_unidecode(unicode_str, max_length):
     ''' unidecode and then replace mystery characters with a single ?'''
     decoded_str = unidecode(unicode_str).replace('[?]', '?')

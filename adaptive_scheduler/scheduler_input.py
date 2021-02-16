@@ -1,5 +1,5 @@
 from adaptive_scheduler.models import ModelBuilder, RequestError, n_base_requests
-from adaptive_scheduler.utils import iso_string_to_datetime
+from adaptive_scheduler.utils import iso_string_to_datetime, toBool
 from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin, get_reservation_datetimes
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 
@@ -16,12 +16,12 @@ class SchedulingInputException(Exception):
 class SchedulerParameters(object):
 
     def __init__(self,
-                 dry_run=os.getenv('DRY_RUN', False),
-                 run_once=os.getenv('RUN_ONCE', False),
-                 no_weather=os.getenv('NO_WEATHER', False),
-                 no_singles=os.getenv('NO_SINGLES', False),
-                 no_compounds=os.getenv('NO_COMPOUNDS', False),
-                 no_rr=os.getenv('NO_RAPID_RESPONSE', False),
+                 dry_run=toBool(os.getenv('DRY_RUN', 'False')),
+                 run_once=toBool(os.getenv('RUN_ONCE', 'False')),
+                 no_weather=toBool(os.getenv('NO_WEATHER', 'False')),
+                 no_singles=toBool(os.getenv('NO_SINGLES', 'False')),
+                 no_compounds=toBool(os.getenv('NO_COMPOUNDS', 'False')),
+                 no_rr=toBool(os.getenv('NO_RAPID_RESPONSE', 'False')),
                  timelimit_seconds=os.getenv('KERNEL_TIMELIMIT', None),
                  slicesize_seconds=int(os.getenv('MODEL_SLICESIZE', 300)),
                  horizon_days=float(os.getenv('MODEL_HORIZON', 7.0)),
@@ -29,10 +29,10 @@ class SchedulerParameters(object):
                  simulate_now=os.getenv('CURRENT_TIME_OVERRIDE', None),
                  kernel=os.getenv('KERNEL_ALGORITHM', 'SCIP'),
                  input_file_name=os.getenv('SCHEDULER_INPUT_FILE', None),
-                 pickle=os.getenv('SAVE_PICKLE_INPUT_FILES', False),
+                 pickle=toBool(os.getenv('SAVE_PICKLE_INPUT_FILES', 'False')),
                  mip_gap=float(os.getenv('KERNEL_MIPGAP', 0.01)),
-                 save_output=os.getenv('SAVE_JSON_OUTPUT_FILES', False),
-                 request_logs=os.getenv('SAVE_PER_REQUEST_LOGS', False),
+                 save_output=toBool(os.getenv('SAVE_JSON_OUTPUT_FILES', 'False')),
+                 request_logs=toBool(os.getenv('SAVE_PER_REQUEST_LOGS', 'False')),
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
                  downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
@@ -40,8 +40,8 @@ class SchedulerParameters(object):
                  telescope_class=os.getenv('TELESCOPE_CLASS', 'all'),
                  elasticsearch_index=os.getenv('ELASTICSEARCH_INDEX', 'live-telemetry'),
                  elasticsearch_excluded_observatories=os.getenv('ELASTICSEARCH_EXCLUDED_OBSERVATORIES', ''),
-                 profiling_enabled=os.getenv('CPROFILE_ENABLED', False),
-                 ignore_ipp=os.getenv('IGNORE_IPP_VALUES', False),
+                 profiling_enabled=toBool(os.getenv('CPROFILE_ENABLED', 'False')),
+                 ignore_ipp=toBool(os.getenv('IGNORE_IPP_VALUES', 'False')),
                  avg_reservation_save_time_seconds=float(os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05)),
                  normal_runtime_seconds=float(os.getenv('INITIAL_NORMAL_RUNTIME', 360.0)),
                  rr_runtime_seconds=float(os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0))):

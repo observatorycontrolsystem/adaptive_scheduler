@@ -50,23 +50,23 @@ def parse_args(argv):
                             help="The discretization size of the scheduler, in seconds")
     arg_parser.add_argument("-s", "--sleep", type=int, default=defaults.sleep_seconds, dest='sleep_seconds',
                             help="Sleep period between scheduling runs, in seconds")
-    arg_parser.add_argument("-p", "--observation_portal_url", type=str, required=True, dest='observation_portal_url',
-                            help="Observation Portal base URL")
+    arg_parser.add_argument("-p", "--observation_portal_url", type=str, dest='observation_portal_url',
+                            help="Observation Portal base URL", default=defaults.observation_portal_url)
     arg_parser.add_argument("-c", "--configdb_url", type=str, dest='configdb_url', default=defaults.configdb_url,
                             help="ConfigDB endpoint URL")
-    arg_parser.add_argument("-d", "--dry-run", action="store_true",
+    arg_parser.add_argument("-d", "--dry-run", type=bool, default=defaults.dry_run,
                             help="Perform a trial run with no changes made")
     arg_parser.add_argument("-n", "--now", type=str, dest='simulate_now',
                             help="Alternative datetime to use as 'now', for running simulations (in isoformat: %%Y-%%m-%%dT%%H:%%M:%%SZ)")
-    arg_parser.add_argument("-w", "--noweather", action="store_true", dest='no_weather',
+    arg_parser.add_argument("-w", "--noweather", type=bool, default=defaults.no_weather, dest='no_weather',
                             help="Disable weather checking")
-    arg_parser.add_argument("--nosingles", action="store_true", dest='no_singles',
+    arg_parser.add_argument("--nosingles", type=bool, default=defaults.no_singles, dest='no_singles',
                             help="Ignore the 'single' Request type")
-    arg_parser.add_argument("--nocompounds", action="store_true", dest='no_compounds',
+    arg_parser.add_argument("--nocompounds", type=bool, default=defaults.no_compounds, dest='no_compounds',
                             help="Ignore the 'and', 'oneof' and 'many' Request types")
-    arg_parser.add_argument("--no_rr", action="store_true", dest='no_rr',
+    arg_parser.add_argument("--no_rr", type=bool, default=defaults.no_rr, dest='no_rr',
                             help="Treat Rapid Response Requests like Normal Requests")
-    arg_parser.add_argument("-o", "--run-once", action="store_true",
+    arg_parser.add_argument("-o", "--run-once", type=bool, default=defaults.run_once,
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
                             help="Options are GUROBI, CBC, GLPK, or SCIP. Default is SCIP")
@@ -74,11 +74,11 @@ def parse_args(argv):
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("-g", "--mip_gap", type=float, default=defaults.mip_gap,
                             help="The acceptable MIP GAP threshold used in the solver. Defaults to 0.01 (1%). Recommended range 0.01-0.0001")
-    arg_parser.add_argument("--pickle", action="store_true", dest='pickle',
+    arg_parser.add_argument("--pickle", type=bool, default=defaults.pickle, dest='pickle',
                             help="Enable storing pickled files of scheduling run input")
-    arg_parser.add_argument("--save_output", action="store_true", dest='save_output',
+    arg_parser.add_argument("--save_output", type=bool, default=defaults.save_output, dest='save_output',
                             help="Enable storing scheduling run output in a json file")
-    arg_parser.add_argument("--request_logs", action="store_true", dest='request_logs',
+    arg_parser.add_argument("--request_logs", type=bool, default=defaults.request_logs, dest='request_logs',
                             help="Enable saving the per-request log files")
     arg_parser.add_argument("--telescope_class", type=str, default=defaults.telescope_class,
                             help="Only schedule observations on the specified telescope_class. Expects 3 character telescope class, default is 'all'")
@@ -91,7 +91,7 @@ def parse_args(argv):
     arg_parser.add_argument("--elasticsearch_excluded_observatories", type=str,
                             dest='elasticsearch_excluded_observatories',
                             help="Elasticsearch telemetry observatories to exclude (comma delimited)",
-                            default=defaults.elasticsearch_excluded_observatories)
+                            default=','.join(defaults.elasticsearch_excluded_observatories))
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                             help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
@@ -103,7 +103,7 @@ def parse_args(argv):
     arg_parser.add_argument("--rr_runtime_seconds", type=float, dest='rr_runtime_seconds',
                             help="Initial estimate for the Rapid Response loop runtime",
                             default=defaults.rr_runtime_seconds)
-    arg_parser.add_argument("--ignore_ipp", action="store_true", dest='ignore_ipp',
+    arg_parser.add_argument("--ignore_ipp", type=bool, dest='ignore_ipp',
                             help="Ignore intra-proposal priority when computing request priority",
                             default=defaults.ignore_ipp)
 
