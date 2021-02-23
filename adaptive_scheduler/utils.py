@@ -32,7 +32,7 @@ NORMAL_OBSERVATION_TYPE = 'normal'
 RR_OBSERVATION_TYPE = 'rr'
 
 
-def toBool(str_or_bool):
+def to_bool(str_or_bool):
     if isinstance(str_or_bool, str):
         if 'false' in str_or_bool.lower():
             return False

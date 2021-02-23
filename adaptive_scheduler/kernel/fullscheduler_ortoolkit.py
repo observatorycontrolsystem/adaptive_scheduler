@@ -21,6 +21,7 @@ from ortools.linear_solver import pywraplp
 
 from collections import defaultdict
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,7 @@ ALGORITHMS = {
     'SCIP': pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING
 }
 
-FALLBACK_ALGORITHM = ALGORITHMS['SCIP']
+FALLBACK_ALGORITHM = ALGORITHMS[os.getenv('KERNEL_FALLBACK_ALGORITHM', 'SCIP')]
 
 class Result(object):
     pass

@@ -61,7 +61,7 @@ local_cache = {}
 
 
 def telescope_to_rise_set_telescope(telescope):
-    '''Convert scheduler Telescope to rise_set telescope dict.'''
+    """Convert scheduler Telescope to rise_set telescope dict."""
     # TODO: Move scheduler Telescope code to rise_set.
     HOURS_TO_DEGREES = 15
     return {
@@ -135,7 +135,7 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     try:
         rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                           airmass=max_airmass)
-    except MovingViolation as mv:
+    except MovingViolation:
         log.warn("rise-set failed on target")
         log.warn(rise_set_target)
 

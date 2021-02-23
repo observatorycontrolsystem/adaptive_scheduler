@@ -41,6 +41,7 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `OBSERVATION_PORTAL_API_TOKEN`| The API Token for an admin of the observation-portal                                   | _`Empty string`_                                 |
 |                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis`                                                 |
 | Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
+| Kernel Settings       | `KERNEL_FALLBACK_ALGORITHM`     | Fallback algorithm in case main choice fails or throws an exception. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
 |                       | `KERNEL_TIMELIMIT`     | Max amount of time for the kernel to try to find an optimal solution      | _None_                                                 |
 |                       | `KERNEL_MIPGAP`     | MIP Gap tolerance for kernel to optimize to.      | 0.01                                                 |
 |                       | `MODEL_SLICESIZE`     | Size of time chunks to discretize window starts into for the solver in whole seconds      | 300                                                 |
