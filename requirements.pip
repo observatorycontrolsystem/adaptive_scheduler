@@ -13,6 +13,7 @@ lcogt-logging
 python-dateutil
 unidecode<1.2.0
 elasticsearch<6.0,>=5.0
+six
 
 # 2) Testing/debugging dependencies
 nose<=1.4.0

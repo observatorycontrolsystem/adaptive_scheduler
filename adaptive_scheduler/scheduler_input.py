@@ -68,7 +68,7 @@ class SchedulerParameters(object):
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
         self.rr_runtime_seconds = rr_runtime_seconds
-        self.mip_gap = 0.01
+        self.mip_gap = mip_gap
         self.ignore_ipp = ignore_ipp
         self.telescope_class = telescope_class
         self.observation_portal_url = observation_portal_url
