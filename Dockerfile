@@ -5,15 +5,22 @@ ENV APPLICATION_ROOT /ocs
 
 RUN yum -y groupinstall 'Development Tools'
 RUN yum -y install pkgconfig epel-release
-RUN yum -y install python36-devel python3-wheel gcc gcc-gfortran fftw-devel gsl-devel swig which cmake autoconf zlib-devel wget glpk redhat-lsb-core maven protobuf
+RUN yum -y install python36-devel python3-wheel gcc gcc-gfortran fftw-devel gsl-devel swig which cmake autoconf zlib-devel wget glpk redhat-lsb-core maven protobuf openssl-devel
 RUN ln -s /usr/bin/python3 /usr/bin/python
 RUN ln -s /usr/bin/pip3 /usr/bin/pip
 
 # create eng user necessary to run scheduler and use gurobi
 WORKDIR $APPLICATION_ROOT
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.17.3/cmake-3.17.3.tar.gz
+RUN tar -zxvf cmake-3.17.3.tar.gz
+WORKDIR $APPLICATION_ROOT/cmake-3.17.3
+RUN ./bootstrap
+RUN make && make install
+
 RUN useradd -ms /bin/bash eng
 RUN chown -R eng:eng /ocs/
 
+WORKDIR $APPLICATION_ROOT
 RUN git clone https://github.com/google/or-tools
 
 RUN wget http://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
@@ -24,7 +31,7 @@ RUN make prefix=/ocs/glpk CFLAGS=-fPIC install
 ENV UNIX_GLPK_DIR /ocs/glpk
 
 WORKDIR $APPLICATION_ROOT/or-tools
-RUN git checkout v7.8
+RUN git checkout v8.1
 COPY Makefile.local .
 
 RUN make third_party

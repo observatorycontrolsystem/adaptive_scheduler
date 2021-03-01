@@ -21,16 +21,19 @@ from ortools.linear_solver import pywraplp
 
 from collections import defaultdict
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
 
 ALGORITHMS = {
-    'CBC': pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING,
-    'GUROBI': pywraplp.Solver.GUROBI_MIXED_INTEGER_PROGRAMMING,
-    'GLPK': pywraplp.Solver.GLPK_MIXED_INTEGER_PROGRAMMING,
-    'SCIP': pywraplp.Solver.SCIP_MIXED_INTEGER_PROGRAMMING
+    'CBC': 'CBC_MIXED_INTEGER_PROGRAMMING',
+    'GUROBI': 'GUROBI_MIXED_INTEGER_PROGRAMMING',
+    'GLPK': 'GLPK_MIXED_INTEGER_PROGRAMMING',
+    'SCIP': 'SCIP_MIXED_INTEGER_PROGRAMMING'
 }
+
+FALLBACK_ALGORITHM = ALGORITHMS[os.getenv('KERNEL_FALLBACK_ALGORITHM', 'SCIP')]
 
 class Result(object):
     pass
@@ -111,8 +114,17 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
-        # Instantiate a Gurobi Model object
-        solver = pywraplp.Solver('adaptive_scheduler', self.algorithm)
+        # Instantiate the ORTools solver
+        try:
+            solver = pywraplp.Solver_CreateSolver(self.algorithm)
+            if not solver:
+                logger.warn(f"Failed to get a valid solver for {self.kernel}.")
+                logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
+                solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
+        except Exception as e:
+            logger.warn(f"Failed to create a valid solver for {self.kernel}: {repr(e)}")
+            logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
+            solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
 
         # Constraint: Decision variable (isScheduled) must be binary (eq 4)
         requestLocations = []

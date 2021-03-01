@@ -14,9 +14,8 @@ class ObservationPortalConnectionError(Exception):
 
 class ObservationPortalInterface(SendMetricMixin):
 
-    def __init__(self, obs_portal_url, debug=False):
+    def __init__(self, obs_portal_url):
         self.obs_portal_url = obs_portal_url
-        self.debug = debug
         self.log = logging.getLogger(__name__)
         self.headers = {'Authorization': 'Token ' + os.getenv("OBSERVATION_PORTAL_API_TOKEN", '')}
         self.current_semester_details = None
@@ -84,11 +83,13 @@ class ObservationPortalInterface(SendMetricMixin):
 
     @timeit
     @metric_timer('requestdb.get_requests', num_requests=len)
-    def get_all_request_groups(self, start, end):
+    def get_all_request_groups(self, start, end, telescope_class='all'):
         ''' Get all user requests waiting for scheduling between
-            start and end date
+            start and end date, potentially for a single telescope class
         '''
         requests_url = self.obs_portal_url + '/api/requestgroups/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
+        if not telescope_class.lower() == 'all':
+            requests_url += '&telescope_class=' + telescope_class
         self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
             response = requests.get(requests_url, headers=self.headers, timeout=180)
