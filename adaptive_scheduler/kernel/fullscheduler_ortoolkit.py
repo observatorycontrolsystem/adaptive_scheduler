@@ -15,7 +15,7 @@ January 2014
 '''
 
 from adaptive_scheduler.kernel.slicedipscheduler_v2 import SlicedIPScheduler_v2
-from adaptive_scheduler.utils import timeit, metric_timer
+from adaptive_scheduler.utils import timeit, metric_timer, SendMetricMixin
 
 from ortools.linear_solver import pywraplp
 
@@ -39,7 +39,7 @@ class Result(object):
     pass
 
 
-class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
+class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
     """ Performs scheduling using an algorithm from ORToolkit
     """
     @metric_timer('kernel.init')
@@ -114,17 +114,24 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
         # weight the priorities in each timeslice by airmass
         self.weight_by_airmass()
 
+        # used to save a metric for when the primary algorithm fails to instantiate
+        primary_algorithm_failed = 0
+
         # Instantiate the ORTools solver
         try:
             solver = pywraplp.Solver_CreateSolver(self.algorithm)
             if not solver:
                 logger.warn(f"Failed to get a valid solver for {self.kernel}.")
                 logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
+                primary_algorithm_failed = 1
                 solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
         except Exception as e:
             logger.warn(f"Failed to create a valid solver for {self.kernel}: {repr(e)}")
             logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
+            primary_algorithm_failed = 1
             solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
+
+        self.send_metric('primary_algorithm_failed.occurence', primary_algorithm_failed)
 
         # Constraint: Decision variable (isScheduled) must be binary (eq 4)
         requestLocations = []
@@ -141,7 +148,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2):
             solution_hints.append(r[4])
 
         # The warm-start hints (not supported in older ortools)
-        # solver.SetHint(variables=scheduled_vars, values=solution_hints)
+        solver.SetHint(variables=scheduled_vars, values=solution_hints)
 
         # Constraint: One-of (eq 5)
         i = 0
