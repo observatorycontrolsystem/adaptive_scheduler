@@ -4,6 +4,7 @@ import time
 import logging
 import itertools
 import json
+import boto3
 from collections import defaultdict
 from functools import cmp_to_key
 
@@ -205,10 +206,23 @@ class Scheduler(SendMetricMixin):
                 schedule_type = RR_OBSERVATION_TYPE
             else:
                 schedule_type = NORMAL_OBSERVATION_TYPE
-            file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+            now = datetime.utcnow()
+            day_timestamp = now.strftime('%Y-%m-%d')
+            file_timestamp = now.strftime('%Y%m%d%H%M%S')
             filename = '{}_schedule_{}.json'.format(schedule_type, file_timestamp)
-            with open('/data/adaptive_scheduler/output_schedule/{}'.format(filename), 'w') as schedule_out:
-                json.dump(schedule_data, schedule_out)
+
+            # If an S3 bucket is configured, attempt to store output files in the bucket in a daydir
+            if self.sched_params.s3_bucket:
+                serialized_output = json.dumps(schedule_data)
+                try:
+                    s3 = boto3.client('s3')
+                    s3.put_object(Bucket=self.sched_params.s3_bucket, Key=f'{day_timestamp}/{filename}',
+                                  Body=serialized_output)
+                except Exception as e:
+                    logging.warning(f"Failed to store output file in S3 bucket: {repr(e)}")
+            else:
+                with open('/data/adaptive_scheduler/output_schedule/{}'.format(filename), 'w') as schedule_out:
+                    json.dump(schedule_data, schedule_out)
 
     def produce_schedule_metrics(self, schedule, estimated_scheduler_end, semester_details):
         ''' Create opentsdb metrics on how full the schedule is per resource for the horizon and for the next 1 day.
