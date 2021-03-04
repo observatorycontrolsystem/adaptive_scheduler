@@ -97,7 +97,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
     def test_schedule_triple_oneof(self):
         slice_size_seconds = 1
         fs = FullScheduler_ortoolkit(self.algorithm, [self.cr9],
-                                     self.gpw2, [], slice_size_seconds, 0.01)
+                                     self.gpw2, [], slice_size_seconds, 0.01, False)
         fs.schedule_all()
         # only one should be scheduled
 
@@ -117,7 +117,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw['goo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
         slice_size_seconds = 300
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], slice_size_seconds, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], slice_size_seconds, 0.01, False)
         fs.schedule_all()
 
     def test_schedule_all_gaw(self):
@@ -134,7 +134,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01, False)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['goo']))
@@ -147,7 +147,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01, False)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['goo']))
@@ -160,7 +160,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01, False)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['foo']))
@@ -173,7 +173,7 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01, False)
         schedule = fs.schedule_all()
         print(schedule)
         assert_equal(1, len(schedule['foo']))
@@ -186,5 +186,5 @@ class TestFullScheduler_cbc(Fullscheduler_ortoolkit_helper):
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
 
-        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01)
+        fs = FullScheduler_ortoolkit(self.algorithm, [cr], gpw, [], 60, 0.01, False)
         fs.schedule_all()
