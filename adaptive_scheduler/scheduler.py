@@ -385,7 +385,7 @@ class Scheduler(SendMetricMixin):
 
             kernel = self.kernel_class(self.sched_params.kernel, compound_reservations, available_windows,
                                        contractual_obligations, self.sched_params.slicesize_seconds,
-                                       self.sched_params.mip_gap)
+                                       self.sched_params.mip_gap, self.sched_params.warm_starts)
             scheduler_result.schedule = kernel.schedule_all(timelimit=self.sched_params.timelimit_seconds)
 
             # TODO: Remove resource_schedules_to_cancel from Scheduler result, this should be managed at a higher level
@@ -604,6 +604,7 @@ class SchedulerRunner(object):
     def __init__(self, sched_params, scheduler, network_interface, network_model, input_factory):
         self.run_flag = True
         self.sched_params = sched_params
+        self.warm_starts_setting = sched_params.warm_starts
         self.scheduler = scheduler
         self.network_interface = network_interface
         self.network_model = network_model
@@ -628,6 +629,8 @@ class SchedulerRunner(object):
         if self.network_interface.current_events_has_changed():
             self.log.info("Telescope network events were found.")
             network_has_changed = True
+            # Turn the warm start off for this run, since there was a change in the network telescopes
+            self.sched_params.warm_starts = False
         elif self.sched_params.no_weather:
             self.log.info("Ignoring Telescope network events, but setting network change flag to True.")
             network_has_changed = True
@@ -699,6 +702,8 @@ class SchedulerRunner(object):
             # We should force a rerun in any case in case the network events and requests haven't changed
             rerun_required = True
             self.log.warning("Skipping Scheduling Run: {}".format(repr(eee)))
+        # Reset the warm starts flag back to the input setting at the end of each run
+        self.sched_params.warm_starts = self.warm_starts_setting
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)

@@ -46,7 +46,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
     def __init__(self, kernel, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
-                 slice_size_seconds, mip_gap):
+                 slice_size_seconds, mip_gap, warm_starts):
         super().__init__(compound_reservation_list,
                          globally_possible_windows_dict,
                          contractual_obligation_list,
@@ -54,6 +54,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
         self.schedulerIDstring = 'SlicedIPSchedulerSparse'
         self.kernel = kernel
         self.mip_gap = mip_gap
+        self.warm_starts = warm_starts
         self.algorithm = ALGORITHMS[kernel.upper()]
 
     # A stub to get the RA/dec by request ID
@@ -148,7 +149,8 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
             solution_hints.append(r[4])
 
         # The warm-start hints (not supported in older ortools)
-        solver.SetHint(variables=scheduled_vars, values=solution_hints)
+        if self.warm_starts:
+            solver.SetHint(variables=scheduled_vars, values=solution_hints)
 
         # Constraint: One-of (eq 5)
         i = 0

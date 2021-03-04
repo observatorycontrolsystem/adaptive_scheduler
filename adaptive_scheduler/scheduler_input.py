@@ -22,6 +22,7 @@ class SchedulerParameters(object):
                  no_singles=to_bool(os.getenv('NO_SINGLES', 'False')),
                  no_compounds=to_bool(os.getenv('NO_COMPOUNDS', 'False')),
                  no_rr=to_bool(os.getenv('NO_RAPID_RESPONSE', 'False')),
+                 warm_starts=to_bool(os.getenv('ENABLE_WARM_STARTS', 'False')),
                  timelimit_seconds=os.getenv('KERNEL_TIMELIMIT', None),
                  slicesize_seconds=int(os.getenv('MODEL_SLICESIZE', 300)),
                  horizon_days=float(os.getenv('MODEL_HORIZON', 7.0)),
@@ -50,6 +51,7 @@ class SchedulerParameters(object):
         self.no_singles = no_singles
         self.no_compounds = no_compounds
         self.no_rr = no_rr
+        self.warm_starts = warm_starts
         if timelimit_seconds:
             self.timelimit_seconds = float(timelimit_seconds)
         else:
