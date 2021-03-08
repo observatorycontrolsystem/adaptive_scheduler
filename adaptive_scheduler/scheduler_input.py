@@ -6,6 +6,7 @@ from adaptive_scheduler.observation_portal_connections import ObservationPortalC
 import os
 import logging
 import pickle
+import boto3
 from datetime import datetime, timedelta
 
 
@@ -32,6 +33,7 @@ class SchedulerParameters(object):
                  input_file_name=os.getenv('SCHEDULER_INPUT_FILE', None),
                  pickle=to_bool(os.getenv('SAVE_PICKLE_INPUT_FILES', 'False')),
                  mip_gap=float(os.getenv('KERNEL_MIPGAP', 0.01)),
+                 s3_bucket=os.getenv('AWS_BUCKET', ''),
                  save_output=to_bool(os.getenv('SAVE_JSON_OUTPUT_FILES', 'False')),
                  request_logs=to_bool(os.getenv('SAVE_PER_REQUEST_LOGS', 'False')),
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
@@ -71,6 +73,7 @@ class SchedulerParameters(object):
         self.normal_runtime_seconds = normal_runtime_seconds
         self.rr_runtime_seconds = rr_runtime_seconds
         self.mip_gap = mip_gap
+        self.s3_bucket = s3_bucket
         self.ignore_ipp = ignore_ipp
         self.telescope_class = telescope_class
         self.observation_portal_url = observation_portal_url
@@ -178,7 +181,8 @@ class SchedulingInputFactory(object):
         if self.input_provider.sched_params.pickle:
             SchedulingInputUtils.write_input_to_file(self.input_provider, rr_scheduler_now,
                                                      rr_resource_usage_snapshot, rr_estimated_runtime,
-                                                     self.model_builder)
+                                                     self.model_builder,
+                                                     self.input_provider.sched_params.s3_bucket)
 
         return self._create_scheduling_input(self.input_provider, False, block_schedule=rr_schedule)
 
@@ -237,7 +241,7 @@ class SchedulingInputUtils(SendMetricMixin):
 
     @staticmethod
     def write_input_to_file(normal_input_provider, rr_scheduler_now, rr_resource_usage_snapshot,
-                            rr_estimated_scheduler_runtime, model_builder,
+                            rr_estimated_scheduler_runtime, model_builder, s3_bucket,
                             output_path='/data/adaptive_scheduler/input_states/'):
         output = {
             'sched_params': normal_input_provider.sched_params,
@@ -256,15 +260,26 @@ class SchedulingInputUtils(SendMetricMixin):
             'proposals_by_id': model_builder.proposals_by_id,
             'semester_details': model_builder.semester_details
         }
+        day_timestamp = datetime.utcnow().strftime('%Y-%m-%d')
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = os.path.join(output_path, 'scheduling_input_{}.pickle'.format(file_timestamp))
-        outfile = open(filename, 'wb')
-        try:
-            pickle.dump(output, outfile)
-        except pickle.PickleError as pe:
-            print(pe)
+        filename = 'scheduling_input_{}.pickle'.format(file_timestamp)
+        filepath = os.path.join(output_path, filename)
 
-        outfile.close()
+        # If an S3 bucket is configured, attempt to store input files in the bucket in a daydir
+        if s3_bucket:
+            serialized_output = pickle.dumps(output)
+            try:
+                s3 = boto3.client('s3')
+                s3.put_object(Bucket=s3_bucket, Key=f'{day_timestamp}/{filename}', Body=serialized_output)
+            except Exception as e:
+                logging.warning(f"Failed to store input file in S3 bucket: {repr(e)}")
+        else:
+            outfile = open(filepath, 'wb')
+            try:
+                pickle.dump(output, outfile)
+            except pickle.PickleError as pe:
+                print(pe)
+            outfile.close()
 
 
 class SchedulingInput(object):
