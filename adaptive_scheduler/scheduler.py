@@ -697,13 +697,13 @@ class SchedulerRunner(object):
             if self.scheduler_rerun_required() or self.first_run or rerun_required:
                 rerun_required = False
                 self.create_new_schedule(scheduler_run_start)
+                # Reset the warm starts flag back to the input setting at the end of each run
+                self.sched_params.warm_starts = self.warm_starts_setting
         except (ObservationPortalConnectionError, ScheduleException, EstimateExceededException) as eee:
             # Estimated run time was exceeded so exception was raised, or web resource failed
             # We should force a rerun in any case in case the network events and requests haven't changed
             rerun_required = True
             self.log.warning("Skipping Scheduling Run: {}".format(repr(eee)))
-        # Reset the warm starts flag back to the input setting at the end of each run
-        self.sched_params.warm_starts = self.warm_starts_setting
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)
