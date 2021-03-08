@@ -66,6 +66,8 @@ def parse_args(argv):
                             help="Ignore the 'and', 'oneof' and 'many' Request types")
     arg_parser.add_argument("--no_rr", type=bool, default=defaults.no_rr, dest='no_rr',
                             help="Treat Rapid Response Requests like Normal Requests")
+    arg_parser.add_argument("--warm_starts", type=bool, default=defaults.warm_starts, dest='warm_starts',
+                            help="Enable using warm start solutions in the scheduling kernel")
     arg_parser.add_argument("-o", "--run-once", type=bool, default=defaults.run_once,
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),

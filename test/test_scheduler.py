@@ -1010,7 +1010,7 @@ class TestSchedulerRunner(object):
 
     def setup(self):
         self.mock_kernel_class = Mock()
-        self.sched_params = SchedulerParameters(run_once=True)
+        self.sched_params = SchedulerParameters(run_once=True, warm_starts=True)
         self.mock_event_bus = Mock()
         self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
 
@@ -1058,10 +1058,13 @@ class TestSchedulerRunner(object):
         current_events['1m0a.doma.lsc'] = []
         current_events['1m0a.doma.coj'] = []
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
+        self.network_interface_mock.current_events_has_changed = Mock(return_value=False)
         self.scheduler_runner.update_network_model()
+        self.scheduler_runner.scheduler_rerun_required()
 
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], [])
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
+        assert_true(self.sched_params.warm_starts)
 
     def test_update_network_model_one_event(self):
         self.network_model['1m0a.doma.lsc'] = {'name': '1m0a.doma.lsc',
@@ -1075,10 +1078,13 @@ class TestSchedulerRunner(object):
         current_events['1m0a.doma.lsc'] = ['event1', 'event2']
         current_events['1m0a.doma.coj'] = []
         self.network_interface_mock.get_current_events = Mock(return_value=current_events)
+        assert_true(self.sched_params.warm_starts)
         self.scheduler_runner.update_network_model()
+        self.scheduler_runner.scheduler_rerun_required()
 
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.lsc']['events'], ['event1', 'event2'])
         assert_equal(self.scheduler_runner.network_model['1m0a.doma.coj']['events'], [])
+        assert_false(self.sched_params.warm_starts)
 
     def test_scheduler_runner_update_network_model_with_new_event(self):
         network_model = {
@@ -1093,9 +1099,13 @@ class TestSchedulerRunner(object):
                                            network_model, self.mock_input_factory)
         scheduler_runner.semester_details = self.observation_portal_interface_mock.get_semester_details(None)
         self.network_interface_mock.get_current_events = Mock(return_value={'1m0a.doma.elp': ['event']})
+        assert_true(self.sched_params.warm_starts)
         scheduler_runner.update_network_model()
+        scheduler_runner.scheduler_rerun_required()
+
         assert_equal(network_model['1m0a.doma.elp']['events'], ['event'], "1m0a.doma.elp should have a single event")
         assert_equal(network_model['1m0a.doma.lsc']['events'], [], "1m0a.doma.lsc should have no events")
+        assert_false(self.sched_params.warm_starts)
 
     def test_scheduler_runner_update_network_model_clear_event(self):
         network_model = {

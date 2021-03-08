@@ -47,6 +47,7 @@ ENV SCHEDULER_ROOT /ocs/adaptive_scheduler
 COPY requirements.pip $SCHEDULER_ROOT/requirements.pip
 RUN pip3 install numpy
 RUN pip3 install -r $SCHEDULER_ROOT/requirements.pip
+RUN pip3 install --ignore-installed six
 
 # copy the stuff
 COPY . $SCHEDULER_ROOT
