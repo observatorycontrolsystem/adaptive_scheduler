@@ -641,7 +641,7 @@ class SchedulerRunner(object):
         network_has_changed = False
 
         if self.network_interface.current_events_has_changed():
-            self.log.info("Telescope network events were found.")
+            self.log.info("Telescope network events were found, turning off warm starts next run.")
             network_has_changed = True
             # Turn the warm start off for this run, since there was a change in the network telescopes
             self.sched_params.warm_starts = False

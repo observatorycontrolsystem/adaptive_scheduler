@@ -150,6 +150,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
 
         # The warm-start hints (not supported in older ortools)
         if self.warm_starts:
+            logger.info("Using warm start solution this run")
             solver.SetHint(variables=scheduled_vars, values=solution_hints)
 
         # Constraint: One-of (eq 5)
