@@ -235,6 +235,10 @@ class ObservationScheduleInterface(object):
         for block in observations:
             block['start'] = parse(block['start'], ignoretz=True)
             block['end'] = parse(block['end'], ignoretz=True)
+            # Add a second if there are any microseconds in the existing end time,
+            # because this is used for our next schedule start time.
+            if block['end'].microsecond:
+                block['end'] = block['end'].replace(microsecond=0) + timedelta(seconds=1)
 
         return observations
 
