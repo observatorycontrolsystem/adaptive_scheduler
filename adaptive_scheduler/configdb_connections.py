@@ -20,11 +20,12 @@ class ConfigDBInterface(SendMetricMixin):
         in data as needed.
     """
 
-    def __init__(self, configdb_url, telescopes_file='/data/adaptive_scheduler/telescopes.json',
+    def __init__(self, configdb_url, telescope_classes, telescopes_file='/data/adaptive_scheduler/telescopes.json',
                  active_instruments_file='/data/adaptive_scheduler/active_instruments.json'):
         self.configdb_url = configdb_url
         if not self.configdb_url.endswith('/'):
             self.configdb_url += '/'
+        self.telescope_classes = telescope_classes
         self.telescopes_file = telescopes_file
         self.active_instruments_file = active_instruments_file
         self.active_instruments = None
@@ -88,7 +89,18 @@ class ConfigDBInterface(SendMetricMixin):
         json_results = r.json()
         if 'results' not in json_results:
             raise ConfigDBError("get_all_active_instruments failed: ConfigDB returned no results")
-        return json_results['results']
+        # Filter out instruments in non-included telescope_classes if they are specified
+        if self.telescope_classes:
+            # non-empty telescope_classes means we have something to filter by
+            instruments = []
+            for instrument in json_results['results']:
+                split_string = instrument['__str__'].lower().split('.')
+                telescope_class = split_string[2][:3]
+                if telescope_class.lower() in self.telescope_classes.lower():
+                    instruments.append(instrument)
+            return instruments
+        else:
+            return json_results['results']
 
     def get_specific_instrument(self, instrument_type_code, site, enclosure, telescope):
         """Get the specific instrument name.
@@ -285,20 +297,22 @@ class ConfigDBInterface(SendMetricMixin):
         for site in site_data:
             for enclosure in site['enclosure_set']:
                 for telescope in enclosure['telescope_set']:
-                    name = '.'.join([telescope['code'], enclosure['code'], site['code']])
-                    active = telescope['active'] and enclosure['active'] and site['active']
-                    telescope_info[name] = {
-                        'name': name,
-                        'tel_class': telescope['code'][:3],
-                        'latitude': telescope['lat'],
-                        'longitude': telescope['long'],
-                        'horizon': telescope['horizon'],
-                        'ha_limit_neg': telescope['ha_limit_neg'],
-                        'ha_limit_pos': telescope['ha_limit_pos'],
-                        'zenith_blind_spot': telescope['zenith_blind_spot'],
-                        'events': [],
-                        'status': 'online' if active else 'offline'
-                    }
+                    telescope_class = telescope['code'][:3]
+                    if not self.telescope_classes or telescope_class.lower() in self.telescope_classes.lower():
+                        name = '.'.join([telescope['code'], enclosure['code'], site['code']])
+                        active = telescope['active'] and enclosure['active'] and site['active']
+                        telescope_info[name] = {
+                            'name': name,
+                            'tel_class': telescope_class,
+                            'latitude': telescope['lat'],
+                            'longitude': telescope['long'],
+                            'horizon': telescope['horizon'],
+                            'ha_limit_neg': telescope['ha_limit_neg'],
+                            'ha_limit_pos': telescope['ha_limit_pos'],
+                            'zenith_blind_spot': telescope['zenith_blind_spot'],
+                            'events': [],
+                            'status': 'online' if active else 'offline'
+                        }
         return telescope_info
 
     def get_telescope_info(self):

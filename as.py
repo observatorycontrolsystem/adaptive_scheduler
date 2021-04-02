@@ -82,8 +82,8 @@ def parse_args(argv):
                             help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--request_logs", type=bool, default=defaults.request_logs, dest='request_logs',
                             help="Enable saving the per-request log files")
-    arg_parser.add_argument("--telescope_class", type=str, default=defaults.telescope_class,
-                            help="Only schedule observations on the specified telescope_class. Expects 3 character telescope class, default is 'all'")
+    arg_parser.add_argument("--telescope_classes", type=str, default=defaults.telescope_classes,
+                            help="Only schedule observations on the specified telescope_classes. Expects 3 character telescope classes comma delimited. If not specified, default is all classes.")
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                             help="Downtime endpoint url", default=defaults.downtime_url)
     arg_parser.add_argument("--elasticsearch_url", type=str, dest='elasticsearch_url',
@@ -150,7 +150,7 @@ def main(argv):
 
     schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
     observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url)
-    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url)
+    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes)
     network_state_interface = Network(configdb_interface, sched_params)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
                                          configdb_interface)

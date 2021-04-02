@@ -399,7 +399,7 @@ class TestModelBuilder(object):
         self.id = 2
         self.state = 'PENDING'
 
-        self.mb = ModelBuilder(mock.MagicMock(), ConfigDBInterface(configdb_url='',
+        self.mb = ModelBuilder(mock.MagicMock(), ConfigDBInterface(configdb_url='', telescope_classes='',
                                                                    active_instruments_file='test/active_instruments.json',
                                                                    telescopes_file='test/telescopes.json'))
 

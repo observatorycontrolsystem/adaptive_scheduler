@@ -40,7 +40,7 @@ class SchedulerParameters(object):
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
                  downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
                  elasticsearch_url=os.getenv('ELASTICSEARCH_URL', ''),
-                 telescope_class=os.getenv('TELESCOPE_CLASS', 'all'),
+                 telescope_classes=os.getenv('TELESCOPE_CLASSES', ''),
                  elasticsearch_index=os.getenv('ELASTICSEARCH_INDEX', 'live-telemetry'),
                  elasticsearch_excluded_observatories=os.getenv('ELASTICSEARCH_EXCLUDED_OBSERVATORIES', ''),
                  profiling_enabled=to_bool(os.getenv('CPROFILE_ENABLED', 'False')),
@@ -75,7 +75,7 @@ class SchedulerParameters(object):
         self.mip_gap = mip_gap
         self.s3_bucket = s3_bucket
         self.ignore_ipp = ignore_ipp
-        self.telescope_class = telescope_class
+        self.telescope_classes = telescope_classes
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
@@ -420,7 +420,7 @@ class SchedulingInputProvider(object):
                                                                 min(now + timedelta(
                                                                     days=self.sched_params.horizon_days),
                                                                     semester_details['end']),
-                                                                self.sched_params.telescope_class)
+                                                                self.sched_params.telescope_classes)
         logging.getLogger(__name__).warning("_get_json_request_group_list got {} rgs".format(len(rg_list)))
 
         return rg_list
@@ -430,7 +430,7 @@ class SchedulingInputProvider(object):
         resources = []
         for resource_name, resource in self.network_model.items():
             telescope_class = resource_name[:3].lower()  # telescope class is first 3 characters of the resource
-            if not resource['events'] and self.sched_params.telescope_class.lower() in ['all', telescope_class]:
+            if not resource['events']:
                 resources.append(resource_name)
 
         return resources
