@@ -41,7 +41,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.log import RequestGroupLogger
 
-from multiprocessing import Pool, cpu_count, current_process, TimeoutError, get_context
+from multiprocessing import cpu_count, current_process, TimeoutError, get_context
 from redis import Redis
 import pickle
 import os
