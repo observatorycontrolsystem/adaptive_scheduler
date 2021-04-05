@@ -66,13 +66,24 @@ class TestNetworkStatus(object):
         self.network.update()
         assert_false(self.network.has_changed())
 
-    def test_flag_is_not_clean_if_change(self):
+    def test_flag_is_clean_if_only_event_change(self):
         self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
 
         self.network.update()
         assert_true(self.network.has_changed())
 
         self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e2}
+
+        self.network.update()
+        assert_false(self.network.has_changed())
+
+    def test_flag_is_not_clean_if_change(self):
+        self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
+
+        self.network.update()
+        assert_true(self.network.has_changed())
+
+        self.mock_monitor1.monitor.return_value = {'1m0a.domb.bpl': self.e2}
 
         self.network.update()
         assert_true(self.network.has_changed())

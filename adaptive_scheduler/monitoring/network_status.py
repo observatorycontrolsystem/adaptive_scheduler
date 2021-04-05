@@ -104,10 +104,10 @@ class Network(object):
         ''' Return True if the current network state is different from
             the previous network state.
         '''
-        if flatten(self.current_events) == flatten(self.previous_events):
+        _log_event_differences(self.current_events, self.previous_events)
+        if self.current_events.keys() == self.previous_events.keys():
             return False
 
-        _log_event_differences(self.current_events, self.previous_events)
         return True
 
     def _status(self):
