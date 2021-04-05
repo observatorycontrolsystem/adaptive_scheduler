@@ -378,6 +378,13 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                     cache_key]
                 local_cache[cache_key] = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass,
                                                                           min_lunar_distance)
+                # save the newly calculated rise-set values into the redis cache for next restart
+                try:
+                    redis.set(cache_key, pickle.dumps(local_cache[cache_key]))
+                except Exception:
+                    log.warn(
+                    'Failed to save rise_set intervals into redis. Please check that redis is online.')
+
 
     # now that we have all the rise_set intervals in local cache, perform the visibility filter on the requests
     for rg in rgs:
