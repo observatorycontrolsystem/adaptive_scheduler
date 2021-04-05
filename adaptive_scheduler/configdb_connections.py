@@ -96,7 +96,7 @@ class ConfigDBInterface(SendMetricMixin):
             for instrument in json_results['results']:
                 split_string = instrument['__str__'].lower().split('.')
                 telescope_class = split_string[2][:3]
-                if telescope_class.lower() in self.telescope_classes.lower():
+                if telescope_class in self.telescope_classes:
                     instruments.append(instrument)
             return instruments
         else:
@@ -298,7 +298,7 @@ class ConfigDBInterface(SendMetricMixin):
             for enclosure in site['enclosure_set']:
                 for telescope in enclosure['telescope_set']:
                     telescope_class = telescope['code'][:3]
-                    if not self.telescope_classes or telescope_class.lower() in self.telescope_classes.lower():
+                    if not self.telescope_classes or telescope_class in self.telescope_classes:
                         name = '.'.join([telescope['code'], enclosure['code'], site['code']])
                         active = telescope['active'] and enclosure['active'] and site['active']
                         telescope_info[name] = {

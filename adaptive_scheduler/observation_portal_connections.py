@@ -89,7 +89,8 @@ class ObservationPortalInterface(SendMetricMixin):
         '''
         requests_url = self.obs_portal_url + '/api/requestgroups/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
         if telescope_classes:
-            requests_url += '&telescope_classes=' + telescope_classes
+            for telescope_class in telescope_classes.split(','):
+                requests_url += '&telescope_class=' + telescope_class
         self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
             response = requests.get(requests_url, headers=self.headers, timeout=180)
