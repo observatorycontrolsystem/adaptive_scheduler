@@ -83,13 +83,14 @@ class ObservationPortalInterface(SendMetricMixin):
 
     @timeit
     @metric_timer('requestdb.get_requests', num_requests=len)
-    def get_all_request_groups(self, start, end, telescope_classes=[]):
+    def get_all_request_groups(self, start, end, telescope_classes=None):
         ''' Get all user requests waiting for scheduling between
             start and end date, potentially for a single telescope class
         '''
         requests_url = self.obs_portal_url + '/api/requestgroups/schedulable_requests/?start=' + start.isoformat() + '&end=' + end.isoformat()
-        for telescope_class in telescope_classes:
-            requests_url += '&telescope_class=' + telescope_class
+        if telescope_classes:
+            for telescope_class in telescope_classes:
+                requests_url += '&telescope_class=' + telescope_class
         self.log.info("Getting schedulable requests from: {}".format(requests_url))
         try:
             response = requests.get(requests_url, headers=self.headers, timeout=180)
