@@ -55,7 +55,7 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `TIME_BETWEEN_RUNS`             | Seconds to sleep between each scheduling loop          | 60.0                                                 |
 |                        | `IGNORE_IPP_VALUES`             | If True, ignore IPP values when considering request priority          | `False`                                                   |
 |                        | `INITIAL_PER_RESERVATION_SAVE_TIME`             | Initial estimate of time taken per reservation to save to the web portal          | 60.0                                                 |
-|                        | `TELESCOPE_CLASS`             | Restrict the scheduler to only operate on a single telescope class (e.g. `1m0`)       | `all`                                                 |
+|                        | `TELESCOPE_CLASSES`             | Restrict the scheduler to only operate on the specified telescope classes (comma delimited) (e.g. `1m0,2m0`). Default empty string means all telescope classes.       | ``                                                 |
 |                        | `INITIAL_NORMAL_RUNTIME`             | Initial estimate of duration of normal scheduling cycle in seconds         | 360.0                                                 |
 |                        | `INITIAL_RAPID_RESPONSE_RUNTIME`  | Initial estimate of duration of rapid response scheduling cycle in seconds      | 120.0                                                 |
 | Debugging Settings     | `SAVE_PICKLE_INPUT_FILES`     | If True, stores pickled scheduler input files each run in `/data/adaptive_scheduler/input_states` | `False`                                                   |

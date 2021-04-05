@@ -154,11 +154,11 @@ class NetworkInterface(object):
             logger.warn("Failed to check the last_changed time properly: {}".format(repr(e)))
             return True
 
-    def get_all_request_groups(self, start, end, telescope_class):
+    def get_all_request_groups(self, start, end, telescope_classes):
         '''Get all user requests waiting for scheduling between
         start and end date, potentially for a single telescope class
         '''
-        return self.observation_portal_interface.get_all_request_groups(start, end, telescope_class)
+        return self.observation_portal_interface.get_all_request_groups(start, end, telescope_classes)
 
     def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
         ''' Cancel the current scheduler between start and end
@@ -216,7 +216,7 @@ class CachedInputNetworkInterface(object):
         '''
         return True
 
-    def get_all_request_groups(self, start, end, telescope_class):
+    def get_all_request_groups(self, start, end, telescope_classes):
         '''Get all user requests waiting for scheduling as loaded in from the input file
         '''
         return self.json_request_group_list
