@@ -21,7 +21,7 @@ class TestObservations(object):
         # Metadata missing proposal and tag parameters
         self.proposal = Proposal(pi='Eric Saunders')
 
-        self.configdb_interface = ConfigDBInterface(configdb_url='', telescope_classes=[]],
+        self.configdb_interface = ConfigDBInterface(configdb_url='', telescope_classes=[],
                                                     telescopes_file='test/telescopes.json',
                                                     active_instruments_file='test/active_instruments.json')
 

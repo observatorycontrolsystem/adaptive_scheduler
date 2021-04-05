@@ -83,7 +83,7 @@ class ObservationPortalInterface(SendMetricMixin):
 
     @timeit
     @metric_timer('requestdb.get_requests', num_requests=len)
-    def get_all_request_groups(self, start, end, telescope_classes=[]]):
+    def get_all_request_groups(self, start, end, telescope_classes=[]):
         ''' Get all user requests waiting for scheduling between
             start and end date, potentially for a single telescope class
         '''
