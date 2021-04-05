@@ -75,7 +75,10 @@ class SchedulerParameters(object):
         self.mip_gap = mip_gap
         self.s3_bucket = s3_bucket
         self.ignore_ipp = ignore_ipp
-        self.telescope_classes = telescope_classes
+        if telescope_classes:
+            self.telescope_classes = telescope_classes.split(',')
+        else:
+            self.telescope_classes = []
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
@@ -429,7 +432,6 @@ class SchedulingInputProvider(object):
         # perform filtering out telescope classes here for now, but longterm should happen when querying requests
         resources = []
         for resource_name, resource in self.network_model.items():
-            telescope_class = resource_name[:3].lower()  # telescope class is first 3 characters of the resource
             if not resource['events']:
                 resources.append(resource_name)
 

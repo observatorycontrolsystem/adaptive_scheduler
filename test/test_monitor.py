@@ -21,7 +21,7 @@ from adaptive_scheduler.configdb_connections import ConfigDBInterface
 class TestOfflineResourceMonitor(object):
 
     def test_telescope_is_offline(self):
-        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes='',
+        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[]],
                                                                               telescopes_file='test/telescopes_sqa_offline.json',
                                                                               active_instruments_file='test/active_instruments.json'))
         event = monitor.monitor()
@@ -29,7 +29,7 @@ class TestOfflineResourceMonitor(object):
         eq_(event['0m8a.doma.sqa'].type, 'OFFLINE')
 
     def test_telescope_is_online(self):
-        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes='',
+        monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[]],
                                                                               telescopes_file='test/telescopes.json',
                                                                               active_instruments_file='test/active_instruments.json'))
         event = monitor.monitor()
@@ -45,7 +45,7 @@ class TestAvailableForSchedulingMonitor(object):
 
     def setUp(self):
         self.monitor = AvailableForScheduling(
-            configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes='',
+            configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[]],
                                                  telescopes_file='test/telescopes.json',
                                                  active_instruments_file='test/active_instruments.json'),
             elasticsearch_url='',
