@@ -41,7 +41,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
                                                 log_windows)
 from adaptive_scheduler.log import RequestGroupLogger
 
-from multiprocessing import Pool, cpu_count, current_process, TimeoutError
+from multiprocessing import cpu_count, current_process, TimeoutError, get_context
 from redis import Redis
 import pickle
 import os
@@ -355,20 +355,20 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
     if rise_sets_to_compute_later:
-        pool = Pool(processes=num_processes)
-        try:
-            pool.map_async(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values()).get(300)
-        except TimeoutError:
-            pool.terminate()
-            log.warn(
-                '300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
-        except Exception:
-            log.warn(
-                'Failed to save rise_set intervals into redis. Please check that redis is online. Falling back on synchronous rise_set calculations.')
-        log.info("finished computing rise_sets")
-        pool.close()
-        pool.join()
-        log.info("finished closing thread pool")
+        with get_context('spawn').Pool(processes=num_processes) as pool:
+            try:
+                pool.map_async(cache_rise_set_timepoint_intervals, rise_sets_to_compute_later.values()).get(300)
+            except TimeoutError:
+                pool.terminate()
+                log.warn(
+                    '300 second timeout reached on multiprocessing rise_set computations. Falling back to synchronous computation')
+            except Exception:
+                log.warn(
+                    'Failed to save rise_set intervals into redis. Please check that redis is online. Falling back on synchronous rise_set calculations.')
+            log.info("finished computing rise_sets")
+            pool.close()
+            pool.join()
+            log.info("finished closing thread pool")
         for cache_key in rise_sets_to_compute_later.keys():
             try:
                 local_cache[cache_key] = pickle.loads(redis.get(cache_key))
