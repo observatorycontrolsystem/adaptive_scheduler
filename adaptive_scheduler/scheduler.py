@@ -18,7 +18,7 @@ from time_intervals.intervals import Intervals
 from adaptive_scheduler.utils import (timeit, iso_string_to_datetime, estimate_runtime, SendMetricMixin,
                                       metric_timer, set_schedule_type, NORMAL_OBSERVATION_TYPE, RR_OBSERVATION_TYPE,
                                       get_reservation_datetimes, time_in_capped_intervals, cap_intervals,
-                                      merge_dicts_of_lists)
+                                      merge_downtime_dicts)
 from adaptive_scheduler.printing import pluralise as pl
 from adaptive_scheduler.printing import plural_str
 from adaptive_scheduler.printing import print_compound_reservations, summarise_rgs, log_full_rg, log_windows
@@ -474,14 +474,16 @@ class LCOGTNetworkScheduler(Scheduler):
 
         downtime_interface = DowntimeInterface(self.sched_params.downtime_url)
         try:
-            downtime_intervals = downtime_interface.get_downtime_intervals_by_resource(start=estimated_scheduler_end,
-                                                                                       end=self.scheduling_horizon(
-                                                                                           estimated_scheduler_end))
+            downtime_intervals = downtime_interface.get_downtime_intervals_by_resource_and_instrument_type(
+                start=estimated_scheduler_end,
+                end=self.scheduling_horizon(
+                estimated_scheduler_end)
+            )
         except DowntimeError as e:
             self.log.warning("Problem getting downtime intervals: {}".format(repr(e)))
             downtime_intervals = {}
 
-        combined_downtime_intervals = merge_dicts_of_lists(downtime_intervals, extra_downtime_by_resource)
+        combined_downtime_intervals = merge_downtime_dicts(downtime_intervals, extra_downtime_by_resource)
         filtered_window_request_groups = filter_for_kernel(request_groups, self.visibility_cache,
                                                            combined_downtime_intervals,
                                                            semester_details['start'], semester_end,
@@ -641,7 +643,7 @@ class SchedulerRunner(object):
         network_has_changed = False
 
         if self.network_interface.current_events_has_changed():
-            self.log.info("Telescope network events were found, turning off warm starts next run.")
+            self.log.info("Telescope network event changes were found, turning off warm starts next run.")
             network_has_changed = True
             # Turn the warm start off for this run, since there was a change in the network telescopes
             self.sched_params.warm_starts = False

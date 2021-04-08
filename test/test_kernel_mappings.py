@@ -185,7 +185,7 @@ class TestKernelMappings(object):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
         visibilities = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}
+        downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
         compute_request_availability(request, intervals_for_resource, {})
@@ -200,7 +200,7 @@ class TestKernelMappings(object):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
         visibilities = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {resource: [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}
+        downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
         compute_request_availability(request, intervals_for_resource, {})
