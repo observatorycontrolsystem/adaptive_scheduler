@@ -209,7 +209,11 @@ class Scheduler(SendMetricMixin):
             now = datetime.utcnow()
             day_timestamp = now.strftime('%Y-%m-%d')
             file_timestamp = now.strftime('%Y%m%d%H%M%S')
-            filename = '{}_{}_schedule_{}.json'.format(schedule_type, '_'.join(self.sched_params.telescope_classes), file_timestamp)
+            if self.sched_params.telescope_classes:
+                telescope_class_str = '_'.join(self.sched_params.telescope_classes)
+            else:
+                telescope_class_str = 'all'
+            filename = '{}_{}_schedule_{}.json'.format(schedule_type, telescope_class_str, file_timestamp)
 
             # If an S3 bucket is configured, attempt to store output files in the bucket in a daydir
             if self.sched_params.s3_bucket:

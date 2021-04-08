@@ -266,7 +266,11 @@ class SchedulingInputUtils(SendMetricMixin):
         }
         day_timestamp = datetime.utcnow().strftime('%Y-%m-%d')
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = 'scheduling_input_{}_{}.pickle'.format('_'.join(telescope_classes), file_timestamp)
+        if telescope_classes:
+            telescope_class_str = '_'.join(telescope_classes)
+        else:
+            telescope_class_str = 'all'
+        filename = 'scheduling_input_{}_{}.pickle'.format(telescope_class_str, file_timestamp)
         filepath = os.path.join(output_path, filename)
 
         # If an S3 bucket is configured, attempt to store input files in the bucket in a daydir
