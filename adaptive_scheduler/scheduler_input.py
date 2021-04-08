@@ -185,7 +185,8 @@ class SchedulingInputFactory(object):
             SchedulingInputUtils.write_input_to_file(self.input_provider, rr_scheduler_now,
                                                      rr_resource_usage_snapshot, rr_estimated_runtime,
                                                      self.model_builder,
-                                                     self.input_provider.sched_params.s3_bucket)
+                                                     self.input_provider.sched_params.s3_bucket,
+                                                     self.input_provider.sched_params.telescope_classes)
 
         return self._create_scheduling_input(self.input_provider, False, block_schedule=rr_schedule)
 
@@ -244,7 +245,7 @@ class SchedulingInputUtils(SendMetricMixin):
 
     @staticmethod
     def write_input_to_file(normal_input_provider, rr_scheduler_now, rr_resource_usage_snapshot,
-                            rr_estimated_scheduler_runtime, model_builder, s3_bucket,
+                            rr_estimated_scheduler_runtime, model_builder, s3_bucket, telescope_classes,
                             output_path='/data/adaptive_scheduler/input_states/'):
         output = {
             'sched_params': normal_input_provider.sched_params,
@@ -265,7 +266,11 @@ class SchedulingInputUtils(SendMetricMixin):
         }
         day_timestamp = datetime.utcnow().strftime('%Y-%m-%d')
         file_timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
-        filename = 'scheduling_input_{}.pickle'.format(file_timestamp)
+        if telescope_classes:
+            telescope_class_str = '_'.join(telescope_classes)
+        else:
+            telescope_class_str = 'all'
+        filename = 'scheduling_input_{}_{}.pickle'.format(telescope_class_str, file_timestamp)
         filepath = os.path.join(output_path, filename)
 
         # If an S3 bucket is configured, attempt to store input files in the bucket in a daydir
