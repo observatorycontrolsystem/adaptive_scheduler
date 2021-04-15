@@ -66,12 +66,19 @@ class ObservationPortalInterface(SendMetricMixin):
 
     @timeit
     @metric_timer('requestdb.get_last_changed')
-    def get_last_changed(self):
+    def get_last_changed(self, telescope_classes=None):
         ''' Queries the observation portal for the time the last change was made to request or observation state
         :return: The datetime for the last change in observation portals models
         '''
+        last_changed_url = self.obs_portal_url + '/api/last_changed/'
+        if telescope_classes:
+            for i, telescope_class in enumerate(telescope_classes):
+                if i == 0:
+                    last_changed_url += f"?telescope_class={telescope_class}"
+                else:
+                    last_changed_url += f"&telescope_class={telescope_class}"
         try:
-            response = requests.get(self.obs_portal_url + '/api/last_changed/', headers=self.headers, timeout=180)
+            response = requests.get(last_changed_url, headers=self.headers, timeout=180)
             response.raise_for_status()
             last_changed = parse(response.json()['last_change_time'])
             last_changed = last_changed.replace(tzinfo=None)
