@@ -144,15 +144,18 @@ def merge_dicts(*args):
     return {k: v for d in args for k, v in d.items()}
 
 
-def merge_dicts_of_lists(*args):
-    '''Merge any number of dictionaries of lists, merging the lists of duplicate keys together 
+def merge_downtime_dicts(*args):
+    ''' Merge any number of downtime dictionaries, merging the lists of dubplicate keys together.
+        Downtime dicts should be in the expected format of by resource, then by instrument_type or all.
     '''
-    output = {}
+    combined_downtime = {}
     for dic in args:
-        for k, v in dic.items():
-            output[k] = output.get(k, []) + v
-
-    return output
+        for resource, downtime_by_inst in dic.items():
+            if resource not in combined_downtime:
+                combined_downtime[resource] = {}
+            for inst, downtimes in downtime_by_inst.items():
+                combined_downtime[resource][inst] = combined_downtime.get(resource, {}).get(inst, []) + downtimes
+    return combined_downtime
 
 
 def iso_string_to_datetime(iso_string):

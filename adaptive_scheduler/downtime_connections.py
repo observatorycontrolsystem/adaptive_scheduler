@@ -13,8 +13,8 @@ class DowntimeError(Exception):
 
 
 class DowntimeInterface(SendMetricMixin):
-    ''' Class for providing access to information in downtime.lco.gtn. It provides a set of datetimes on resources that
-        should be used to exclude scheduling on those resources during those times.
+    ''' Class for providing access to information in downtime.lco.gtn. It provides a set of datetimes on resources
+        and potentially by instrument_type that should be used to exclude scheduling on those resources during those times.
     '''
 
     def __init__(self, downtime_url):
@@ -48,8 +48,8 @@ class DowntimeInterface(SendMetricMixin):
 
     @timeit
     @metric_timer('downtime.get_downtime_intervals')
-    def get_downtime_intervals_by_resource(self, start, end):
-        ''' Function returns the downtime intervals by resource (telescope) as datetime tuples
+    def get_downtime_intervals_by_resource_and_instrument_type(self, start, end):
+        ''' Function returns the downtime intervals by resource (telescope) and instrument_type as datetime tuples
         '''
         downtime_intervals = {}
         downtime_json = self._get_downtime_json(start, end)
@@ -57,9 +57,14 @@ class DowntimeInterface(SendMetricMixin):
         for interval in downtime_json:
             resource = '.'.join(
                 [interval['telescope'].lower(), interval['enclosure'].lower(), interval['site'].lower()])
+            instrument_type = interval['instrument_type'] if insterval['instrument_type'] else 'all'
             if resource not in downtime_intervals:
-                downtime_intervals[resource] = []
-            downtime_intervals[resource].append((datetime.strptime(interval['start'], DOWNTIME_DATE_FORMAT),
-                                                 datetime.strptime(interval['end'], DOWNTIME_DATE_FORMAT)))
+                downtime_intervals[resource] = {}
+            if instrument_type not in downtime_intervals[resource]:
+                downtime_intervals[resource][instrument_type] = []
+            downtime_intervals[resource][instrument_type].append(
+                (datetime.strptime(interval['start'], DOWNTIME_DATE_FORMAT),
+                datetime.strptime(interval['end'], DOWNTIME_DATE_FORMAT))
+            )
 
         return downtime_intervals

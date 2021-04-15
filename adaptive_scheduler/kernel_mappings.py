@@ -418,19 +418,21 @@ def process_request_visibility(request_group_id, request, target_intervals, down
     RequestGroup.emit_request_group_feedback(request_group_id, msg, tag)
 
 
-def compute_request_availability(req, target_intervals_by_resource, downtime_intervals):
+def compute_request_availability(request, target_intervals_by_resource, downtime_intervals):
     intervals_for_resource = {}
     for resource, target_intervals in target_intervals_by_resource.items():
         # Intersect with any window provided in the user request
-        user_windows = req.windows.at(resource)
+        user_windows = request.windows.at(resource)
         user_intervals = req_window_to_kernel_intervals(user_windows)
         intervals_for_resource[resource] = target_intervals.intersect([user_intervals])
-        if resource in downtime_intervals and len(downtime_intervals[resource]) > 0:
-            downtime_kernel_intervals = rise_set_to_kernel_intervals(downtime_intervals[resource])
-            intervals_for_resource[resource] = intervals_for_resource[resource].subtract(downtime_kernel_intervals)
+        if resource in downtime_intervals:
+            for instrument_type, intervals in downtime_intervals[resource].items():
+                if instrument_type == 'all' or instrument_type.upper() == request.configurations[0].instrument_type.upper():
+                    downtime_kernel_intervals = rise_set_to_kernel_intervals(intervals)
+                    intervals_for_resource[resource] = intervals_for_resource[resource].subtract(downtime_kernel_intervals)
 
-    req.windows = intervals_to_windows(req, intervals_for_resource)
-    return req
+    request.windows = intervals_to_windows(request, intervals_for_resource)
+    return request
 
 
 def intervals_to_windows(req, intersections_for_resource):

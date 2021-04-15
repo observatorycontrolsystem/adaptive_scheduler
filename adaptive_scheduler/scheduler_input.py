@@ -318,10 +318,10 @@ class SchedulingInput(object):
         semester_start = self.model_builder.semester_details['start']
 
         for resource, reservations in self.block_schedule.items():
-            block_schedule_by_resource[resource] = []
+            block_schedule_by_resource[resource] = {'all': []}
             for reservation in reservations:
                 reservation_start, reservation_end = get_reservation_datetimes(reservation, semester_start)
-                block_schedule_by_resource[resource].append((reservation_start, reservation_end))
+                block_schedule_by_resource[resource]['all'].append((reservation_start, reservation_end))
 
         return block_schedule_by_resource
 
