@@ -308,8 +308,8 @@ class TestIntegration(object):
     def test_normal_requests_dont_schedule_over_rr(self):
         ''' Verifies that a normal request will not schedule over a just scheduled RR request
         '''
-        rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
-                                          self.base_time + timedelta(hours=1, minutes=25)), ]}
+        rr_schedule = {self.resource_3: {'all': [(self.base_time + timedelta(hours=1, minutes=0),
+                                          self.base_time + timedelta(hours=1, minutes=25)), ]}}
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          self.base_time - timedelta(hours=10), rr_loop=False,
                                          block_schedule_by_resource=rr_schedule)
@@ -412,8 +412,8 @@ class TestIntegration(object):
         ''' Verifies that a normal request will respect a previously scheduled RR whose time overlaps with it's window.
             Ensures that the normal request starts after the end of the RR.
         '''
-        rr_schedule = {self.resource_3: [(self.base_time + timedelta(hours=1, minutes=0),
-                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)), ]}
+        rr_schedule = {self.resource_3: {'all': [(self.base_time + timedelta(hours=1, minutes=0),
+                                          self.base_time + timedelta(hours=1, minutes=0, seconds=30)), ]}}
         scheduler_start = self.base_time - timedelta(hours=10)
         result = self._schedule_requests([self.rr_request_group_1, ], [self.many_request_group_2, ],
                                          scheduler_start, rr_loop=False,

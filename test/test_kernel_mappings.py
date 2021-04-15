@@ -185,7 +185,7 @@ class TestKernelMappings(object):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
         visibilities = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {resource: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}
+        downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
         compute_request_availability(request, intervals_for_resource, {})
@@ -200,7 +200,7 @@ class TestKernelMappings(object):
         request = self.make_constrained_request()
         resource = '1m0a.doma.bpl'
         visibilities = construct_visibilities(self.tels, self.start, self.end)
-        downtime_intervals = {resource: [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}
+        downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
         compute_request_availability(request, intervals_for_resource, {})
@@ -209,6 +209,54 @@ class TestKernelMappings(object):
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
         assert_equal(len(base_windows[resource]), 2)
         assert_equal(request.windows.size(), 0)
+
+    def test_compute_request_availability_half_downtime_instrument_type(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        instrument_type = request.configurations[0].instrument_type
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {resource: {instrument_type: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}}
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
+
+        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(request.windows.size(), 1)
+        assert_equal(request.windows.at(resource)[0], base_windows[resource][1])
+
+    def test_compute_request_availability_combined_full_downtime(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        instrument_type = request.configurations[0].instrument_type
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {resource: {
+            'all': [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ],
+            instrument_type: [(datetime(2011, 11, 1, 8), datetime(2011, 11, 3)), ]
+        }}
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
+
+        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(request.windows.size(), 0)
+
+    def test_compute_request_availability_different_instrument_downtime(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        downtime_intervals = {resource: {'not_my_inst': [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}}
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
+
+        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(request.windows.size(), 2)
 
     def test_construct_compound_reservation(self):
         request = self.make_constrained_request()
