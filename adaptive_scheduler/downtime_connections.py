@@ -57,7 +57,7 @@ class DowntimeInterface(SendMetricMixin):
         for interval in downtime_json:
             resource = '.'.join(
                 [interval['telescope'].lower(), interval['enclosure'].lower(), interval['site'].lower()])
-            instrument_type = interval['instrument_type'] if insterval['instrument_type'] else 'all'
+            instrument_type = interval['instrument_type'] if interval['instrument_type'] else 'all'
             if resource not in downtime_intervals:
                 downtime_intervals[resource] = {}
             if instrument_type not in downtime_intervals[resource]:
