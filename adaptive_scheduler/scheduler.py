@@ -658,7 +658,7 @@ class SchedulerRunner(object):
         request_set_changed = True
         if (not self.sched_params.dry_run) and (not self.sched_params.no_weather):
             # Skipping weather checking or doing a dry run forces network/request update
-            request_set_changed = self.network_interface.schedulable_request_set_has_changed()
+            request_set_changed = self.network_interface.schedulable_request_set_has_changed(self.sched_params.telescope_classes)
 
         return network_has_changed or request_set_changed
 

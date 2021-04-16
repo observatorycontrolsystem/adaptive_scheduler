@@ -134,7 +134,7 @@ class NetworkInterface(object):
         '''
         return self.network_schedule_interface.rr_request_group_intervals_by_telescope()
 
-    def schedulable_request_set_has_changed(self):
+    def schedulable_request_set_has_changed(self, telescope_classes):
         '''True if set of schedulable requests or observations have changed
         '''
         try:
@@ -144,7 +144,7 @@ class NetworkInterface(object):
             else:
                 last_changed_check = pickle.loads(last_changed_check)
             now = datetime.utcnow()
-            last_changed = self.observation_portal_interface.get_last_changed()
+            last_changed = self.observation_portal_interface.get_last_changed(telescope_classes)
             redis.set('scheduler_last_changed_check_time', pickle.dumps(now))
             if last_changed > last_changed_check:
                 return True
@@ -206,7 +206,7 @@ class CachedInputNetworkInterface(object):
         self.json_request_group_list = input_data['json_request_group_list']
         self.resource_usage_snapshot_data = input_data['resource_usage_snapshot']
 
-    def schedulable_request_set_has_changed(self):
+    def schedulable_request_set_has_changed(self, telescope_classes):
         '''True if set of schedulable requests has changed
         '''
         return True
