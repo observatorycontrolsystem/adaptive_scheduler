@@ -384,7 +384,7 @@ def build_observation(reservation, semester_start, configdb_interface):
         }
 
         if configuration.guiding_config.get('mode', 'OFF') != 'OFF':
-            self_guide = getattr(configuration.extra_params, 'self_guide', False)
+            self_guide = getattr(configuration, 'extra_params', {}).get('self_guide', False)
             specific_ag = resolve_autoguider(self_guide, specific_camera,
                                              site, enclosure, telescope,
                                              configdb_interface)
