@@ -743,8 +743,8 @@ class SchedulerRunner(object):
 
         return scheduler_result
 
-    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_rr, include_normal):
-        n_deleted = self.network_interface.cancel(cancelation_date_list_by_resource, include_rr, include_normal)
+    def clear_resource_schedules(self, cancelation_date_list_by_resource, include_rr, include_normal, preemption_enabled):
+        n_deleted = self.network_interface.cancel(cancelation_date_list_by_resource, include_rr, include_normal, preemption_enabled)
 
         return n_deleted
 
@@ -869,11 +869,11 @@ class SchedulerRunner(object):
 
             # Cancel just the time slots under a newly scheduled RR
             n_deleted = self.clear_resource_schedules(cancelation_date_list_by_resource, include_rr=True,
-                                                      include_normal=True)
+                                                      include_normal=True, preemption_enabled=True)
             # Cancel any remaining RRs not under a newly scheduled RR (needed in case weather knocks out a telescope
             # that previously had a RR scheduled on it)
             n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
-                                                       include_normal=False)
+                                                       include_normal=False, preemption_enabled=False)
             n_aborted = self.abort_running_requests(abort_requests)
             # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
             n_submitted = self.save_resource_schedules(scheduler_result.schedule,
@@ -906,24 +906,38 @@ class SchedulerRunner(object):
                 abort_requests_by_resource[resource] = to_abort
 
             n_deleted, n_aborted, n_submitted = 0, 0, 0
+            cancel_exception = None
             for resource in sorted(set(new_schedule_resources + resources_to_clear)):
                 # These are resources at which the schedule must be updated in some way. Save and abort will
                 # have the same resources. Cancel might be different, for example if a resource just became
                 # unavailable, the schedule there would need to be canceled but no new schedule submitted. For this
                 # reason, check if an action has the resource before doing it.
-                if resource in cancelation_date_list_by_resource:
-                    n_deleted += self.clear_resource_schedules({resource: cancelation_date_list_by_resource[resource]},
-                                                               include_rr=False,
-                                                               include_normal=True)
-                if resource in abort_requests_by_resource:
-                    n_aborted += self.abort_running_requests(abort_requests_by_resource[resource])
+                try:
+                    if resource in cancelation_date_list_by_resource:
+                        n_deleted += self.clear_resource_schedules(
+                            {resource: cancelation_date_list_by_resource[resource]},
+                            include_rr=False,
+                            include_normal=True,
+                            preemption_enabled=False
+                        )
+                    if resource in abort_requests_by_resource:
+                        n_aborted += self.abort_running_requests(abort_requests_by_resource[resource])
 
-                if resource in scheduler_result.schedule:
-                    # TODO: Shouldn't need to pass semester start, should denormalize reservations before calling save
-                    n_submitted += self.save_resource_schedules({resource: scheduler_result.schedule[resource]},
-                                                                semester_start)
+                    if resource in scheduler_result.schedule:
+                        # TODO: Shouldn't need to pass semester start, should denormalize reservations before calling save
+                        n_submitted += self.save_resource_schedules({resource: scheduler_result.schedule[resource]},
+                                                                    semester_start)
+                except ScheduleException as se:
+                    # Canceling could fail if the cancel endpoint detects that an in_progress observation overlaps with
+                    # the cancellation range. In this case we should just leave the schedule as-is on that site and wait
+                    # for the next scheduling run to correct itself.
+                    self.log.warning(f"Failed to cancel schedule at {resource}, skipping saving schedule this run")
+                    cancel_exception = se
             self._update_summary_events(n_deleted, n_aborted, n_submitted)
-
+            if cancel_exception:
+                # If there was an exception raised during cancelling any of the sites, re-raise it here so the scheduler
+                # knows to trigger a re-run immediately.
+                raise cancel_exception
             return n_submitted
         return 0
 
