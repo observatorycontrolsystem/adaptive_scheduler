@@ -872,8 +872,12 @@ class SchedulerRunner(object):
                                                       include_normal=True, preemption_enabled=True)
             # Cancel any remaining RRs not under a newly scheduled RR (needed in case weather knocks out a telescope
             # that previously had a RR scheduled on it)
-            n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
-                                                       include_normal=False, preemption_enabled=False)
+            try:
+                n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
+                                                           include_normal=False, preemption_enabled=False)
+            except ScheduleException as se:
+                self.log.warning("Failed to cancel existing rapid responses, but will continue scheduling new rapid responses this run.")
+
             n_aborted = self.abort_running_requests(abort_requests)
             # TODO: Shouldn't need to pass semester start in here.  Should denormalize reservations before calling save
             n_submitted = self.save_resource_schedules(scheduler_result.schedule,
