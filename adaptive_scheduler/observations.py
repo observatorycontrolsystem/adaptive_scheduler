@@ -9,6 +9,7 @@ March 2019
 '''
 from __future__ import division
 import os
+import json
 
 from datetime import timedelta
 from collections import defaultdict
@@ -107,13 +108,13 @@ class ObservationScheduleInterface(object):
         return self.rr_intervals_by_telescope
 
     @metric_timer('observation_portal.cancel_observations', num_requests=lambda x: x, rate=lambda x: x)
-    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
+    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal, preemption_enabled):
         ''' Cancel the current scheduler between start and end
         '''
         n_deleted = 0
         if cancelation_date_list_by_resource:
             n_deleted += self._cancel_schedule(cancelation_date_list_by_resource, include_rr,
-                                               include_normal)
+                                               include_normal, preemption_enabled)
         return n_deleted
 
     def abort(self, running_request):
@@ -251,7 +252,7 @@ class ObservationScheduleInterface(object):
             raise ScheduleException(e, "Unable to retrieve Schedule from Observation Portal: {}".format(repr(e)))
 
     @timeit
-    def _cancel_schedule(self, cancelation_date_list_by_resource, include_rr, include_normal):
+    def _cancel_schedule(self, cancelation_date_list_by_resource, include_rr, include_normal, preemption_enabled):
         total_num_canceled = 0
         for full_tel_name, cancel_dates in cancelation_date_list_by_resource.items():
             for (start, end) in cancel_dates:
@@ -266,25 +267,39 @@ class ObservationScheduleInterface(object):
                     'enclosure': enc,
                     'telescope': tel,
                     'include_rr': include_rr,
-                    'include_normal': include_normal
+                    'include_normal': include_normal,
+                    'preemption_enabled': preemption_enabled
                 }
 
+                error_output = ''
                 try:
                     results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers,
                                             timeout=120)
+                    error_output = results.text
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
                     msg = 'Cancelled {} observations at {}'.format(num_canceled, full_tel_name)
                     log.info(msg)
                 except Exception as e:
-                    raise ScheduleException("Failed to cancel observations in Observation Portal: {}".format(repr(e)))
+                    # Attempt to pull out a returned json error if one exists in the output
+                    error_str = ''
+                    try:
+                        error_str = json.loads(error_output).get('error')
+                    except Exception:
+                        error_str = 'Failed to cancel observations in Observation Portal'
+                    raise ScheduleException("{}: {}".format(error_str, repr(e)))
 
         return total_num_canceled
 
     def _cancel_observations(self, observation_ids):
+        # This code path is from aborting currently running but failed observations. Preepmtion shouldn't matter since they
+        # should be failed to hit this code, but just in case I think we would want to cancel everything if specifying by id.
         try:
-            data = {'ids': observation_ids}
+            data = {
+                'ids': observation_ids,
+                'preemption_enabled': True
+            }
             results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers,
                                     timeout=120)
             results.raise_for_status()

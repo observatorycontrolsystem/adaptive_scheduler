@@ -162,7 +162,7 @@ class TestObservationInteractions(object):
                       json={"canceled": len(delete_list)}, status=200)
 
         schedule_interface = ObservationScheduleInterface(host=host)
-        n_deleted = schedule_interface._cancel_schedule(start_end_by_resource, True, True)
+        n_deleted = schedule_interface._cancel_schedule(start_end_by_resource, True, True, True)
 
         assert_equal(n_deleted, len(delete_list))
 

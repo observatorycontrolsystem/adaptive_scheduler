@@ -160,12 +160,12 @@ class NetworkInterface(object):
         '''
         return self.observation_portal_interface.get_all_request_groups(start, end, telescope_classes)
 
-    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal):
+    def cancel(self, cancelation_date_list_by_resource, include_rr, include_normal, preemption_enabled):
         ''' Cancel the current scheduler between start and end
         Return the number of deleted requests
         '''
         return self.network_schedule_interface.cancel(cancelation_date_list_by_resource, include_rr,
-                                                      include_normal)
+                                                      include_normal, preemption_enabled)
 
     def abort(self, running_request):
         return self.network_schedule_interface.abort(running_request)
