@@ -283,11 +283,11 @@ class ObservationScheduleInterface(object):
                     log.info(msg)
                 except Exception as e:
                     # Attempt to pull out a returned json error if one exists in the output
-                    error_str = 'Failed to cancel observations in Observation Portal'
+                    error_str = ''
                     try:
                         error_str = json.loads(error_output).get('error')
                     except Exception:
-                        pass
+                        error_str = 'Failed to cancel observations in Observation Portal'
                     raise ScheduleException("{}: {}".format(error_str, repr(e)))
 
         return total_num_canceled
