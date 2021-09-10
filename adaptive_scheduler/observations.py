@@ -9,6 +9,7 @@ March 2019
 '''
 from __future__ import division
 import os
+import json
 
 from datetime import timedelta
 from collections import defaultdict
@@ -270,16 +271,24 @@ class ObservationScheduleInterface(object):
                     'preemption_enabled': preemption_enabled
                 }
 
+                error_output = ''
                 try:
                     results = requests.post(self.host + '/api/observations/cancel/', json=data, headers=self.headers,
                                             timeout=120)
+                    error_output = results.text
                     results.raise_for_status()
                     num_canceled = int(results.json()['canceled'])
                     total_num_canceled += num_canceled
                     msg = 'Cancelled {} observations at {}'.format(num_canceled, full_tel_name)
                     log.info(msg)
                 except Exception as e:
-                    raise ScheduleException("Failed to cancel observations in Observation Portal: {}".format(repr(e)))
+                    # Attempt to pull out a returned json error if one exists in the output
+                    error_str = 'Failed to cancel observations in Observation Portal'
+                    try:
+                        error_str = json.loads(error_output).get('error')
+                    except Exception:
+                        pass
+                    raise ScheduleException("{}: {}".format(error_str, repr(e)))
 
         return total_num_canceled
 

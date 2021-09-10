@@ -875,7 +875,7 @@ class SchedulerRunner(object):
             try:
                 n_deleted += self.clear_resource_schedules(all_cancelation_date_list_by_resource, include_rr=True,
                                                            include_normal=False, preemption_enabled=False)
-            except ScheduleException as se:
+            except ScheduleException:
                 self.log.warning("Failed to cancel existing rapid responses, but will continue scheduling new rapid responses this run.")
 
             n_aborted = self.abort_running_requests(abort_requests)
