@@ -17,8 +17,9 @@ services:
       links:
         -  redis:redis
       environment:
-            # Note that 172.17.0.1 works for localhost on linux, but for mac you will
-            # need to use `host.docker.internal` instead to point to localhost.
+            # Note that when using the default docker network on linux, 172.17.0.1 works
+            # for localhost of the host network, but for mac you will need to use 
+            # `host.docker.internal` instead to point to localhost of the host network.
             -  OPENTSDB_HOSTNAME=opentsdb-path
             -  OPENTSDB_PYTHON_METRICS_TEST_MODE=True
             -  OBSERVATION_PORTAL_URL=http://172.17.0.1:8000
