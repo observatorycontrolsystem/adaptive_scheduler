@@ -5,8 +5,8 @@ services:
       image: redis:3.2
       command: ["redis-server", "--appendonly", "yes"]
       restart: always
-      ports:
-        -  6374:6379
+      expose:
+        -  "6379"
       volumes:
         # This will store the redis data locally in ./data/redis so it will be saved between container runs
         -  ./data/redis:/data
