@@ -1,0 +1,51 @@
+version: "3.7"
+
+services:
+  redis:
+      image: redis:3.2
+      command: ["redis-server", "--appendonly", "yes"]
+      restart: always
+      expose:
+        -  "6379"
+      volumes:
+        # This will store the redis data locally in ./data/redis so it will be saved between container runs
+        -  ./data/redis:/data
+
+  adaptive_scheduler:
+      image: observatorycontrolsystem/adaptive_scheduler:1.1.10
+      restart: always
+      links:
+        -  redis:redis
+      environment:
+            # Note that when using the default docker network on linux, 172.17.0.1 works
+            # for localhost of the host network, but for mac you will need to use 
+            # `host.docker.internal` instead to point to localhost of the host network.
+            -  OPENTSDB_HOSTNAME=opentsdb-path
+            -  OPENTSDB_PYTHON_METRICS_TEST_MODE=True
+            -  OBSERVATION_PORTAL_URL=http://172.17.0.1:8000
+            -  OBSERVATION_PORTAL_API_TOKEN={staff_obs_portal_api_token}
+            -  CONFIGDB_URL=http://172.17.0.1:7000
+            -  DOWNTIMEDB_URL=http://172.17.0.1:7500/
+            -  REDIS_URL=redis
+            -  TELESCOPE_CLASSES=1m0,2m0
+            -  SAVE_PICKLE_INPUT_FILES=False
+            -  SAVE_JSON_OUTPUT_FILES=False
+            -  TIME_BETWEEN_RUNS=300
+            -  KERNEL_TIMELIMIT=1200
+            -  MODEL_HORIZON=2
+            -  MODEL_SLICESIZE=300
+            -  NO_WEATHER=True
+            -  KERNEL_ALGORITHM=SCIP
+        volumes:
+            # Edit these volume maps to wherever you want to store the log files and input/output data sets
+            -  ./data/input:/data/adaptive_scheduler/input_states/
+            -  ./data/output:/data/adaptive_scheduler/output_schedule/
+            -  ./data/:/data/adaptive_scheduler/
+            -  ./logs/:/ocs/adaptive_scheduler/logs/
+        working_dir: /ocs/adaptive_scheduler/
+        # This command can be uncommented to run the unit tests instead of the scheduler itself
+        # command: nosetests --logging-level=WARNING test --exclude-dir=test/requires_third_party
+        command: python as.py
+        depends_on:
+            redis:
+                condition: service_healthy

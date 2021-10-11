@@ -82,10 +82,10 @@ You can build the **Dockerfile** locally with local changes by running
 
 `docker build -t name_of_my_container .`
 
-You can then update the container name in the supplied **docker-compose.yml** and run the tests using
+You can then update the container name in the supplied **docker-compose.yml** and run the scheduler using
 
-`docker-compose up`
+`cd deploy; docker-compose up`
 
-To run the actual scheduler instead of its unit tests, change the entrypoint in the **docker-compose.yml** file to 
-invoke the main entrypoint `python as.py` with the desired arguments. Currently this will only work if you have a Gurobi 
-license for Gurobi 6.0.2 mounted into the container and linked appropriately, or switch the code to not use Gurobi.
+To run the unit tests instead of the actual scheduler, change the commented out command in the **deploy/docker-compose.yml** file to run nosetests with the desired arguments.
+
+Note you will likely want to change many of the environment variables to point to your services and adjust the settings of the scheduler.
