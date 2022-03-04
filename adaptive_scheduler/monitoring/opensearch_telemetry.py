@@ -1,7 +1,7 @@
 from datetime import datetime
 import collections
 
-from elasticsearch import Elasticsearch
+from opensearchpy import OpenSearch
 import logging
 
 log = logging.getLogger('adaptive_scheduler')
@@ -11,25 +11,25 @@ class ConnectionError(Exception):
     pass
 
 
-def get_datum(datum_name, elasticsearch_url, es_index, es_excluded_observatories, instance=None, originator=None):
-    ''' Get data from live telemetry index in ES, ordered by timestamp ascending (i.e.
+def get_datum(datum_name, opensearch_url, os_index, os_excluded_observatories, instance=None, originator=None):
+    ''' Get data from live telemetry index in OS, ordered by timestamp ascending (i.e.
         newest value is last). '''
-    es = Elasticsearch([elasticsearch_url])
+    os = OpenSearch(opensearch_url, http_compress=True)
 
     datum_query = _get_datum_query(datum_name, instance, originator)
 
     try:
-        results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
+        results = os.search(index=os_index, request_timeout=60, body=datum_query, size=1000)
     except Exception:
         # retry one time in case this was a momentary outage which happens occasionally
         try:
-            results = es.search(index=es_index, request_timeout=60, body=datum_query, size=1000)
+            results = os.search(index=os_index, request_timeout=60, body=datum_query, size=1000)
         except Exception as ex:
             raise ConnectionError(
-                "Failed to get datum {} from Elasticsearch after 2 attempts: {}".format(datum_name, repr(ex)))
+                "Failed to get datum {} from OpenSearch after 2 attempts: {}".format(datum_name, repr(ex)))
 
     return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if
-            dat['_source']['observatory'] not in es_excluded_observatories]
+            dat['_source']['observatory'] not in os_excluded_observatories]
 
 
 def _get_datum_query(datumname, datuminstance=None, originator=None):

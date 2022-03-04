@@ -86,14 +86,14 @@ def parse_args(argv):
                             help="Only schedule observations on the specified telescope_classes. Expects 3 character telescope classes comma delimited. If not specified, default is all classes.")
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
                             help="Downtime endpoint url", default=defaults.downtime_url)
-    arg_parser.add_argument("--elasticsearch_url", type=str, dest='elasticsearch_url',
-                            help="Elasticsearch telemetry endpoint url", default=defaults.elasticsearch_url)
-    arg_parser.add_argument("--elasticsearch_index", type=str, dest='elasticsearch_index',
-                            help="Elasticsearch telemetry index name", default=defaults.elasticsearch_index)
-    arg_parser.add_argument("--elasticsearch_excluded_observatories", type=str,
-                            dest='elasticsearch_excluded_observatories',
-                            help="Elasticsearch telemetry observatories to exclude (comma delimited)",
-                            default=','.join(defaults.elasticsearch_excluded_observatories))
+    arg_parser.add_argument("--opensearch_url", type=str, dest='opensearch_url',
+                            help="OpenSearch telemetry endpoint url", default=defaults.opensearch_url)
+    arg_parser.add_argument("--opensearch_index", type=str, dest='opensearch_index',
+                            help="OpenSearch telemetry index name", default=defaults.opensearch_index)
+    arg_parser.add_argument("--opensearch_excluded_observatories", type=str,
+                            dest='opensearch_excluded_observatories',
+                            help="OpenSearch telemetry observatories to exclude (comma delimited)",
+                            default=','.join(defaults.opensearch_excluded_observatories))
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                             help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',

@@ -8,7 +8,7 @@ The adaptive scheduler works with the [Observation Portal](https://github.com/ob
 to get the set of schedulable requests, and cancel and submit sets of observations on sites. It solves an optimization
 problem using a mixed integer programming solver to maximize the priority of scheduled observations. It supports the 
 three types of observations within the Observation Portal (Normal, Rapid Request, and Time Critical). It has optional 
-support to query elasticsearch to incorporate telescope telemetry into it's decision to schedule on a telescope. 
+support to query OpenSearch to incorporate telescope telemetry into it's decision to schedule on a telescope. 
 It connects to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb) to get the set 
 of schedulable instruments.
 
@@ -22,7 +22,7 @@ Optional prerequisites can be skipped for reduced functionality.
 -   A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
 -   A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 -   (Optional) A running [Downtime Database](https://github.com/observatorycontrolsystem/downtime)
--   (Optional) A running Elasticsearch with index for telescope telemetry
+-   (Optional) A running OpenSearch with index for telescope telemetry
 -   (Optional) A running Redis instance - used for caching rise-set values
 
 ## Environment Variables
@@ -34,9 +34,9 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `OPENTSDB_PYTHON_METRICS_TEST_MODE`| Set to any value to turn off metrics collection                   | `False`                                                       |
 | External Services      | `CONFIGDB_URL`          | The url to the configuration database                               | `http://127.0.0.1:7500`                                 |
 |                        | `DOWNTIMEDB_URL`        | The url to the downtime database                                    | `http://127.0.0.1:7000`                                 |
-|                        | `ELASTICSEARCH_URL`     | The url to the elasticsearch cluster                                | _`Empty string`_                                                      |
-|                        | `ELASTICSEARCH_INDEX`     | The elasticsearch index for telescope telemetry                                | `live-telemetry`                                                      |
-|                        | `ELASTICSEARCH_EXCLUDED_OBSERVATORIES`| Comma delimited list of enclosure codes to ignore telemetry from                                | _`Empty string`_                                                      |
+|                        | `OPENSEARCH_URL`     | The url to the OpenSearch cluster                                | _`Empty string`_                                                      |
+|                        | `OPENSEARCH_INDEX`     | The OpenSearch index for telescope telemetry                                | `live-telemetry`                                                      |
+|                        | `OPENSEARCH_EXCLUDED_OBSERVATORIES`| Comma delimited list of enclosure codes to ignore telemetry from                                | _`Empty string`_                                                      |
 |                        | `OBSERVATION_PORTAL_URL`| The url to the observation portal                                   | `http://127.0.0.1:8000`                                 |
 |                        | `OBSERVATION_PORTAL_API_TOKEN`| The API Token for an admin of the observation-portal                                   | _`Empty string`_                                 |
 |                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis`                                                 |
