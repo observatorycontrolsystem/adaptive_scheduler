@@ -33,7 +33,7 @@ Optional prerequisites can be skipped for reduced functionality.
 | Metrics                | `OPENTSDB_HOSTNAME`     | The host name for an opentsdb server, for metrics                   | _`Empty string`_                                                      |
 |                        | `OPENTSDB_PYTHON_METRICS_TEST_MODE`| Set to any value to turn off metrics collection                   | `False`                                                       |
 | External Services      | `CONFIGDB_URL`          | The url to the configuration database                               | `http://127.0.0.1:7500`                                 |
-|                        | `DOWNTIMEDB_URL`        | The url to the downtime database                                    | `http://127.0.0.1:7000`                                 |
+|                        | `DOWNTIME_URL`        | The url to the downtime database                                    | `http://127.0.0.1:7000`                                 |
 |                        | `OPENSEARCH_URL`     | The url to the OpenSearch cluster                                | _`Empty string`_                                                      |
 |                        | `OPENSEARCH_INDEX`     | The OpenSearch index for telescope telemetry                                | `live-telemetry`                                                      |
 |                        | `OPENSEARCH_EXCLUDED_OBSERVATORIES`| Comma delimited list of enclosure codes to ignore telemetry from                                | _`Empty string`_                                                      |
