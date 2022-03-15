@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import collections
 import itertools
 
-from adaptive_scheduler.monitoring.elasticearch_telemetry import get_datum
+from adaptive_scheduler.monitoring.opensearch_telemetry import get_datum
 
 # Set up and configure a module scope logger
 import logging
@@ -103,16 +103,16 @@ class OfflineResourceMonitor(NetworkStateMonitor):
         return datum['status'].lower() == 'offline'
 
 
-class ElasticsearchDataMonitor(NetworkStateMonitor):
-    ''' Abstract class for monitoring changes to the telescope network via LCO's Elasticsearch telemetry datums
+class OpenSearchDataMonitor(NetworkStateMonitor):
+    ''' Abstract class for monitoring changes to the telescope network via OpenSearch telemetry datums
     '''
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, configdb_interface, elasticsearch_url, es_index, es_excluded_observatories):
-        super(ElasticsearchDataMonitor, self).__init__(configdb_interface)
-        self.elasticsearch_url = elasticsearch_url
-        self.es_index = es_index
-        self.es_excluded_observatories = es_excluded_observatories
+    def __init__(self, configdb_interface, opensearch_url, os_index, os_excluded_observatories):
+        super().__init__(configdb_interface)
+        self.opensearch_url = opensearch_url
+        self.os_index = os_index
+        self.os_excluded_observatories = os_excluded_observatories
 
     @staticmethod
     def _sort_by_site_and_observatory(datum_tuple):
@@ -130,14 +130,14 @@ class ElasticsearchDataMonitor(NetworkStateMonitor):
 
     def _flatten_data(self, datum_names):
         for datum_name in datum_names:
-            for datum in get_datum(datum_name, self.elasticsearch_url, self.es_index, self.es_excluded_observatories,
+            for datum in get_datum(datum_name, self.opensearch_url, self.os_index, self.os_excluded_observatories,
                                    instance=1):
                 yield self._datum_name_to_key(datum_name), datum
 
         return
 
 
-class AvailableForScheduling(ElasticsearchDataMonitor):
+class AvailableForScheduling(OpenSearchDataMonitor):
     ''' Monitors two LCO formatted telemetry datums to determine when and why resources are unavailable. The expected
         telemetry datum names are "Available For Scheduling" (a boolean), and "Available For Scheduling Reason" (a
         string reason for being unavailble).

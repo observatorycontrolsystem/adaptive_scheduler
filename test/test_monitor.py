@@ -12,7 +12,7 @@ from datetime import datetime
 import mock
 from io import StringIO
 
-from adaptive_scheduler.monitoring.elasticearch_telemetry import Datum
+from adaptive_scheduler.monitoring.opensearch_telemetry import Datum
 from adaptive_scheduler.monitoring.monitors import (OfflineResourceMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
@@ -48,9 +48,9 @@ class TestAvailableForSchedulingMonitor(object):
             configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[],
                                                  telescopes_file='test/telescopes.json',
                                                  active_instruments_file='test/active_instruments.json'),
-            elasticsearch_url='',
-            es_index='',
-            es_excluded_observatories=[]
+            opensearch_url='',
+            os_index='',
+            os_excluded_observatories=[]
         )
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
@@ -127,7 +127,7 @@ def _create_event(self, value, site='lsc', observatory=None, telescope=None):
                     'value': value})
 
 
-def _mocked_get_datum_consistent(datum, es_url='', es_index='', es_excluded_obs=None, instance=None):
+def _mocked_get_datum_consistent(datum, os_url='', os_index='', os_excluded_obs=None, instance=None):
     if datum == 'Available For Scheduling':
         return [_create_event(object, 'true', site='lsc'),
                 _create_event(object, 'false', site='elp')]

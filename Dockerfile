@@ -1,5 +1,10 @@
 FROM centos:centos8
 
+# Fix for centos appstream issue https://stackoverflow.com/questions/70963985/error-failed-to-download-metadata-for-repo-appstream-cannot-prepare-internal/71020440#71020440
+RUN cd /etc/yum.repos.d/
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-*
+RUN sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*
+
 # setup the python environment
 ENV APPLICATION_ROOT /ocs
 

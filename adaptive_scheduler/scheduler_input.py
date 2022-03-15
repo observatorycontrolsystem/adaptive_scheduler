@@ -39,10 +39,10 @@ class SchedulerParameters(object):
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
                  downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
-                 elasticsearch_url=os.getenv('ELASTICSEARCH_URL', ''),
+                 opensearch_url=os.getenv('OPENSEARCH_URL', ''),
                  telescope_classes=os.getenv('TELESCOPE_CLASSES', ''),
-                 elasticsearch_index=os.getenv('ELASTICSEARCH_INDEX', 'live-telemetry'),
-                 elasticsearch_excluded_observatories=os.getenv('ELASTICSEARCH_EXCLUDED_OBSERVATORIES', ''),
+                 opensearch_index=os.getenv('OPENSEARCH_INDEX', 'live-telemetry'),
+                 opensearch_excluded_observatories=os.getenv('OPENSEARCH_EXCLUDED_OBSERVATORIES', ''),
                  profiling_enabled=to_bool(os.getenv('CPROFILE_ENABLED', 'False')),
                  ignore_ipp=to_bool(os.getenv('IGNORE_IPP_VALUES', 'False')),
                  avg_reservation_save_time_seconds=float(os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05)),
@@ -82,12 +82,12 @@ class SchedulerParameters(object):
         self.observation_portal_url = observation_portal_url
         self.configdb_url = configdb_url
         self.downtime_url = downtime_url
-        self.elasticsearch_url = elasticsearch_url
-        self.elasticsearch_index = elasticsearch_index
-        if elasticsearch_excluded_observatories:
-            self.elasticsearch_excluded_observatories = elasticsearch_excluded_observatories.split(',')
+        self.opensearch_url = opensearch_url
+        self.opensearch_index = opensearch_index
+        if opensearch_excluded_observatories:
+            self.opensearch_excluded_observatories = opensearch_excluded_observatories.split(',')
         else:
-            self.elasticsearch_excluded_observatories = []
+            self.opensearch_excluded_observatories = []
 
 
 class SchedulingInputFactory(object):

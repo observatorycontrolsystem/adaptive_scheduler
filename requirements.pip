@@ -12,7 +12,7 @@ opentsdb_python_metrics>=0.2.0
 lcogt-logging
 python-dateutil
 unidecode<1.2.0
-elasticsearch<6.0,>=5.0
+opensearch-py>=1.0,<2.0
 boto3==1.17.20
 six
 
