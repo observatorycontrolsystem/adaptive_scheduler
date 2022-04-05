@@ -409,6 +409,11 @@ def build_observation(reservation, semester_start, configdb_interface):
             rg_log.debug(msg, reservation.request_group.id)
         configuration_statuses.append(configuration_status)
 
+    all_configuration_statuses = []
+    for i in range(request.configuration_repeats):
+        # Duplicate the configuration_statuses for each configuration_repeat
+        all_configuration_statuses.extend(configuration_statuses)
+
     observation = {
         'site': site,
         'enclosure': enclosure,
@@ -416,7 +421,7 @@ def build_observation(reservation, semester_start, configdb_interface):
         'start': res_start.isoformat(),
         'end': res_end.isoformat(),
         'request': request.id,
-        'configuration_statuses': configuration_statuses
+        'configuration_statuses': all_configuration_statuses
     }
 
     return observation

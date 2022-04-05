@@ -385,12 +385,13 @@ class Request(EqualityMixin):
     '''
 
     def __init__(self, configurations, windows, request_id, state='PENDING',
-                 duration=0, scheduled_reservation=None):
+                 duration=0, configuration_repeats=1, scheduled_reservation=None):
         self.configurations = configurations
         self.windows = windows
         self.id = request_id
         self.state = state
         self.req_duration = duration
+        self.configuration_repeats = configuration_repeats
         self.scheduled_reservation = scheduled_reservation
 
     def get_duration(self):
@@ -762,6 +763,7 @@ class ModelBuilder(object):
             request_id=int(req_dict['id']),
             state=req_dict['state'],
             duration=req_dict['duration'],
+            configuration_repeats=req_dict['configuration_repeats'] if 'configuration_repeats' in req_dict else 1,
             scheduled_reservation=scheduled_reservation
         )
 
