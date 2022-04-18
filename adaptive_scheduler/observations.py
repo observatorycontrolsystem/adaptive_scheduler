@@ -410,7 +410,7 @@ def build_observation(reservation, semester_start, configdb_interface):
         configuration_statuses.append(configuration_status)
 
     all_configuration_statuses = []
-    for i in range(request.configuration_repeats):
+    for _ in range(request.configuration_repeats):
         # Duplicate the configuration_statuses for each configuration_repeat
         all_configuration_statuses.extend(configuration_statuses)
 
