@@ -561,7 +561,7 @@ class RequestGroup(EqualityMixin):
             log.warning("Unknown observation type encountered: {}. Setting effective priority to 0".format(
                 self.observation_type))
 
-        effective_priority = min(effective_priority, 32000.0) * ran
+        effective_priority = min(effective_priority, 320000.0) * ran
 
         return effective_priority
 
