@@ -26,7 +26,7 @@ services:
             -  OBSERVATION_PORTAL_API_TOKEN={staff_obs_portal_api_token}
             -  CONFIGDB_URL=http://172.17.0.1:7000
             -  DOWNTIME_URL=http://172.17.0.1:7500/
-            -  REDIS_URL=redis
+            -  REDIS_URL=redis://redis
             -  TELESCOPE_CLASSES=1m0,2m0
             -  SAVE_PICKLE_INPUT_FILES=False
             -  SAVE_JSON_OUTPUT_FILES=False

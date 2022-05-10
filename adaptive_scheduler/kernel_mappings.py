@@ -54,7 +54,7 @@ log = logging.getLogger(__name__)
 multi_rg_log = logging.getLogger('rg_logger')
 rg_log = RequestGroupLogger(multi_rg_log)
 
-redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis'), socket_connect_timeout=15,
+redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), socket_connect_timeout=15,
               socket_timeout=30)
 
 local_cache = {}

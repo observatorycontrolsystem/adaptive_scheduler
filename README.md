@@ -39,7 +39,7 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `OPENSEARCH_EXCLUDED_OBSERVATORIES`| Comma delimited list of enclosure codes to ignore telemetry from                                | _`Empty string`_                                                      |
 |                        | `OBSERVATION_PORTAL_URL`| The url to the observation portal                                   | `http://127.0.0.1:8000`                                 |
 |                        | `OBSERVATION_PORTAL_API_TOKEN`| The API Token for an admin of the observation-portal                                   | _`Empty string`_                                 |
-|                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis`                                                 |
+|                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis://redis`                                                 |
 | Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
 | Kernel Settings       | `KERNEL_FALLBACK_ALGORITHM`     | Fallback algorithm in case main choice fails or throws an exception. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
 |                       | `KERNEL_TIMELIMIT`     | Max amount of time for the kernel to try to find an optimal solution      | _None_                                                 |
