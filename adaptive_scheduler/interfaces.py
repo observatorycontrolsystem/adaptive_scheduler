@@ -6,7 +6,7 @@ import logging
 from datetime import datetime, timedelta
 from redis import Redis
 
-redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redisdev'), socket_connect_timeout=15,
+redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), socket_connect_timeout=15,
               socket_timeout=30)
 
 logger = logging.getLogger(__name__)
