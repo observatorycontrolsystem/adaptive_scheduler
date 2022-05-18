@@ -79,7 +79,8 @@ class TestKernelMappings(object):
         )
 
         self.constraints = {'max_airmass': None,
-                            'min_lunar_distance': 0}
+                            'min_lunar_distance': 0,
+                            'max_lunar_phase': 1.0}
 
         self.configuration = Configuration(
             dict(
@@ -162,9 +163,10 @@ class TestKernelMappings(object):
             rs_target = configuration.target.in_rise_set_format()
             max_airmass = configuration.constraints['max_airmass']
             min_lunar_distance = configuration.constraints['min_lunar_distance']
+            max_lunar_phase = configuration.constraints['max_lunar_phase']
             for resource, visibility in visibilities.items():
                 intervals = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
-                                                             min_lunar_distance)
+                                                             min_lunar_distance, max_lunar_phase)
                 if resource in intervals_for_resource:
                     intervals_for_resource[resource] = intervals_for_resource[resource].intersect(intervals)
                 else:
@@ -175,11 +177,12 @@ class TestKernelMappings(object):
     def test_make_cache_key(self):
         max_airmass = 2.5
         min_lunar_distance = 30.0
+        max_lunar_phase = 0.75
         resource = '1m0a.doma.lsc'
         rs_target = self.make_constrained_request().configurations[0].target.in_rise_set_format()
 
-        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance),
-                     '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.items()))))
+        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase),
+                     '{}_{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, max_lunar_phase, repr(sorted(rs_target.items()))))
 
     def test_compute_request_availability_half_downtime(self):
         request = self.make_constrained_request()

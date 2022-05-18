@@ -48,8 +48,8 @@ def log_windows(rg, log_msg):
 
 
 def log_constraints(constraints_dict):
-    return 'Constraints(airmass={}, min_lunar_distance={})'.format(constraints_dict['max_airmass'],
-                                                                   constraints_dict['min_lunar_distance'])
+    return 'Constraints(airmass={}, min_lunar_distance={}, max_lunar_phase={})'.format(
+        constraints_dict['max_airmass'], constraints_dict['min_lunar_distance'], constraints_dict['max_lunar_phase'])
 
 
 def log_full_rg(rg, now):

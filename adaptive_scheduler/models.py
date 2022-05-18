@@ -39,8 +39,6 @@ log = logging.getLogger(__name__)
 
 event_bus = get_eventbus()
 
-POND_FIELD_DIGITS = 7
-
 
 def n_requests(request_groups):
     n_rgs = len(request_groups)

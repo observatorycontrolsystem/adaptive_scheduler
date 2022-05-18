@@ -3,7 +3,7 @@
 numpy<1.20.0
 time_intervals<2.0
 
-ocs-rise-set==0.5.1
+ocs-rise-set==0.5.2
 requests<=2.30.0
 redis<=3.4
 retry<=0.10.0

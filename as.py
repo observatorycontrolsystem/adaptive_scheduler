@@ -72,6 +72,8 @@ def parse_args(argv):
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
                             help="Options are GUROBI, CBC, GLPK, or SCIP. Default is SCIP")
+    arg_parser.add_argument("--kernel_params", type=str, default=defaults.kernel_params,
+                            help="Set kernel specific parameters within ORTools. Only set this if you know what you are doing")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("-g", "--mip_gap", type=float, default=defaults.mip_gap,
