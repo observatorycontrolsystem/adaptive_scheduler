@@ -304,8 +304,7 @@ def filter_for_kernel(request_groups, visibility_for_resource, downtime_interval
 
 
 def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase):
-    return str(resource) + '_' + str(max_airmass) + '_' + str(min_lunar_distance) + '_' + str(max_lunar_phase) + '_' + repr(
-        sorted(rs_target.items()))
+    return f"{resource}_{max_airmass}_{min_lunar_distance}_{max_lunar_phase}_{sorted(rs_target.items())}"
 
 
 def update_cached_semester(semester_start, semester_end):
