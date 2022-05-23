@@ -1,5 +1,6 @@
 import logging
 import json
+from math import floor
 from collections import defaultdict
 
 import requests
@@ -33,8 +34,8 @@ class ConfigDBInterface(SendMetricMixin):
         self.update_configdb_structures()
 
     def update_configdb_structures(self):
-        self.update_active_instruments()
         self.update_telescope_info()
+        self.update_active_instruments()
 
     def update_active_instruments(self):
         try:
@@ -95,7 +96,10 @@ class ConfigDBInterface(SendMetricMixin):
             instruments = []
             for instrument in json_results['results']:
                 split_string = instrument['__str__'].lower().split('.')
-                telescope_class = split_string[2][:3]
+                # Need to reverse the ordering of the first parts of the instrument string to get resource
+                resource = '.'.join(split_string[2], split_string[1], split_string[0])
+                # Telescope info is filled in before active instruments so this should always be available
+                telescope_class = self.telescope_info.get(resource, {}).get('tel_class', '')
                 if telescope_class in self.telescope_classes:
                     instruments.append(instrument)
             return instruments
@@ -290,6 +294,16 @@ class ConfigDBInterface(SendMetricMixin):
             raise ConfigDBError("get_all_sites failed: ConfigDB returned no results")
         return json_results['results']
 
+    @staticmethod
+    def _convert_telescope_aperture_to_string(aperture):
+        ''' This takes in a float aperture and converts it to a string of the form #m#
+            where the first # is the left side of the decimal point, and the second number
+            is the rounded right side of the decimal.
+        '''
+        left_side = floor(aperture)
+        right_side = round((aperture - left_side) * 10.0)
+        return f'{left_side}m{right_side}'
+
     def _generate_telescope_info(self):
         """Generates the structure for telescope_info using the site data from configdb"""
         telescope_info = {}
@@ -297,7 +311,7 @@ class ConfigDBInterface(SendMetricMixin):
         for site in site_data:
             for enclosure in site['enclosure_set']:
                 for telescope in enclosure['telescope_set']:
-                    telescope_class = telescope['code'][:3]
+                    telescope_class = ConfigDBInterface._convert_telescope_aperture_to_string(telescope['aperture'])
                     if not self.telescope_classes or telescope_class in self.telescope_classes:
                         name = '.'.join([telescope['code'], enclosure['code'], site['code']])
                         active = telescope['active'] and enclosure['active'] and site['active']
@@ -306,6 +320,7 @@ class ConfigDBInterface(SendMetricMixin):
                             'tel_class': telescope_class,
                             'latitude': telescope['lat'],
                             'longitude': telescope['long'],
+                            'aperture': telescope['aperture'],
                             'horizon': telescope['horizon'],
                             'ha_limit_neg': telescope['ha_limit_neg'],
                             'ha_limit_pos': telescope['ha_limit_pos'],
