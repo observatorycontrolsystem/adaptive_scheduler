@@ -97,7 +97,7 @@ class ConfigDBInterface(SendMetricMixin):
             for instrument in json_results['results']:
                 split_string = instrument['__str__'].lower().split('.')
                 # Need to reverse the ordering of the first parts of the instrument string to get resource
-                resource = '.'.join(split_string[2], split_string[1], split_string[0])
+                resource = '.'.join([split_string[2], split_string[1], split_string[0]])
                 # Telescope info is filled in before active instruments so this should always be available
                 telescope_class = self.telescope_info.get(resource, {}).get('tel_class', '')
                 if telescope_class in self.telescope_classes:
