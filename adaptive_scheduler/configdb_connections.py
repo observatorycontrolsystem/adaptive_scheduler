@@ -95,12 +95,18 @@ class ConfigDBInterface(SendMetricMixin):
             # non-empty telescope_classes means we have something to filter by
             instruments = []
             for instrument in json_results['results']:
-                split_string = instrument['__str__'].lower().split('.')
+                split_string = instrument['__str__'].split('.')
                 # Need to reverse the ordering of the first parts of the instrument string to get resource
                 resource = '.'.join([split_string[2], split_string[1], split_string[0]])
                 # Telescope info is filled in before active instruments so this should always be available
                 telescope_class = self.telescope_info.get(resource, {}).get('tel_class', '')
                 if telescope_class in self.telescope_classes:
+                    instrument['telescope_details'] = ConfigDBInterface._generate_telescope_details(
+                        site=split_string[0],
+                        enclosure=split_string[1],
+                        telescope=split_string[2],
+                        telescope_class=telescope_class
+                    )
                     instruments.append(instrument)
             return instruments
         else:
@@ -124,7 +130,7 @@ class ConfigDBInterface(SendMetricMixin):
             if instrument['state'] != ['DISABLED']:
                 temp_instrument_type = instrument['instrument_type']['code']
                 if case_insensitive_equals(instrument_type_code, temp_instrument_type):
-                    split_string = instrument['__str__'].lower().split('.')
+                    split_string = instrument['__str__'].split('.')
                     temp_site, temp_observatory, temp_telescope, _ = split_string
                     if (
                             case_insensitive_equals(site, temp_site) and
@@ -179,15 +185,13 @@ class ConfigDBInterface(SendMetricMixin):
         )
 
     @staticmethod
-    def _parse_instrument_string(instrument_string):
-        split_string = instrument_string.lower().split('.')
-        site, enclosure, telescope, _ = split_string
+    def _generate_telescope_details(site, enclosure, telescope, telescope_class):
         return {
             'telescope_location': join_location(site, enclosure, telescope),
             'site': site,
             'enclosure': enclosure,
             'telescope': telescope,
-            'telescope_class': telescope[:3]
+            'telescope_class': telescope_class
         }
 
     @staticmethod
@@ -242,11 +246,10 @@ class ConfigDBInterface(SendMetricMixin):
         telescope_sets = defaultdict(set)
         for instrument in self.active_instruments:
             if instrument['state'] == 'SCHEDULABLE' or (instrument['state'] != 'DISABLED' and is_staff and loc_is_set):
-                instrument_location = self._parse_instrument_string(instrument['__str__'])
                 for instrument_type, instrument_requirements in instrument_types_to_requirements.items():
                     if (case_insensitive_equals(instrument_type,
                                                 instrument['instrument_type']['code']) and
-                            self._location_available(instrument_location, location)):
+                            self._location_available(instrument['telescope_details'], location)):
                         # This instrument is a candidate, now the optical elements just need to match
                         self_guide = instrument_requirements['self_guide']
                         these_imager_element_groups = []
@@ -268,7 +271,7 @@ class ConfigDBInterface(SendMetricMixin):
                                                          these_guider_element_groups)
                         ):
                             telescope_sets[instrument_type].add(
-                                instrument_location['telescope_location'])
+                                instrument['telescope_details']['telescope_location'])
 
         telescope_sets = list(telescope_sets.values())
         if len(telescope_sets) > 1:
