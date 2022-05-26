@@ -1,6 +1,13 @@
 [
   {
     "telescope": "http://configdb.lco.gtn/telescopes/16/",
+    "telescope_details": {
+      "telescope_location": "tfn.aqwa.0m4a",
+      "site": "tfn",
+      "enclosure": "aqwa",
+      "telescope": "0m4a",
+      "telescope_class": "0m4"
+    },
     "__str__": "tfn.aqwa.0m4a.kb29-kb29",
     "instrument_type": {
       "allow_self_guiding": true,
@@ -171,6 +178,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fs02-kb40",
+    "telescope_details": {
+      "telescope_location": "ogg.clma.2m0a",
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "2m0a",
+      "telescope_class": "2m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 12.0,
@@ -324,6 +338,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/4/",
     "__str__": "coj.doma.1m0a.fl12-ef09",
+    "telescope_details": {
+      "telescope_location": "coj.doma.1m0a",
+      "site": "coj",
+      "enclosure": "doma",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -532,6 +553,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/20/",
     "__str__": "ogg.clma.0m4b.kb27-kb27",
+    "telescope_details": {
+      "telescope_location": "ogg.clma.0m4b",
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "0m4b",
+      "telescope_class": "0m4"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -700,6 +728,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/7/",
     "__str__": "cpt.domb.1m0a.fl14-ef03",
+    "telescope_details": {
+      "telescope_location": "cpt.domb.1m0a",
+      "site": "cpt",
+      "enclosure": "domb",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -888,6 +923,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/5/",
     "__str__": "coj.domb.1m0a.fl11-ef10",
+    "telescope_details": {
+      "telescope_location": "coj.domb.1m0a",
+      "site": "coj",
+      "enclosure": "domb",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -1096,6 +1138,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/22/",
     "__str__": "coj.clma.0m4a.kb98-kb98",
+    "telescope_details": {
+      "telescope_location": "coj.clma.0m4a",
+      "site": "coj",
+      "enclosure": "clma",
+      "telescope": "0m4a",
+      "telescope_class": "0m4"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -1264,6 +1313,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/12/",
     "__str__": "lsc.domc.1m0a.fl04-ef08",
+    "telescope_details": {
+      "telescope_location": "lsc.domc.1m0a",
+      "site": "lsc",
+      "enclosure": "domc",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -1442,6 +1498,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/8/",
     "__str__": "cpt.domc.1m0a.fl06-ef04",
+    "telescope_details": {
+      "telescope_location": "cpt.domc.1m0a",
+      "site": "cpt",
+      "enclosure": "domc",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -1620,6 +1683,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.fs01-kb34",
+    "telescope_details": {
+      "telescope_location": "coj.clma.2m0a",
+      "site": "coj",
+      "enclosure": "clma",
+      "telescope": "2m0a",
+      "telescope_class": "2m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 12.0,
@@ -1778,6 +1848,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/9/",
     "__str__": "elp.doma.1m0a.fl05-ef01",
+    "telescope_details": {
+      "telescope_location": "elp.doma.1m0a",
+      "site": "elp",
+      "enclosure": "doma",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -1981,6 +2058,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.floyds01-kb42",
+    "telescope_details": {
+      "telescope_location": "ogg.clma.2m0a",
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "2m0a",
+      "telescope_class": "2m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 0.5,
@@ -2089,6 +2173,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fake01-na42",
+    "telescope_details": {
+      "telescope_location": "ogg.clma.2m0a",
+      "site": "ogg",
+      "enclosure": "clma",
+      "telescope": "2m0a",
+      "telescope_class": "2m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 0.5,
@@ -2227,6 +2318,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/6/",
     "__str__": "cpt.doma.1m0a.fl16-ef02",
+    "telescope_details": {
+      "telescope_location": "cpt.doma.1m0a",
+      "site": "cpt",
+      "enclosure": "doma",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -2405,6 +2503,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.kb16-kb31",
+    "telescope_details": {
+      "telescope_location": "sqa.doma.0m8a",
+      "site": "sqa",
+      "enclosure": "doma",
+      "telescope": "0m8a",
+      "telescope_class": "0m8"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -2518,6 +2623,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.nres-kb35",
+    "telescope_details": {
+      "telescope_location": "sqa.doma.0m8a",
+      "site": "sqa",
+      "enclosure": "doma",
+      "telescope": "0m8a",
+      "telescope_class": "0m8"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 0.5,
@@ -2601,6 +2713,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.fl03-ef07",
+    "telescope_details": {
+      "telescope_location": "lsc.domb.1m0a",
+      "site": "lsc",
+      "enclosure": "domb",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,
@@ -2789,6 +2908,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.nres01-ak01",
+    "telescope_details": {
+      "telescope_location": "lsc.domb.1m0a",
+      "site": "lsc",
+      "enclosure": "domb",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 0.5,
@@ -2857,6 +2983,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.floyds02-kb37",
+    "telescope_details": {
+      "telescope_location": "coj.clma.2m0a",
+      "site": "coj",
+      "enclosure": "clma",
+      "telescope": "2m0a",
+      "telescope_class": "2m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 0.5,
@@ -2965,6 +3098,13 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/10/",
     "__str__": "lsc.doma.1m0a.fl15-ef06",
+    "telescope_details": {
+      "telescope_location": "lsc.doma.1m0a",
+      "site": "lsc",
+      "enclosure": "doma",
+      "telescope": "1m0a",
+      "telescope_class": "1m0"
+    },
     "instrument_type": {
       "allow_self_guiding": true,
       "fixed_overhead_per_exposure": 1.0,

@@ -323,7 +323,6 @@ class ConfigDBInterface(SendMetricMixin):
                             'tel_class': telescope_class,
                             'latitude': telescope['lat'],
                             'longitude': telescope['long'],
-                            'aperture': telescope['aperture'],
                             'horizon': telescope['horizon'],
                             'ha_limit_neg': telescope['ha_limit_neg'],
                             'ha_limit_pos': telescope['ha_limit_pos'],
