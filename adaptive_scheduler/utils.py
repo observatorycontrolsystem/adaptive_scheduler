@@ -245,9 +245,9 @@ def split_location(location):
     return (location, location, location)
 
 
-def join_location(site, observatory, telescope):
+def join_location(site, enclosure, telescope):
     # Join on full stops
-    return "%s.%s.%s" % (telescope, observatory, site)
+    return f"{telescope}.{enclosure}.{site}"
 
 
 def timeit(method):
