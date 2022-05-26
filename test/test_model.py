@@ -66,7 +66,8 @@ class TestRequest(object):
         )
 
         self.constraints = {'max_airmass': None,
-                            'min_lunar_distance': 0}
+                            'min_lunar_distance': 0,
+                            'max_lunar_phase': 1.0}
 
         self.configuration = Configuration(
             dict(
@@ -175,7 +176,8 @@ class TestRequestGroup(object):
         )
 
         constraints = {'max_airmass': None,
-                       'min_lunar_distance': 0.0}
+                       'min_lunar_distance': 0.0,
+                       'max_lunar_phase': 1.0}
 
         configuration1 = Configuration(
             dict(
@@ -369,7 +371,8 @@ class TestModelBuilder(object):
         )
 
         self.constraints = {'max_airmass': None,
-                            'min_lunar_distance': 0}
+                            'min_lunar_distance': 0,
+                            'max_lunar_phase': 1.0}
 
         self.configurations = [
             dict(

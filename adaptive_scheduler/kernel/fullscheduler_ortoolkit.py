@@ -33,6 +33,7 @@ ALGORITHMS = {
     'SCIP': 'SCIP_MIXED_INTEGER_PROGRAMMING'
 }
 
+
 FALLBACK_ALGORITHM = ALGORITHMS[os.getenv('KERNEL_FALLBACK_ALGORITHM', 'SCIP')]
 
 class Result(object):
@@ -46,7 +47,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
     def __init__(self, kernel, compound_reservation_list,
                  globally_possible_windows_dict,
                  contractual_obligation_list,
-                 slice_size_seconds, mip_gap, warm_starts):
+                 slice_size_seconds, mip_gap, warm_starts, kernel_params=''):
         super().__init__(compound_reservation_list,
                          globally_possible_windows_dict,
                          contractual_obligation_list,
@@ -55,6 +56,7 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
         self.kernel = kernel
         self.mip_gap = mip_gap
         self.warm_starts = warm_starts
+        self.kernel_params = kernel_params
         self.algorithm = ALGORITHMS[kernel.upper()]
 
     # A stub to get the RA/dec by request ID
@@ -205,6 +207,10 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
         # impose a time limit (ms) on the solve
         if timelimit > 0:
             solver.SetTimeLimit(int(timelimit * 1000))
+
+        # Set kernel specific parameters if they are present
+        if self.kernel_params:
+            solver.SetSolverSpecificParametersAsString(self.kernel_params)
 
         params = pywraplp.MPSolverParameters()
         # Set the tolerance for the model solution to be within 1% of what it thinks is the best solution

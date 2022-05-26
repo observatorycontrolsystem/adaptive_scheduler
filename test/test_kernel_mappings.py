@@ -79,7 +79,8 @@ class TestKernelMappings(object):
         )
 
         self.constraints = {'max_airmass': None,
-                            'min_lunar_distance': 0}
+                            'min_lunar_distance': 0,
+                            'max_lunar_phase': 1.0}
 
         self.configuration = Configuration(
             dict(
@@ -94,7 +95,7 @@ class TestKernelMappings(object):
             )
         )
 
-    def make_constrained_request(self, airmass=None,
+    def make_constrained_request(self, airmass=None, max_lunar_phase=1.0,
                                  start=datetime(2011, 11, 1, 6, 0, 0),
                                  end=datetime(2011, 11, 2, 6, 0, 0)):
         # A one day user supplied window
@@ -111,6 +112,7 @@ class TestKernelMappings(object):
 
         configuration = copy.deepcopy(self.configuration)
         configuration.constraints['max_airmass'] = airmass
+        configuration.constraints['max_lunar_phase'] = max_lunar_phase
 
         req = Request(
             configurations=[configuration],
@@ -162,9 +164,10 @@ class TestKernelMappings(object):
             rs_target = configuration.target.in_rise_set_format()
             max_airmass = configuration.constraints['max_airmass']
             min_lunar_distance = configuration.constraints['min_lunar_distance']
+            max_lunar_phase = configuration.constraints['max_lunar_phase']
             for resource, visibility in visibilities.items():
                 intervals = get_rise_set_timepoint_intervals(rs_target, visibility, max_airmass,
-                                                             min_lunar_distance)
+                                                             min_lunar_distance, max_lunar_phase)
                 if resource in intervals_for_resource:
                     intervals_for_resource[resource] = intervals_for_resource[resource].intersect(intervals)
                 else:
@@ -175,11 +178,31 @@ class TestKernelMappings(object):
     def test_make_cache_key(self):
         max_airmass = 2.5
         min_lunar_distance = 30.0
+        max_lunar_phase = 0.75
         resource = '1m0a.doma.lsc'
         rs_target = self.make_constrained_request().configurations[0].target.in_rise_set_format()
 
-        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance),
-                     '{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, repr(sorted(rs_target.items()))))
+        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase),
+                     '{}_{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, max_lunar_phase, repr(sorted(rs_target.items()))))
+
+    def test_compute_request_availability_lunar_phase_removes_window(self):
+        request = self.make_constrained_request(max_lunar_phase=1.0)
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {})
+        base_windows = request.windows.windows_for_resource.copy()
+
+        # Lunar phase goes above 40 at ~16:30 on 11/1, so it should eliminate the second window
+        constrainted_request = self.make_constrained_request(max_lunar_phase=0.4)
+        intervals_for_resource = self.make_rise_set_intervals(constrainted_request, visibilities)
+        compute_request_availability(constrainted_request, intervals_for_resource, {})
+
+        assert_equal(len(base_windows[resource]), 2)
+        assert_equal(constrainted_request.windows.size(), 1)
+        # The window below lunar phase of 40% is the first of its two windows
+        assert_equal(constrainted_request.windows.at(resource)[0], base_windows[resource][0])
 
     def test_compute_request_availability_half_downtime(self):
         request = self.make_constrained_request()

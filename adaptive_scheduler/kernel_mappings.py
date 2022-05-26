@@ -115,9 +115,9 @@ def cache_rise_set_timepoint_intervals(args):
     '''
     try:
         log.info('process {} is calculating a rise set'.format(current_process().pid))
-        (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = args
-        intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance)
-        cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance)
+        (resource, rise_set_target, visibility, max_airmass, min_lunar_distance, max_lunar_phase) = args
+        intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance, max_lunar_phase)
+        cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance, max_lunar_phase)
         redis.set(cache_key, pickle.dumps(intervals))
         log.info('process {} finished calculating rise set'.format(current_process().pid))
     except Exception as e:
@@ -126,7 +126,7 @@ def cache_rise_set_timepoint_intervals(args):
         raise Exception(repr(e))
 
 
-def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance):
+def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance, max_lunar_phase):
     ''' Computes the rise set timepoint intervals for a given target, visibility object, and constraints
     '''
     # arguments are packed into a tuple since multiprocessing pools only work with single arg functions
@@ -145,6 +145,11 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
             rs_up_intervals = visibility.get_moon_distance_intervals(target=rise_set_target,
                                                                      target_intervals=rs_up_intervals,
                                                                      moon_distance=Angle(degrees=min_lunar_distance))
+        # Apply the moon phase intervals if max_lunar_phase < 1.0 (full moon)
+        if max_lunar_phase < 1.0:
+            rs_up_intervals = visibility.get_moon_phase_intervals(target_intervals=rs_up_intervals,
+                                                                  max_moon_phase=max_lunar_phase)
+
         if visibility.zenith_blind_spot.in_degrees() > 0.0:
             rs_up_intervals = visibility.get_zenith_distance_intervals(target=rise_set_target,
                                                                        target_intervals=rs_up_intervals)
@@ -298,9 +303,8 @@ def filter_for_kernel(request_groups, visibility_for_resource, downtime_interval
     return rgs
 
 
-def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance):
-    return str(resource) + '_' + str(max_airmass) + '_' + str(min_lunar_distance) + '_' + repr(
-        sorted(rs_target.items()))
+def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase):
+    return f"{resource}_{max_airmass}_{min_lunar_distance}_{max_lunar_phase}_{sorted(rs_target.items())}"
 
 
 def update_cached_semester(semester_start, semester_end):
@@ -339,17 +343,18 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                 rise_set_target = conf.target.in_rise_set_format()
                 for resource in r.windows.windows_for_resource:
                     cache_key = make_cache_key(resource, rise_set_target, conf.constraints['max_airmass'],
-                                               conf.constraints['min_lunar_distance'])
+                                               conf.constraints['min_lunar_distance'], conf.constraints['max_lunar_phase'])
                     if cache_key not in local_cache:
                         try:
                             # put intersections from the redis cache into the local cache for use later
                             local_cache[cache_key] = pickle.loads(redis.get(cache_key))
                         except Exception:
-                            # need to compute the rise_set for this target/resource/airmass/lunar_distance combo
+                            # need to compute the rise_set for this target/resource/airmass/lunar_distance/lunar_phase combo
                             rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
                                                                       visibility_for_resource[resource],
                                                                       conf.constraints['max_airmass'],
-                                                                      conf.constraints['min_lunar_distance']))
+                                                                      conf.constraints['min_lunar_distance'],
+                                                                      conf.constraints['max_lunar_phase']))
 
     num_processes = cpu_count() - 1
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
@@ -374,10 +379,10 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                 local_cache[cache_key] = pickle.loads(redis.get(cache_key))
             except Exception:
                 # failed to load this cache_key from redis, maybe redis is down. Will run synchronously.
-                (resource, rise_set_target, visibility, max_airmass, min_lunar_distance) = rise_sets_to_compute_later[
-                    cache_key]
+                (resource, rise_set_target, visibility, max_airmass, min_lunar_distance,
+                 max_lunar_phase) = rise_sets_to_compute_later[cache_key]
                 local_cache[cache_key] = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass,
-                                                                          min_lunar_distance)
+                                                                          min_lunar_distance, max_lunar_phase)
                 # save the newly calculated rise-set values into the redis cache for next restart
                 try:
                     redis.set(cache_key, pickle.dumps(local_cache[cache_key]))
@@ -394,7 +399,8 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                 for resource in r.windows.windows_for_resource:
                     cache_key = make_cache_key(resource, conf.target.in_rise_set_format(),
                                                conf.constraints['max_airmass'],
-                                               conf.constraints['min_lunar_distance'])
+                                               conf.constraints['min_lunar_distance'],
+                                               conf.constraints['max_lunar_phase'])
                     target_intervals = local_cache[cache_key]
                     if resource in intervals_by_resource:
                         intervals_by_resource[resource] = intervals_by_resource[resource].intersect([target_intervals])

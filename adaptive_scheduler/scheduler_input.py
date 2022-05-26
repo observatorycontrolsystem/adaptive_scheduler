@@ -30,6 +30,7 @@ class SchedulerParameters(object):
                  sleep_seconds=float(os.getenv('TIME_BETWEEN_RUNS', 60.0)),
                  simulate_now=os.getenv('CURRENT_TIME_OVERRIDE', None),
                  kernel=os.getenv('KERNEL_ALGORITHM', 'SCIP'),
+                 kernel_params=os.getenv('KERNEL_PARAMS', ''),
                  input_file_name=os.getenv('SCHEDULER_INPUT_FILE', None),
                  pickle=to_bool(os.getenv('SAVE_PICKLE_INPUT_FILES', 'False')),
                  mip_gap=float(os.getenv('KERNEL_MIPGAP', 0.01)),
@@ -64,6 +65,7 @@ class SchedulerParameters(object):
         self.sleep_seconds = sleep_seconds
         self.simulate_now = simulate_now
         self.kernel = kernel
+        self.kernel_params = kernel_params
         self.input_file_name = input_file_name
         self.pickle = pickle
         self.save_output = save_output
