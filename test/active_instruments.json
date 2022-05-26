@@ -2,7 +2,7 @@
   {
     "telescope": "http://configdb.lco.gtn/telescopes/16/",
     "telescope_details": {
-      "telescope_location": "tfn.aqwa.0m4a",
+      "telescope_location": "0m4a.aqwa.tfn",
       "site": "tfn",
       "enclosure": "aqwa",
       "telescope": "0m4a",
@@ -179,7 +179,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fs02-kb40",
     "telescope_details": {
-      "telescope_location": "ogg.clma.2m0a",
+      "telescope_location": "2m0a.clma.ogg",
       "site": "ogg",
       "enclosure": "clma",
       "telescope": "2m0a",
@@ -339,7 +339,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/4/",
     "__str__": "coj.doma.1m0a.fl12-ef09",
     "telescope_details": {
-      "telescope_location": "coj.doma.1m0a",
+      "telescope_location": "1m0a.doma.coj",
       "site": "coj",
       "enclosure": "doma",
       "telescope": "1m0a",
@@ -554,7 +554,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/20/",
     "__str__": "ogg.clma.0m4b.kb27-kb27",
     "telescope_details": {
-      "telescope_location": "ogg.clma.0m4b",
+      "telescope_location": "o0m4b.clma.ogg",
       "site": "ogg",
       "enclosure": "clma",
       "telescope": "0m4b",
@@ -729,7 +729,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/7/",
     "__str__": "cpt.domb.1m0a.fl14-ef03",
     "telescope_details": {
-      "telescope_location": "cpt.domb.1m0a",
+      "telescope_location": "1m0a.domb.cpt",
       "site": "cpt",
       "enclosure": "domb",
       "telescope": "1m0a",
@@ -924,7 +924,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/5/",
     "__str__": "coj.domb.1m0a.fl11-ef10",
     "telescope_details": {
-      "telescope_location": "coj.domb.1m0a",
+      "telescope_location": "1m0a.domb.coj",
       "site": "coj",
       "enclosure": "domb",
       "telescope": "1m0a",
@@ -1139,7 +1139,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/22/",
     "__str__": "coj.clma.0m4a.kb98-kb98",
     "telescope_details": {
-      "telescope_location": "coj.clma.0m4a",
+      "telescope_location": "0m4a.clma.coj",
       "site": "coj",
       "enclosure": "clma",
       "telescope": "0m4a",
@@ -1314,7 +1314,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/12/",
     "__str__": "lsc.domc.1m0a.fl04-ef08",
     "telescope_details": {
-      "telescope_location": "lsc.domc.1m0a",
+      "telescope_location": "1m0a.domc.lsc",
       "site": "lsc",
       "enclosure": "domc",
       "telescope": "1m0a",
@@ -1499,7 +1499,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/8/",
     "__str__": "cpt.domc.1m0a.fl06-ef04",
     "telescope_details": {
-      "telescope_location": "cpt.domc.1m0a",
+      "telescope_location": "1m0a.domc.cpt",
       "site": "cpt",
       "enclosure": "domc",
       "telescope": "1m0a",
@@ -1684,7 +1684,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.fs01-kb34",
     "telescope_details": {
-      "telescope_location": "coj.clma.2m0a",
+      "telescope_location": "2m0a.clma.coj",
       "site": "coj",
       "enclosure": "clma",
       "telescope": "2m0a",
@@ -1849,7 +1849,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/9/",
     "__str__": "elp.doma.1m0a.fl05-ef01",
     "telescope_details": {
-      "telescope_location": "elp.doma.1m0a",
+      "telescope_location": "1m0a.doma.elp",
       "site": "elp",
       "enclosure": "doma",
       "telescope": "1m0a",
@@ -2059,7 +2059,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.floyds01-kb42",
     "telescope_details": {
-      "telescope_location": "ogg.clma.2m0a",
+      "telescope_location": "2m0a.clma.ogg",
       "site": "ogg",
       "enclosure": "clma",
       "telescope": "2m0a",
@@ -2174,7 +2174,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/14/",
     "__str__": "ogg.clma.2m0a.fake01-na42",
     "telescope_details": {
-      "telescope_location": "ogg.clma.2m0a",
+      "telescope_location": "2m0a.clma.ogg",
       "site": "ogg",
       "enclosure": "clma",
       "telescope": "2m0a",
@@ -2319,7 +2319,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/6/",
     "__str__": "cpt.doma.1m0a.fl16-ef02",
     "telescope_details": {
-      "telescope_location": "cpt.doma.1m0a",
+      "telescope_location": "1m0a.doma.cpt",
       "site": "cpt",
       "enclosure": "doma",
       "telescope": "1m0a",
@@ -2504,7 +2504,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.kb16-kb31",
     "telescope_details": {
-      "telescope_location": "sqa.doma.0m8a",
+      "telescope_location": "0m8a.doma.sqa",
       "site": "sqa",
       "enclosure": "doma",
       "telescope": "0m8a",
@@ -2624,7 +2624,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/15/",
     "__str__": "sqa.doma.0m8a.nres-kb35",
     "telescope_details": {
-      "telescope_location": "sqa.doma.0m8a",
+      "telescope_location": "0m8a.doma.sqa",
       "site": "sqa",
       "enclosure": "doma",
       "telescope": "0m8a",
@@ -2714,7 +2714,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.fl03-ef07",
     "telescope_details": {
-      "telescope_location": "lsc.domb.1m0a",
+      "telescope_location": "1m0a.domb.lsc",
       "site": "lsc",
       "enclosure": "domb",
       "telescope": "1m0a",
@@ -2909,7 +2909,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/11/",
     "__str__": "lsc.domb.1m0a.nres01-ak01",
     "telescope_details": {
-      "telescope_location": "lsc.domb.1m0a",
+      "telescope_location": "1m0a.domb.lsc",
       "site": "lsc",
       "enclosure": "domb",
       "telescope": "1m0a",
@@ -2984,7 +2984,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/3/",
     "__str__": "coj.clma.2m0a.floyds02-kb37",
     "telescope_details": {
-      "telescope_location": "coj.clma.2m0a",
+      "telescope_location": "2m0a.clma.coj",
       "site": "coj",
       "enclosure": "clma",
       "telescope": "2m0a",
@@ -3099,7 +3099,7 @@
     "telescope": "http://configdb.lco.gtn/telescopes/10/",
     "__str__": "lsc.doma.1m0a.fl15-ef06",
     "telescope_details": {
-      "telescope_location": "lsc.doma.1m0a",
+      "telescope_location": "1m0a.doma.lsc",
       "site": "lsc",
       "enclosure": "doma",
       "telescope": "1m0a",
