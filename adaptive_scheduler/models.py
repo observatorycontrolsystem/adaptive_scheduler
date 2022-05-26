@@ -382,12 +382,13 @@ class Request(EqualityMixin):
         state          - the initial state of the Request
     '''
 
-    def __init__(self, configurations, windows, request_id, state='PENDING',
+    def __init__(self, configurations, windows, request_id, state='PENDING', telescope_class='',
                  duration=0, configuration_repeats=1, scheduled_reservation=None):
         self.configurations = configurations
         self.windows = windows
         self.id = request_id
         self.state = state
+        self.telescope_class = telescope_class
         self.req_duration = duration
         self.configuration_repeats = configuration_repeats
         self.scheduled_reservation = scheduled_reservation
@@ -760,6 +761,7 @@ class ModelBuilder(object):
             windows=windows,
             request_id=int(req_dict['id']),
             state=req_dict['state'],
+            telescope_class=req_dict['location']['telescope_class'] if 'telescope_class' in req_dict['location'] else '',
             duration=req_dict['duration'],
             configuration_repeats=req_dict['configuration_repeats'] if 'configuration_repeats' in req_dict else 1,
             scheduled_reservation=scheduled_reservation

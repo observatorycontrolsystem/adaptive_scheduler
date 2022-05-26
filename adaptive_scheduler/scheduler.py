@@ -281,13 +281,13 @@ class Scheduler(SendMetricMixin):
         unscheduled_hours_per_class = defaultdict(float)
         for reservation in not_scheduled_reservations:
             # We don't currently save telescope_class, so have to parse it from beginning of inst type
-            telescope_class = reservation.request.configurations[0].instrument_type[:3].lower()
+            telescope_class = reservation.request.telescope_class.lower()
             unscheduled_reqs_per_class[telescope_class] += 1
             unscheduled_hours_per_class[telescope_class] += (reservation.duration / 3600.0)
         total_reqs_per_class = defaultdict(int)
         total_hours_per_class = defaultdict(float)
         for reservation in to_schedule_res:
-            telescope_class = reservation.request.configurations[0].instrument_type[:3].lower()
+            telescope_class = reservation.request.telescope_class.lower()
             total_reqs_per_class[telescope_class] += 1
             total_hours_per_class[telescope_class] += (reservation.duration / 3600.0)
 
