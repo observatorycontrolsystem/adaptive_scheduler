@@ -1,32 +1,35 @@
-#!/usr/bin/env python
 '''
-as.py - Run the adaptive scheduler on continuous loop.
+Run the adaptive scheduler on continuous loop.
 
 Author: Eric Saunders
 July 2012
 '''
 from __future__ import division
 
-from adaptive_scheduler.eventbus import get_eventbus
-from adaptive_scheduler.feedback import UserFeedbackLogger, TimingLogger
-from adaptive_scheduler.interfaces import NetworkInterface
-from adaptive_scheduler.observations import ObservationScheduleInterface
-from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
-from adaptive_scheduler.configdb_connections import ConfigDBInterface
-from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.scheduler_input import SchedulingInputFactory, SchedulingInputProvider, \
-    FileBasedSchedulingInputProvider, SchedulerParameters
-from adaptive_scheduler.monitoring.network_status import Network
-from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
+from .eventbus import get_eventbus
+from .feedback import UserFeedbackLogger, TimingLogger
+from .interfaces import NetworkInterface
+from .observations import ObservationScheduleInterface
+from .observation_portal_connections import ObservationPortalInterface
+from .configdb_connections import ConfigDBInterface
+from .scheduler import LCOGTNetworkScheduler, SchedulerRunner
+from .scheduler_input import (
+  SchedulingInputFactory, SchedulingInputProvider,
+  FileBasedSchedulingInputProvider, SchedulerParameters
+)
+from .monitoring.network_status import Network
+from .kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
+from .log import RequestGroupHandler
+
+from lcogt_logging import LCOGTFormatter
 
 import argparse
 import logging
 import sys
+import os
+
 
 VERSION = '2.0.0'
-
-# Set up and configure an application scope logger
-import logger_config
 
 log = logging.getLogger('adaptive_scheduler')
 rg_logger = logging.getLogger('rg_logger')
@@ -77,13 +80,15 @@ def parse_args(argv):
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,
                             help="Filename for scheduler input. Example: -f scheduling_input_20180101.pickle")
     arg_parser.add_argument("-g", "--mip_gap", type=float, default=defaults.mip_gap,
-                            help="The acceptable MIP GAP threshold used in the solver. Defaults to 0.01 (1%). Recommended range 0.01-0.0001")
+                            help="The acceptable MIP GAP threshold used in the solver. Defaults to 0.01 (1%%). Recommended range 0.01-0.0001")
     arg_parser.add_argument("--pickle", type=bool, default=defaults.pickle, dest='pickle',
                             help="Enable storing pickled files of scheduling run input")
     arg_parser.add_argument("--save_output", type=bool, default=defaults.save_output, dest='save_output',
                             help="Enable storing scheduling run output in a json file")
     arg_parser.add_argument("--request_logs", type=bool, default=defaults.request_logs, dest='request_logs',
                             help="Enable saving the per-request log files")
+    arg_parser.add_argument("--request_logs_dir", type=str, default=defaults.request_logs_dir, dest='request_logs_dir',
+                            help="Where to save the per-request log files")
     arg_parser.add_argument("--telescope_classes", type=str, default=','.join(defaults.telescope_classes),
                             help="Only schedule observations on the specified telescope_classes. Expects 3 character telescope classes comma delimited. If not specified, default is all classes.")
     arg_parser.add_argument("--downtime_url", type=str, dest='downtime_url',
@@ -137,8 +142,40 @@ def get_kernel_class(sched_params):
     return kernel_class
 
 
-def main(argv):
+def setup_logging(sched_params):
+    log = logging.getLogger('adaptive_scheduler')
+    log.setLevel(logging.INFO)
+    log.propagate = False
+
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.DEBUG)
+
+    formatter = LCOGTFormatter()
+
+    sh.setFormatter(formatter)
+    log.addHandler(sh)
+
+    if sched_params.request_logs:
+        # create the rg logs directory
+        os.makedirs(sched_params.request_logs_dir, exist_ok=True)
+
+        multi_rg_log = logging.getLogger('rg_logger')
+        multi_rg_log.setLevel(logging.DEBUG)
+        multi_rg_log.propagate = False
+
+        uh = RequestGroupHandler(request_group_id=1, logdir=sched_params.request_logs_dir)
+        uh.setLevel(logging.DEBUG)
+
+        uh.setFormatter(formatter)
+        multi_rg_log.addHandler(uh)
+
+
+def main(argv=None):
     sched_params = parse_args(argv)
+
+    # Set up and configure an application scope logger
+    setup_logging(sched_params)
+
     log.info("Starting Adaptive Scheduler, version {v}".format(v=VERSION))
 
     event_bus = get_eventbus()

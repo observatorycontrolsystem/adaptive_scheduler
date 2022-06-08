@@ -31,3 +31,6 @@ responses = "<=0.17.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+ocs-scheduler = 'adaptive_scheduler.cli:main'

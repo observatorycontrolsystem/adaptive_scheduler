@@ -37,6 +37,7 @@ class SchedulerParameters(object):
                  s3_bucket=os.getenv('AWS_BUCKET', ''),
                  save_output=to_bool(os.getenv('SAVE_JSON_OUTPUT_FILES', 'False')),
                  request_logs=to_bool(os.getenv('SAVE_PER_REQUEST_LOGS', 'False')),
+                 request_logs_dir=os.getenv('SAVE_PER_REQUEST_LOGS_DIR', 'logs'),
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
                  downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
@@ -70,6 +71,7 @@ class SchedulerParameters(object):
         self.pickle = pickle
         self.save_output = save_output
         self.request_logs = request_logs
+        self.request_logs_dir = request_logs_dir
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
