@@ -1,6 +1,5 @@
 from __future__ import division
 
-from nose.tools import assert_equal, raises
 from mock import patch, Mock
 
 from adaptive_scheduler.observations import (InstrumentResolutionError, build_observation, resolve_instrument,
@@ -14,6 +13,11 @@ from datetime import datetime
 import responses
 import os
 
+import pytest
+
+
+SRC_DIR = os.path.dirname(__file__)
+
 
 class TestObservations(object):
 
@@ -22,8 +26,8 @@ class TestObservations(object):
         self.proposal = Proposal(pi='Eric Saunders')
 
         self.configdb_interface = ConfigDBInterface(configdb_url='', telescope_classes=[],
-                                                    telescopes_file='test/telescopes.json',
-                                                    active_instruments_file='test/active_instruments.json')
+                                                    telescopes_file=f'{SRC_DIR}/telescopes.json',
+                                                    active_instruments_file=f'{SRC_DIR}/active_instruments.json')
 
         self.valid_proposal = Proposal(
             pi='Eric Saunders',
@@ -60,62 +64,61 @@ class TestObservations(object):
     def test_proposal_lists_missing_fields(self):
         missing = self.proposal.list_missing_fields()
 
-        assert_equal(
-            missing,
-            ['id', 'tag', 'tac_priority']
-        )
+        assert (
+            missing ==
+            ['id', 'tag', 'tac_priority'])
 
-    @raises(ScheduleException)
     @responses.activate
     def test_no_observation_portal_connection_okay(self):
-        tels = {
-            '1m0a.doma.elp': [],
-            '1m0a.doma.coj': []
-        }
-        start = datetime(2013, 10, 3)
-        end = datetime(2013, 11, 3)
+        with pytest.raises(ScheduleException):
+            tels = {
+                '1m0a.doma.elp': [],
+                '1m0a.doma.coj': []
+            }
+            start = datetime(2013, 10, 3)
+            end = datetime(2013, 11, 3)
 
-        host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
-        get_endpoint = host + '/api/observations/'
-        responses.add(responses.GET, get_endpoint,
-                      json={"error": 'failed to get Observation Portal observations'}, status=500)
+            host = os.getenv('OBSERVATION_PORTAL_URL', 'http://observation-portal-dev.lco.gtn')
+            get_endpoint = host + '/api/observations/'
+            responses.add(responses.GET, get_endpoint,
+                          json={"error": 'failed to get Observation Portal observations'}, status=500)
 
-        observation_schedule_interface = ObservationScheduleInterface(host=host)
-        rr_blocks = observation_schedule_interface._get_rr_observations_by_telescope(tels, start, end)
-        assert_equal({}, rr_blocks)
+            observation_schedule_interface = ObservationScheduleInterface(host=host)
+            rr_blocks = observation_schedule_interface._get_rr_observations_by_telescope(tels, start, end)
+            assert {} == rr_blocks
 
     def test_scicam_instrument_resolves_to_a_specific_camera(self):
         instrument_type = '1M0-SCICAM-SINISTRO'
         site, obs, tel = ('lsc', 'doma', '1m0a')
         received = resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
-        assert_equal(received, 'fl15')
+        assert received == 'fl15'
 
-    @raises(InstrumentResolutionError)
     def test_no_matching_instrument_raises_an_exception(self):
-        instrument_type = '1M0-SCICAM-SINISTRO'
-        site, obs, tel = ('looloo', 'doma', '1m0a')
-        resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
+        with pytest.raises(InstrumentResolutionError):
+            instrument_type = '1M0-SCICAM-SINISTRO'
+            site, obs, tel = ('looloo', 'doma', '1m0a')
+            resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
 
     def test_scicam_autoguider_resolves_to_primary_instrument(self):
         self_guide = True
         specific_inst_name = 'fl15'
         site, obs, tel = ('lsc', 'doma', '1m0a')
         received = resolve_autoguider(self_guide, specific_inst_name, site, obs, tel, self.configdb_interface)
-        assert_equal(received, 'fl15')
+        assert received == 'fl15'
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
         self_guide = False
         inst_name = 'fl15'
         site, obs, tel = ('lsc', 'doma', '1m0a')
         received = resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
-        assert_equal(received, 'ef06')
+        assert received == 'ef06'
 
-    @raises(InstrumentResolutionError)
     def test_no_matching_autoguider_raises_an_exception(self):
-        self_guide = True
-        inst_name = 'abcd'
-        site, obs, tel = ('looloo', 'doma', '1m0a')
-        resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
+        with pytest.raises(InstrumentResolutionError):
+            self_guide = True
+            inst_name = 'abcd'
+            site, obs, tel = ('looloo', 'doma', '1m0a')
+            resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
 
 
 class TestObservationInteractions(object):
@@ -164,7 +167,7 @@ class TestObservationInteractions(object):
         schedule_interface = ObservationScheduleInterface(host=host)
         n_deleted = schedule_interface._cancel_schedule(start_end_by_resource, True, True, True)
 
-        assert_equal(n_deleted, len(delete_list))
+        assert n_deleted == len(delete_list)
 
     @patch('adaptive_scheduler.observations.build_observation')
     def test_dont_send_schedule_to_observation_portal_if_dry_run(self, mock_func1):
@@ -186,7 +189,7 @@ class TestObservationInteractions(object):
         n_submitted_total = schedule_interface._send_schedule_to_observation_portal(schedule, self.start,
                                                                                 self.configdb_interface, dry_run)
 
-        assert_equal(n_submitted_total, 3)
+        assert n_submitted_total == 3
 
     def test_build_normal_block(self):
         reservation = Reservation(
@@ -233,12 +236,12 @@ class TestObservationInteractions(object):
         configdb_interface.get_specific_instrument.return_value='xx01'
         received = build_observation(reservation, self.start, configdb_interface)
 
-        assert_equal(received['request'], 22222)
-        assert_equal(received['site'], 'bpl')
-        assert_equal(received['enclosure'], 'doma')
-        assert_equal(received['telescope'], '1m0a')
-        assert_equal(received['configuration_statuses'][0]['configuration'], 11)
-        assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx01')
+        assert received['request'] == 22222
+        assert received['site'] == 'bpl'
+        assert received['enclosure'] == 'doma'
+        assert received['telescope'] == '1m0a'
+        assert received['configuration_statuses'][0]['configuration'] == 11
+        assert received['configuration_statuses'][0]['instrument_name'] == 'xx01'
 
     def test_build_rr_observation(self):
         reservation = Reservation(
@@ -286,10 +289,10 @@ class TestObservationInteractions(object):
         configdb_interface.get_autoguider_for_instrument.return_value='xx04'
         received = build_observation(reservation, self.start, configdb_interface)
 
-        assert_equal(received['request'], 22223)
-        assert_equal(received['site'], 'bpl')
-        assert_equal(received['enclosure'], 'doma')
-        assert_equal(received['telescope'], '1m0a')
-        assert_equal(received['configuration_statuses'][0]['configuration'], 13)
-        assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx03')
-        assert_equal(received['configuration_statuses'][0]['guide_camera_name'], 'xx04')
+        assert received['request'] == 22223
+        assert received['site'] == 'bpl'
+        assert received['enclosure'] == 'doma'
+        assert received['telescope'] == '1m0a'
+        assert received['configuration_statuses'][0]['configuration'] == 13
+        assert received['configuration_statuses'][0]['instrument_name'] == 'xx03'
+        assert received['configuration_statuses'][0]['guide_camera_name'] == 'xx04'

@@ -3,8 +3,6 @@ from __future__ import division
 
 import copy
 
-from nose.tools import assert_equal, assert_almost_equals, assert_not_equal
-
 from adaptive_scheduler.models import (ICRSTarget, Request, Proposal,
                                        RequestGroup, Window, Windows, Configuration)
 from adaptive_scheduler.utils import (datetime_to_epoch,
@@ -21,6 +19,8 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 make_cache_key,
                                                 req_windows_to_kernel_intervals)
 from datetime import datetime
+
+import pytest
 
 
 class TestKernelMappings(object):
@@ -182,7 +182,7 @@ class TestKernelMappings(object):
         resource = '1m0a.doma.lsc'
         rs_target = self.make_constrained_request().configurations[0].target.in_rise_set_format()
 
-        assert_equal(make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase),
+        assert (make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lunar_phase) ==
                      '{}_{}_{}_{}_{}'.format(resource, max_airmass, min_lunar_distance, max_lunar_phase, repr(sorted(rs_target.items()))))
 
     def test_compute_request_availability_lunar_phase_removes_window(self):
@@ -199,10 +199,10 @@ class TestKernelMappings(object):
         intervals_for_resource = self.make_rise_set_intervals(constrainted_request, visibilities)
         compute_request_availability(constrainted_request, intervals_for_resource, {})
 
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(constrainted_request.windows.size(), 1)
+        assert len(base_windows[resource]) == 2
+        assert constrainted_request.windows.size() == 1
         # The window below lunar phase of 40% is the first of its two windows
-        assert_equal(constrainted_request.windows.at(resource)[0], base_windows[resource][0])
+        assert constrainted_request.windows.at(resource)[0] == base_windows[resource][0]
 
     def test_compute_request_availability_half_downtime(self):
         request = self.make_constrained_request()
@@ -215,9 +215,9 @@ class TestKernelMappings(object):
         base_windows = request.windows.windows_for_resource.copy()
 
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(request.windows.size(), 1)
-        assert_equal(request.windows.at(resource)[0], base_windows[resource][1])
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 1
+        assert request.windows.at(resource)[0] == base_windows[resource][1]
 
     def test_compute_request_availability_full_downtime(self):
         request = self.make_constrained_request()
@@ -230,8 +230,8 @@ class TestKernelMappings(object):
         base_windows = request.windows.windows_for_resource.copy()
 
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(request.windows.size(), 0)
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 0
 
     def test_compute_request_availability_half_downtime_instrument_type(self):
         request = self.make_constrained_request()
@@ -245,9 +245,9 @@ class TestKernelMappings(object):
         base_windows = request.windows.windows_for_resource.copy()
 
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(request.windows.size(), 1)
-        assert_equal(request.windows.at(resource)[0], base_windows[resource][1])
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 1
+        assert request.windows.at(resource)[0] == base_windows[resource][1]
 
     def test_compute_request_availability_combined_full_downtime(self):
         request = self.make_constrained_request()
@@ -264,8 +264,8 @@ class TestKernelMappings(object):
         base_windows = request.windows.windows_for_resource.copy()
 
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(request.windows.size(), 0)
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 0
 
     def test_compute_request_availability_different_instrument_downtime(self):
         request = self.make_constrained_request()
@@ -278,8 +278,8 @@ class TestKernelMappings(object):
         base_windows = request.windows.windows_for_resource.copy()
 
         compute_request_availability(request, intervals_for_resource, downtime_intervals)
-        assert_equal(len(base_windows[resource]), 2)
-        assert_equal(request.windows.size(), 2)
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 2
 
     def test_construct_compound_reservation(self):
         request = self.make_constrained_request()
@@ -294,8 +294,8 @@ class TestKernelMappings(object):
         received = construct_compound_reservation(request_group,
                                                   sem_start)
 
-        assert_equal(len(received.reservation_list), len(requests))
-        assert_equal(received.type, operator)
+        assert len(received.reservation_list) == len(requests)
+        assert received.type == operator
 
     def test_construct_many_compound_reservation(self):
         request = self.make_constrained_request()
@@ -312,8 +312,8 @@ class TestKernelMappings(object):
             0,
             sem_start)
 
-        assert_equal(len(received.reservation_list), 1)
-        assert_equal(received.type, 'single')
+        assert len(received.reservation_list) == 1
+        assert received.type == 'single'
 
     def test_filter_on_scheduling_horizon_applies_horizon_to_singles(self):
         start = datetime(2011, 11, 1, 6, 0, 0)
@@ -330,13 +330,13 @@ class TestKernelMappings(object):
         expected_window_start = start
         expected_window_end = scheduling_horizon
 
-        assert_equal(1, len(filtered_rgs))
+        assert 1 == len(filtered_rgs)
         output_ur = filtered_rgs[0]
-        assert_equal(1, len(output_ur.requests))
+        assert 1 == len(output_ur.requests)
         bpl_1m0a_doma_windows = output_ur.requests[0].windows.at('1m0a.doma.bpl')
-        assert_equal(1, len(bpl_1m0a_doma_windows))
-        assert_equal(bpl_1m0a_doma_windows[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows[0].end, expected_window_end)
+        assert 1 == len(bpl_1m0a_doma_windows)
+        assert bpl_1m0a_doma_windows[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows[0].end == expected_window_end
 
     def test_filter_on_scheduling_horizon_applies_horizon_to_manys(self):
         start = datetime(2011, 11, 1, 6, 0, 0)
@@ -354,17 +354,17 @@ class TestKernelMappings(object):
         expected_window_start = start
         expected_window_end = scheduling_horizon
 
-        assert_equal(1, len(filtered_rgs))
+        assert 1 == len(filtered_rgs)
         output_ur = filtered_rgs[0]
-        assert_equal(2, len(output_ur.requests))
+        assert 2 == len(output_ur.requests)
         bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
         bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
-        assert_equal(1, len(bpl_1m0a_doma_windows1))
-        assert_equal(1, len(bpl_1m0a_doma_windows2))
-        assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
-        assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
+        assert 1 == len(bpl_1m0a_doma_windows1)
+        assert 1 == len(bpl_1m0a_doma_windows2)
+        assert bpl_1m0a_doma_windows1[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows1[0].end == expected_window_end
+        assert bpl_1m0a_doma_windows2[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows2[0].end == expected_window_end
 
     def test_filter_on_scheduling_horizon_no_horizon_applied_to_oneof(self):
         start = datetime(2011, 11, 1, 6, 0, 0)
@@ -382,17 +382,17 @@ class TestKernelMappings(object):
         expected_window_start = start
         expected_window_end = end
 
-        assert_equal(1, len(filtered_rgs))
+        assert 1 == len(filtered_rgs)
         output_ur = filtered_rgs[0]
-        assert_equal(2, len(output_ur.requests))
+        assert 2 == len(output_ur.requests)
         bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
         bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
-        assert_equal(1, len(bpl_1m0a_doma_windows1))
-        assert_equal(1, len(bpl_1m0a_doma_windows2))
-        assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
-        assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
+        assert 1 == len(bpl_1m0a_doma_windows1)
+        assert 1 == len(bpl_1m0a_doma_windows2)
+        assert bpl_1m0a_doma_windows1[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows1[0].end == expected_window_end
+        assert bpl_1m0a_doma_windows2[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows2[0].end == expected_window_end
 
     def test_filter_on_scheduling_horizon_no_horizon_applied_to_and(self):
         start = datetime(2011, 11, 1, 6, 0, 0)
@@ -410,17 +410,17 @@ class TestKernelMappings(object):
         expected_window_start = start
         expected_window_end = end
 
-        assert_equal(1, len(filtered_rgs))
+        assert 1 == len(filtered_rgs)
         output_ur = filtered_rgs[0]
-        assert_equal(2, len(output_ur.requests))
+        assert 2 == len(output_ur.requests)
         bpl_1m0a_doma_windows1 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
         bpl_1m0a_doma_windows2 = output_ur.requests[0].windows.at('1m0a.doma.bpl')
-        assert_equal(1, len(bpl_1m0a_doma_windows1))
-        assert_equal(1, len(bpl_1m0a_doma_windows2))
-        assert_equal(bpl_1m0a_doma_windows1[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows1[0].end, expected_window_end)
-        assert_equal(bpl_1m0a_doma_windows2[0].start, expected_window_start)
-        assert_equal(bpl_1m0a_doma_windows2[0].end, expected_window_end)
+        assert 1 == len(bpl_1m0a_doma_windows1)
+        assert 1 == len(bpl_1m0a_doma_windows2)
+        assert bpl_1m0a_doma_windows1[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows1[0].end == expected_window_end
+        assert bpl_1m0a_doma_windows2[0].start == expected_window_start
+        assert bpl_1m0a_doma_windows2[0].end == expected_window_end
 
     def test_make_target_intervals(self):
         window_dict = {
@@ -457,7 +457,7 @@ class TestKernelMappings(object):
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
-                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
+                assert received_tp['time'] == rise_set_dark_intervals[i]
 
     def test_proper_motion_in_rise_set(self):
         target_dict = self.prop_mot_target.in_rise_set_format()
@@ -466,9 +466,8 @@ class TestKernelMappings(object):
         # See https://issues.lcogt.net/issues/8723 for more info
         converted_proper_motion_ra = 5.265450459478893
         converted_proper_motion_dec = 3.14468
-        assert_almost_equals(target_dict['ra_proper_motion'].in_degrees_per_year(), converted_proper_motion_ra / 3600.0)
-        assert_almost_equals(target_dict['dec_proper_motion'].in_degrees_per_year(),
-                             converted_proper_motion_dec / 3600.0)
+        assert target_dict['ra_proper_motion'].in_degrees_per_year() == pytest.approx(converted_proper_motion_ra / 3600.0)
+        assert target_dict['dec_proper_motion'].in_degrees_per_year() == pytest.approx(converted_proper_motion_dec / 3600.0)
 
     def test_user_interval_is_honoured(self):
         # A one day user supplied window
@@ -508,7 +507,7 @@ class TestKernelMappings(object):
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
-                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
+                assert received_tp['time'] == rise_set_dark_intervals[i]
 
     def test_multiple_user_intervals_are_honoured(self):
         # A one day user supplied window
@@ -553,7 +552,7 @@ class TestKernelMappings(object):
         # Verify we get the intervals we expect
         for resource_name, received_intervals in received.items():
             for i, received_tp in enumerate(received_intervals.toDictList()):
-                assert_equal(received_tp['time'], rise_set_dark_intervals[i])
+                assert received_tp['time'] == rise_set_dark_intervals[i]
 
     def test_visibility_intervals_are_limited_by_hour_angle(self):
 
@@ -618,8 +617,8 @@ class TestKernelMappings(object):
         ]
 
         for received_tp, expected_tp in zip(received[tel_name].toDictList(), expected_tps):
-            assert_equal(received_tp['type'], expected_tp['type'])
-            assert_equal(received_tp['time'], expected_tp['time'])
+            assert received_tp['type'] == expected_tp['type']
+            assert received_tp['time'] == expected_tp['time']
 
     def test_visibility_intervals_at_low_horizon_are_allowed_by_hour_angle(self):
 
@@ -685,8 +684,8 @@ class TestKernelMappings(object):
         ]
 
         for received_tp, expected_tp in zip(received[tel_name].toDictList(), expected_tps):
-            assert_equal(received_tp['type'], expected_tp['type'])
-            assert_equal(received_tp['time'], expected_tp['time'])
+            assert received_tp['type'] == expected_tp['type']
+            assert received_tp['time'] == expected_tp['time']
 
     def test_construct_global_availability(self):
         tel_name = '1m0a.doma.lsc'
@@ -721,7 +720,7 @@ class TestKernelMappings(object):
                                                  resource_windows)
         received_int = received[tel_name]
         timepoints = received_int.toDictList()
-        assert_equal(len(timepoints), 4)
+        assert len(timepoints) == 4
         r0 = normalised_epoch_to_datetime(timepoints[0]['time'],
                                           datetime_to_epoch(sem_start))
         r1 = normalised_epoch_to_datetime(timepoints[1]['time'],
@@ -730,9 +729,9 @@ class TestKernelMappings(object):
         #                                   datetime_to_epoch(sem_start))
         r3 = normalised_epoch_to_datetime(timepoints[3]['time'],
                                           datetime_to_epoch(sem_start))
-        assert_equal(r0, dt0)
-        assert_equal(r1, dt2)
-        assert_equal(r3, dt1)
+        assert r0 == dt0
+        assert r1 == dt2
+        assert r3 == dt1
 
     def test_airmass_is_honoured_high_airmass(self):
         airmass = 3.0
@@ -751,7 +750,7 @@ class TestKernelMappings(object):
         received_airmass3 = req_windows_to_kernel_intervals(req_airmass3.windows.windows_for_resource)
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].toDictList()
 
-        assert_equal(timepoints_no_airmass, timepoints_airmass3)
+        assert timepoints_no_airmass == timepoints_airmass3
 
     def test_airmass_is_honoured_low_airmass(self):
         airmass = 1.0
@@ -768,5 +767,5 @@ class TestKernelMappings(object):
         compute_request_availability(req_airmass1, intervals_for_resource, {})
         received_airmass1 = req_windows_to_kernel_intervals(req_airmass1.windows.windows_for_resource)
 
-        assert_not_equal(received_airmass1, received_no_airmass)
-        assert_equal(len(received_airmass1), 0)
+        assert received_airmass1 != received_no_airmass
+        assert len(received_airmass1) == 0

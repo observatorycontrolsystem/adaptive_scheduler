@@ -6,8 +6,7 @@ description
 Author: Martin Norbury
 May 2013
 '''
-
-from nose.tools import eq_, assert_false, assert_true
+import os
 from datetime import datetime
 import mock
 from io import StringIO
@@ -17,24 +16,26 @@ from adaptive_scheduler.monitoring.monitors import (OfflineResourceMonitor,
                                                     AvailableForScheduling)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 
+SRC_DIR = os.path.dirname(__file__)
+
 
 class TestOfflineResourceMonitor(object):
 
     def test_telescope_is_offline(self):
         monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[],
-                                                                              telescopes_file='test/telescopes_sqa_offline.json',
-                                                                              active_instruments_file='test/active_instruments.json'))
+                                                                              telescopes_file=f'{SRC_DIR}/telescopes_sqa_offline.json',
+                                                                              active_instruments_file=f'{SRC_DIR}/active_instruments.json'))
         event = monitor.monitor()
 
-        eq_(event['0m8a.doma.sqa'].type, 'OFFLINE')
+        assert event['0m8a.doma.sqa'].type == 'OFFLINE'
 
     def test_telescope_is_online(self):
         monitor = OfflineResourceMonitor(configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[],
-                                                                              telescopes_file='test/telescopes.json',
-                                                                              active_instruments_file='test/active_instruments.json'))
+                                                                              telescopes_file=f'{SRC_DIR}/telescopes.json',
+                                                                              active_instruments_file=f'{SRC_DIR}/active_instruments.json'))
         event = monitor.monitor()
 
-        assert_false(event)
+        assert not event
 
     def _create_resource(self, state):
         resource_string = """[ { 'name':'0m8a.doma.sqa', 'status':'%s' } ]"""
@@ -43,11 +44,11 @@ class TestOfflineResourceMonitor(object):
 
 class TestAvailableForSchedulingMonitor(object):
 
-    def setUp(self):
+    def setup(self):
         self.monitor = AvailableForScheduling(
             configdb_interface=ConfigDBInterface(configdb_url='', telescope_classes=[],
-                                                 telescopes_file='test/telescopes.json',
-                                                 active_instruments_file='test/active_instruments.json'),
+                                                 telescopes_file=f'{SRC_DIR}/telescopes.json',
+                                                 active_instruments_file=f'{SRC_DIR}/active_instruments.json'),
             opensearch_url='',
             os_index='',
             os_excluded_observatories=[]
@@ -59,7 +60,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        assert_false(event)
+        assert not event
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_if_we_are_not_okay_to_open(self, mock_get_datum):
@@ -67,7 +68,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        assert_true(event)
+        assert event
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_gives_reason(self, mock_get_datum):
@@ -75,7 +76,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        eq_(event['lsc.lsc.lsc'].reason, 'There is a reason')
+        event['lsc.lsc.lsc'].reason == 'There is a reason'
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_if_consistent_sites_in_data_lists(self, mock_get_datum):
@@ -83,7 +84,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        eq_('NOT AVAILABLE', event.get('elp.elp.elp').type)
+        'NOT AVAILABLE' == event.get('elp.elp.elp').type
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_events_when_available_for_scheduling(self, mock_get_datum):
@@ -91,7 +92,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         events = self.monitor.monitor()
 
-        assert_false(events)
+        assert not events
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_when_not_available_for_scheduling(self, mock_get_datum):
@@ -99,7 +100,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         events = self.monitor.monitor()
 
-        assert_true(events)
+        assert events
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_resource_is_returned(self, mock_get_datum):
@@ -107,7 +108,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         events = self.monitor.monitor()
 
-        assert_true('lsc.lsc.lsc' in list(events.keys()))
+        assert 'lsc.lsc.lsc' in list(events.keys())
 
     def _create_events(self, available, reason):
         return [[_create_event(self, available), ],

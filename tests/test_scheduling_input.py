@@ -3,14 +3,15 @@ from adaptive_scheduler.scheduler_input import SchedulingInputProvider, Schedule
 from adaptive_scheduler.models import RequestError
 
 from mock import Mock, patch
-from nose.tools import assert_equal, assert_almost_equal
 
 from datetime import datetime, timedelta
+
+import pytest
 
 
 class TestSchedulingInputProvider(object):
 
-    def setUp(self):
+    def setup(self):
         self.sched_params = SchedulerParameters()
         self.network_interface = Mock()
         self.network_interface.get_all_request_groups = Mock(return_value=[])
@@ -29,13 +30,13 @@ class TestSchedulingInputProvider(object):
     def test_constructor(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
                                                  is_rr_input=True)
-        assert_equal(self.sched_params.rr_runtime_seconds, input_provider.estimated_rr_run_time.total_seconds())
-        assert_equal(self.sched_params.normal_runtime_seconds, input_provider.estimated_normal_run_time.total_seconds())
-        assert_equal(None, input_provider.scheduler_now)
-        assert_equal(input_provider.estimated_rr_run_time, input_provider.estimated_scheduler_runtime())
-        assert_equal(None, input_provider.json_request_group_list)
-        assert_equal(None, input_provider.available_resources)
-        assert_equal(None, input_provider.resource_usage_snapshot)
+        assert self.sched_params.rr_runtime_seconds == input_provider.estimated_rr_run_time.total_seconds()
+        assert self.sched_params.normal_runtime_seconds == input_provider.estimated_normal_run_time.total_seconds()
+        assert None == input_provider.scheduler_now
+        assert input_provider.estimated_rr_run_time == input_provider.estimated_scheduler_runtime()
+        assert None == input_provider.json_request_group_list
+        assert None == input_provider.available_resources
+        assert None == input_provider.resource_usage_snapshot
 
     def test_input_does_not_exclude_resources_with_events(self):
         self.network_model['1m0a.doma.elp'] = {'name': '1m0a.doma.elp',
@@ -48,8 +49,8 @@ class TestSchedulingInputProvider(object):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
                                                  is_rr_input=True)
         input_provider.refresh()
-        assert_equal(['1m0a.doma.elp'], input_provider.available_resources)
-        assert_equal(set(['1m0a.doma.elp', '1m0a.doma.lsc']),
+        assert ['1m0a.doma.elp'] == input_provider.available_resources
+        assert (set(['1m0a.doma.elp', '1m0a.doma.lsc']) ==
                      set(self.network_interface.resource_usage_snapshot.call_args[0][0]))
 
     def test_input_scheduler_now_when_not_provided_by_parameter(self):
@@ -57,7 +58,10 @@ class TestSchedulingInputProvider(object):
                                                  is_rr_input=True)
         test_now = datetime.utcnow()
         input_provider.refresh()
-        assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
+        assert 0 == pytest.approx(
+            (input_provider.scheduler_now - test_now).total_seconds(),
+            abs=5
+        )
 
     def test_input_scheduler_now_when_provided_by_parameter(self):
         simulated_now_str = '1980-06-10T08:00:00Z'
@@ -66,7 +70,7 @@ class TestSchedulingInputProvider(object):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
                                                  is_rr_input=True)
         input_provider.refresh()
-        assert_equal(simulated_now, input_provider.scheduler_now)
+        assert simulated_now == input_provider.scheduler_now
 
     def test_rr_input_estimated_scheduler_end(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
@@ -74,16 +78,23 @@ class TestSchedulingInputProvider(object):
         test_now = datetime.utcnow()
         input_provider.refresh()
 
-        assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.rr_runtime_seconds, input_provider.estimated_scheduler_runtime().total_seconds())
-        assert_equal(1, self.network_interface.get_all_request_groups.call_count)
-        assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
-        assert_almost_equal(0,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot start should be refresh time')
-        assert_almost_equal(self.sched_params.rr_runtime_seconds,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot end should be refresh time + RR scheduling run time')
+        assert 0 ==  pytest.approx(
+            (input_provider.scheduler_now - test_now).total_seconds(),
+            abs=5
+        )
+        assert self.sched_params.rr_runtime_seconds == input_provider.estimated_scheduler_runtime().total_seconds()
+        assert 1 == self.network_interface.get_all_request_groups.call_count
+        assert 1 == self.network_interface.resource_usage_snapshot.call_count
+
+        assert 0 == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot start should be refresh time'
+
+        assert self.sched_params.rr_runtime_seconds == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot end should be refresh time + RR scheduling run time'
 
     def test_normal_input_estimated_scheduler_end(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
@@ -91,16 +102,22 @@ class TestSchedulingInputProvider(object):
         test_now = datetime.utcnow()
         input_provider.refresh()
 
-        assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.normal_runtime_seconds, input_provider.estimated_scheduler_runtime().total_seconds())
-        assert_equal(0, self.network_interface.get_all_request_groups.call_count)
-        assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
-        assert_almost_equal(0,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot start should be refresh time')
-        assert_almost_equal(self.sched_params.normal_runtime_seconds,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot end should be refresh time + Normal scheduling run time')
+        assert 0 ==  pytest.approx(
+            (input_provider.scheduler_now - test_now).total_seconds(),
+            abs=5
+        )
+        assert self.sched_params.normal_runtime_seconds == input_provider.estimated_scheduler_runtime().total_seconds()
+        assert 0 == self.network_interface.get_all_request_groups.call_count
+        assert 1 == self.network_interface.resource_usage_snapshot.call_count
+        assert 0 == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot start should be refresh time'
+
+        assert self.sched_params.normal_runtime_seconds == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot end should be refresh time + Normal scheduling run time'
 
     def test_normal_input_resource_usage_snapshot_start(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
@@ -109,42 +126,53 @@ class TestSchedulingInputProvider(object):
         input_provider.set_last_known_state(last_known_state)
         input_provider.refresh()
 
-        assert_almost_equal(last_known_state, self.network_interface.resource_usage_snapshot.call_args[0][1],
-                            msg='Snapshot start should be last known state')
+        assert last_known_state.timestamp() == pytest.approx(
+            self.network_interface.resource_usage_snapshot.call_args[0][1].timestamp(),
+        ),  'Snapshot start should be last known state'
 
     def test_set_rr_mode(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
                                                  is_rr_input=False)
         test_now = datetime.utcnow()
         input_provider.set_rr_mode()
-        assert_equal(True, input_provider.is_rr_input)
-        assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.rr_runtime_seconds, input_provider.estimated_scheduler_runtime().total_seconds())
-        assert_equal(1, self.network_interface.get_all_request_groups.call_count)
-        assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
-        assert_almost_equal(0,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot start should be refresh time')
-        assert_almost_equal(self.sched_params.rr_runtime_seconds,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot end should be refresh time + RR scheduling run time')
+        assert True == input_provider.is_rr_input
+        assert 0 == pytest.approx(
+            (input_provider.scheduler_now - test_now).total_seconds(),
+            abs=5
+        )
+        assert self.sched_params.rr_runtime_seconds == input_provider.estimated_scheduler_runtime().total_seconds()
+        assert 1 == self.network_interface.get_all_request_groups.call_count
+        assert 1 == self.network_interface.resource_usage_snapshot.call_count
+        assert 0 == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot start should be refresh time'
+        assert self.sched_params.rr_runtime_seconds == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot end should be refresh time + RR scheduling run time'
 
     def test_set_normal_mode(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
                                                  is_rr_input=False)
         test_now = datetime.utcnow()
         input_provider.set_normal_mode()
-        assert_equal(False, input_provider.is_rr_input)
-        assert_almost_equal(0, (input_provider.scheduler_now - test_now).total_seconds(), delta=5)
-        assert_equal(self.sched_params.normal_runtime_seconds, input_provider.estimated_scheduler_runtime().total_seconds())
-        assert_equal(0, self.network_interface.get_all_request_groups.call_count)
-        assert_equal(1, self.network_interface.resource_usage_snapshot.call_count)
-        assert_almost_equal(0,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot start should be refresh time')
-        assert_almost_equal(self.sched_params.normal_runtime_seconds,
-                            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
-                            delta=5, msg='Snapshot end should be refresh time + Normal scheduling run time')
+        assert False == input_provider.is_rr_input
+        assert 0 == pytest.approx(
+            (input_provider.scheduler_now - test_now).total_seconds(),
+            abs=5
+        )
+        assert self.sched_params.normal_runtime_seconds == input_provider.estimated_scheduler_runtime().total_seconds()
+        assert 0 == self.network_interface.get_all_request_groups.call_count
+        assert 1 == self.network_interface.resource_usage_snapshot.call_count
+        assert 0 == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][1] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot start should be refresh time'
+        assert self.sched_params.normal_runtime_seconds == pytest.approx(
+            (self.network_interface.resource_usage_snapshot.call_args[0][2] - test_now).total_seconds(),
+            abs=5
+        ), 'Snapshot end should be refresh time + Normal scheduling run time'
 
     def test_set_rr_run_time(self):
         input_provider = SchedulingInputProvider(self.sched_params, self.network_interface, self.network_model,
@@ -163,7 +191,7 @@ class TestSchedulingInputProvider(object):
 
 class TestSchedulingInputFactory(object):
 
-    def setUp(self):
+    def setup(self):
         self.input = Mock()
         self.input.rr_request_groups = []
         self.input.normal_request_groups = []
@@ -173,7 +201,7 @@ class TestSchedulingInputFactory(object):
     def test_constructor(self):
         input_provider = Mock()
         factory = SchedulingInputFactory(input_provider)
-        assert_equal(input_provider, factory.input_provider)
+        assert input_provider == factory.input_provider
 
     def test_create_rr_scheduling(self):
         input_provider = Mock()
@@ -183,9 +211,9 @@ class TestSchedulingInputFactory(object):
                    self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
             factory.create_rr_scheduling_input(100)
-            assert_equal(1, input_provider.set_rr_mode.call_count)
-            assert_equal(1, input_provider.set_rr_run_time.call_count)
-            assert_equal(100, input_provider.set_rr_run_time.call_args[0][0])
+            assert 1 == input_provider.set_rr_mode.call_count
+            assert 1 == input_provider.set_rr_run_time.call_count
+            assert 100 == input_provider.set_rr_run_time.call_args[0][0]
 
     def test_create_rr_scheduling_no_estimate_provided(self):
         input_provider = Mock()
@@ -195,8 +223,8 @@ class TestSchedulingInputFactory(object):
                    self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
             factory.create_rr_scheduling_input()
-            assert_equal(1, input_provider.set_rr_mode.call_count)
-            assert_equal(0, input_provider.set_rr_run_time.call_count)
+            assert 1 == input_provider.set_rr_mode.call_count
+            assert 0 == input_provider.set_rr_run_time.call_count
 
     def test_create_normal_scheduling(self):
         input_provider = Mock()
@@ -205,9 +233,9 @@ class TestSchedulingInputFactory(object):
                    self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
             factory.create_normal_scheduling_input(600)
-            assert_equal(1, input_provider.set_normal_mode.call_count)
-            assert_equal(1, input_provider.set_normal_run_time.call_count)
-            assert_equal(600, input_provider.set_normal_run_time.call_args[0][0])
+            assert 1 == input_provider.set_normal_mode.call_count
+            assert 1 == input_provider.set_normal_run_time.call_count
+            assert 600 == input_provider.set_normal_run_time.call_args[0][0]
 
     def test_create_normal_scheduling_no_estimate_provided(self):
         input_provider = Mock()
@@ -216,8 +244,8 @@ class TestSchedulingInputFactory(object):
                    self.create_input_mock, create=True):
             factory = SchedulingInputFactory(input_provider)
             factory.create_normal_scheduling_input()
-            assert_equal(1, input_provider.set_normal_mode.call_count)
-            assert_equal(0, input_provider.set_normal_run_time.call_count)
+            assert 1 == input_provider.set_normal_mode.call_count
+            assert 0 == input_provider.set_normal_run_time.call_count
 
 
 class TestSchedulingInputUtils(object):
@@ -230,9 +258,9 @@ class TestSchedulingInputUtils(object):
         utils = SchedulingInputUtils(mock_model_builder)
         mock_rgs, invalid_rgs, invalid_rs = utils.json_rgs_to_scheduler_model_rgs([{'id': 'dummy1'},
                                                                                    {'id': 'dummy2'}])
-        assert_equal(2, len(mock_rgs))
-        assert_equal([], invalid_rgs)
-        assert_equal(2, len(invalid_rs))
+        assert 2 == len(mock_rgs)
+        assert [] == invalid_rgs
+        assert 2 == len(invalid_rs)
 
     def test_json_rgs_to_scheduler_model_rgs_returns_invalid_request_groups(self):
         mock_model_builder = Mock()
@@ -241,6 +269,6 @@ class TestSchedulingInputUtils(object):
         utils = SchedulingInputUtils(mock_model_builder)
         model_rgs, invalid_rgs, invalid_rs = utils.json_rgs_to_scheduler_model_rgs([{'id': 'dummy1'},
                                                                                     {'id': 'dummy2'}])
-        assert_equal(0, len(model_rgs))
-        assert_equal(2, len(invalid_rgs))
-        assert_equal(0, len(invalid_rs))
+        assert 0 == len(model_rgs)
+        assert 2 == len(invalid_rgs)
+        assert 0 == len(invalid_rs)

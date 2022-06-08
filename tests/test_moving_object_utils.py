@@ -11,8 +11,7 @@ December 2013
 from adaptive_scheduler.moving_object_utils import InvalidElements
 from adaptive_scheduler.models import OrbitalElementsTarget
 
-from nose.tools import raises
-
+import pytest
 
 class TestMovingObjectUtils(object):
 
@@ -29,7 +28,7 @@ class TestMovingObjectUtils(object):
             'scheme': 'MPC_MINOR_PLANET',
         }
 
-    @raises(InvalidElements)
     def test_invalid_scheme_raises_exception(self):
-        self.elements['scheme'] = 'nonsense'
-        OrbitalElementsTarget(self.elements)
+        with pytest.raises(InvalidElements):
+            self.elements['scheme'] = 'nonsense'
+            OrbitalElementsTarget(self.elements)

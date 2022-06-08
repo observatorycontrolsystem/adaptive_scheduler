@@ -1,9 +1,9 @@
 #!/usr/bin/python
 from __future__ import division
 
+import os
 import mock
 import copy
-from nose.tools import assert_equal, assert_in, raises, assert_almost_equal
 from datetime import datetime
 
 # Import the modules to test
@@ -14,6 +14,11 @@ from adaptive_scheduler.models import (ICRSTarget, OrbitalElementsTarget,
                                        ModelBuilder,
                                        RequestError)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
+
+import pytest
+
+
+SRC_DIR = os.path.dirname(__file__)
 
 
 class TestRequest(object):
@@ -91,16 +96,16 @@ class TestRequest(object):
         self.duration = 60
         self.id = 1
 
-    @raises(RequestError)
     def test_invalid_request_type_raises_exception(self):
-        junk_res_type = 'chocolate'
-        request = Request(configurations=[self.configuration],
-                          windows=self.windows,
-                          request_id=self.id,
-                          )
-        RequestGroup(operator=junk_res_type, requests=[request], name='Group 1', proposal=Proposal(),
-                     rg_id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
-                     expires=datetime(2999, 1, 1), submitter='')
+        with pytest.raises(RequestError):
+            junk_res_type = 'chocolate'
+            request = Request(configurations=[self.configuration],
+                              windows=self.windows,
+                              request_id=self.id,
+                              )
+            RequestGroup(operator=junk_res_type, requests=[request], name='Group 1', proposal=Proposal(),
+                         rg_id=1, is_staff=False, observation_type='NORMAL', ipp_value=1.0,
+                         expires=datetime(2999, 1, 1), submitter='')
 
     def test_valid_request_type_does_not_raise_exception(self):
         valid_res_type = 'and'
@@ -141,7 +146,7 @@ class TestRequestGroup(object):
         timestamp = datetime(2013, 10, 15, 1, 1, 1)
         rg.emit_rg_feedback(msg, tag, timestamp)
 
-        assert_equal(mock_func.called, True)
+        assert mock_func.called == True
 
     def _build_request_group(self, base_priority=1.0, ipp_value=1.0):
         operator = 'single'
@@ -234,10 +239,9 @@ class TestRequestGroup(object):
 
     def _test_priority(self, base_priority, ipp_value):
         ur = self._build_request_group(base_priority=base_priority, ipp_value=ipp_value)
-        assert_almost_equal(base_priority * ipp_value * ur.requests[0].get_duration() / 60.0, ur.get_priority(),
-                            delta=(base_priority * ipp_value * ur.requests[0].get_duration() / 60.0) * 0.005)
-        assert_equal(base_priority, ur.get_base_priority())
-        assert_equal(ipp_value * base_priority, ur.get_ipp_modified_priority())
+        assert abs(base_priority * ipp_value * ur.requests[0].get_duration() / 60.0 - ur.get_priority()) <= (base_priority * ipp_value * ur.requests[0].get_duration() / 60.0) * 0.005
+        assert base_priority == ur.get_base_priority()
+        assert ipp_value * base_priority == ur.get_ipp_modified_priority()
 
     def test_priority_ipp_1(self):
         self._test_priority(base_priority=1.0, ipp_value=1.0)
@@ -258,8 +262,8 @@ class TestRequestGroup(object):
 
         rg.drop_empty_children()
 
-        assert_equal(len(rg.requests), 1)
-        assert_equal(rg.requests[0], r_mock1)
+        assert len(rg.requests) == 1
+        assert rg.requests[0] == r_mock1
 
 
 class TestWindows(object):
@@ -284,11 +288,11 @@ class TestWindows(object):
         windows = Windows()
         windows.append(w)
 
-        assert_equal(windows.has_windows(), True)
+        assert windows.has_windows() == True
 
     def test_has_windows_no_windows(self):
         windows = Windows()
-        assert_equal(windows.has_windows(), False)
+        assert windows.has_windows() == False
 
     def test_is_empty_has_windows_empty_on_one_resource(self):
         window_dict = {
@@ -309,8 +313,8 @@ class TestWindows(object):
         windows.append(w2)
         windows.windows_for_resource[self.t2['name']] = []
 
-        assert_equal(windows.has_windows(), True)
-        assert_equal(windows.size(), 1)
+        assert windows.has_windows() == True
+        assert windows.size() == 1
 
 
 class TestOrbitalElementsTarget(object):
@@ -323,21 +327,21 @@ class TestOrbitalElementsTarget(object):
 
         target = OrbitalElementsTarget(initial_data)
 
-        assert_in('meandist', target.required_fields)
+        assert 'meandist' in target.required_fields
 
     def test_comet_has_required_fields(self):
         initial_data = {'scheme': 'MPC_COMET'}
 
         target = OrbitalElementsTarget(initial_data)
 
-        assert_in('perihdist', target.required_fields)
+        assert 'perihdist' in target.required_fields
 
     def test_accepts_lowercase_scheme(self):
         initial_data = {'scheme': 'mpc_minor_planet'}
 
         target = OrbitalElementsTarget(initial_data)
 
-        assert_in('meandist', target.required_fields)
+        assert 'meandist' in target.required_fields
 
 
 class TestModelBuilder(object):
@@ -403,8 +407,8 @@ class TestModelBuilder(object):
         self.state = 'PENDING'
 
         self.mb = ModelBuilder(mock.MagicMock(), ConfigDBInterface(configdb_url='', telescope_classes=[],
-                                                                   active_instruments_file='test/active_instruments.json',
-                                                                   telescopes_file='test/telescopes.json'))
+                                                                   active_instruments_file=f'{SRC_DIR}/active_instruments.json',
+                                                                   telescopes_file=f'{SRC_DIR}/telescopes.json'))
 
     def test_build_request_sinistro_resolves_to_lsc_subnetwork(self):
         location = self.location.copy()
@@ -419,47 +423,47 @@ class TestModelBuilder(object):
         }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']),
+        assert (set(['1m0a.doma.lsc', '1m0a.domb.lsc', '1m0a.domc.lsc']) ==
                      set(request.windows.windows_for_resource.keys()))
 
-    @raises(RequestError)
     def test_build_request_2m_sbig_doesnt_resolve_when_not_staff(self):
-        location = self.location.copy()
-        location['site'] = 'ogg'
-        location['telescope'] = '2m0a'
-        location['enclosure'] = 'clma'
-        location['telescope_class'] = '2m0'
-        configuration = self.configurations[0].copy()
-        configuration['instrument_type'] = '2M0-SCICAM-SBIG'
-        req_dict = {
-            'configurations': [configuration, ],
-            'location': location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            location = self.location.copy()
+            location['site'] = 'ogg'
+            location['telescope'] = '2m0a'
+            location['enclosure'] = 'clma'
+            location['telescope_class'] = '2m0'
+            configuration = self.configurations[0].copy()
+            configuration['instrument_type'] = '2M0-SCICAM-SBIG'
+            req_dict = {
+                'configurations': [configuration, ],
+                'location': location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10,
+                'state': self.state,
+            }
 
-        self.mb.build_request(req_dict, is_staff=False)
+            self.mb.build_request(req_dict, is_staff=False)
 
-    @raises(RequestError)
     def test_build_request_2m_sbig_doesnt_resolve_when_location_not_set(self):
-        location = self.location.copy()
-        location['site'] = 'ogg'
-        location['telescope'] = '2m0a'
-        location['telescope_class'] = '2m0'
-        configuration = self.configurations[0].copy()
-        configuration['instrument_type'] = '2M0-SCICAM-SBIG'
-        req_dict = {
-            'configurations': [configuration, ],
-            'location': location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            location = self.location.copy()
+            location['site'] = 'ogg'
+            location['telescope'] = '2m0a'
+            location['telescope_class'] = '2m0'
+            configuration = self.configurations[0].copy()
+            configuration['instrument_type'] = '2M0-SCICAM-SBIG'
+            req_dict = {
+                'configurations': [configuration, ],
+                'location': location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10,
+                'state': self.state,
+            }
 
-        self.mb.build_request(req_dict, is_staff=True)
+            self.mb.build_request(req_dict, is_staff=True)
 
     def test_build_request_2m_sbig_resolves_when_staff(self):
         location = self.location.copy()
@@ -479,7 +483,7 @@ class TestModelBuilder(object):
         }
 
         request = self.mb.build_request(req_dict, is_staff=True)
-        assert_equal(set(['2m0a.clma.ogg', ]),
+        assert (set(['2m0a.clma.ogg', ]) ==
                      set(request.windows.windows_for_resource.keys()))
 
     def test_build_request_fl03_resolves_to_lsc_telescope(self):
@@ -497,7 +501,7 @@ class TestModelBuilder(object):
             'state': self.state,
         }
         request = self.mb.build_request(req_dict)
-        assert_equal({'1m0a.domb.lsc'}, set(request.windows.windows_for_resource.keys()))
+        assert {'1m0a.domb.lsc'} == set(request.windows.windows_for_resource.keys())
 
     def test_build_request_slit_2as_resolves_to_coj_telescope(self):
         configurations = copy.deepcopy(self.configurations)
@@ -518,54 +522,54 @@ class TestModelBuilder(object):
         }
 
         request = self.mb.build_request(req_dict)
-        assert_equal(set(['2m0a.clma.coj', '2m0a.clma.ogg']),
+        assert (set(['2m0a.clma.coj', '2m0a.clma.ogg']) ==
                      set(request.windows.windows_for_resource.keys()))
 
-    @raises(RequestError)
     def test_dont_accept_weird_target_types(self):
-        configurations = copy.deepcopy(self.configurations)
-        configurations[0]['target']['type'] = 'POTATOES'
-        configurations[0]['target']['name'] = 'Potato Target'
-        req_dict = {
-            'configurations': configurations,
-            'location': self.location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            configurations = copy.deepcopy(self.configurations)
+            configurations[0]['target']['type'] = 'POTATOES'
+            configurations[0]['target']['name'] = 'Potato Target'
+            req_dict = {
+                'configurations': configurations,
+                'location': self.location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10,
+                'state': self.state,
+            }
 
-        self.mb.build_request(req_dict)
+            self.mb.build_request(req_dict)
 
-    @raises(RequestError)
     def test_dont_accept_cameras_not_present_on_a_subnetwork(self):
-        configurations = copy.deepcopy(self.configurations)
-        configurations[0]['instrument_type'] = 'POTATOES'
-        req_dict = {
-            'configurations': configurations,
-            'location': self.location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            configurations = copy.deepcopy(self.configurations)
+            configurations[0]['instrument_type'] = 'POTATOES'
+            req_dict = {
+                'configurations': configurations,
+                'location': self.location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10,
+                'state': self.state,
+            }
 
-        self.mb.build_request(req_dict)
+            self.mb.build_request(req_dict)
 
-    @raises(RequestError)
     def test_dont_accept_filters_not_present_on_a_subnetwork(self):
-        configurations = copy.deepcopy(self.configurations)
-        configurations[0]['instrument_configs'][0]['optical_elements']['filter'] = 'fake'
-        req_dict = {
-            'configurations': configurations,
-            'location': self.location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            configurations = copy.deepcopy(self.configurations)
+            configurations[0]['instrument_configs'][0]['optical_elements']['filter'] = 'fake'
+            req_dict = {
+                'configurations': configurations,
+                'location': self.location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10,
+                'state': self.state,
+            }
 
-        self.mb.build_request(req_dict)
+            self.mb.build_request(req_dict)
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
@@ -593,7 +597,7 @@ class TestModelBuilder(object):
         }
 
         request_group_model, _ = self.mb.build_request_group(cr_dict)
-        assert_equal(request_group_model.observation_type, 'NORMAL')
+        assert request_group_model.observation_type == 'NORMAL'
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
@@ -621,35 +625,35 @@ class TestModelBuilder(object):
         }
 
         request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
-        assert_equal(request_group_model.observation_type, 'RAPID_RESPONSE')
+        assert request_group_model.observation_type == 'RAPID_RESPONSE'
 
-    @raises(RequestError)
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
     def test_dont_accept_unsupported_observation_type(self, mock_proposal, mock_semester):
-        mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
-        mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
-        req_dict = {
-            'configurations': self.configurations,
-            'location': self.location,
-            'windows': self.windows,
-            'id': self.id,
-            'duration': 10.0,
-            'state': self.state,
-        }
+        with pytest.raises(RequestError):
+            mock_semester.return_value = {'id': '2013A', 'start': datetime(2013, 1, 1), 'end': datetime(2014, 1, 1)}
+            mock_proposal.return_value = Proposal({'id': 'TestProposal', 'pi': '', 'tag': '', 'tac_priority': 10})
+            req_dict = {
+                'configurations': self.configurations,
+                'location': self.location,
+                'windows': self.windows,
+                'id': self.id,
+                'duration': 10.0,
+                'state': self.state,
+            }
 
-        cr_dict = {
-            'proposal': 'TestProposal',
-            'expires': '2014-10-29 12:12:12',
-            'name': '',
-            'id': '1',
-            'ipp_value': '1.0',
-            'operator': 'many',
-            'requests': [req_dict, ],
-            'observation_type': 'ABNORMAL',
-        }
+            cr_dict = {
+                'proposal': 'TestProposal',
+                'expires': '2014-10-29 12:12:12',
+                'name': '',
+                'id': '1',
+                'ipp_value': '1.0',
+                'operator': 'many',
+                'requests': [req_dict, ],
+                'observation_type': 'ABNORMAL',
+            }
 
-        self.mb.build_request_group(cr_dict)
+            self.mb.build_request_group(cr_dict)
 
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_semester_details')
     @mock.patch('adaptive_scheduler.models.ModelBuilder.get_proposal_details')
@@ -692,6 +696,6 @@ class TestModelBuilder(object):
 
         request_group_model, invalid_requests = self.mb.build_request_group(cr_dict)
 
-        assert_equal(1, len(request_group_model.requests))
-        assert_equal(1, len(invalid_requests))
-        assert_equal(bad_req_dict, invalid_requests[0])
+        assert 1 == len(request_group_model.requests)
+        assert 1 == len(invalid_requests)
+        assert bad_req_dict == invalid_requests[0]
