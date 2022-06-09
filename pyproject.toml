@@ -6,8 +6,8 @@ authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
 
 [tool.poetry.dependencies]
-python = "^3.6"
-ortools = "8.1.8487"
+python = "^3.7"
+ortools = "^9.3"
 time-intervals = "^1"
 numpy = "^1"
 ocs-rise-set = "0.5.2"
