@@ -1,0 +1,17 @@
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp37-cp37m-manylinux_2_27_x86_64.whl ; \
+  python_version ~= '3.7.0' and sys_platform == 'linux' and platform_machine == 'x86_64'
+
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp37-cp37m-manylinux_2_27_aarch64.whl ; \
+  python_version ~= '3.7.0' and sys_platform == 'linux' and platform_machine == 'aarch64'
+
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp38-cp38-manylinux_2_27_x86_64.whl ; \
+  python_version ~= '3.8.0' and sys_platform == 'linux' and platform_machine == 'x86_64'
+
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp38-cp38-manylinux_2_27_aarch64.whl ; \
+  python_version ~= '3.8.0' and sys_platform == 'linux' and platform_machine == 'aarch64'
+
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp39-cp39-manylinux_2_27_x86_64.whl ; \
+  python_version ~= '3.9.0' and sys_platform == 'linux' and platform_machine == 'x86_64'
+
+ortools @ https://github.com/observatorycontrolsystem/ortools-glpk-wheels/releases/download/v9.3/ortools-9.3.9999-cp39-cp39-manylinux_2_27_aarch64.whl ; \
+  python_version ~= '3.9.0' and sys_platform == 'linux' and platform_machine == 'aarch64'
