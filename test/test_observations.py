@@ -8,7 +8,7 @@ from adaptive_scheduler.observations import (InstrumentResolutionError, build_ob
 from adaptive_scheduler.models import (Proposal, ICRSTarget, Request, RequestGroup)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.kernel.reservation import Reservation
 
 from datetime import datetime
 import responses
@@ -189,14 +189,6 @@ class TestObservationInteractions(object):
         assert_equal(n_submitted_total, 3)
 
     def test_build_normal_block(self):
-        reservation = Reservation(
-            priority=None,
-            duration=10,
-            possible_windows_dict={}
-        )
-        reservation.scheduled_start = 0
-        reservation.scheduled_resource = '1m0a.doma.bpl'
-
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
@@ -227,8 +219,16 @@ class TestObservationInteractions(object):
             request_id=22222
         )
 
-        reservation.request = request
-        reservation.request_group = request_group
+        reservation = Reservation(
+            priority=None,
+            duration=10,
+            possible_windows_dict={},
+            request=request,
+            request_group_id=request_group.id
+        )
+        reservation.scheduled_start = 0
+        reservation.scheduled_resource = '1m0a.doma.bpl'
+
         configdb_interface = Mock()
         configdb_interface.get_specific_instrument.return_value='xx01'
         received = build_observation(reservation, self.start, configdb_interface)
@@ -241,14 +241,6 @@ class TestObservationInteractions(object):
         assert_equal(received['configuration_statuses'][0]['instrument_name'], 'xx01')
 
     def test_build_rr_observation(self):
-        reservation = Reservation(
-            priority=None,
-            duration=10,
-            possible_windows_dict={}
-        )
-        reservation.scheduled_start = 0
-        reservation.scheduled_resource = '1m0a.doma.bpl'
-
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
@@ -279,8 +271,16 @@ class TestObservationInteractions(object):
             request_id=22223,
         )
 
-        reservation.request = request
-        reservation.request_group = request_group
+        reservation = Reservation(
+            priority=None,
+            duration=10,
+            possible_windows_dict={},
+            request=request,
+            request_group_id=request_group.id
+        )
+        reservation.scheduled_start = 0
+        reservation.scheduled_resource = '1m0a.doma.bpl'
+
         configdb_interface = Mock()
         configdb_interface.get_specific_instrument.return_value = 'xx03'
         configdb_interface.get_autoguider_for_instrument.return_value='xx04'

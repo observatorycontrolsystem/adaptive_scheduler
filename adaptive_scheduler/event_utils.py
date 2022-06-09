@@ -8,6 +8,8 @@ Author: Eric Saunders
 December 2013
 '''
 
+from adaptive_scheduler.models import RequestGroup
+
 
 def report_scheduling_outcome(to_schedule, scheduled_reservations):
     # Collate the scheduled and unscheduled reservations
@@ -21,12 +23,12 @@ def report_scheduling_outcome(to_schedule, scheduled_reservations):
     for res in scheduled_reservations:
         tag = 'WasScheduled'
         msg = 'This Request (request id=%d) was scheduled' % res.request.id
-        res.request_group.emit_rg_feedback(msg, tag)
+        RequestGroup.emit_request_group_feedback(res.request_group_id, msg, tag)
 
     for res in not_scheduled_res:
         tag = 'WasNotScheduled'
         msg = 'This Request (request id=%d) was not scheduled (it clashed)' % res.request.id
-        res.request_group.emit_rg_feedback(msg, tag)
+        RequestGroup.emit_request_group_feedback(res.request_group_id, msg, tag)
 
     return
 

@@ -8,20 +8,20 @@ information about how to generate the slices, so its signature has one
 more argument than usual. 
 
 Author: Sotiria Lampoudi (slampoud@gmail.com)
-Sept 2012
-Dec 2012: changed to work with Reservation_v3
 '''
 
 import math
+import numpy as np
 from adaptive_scheduler.kernel.scheduler import Scheduler
 
 
 class PossibleStart(object):
-    def __init__(self, resource, slice_starts, internal_start):
+    def __init__(self, resource, slice_starts, internal_start, airmass_coefficient):
         self.resource = resource
         self.first_slice_start = slice_starts[0]
         self.all_slice_starts = slice_starts
         self.internal_start = internal_start
+        self.airmass_coefficient = airmass_coefficient
 
     def __lt__(self, other):
         return self.first_slice_start < other.first_slice_start
@@ -79,7 +79,7 @@ class SlicedIPScheduler_v2(Scheduler):
             r.Yik_entries = []
             r.possible_starts = []
             for resource in sorted(r.free_windows_dict.keys()):
-                r.possible_starts.extend(self.get_slices(r.free_windows_dict[resource], resource, r.duration))
+                r.possible_starts.extend(self.get_slices(r.free_windows_dict[resource], resource, r.duration, r.request))
             # reorder PossibleStarts
             r.possible_starts.sort()
             # build aikt
@@ -93,7 +93,13 @@ class SlicedIPScheduler_v2(Scheduler):
                     scheduled = 1
                 # now w_idx is the index into r.possible_starts, which have
                 # been reordered by time.
-                self.Yik.append([r.resID, w_idx, r.priority, ps.resource, scheduled])
+                if r.request and r.request.optimization_type == 'AIRMASS':
+                    # Apply the airmass coefficient into the priority
+                    priority = r.priority + ps.airmass_coefficient
+                else:
+                    # Add the earlier window optimization priority factor to the effective priority
+                    priority = r.priority + (0.1 / (w_idx + 1.0))
+                self.Yik.append([r.resID, w_idx, priority, ps.resource, scheduled])
                 w_idx += 1
                 # build aikt
                 for s in ps.all_slice_starts:
@@ -123,7 +129,7 @@ class SlicedIPScheduler_v2(Scheduler):
             idx += 1
         return self.schedule_dict
 
-    def get_slices(self, intervals, resource, duration):
+    def get_slices(self, intervals, resource, duration, request):
         ''' Creates two things:
         * slices: list of lists. Each inner list is a window. The first
         element is the initial slice, and each subsequent slice is also
@@ -163,11 +169,18 @@ class SlicedIPScheduler_v2(Scheduler):
                         start += slice_length
                         internal_start = start
 
+            # Get the airmass coefficients for the internal starts if the request should be optimized by airmass
+            if request and request.optimization_type == 'AIRMASS':
+                airmasses_at_times = request.get_airmasses_within_kernel_windows(resource)
+                # use numpy to interpolate airmass values for the internal_starts times
+                interpolated_airmasses = np.interp(internal_starts, airmasses_at_times['times'], airmasses_at_times['airmasses'])
+            else:
+                interpolated_airmasses = np.zeros(len(internal_starts))
             # return slices, internal_starts
             ps_list = []
             idx = 0
             for w in slices:
-                ps_list.append(PossibleStart(resource, w, internal_starts[idx]))
+                ps_list.append(PossibleStart(resource, w, internal_starts[idx], interpolated_airmasses[idx]))
                 idx += 1
 
         return ps_list

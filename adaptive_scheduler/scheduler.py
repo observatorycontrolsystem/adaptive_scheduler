@@ -36,12 +36,13 @@ from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInter
 
 class Scheduler(SendMetricMixin):
 
-    def __init__(self, kernel_class, sched_params, event_bus):
+    def __init__(self, kernel_class, sched_params, event_bus, network_model):
         self.kernel_class = kernel_class
         self.visibility_cache = {}
         self.saved_semester = {'start': None, 'end': None}
         self.sched_params = sched_params
         self.event_bus = event_bus
+        self.network_model = network_model
         self.log = logging.getLogger(__name__)
         if self.sched_params.simulate_now:
             self.estimated_scheduler_end = iso_string_to_datetime(self.sched_params.simulate_now)
@@ -427,12 +428,11 @@ class Scheduler(SendMetricMixin):
 
 class LCOGTNetworkScheduler(Scheduler):
     def __init__(self, kernel_class, sched_params, event_bus, network_model):
-        super().__init__(kernel_class, sched_params, event_bus)
+        super().__init__(kernel_class, sched_params, event_bus, network_model)
 
         self.visibility_cache = {}
         self.date_fmt = '%Y-%m-%d'
         self.date_time_fmt = '%Y-%m-%d %H:%M:%S'
-        self.network_model = network_model
 
     def _log_scheduler_start_details(self, estimated_scheduler_end, semester_details):
         self.log.info("Scheduling for semester %s (%s to %s)", semester_details['id'],
@@ -502,8 +502,8 @@ class LCOGTNetworkScheduler(Scheduler):
         semester_start = semester_details['start']
 
         many_rgs, other_rgs = differentiate_by_type('many', window_adjusted_rgs)
-        many_compound_reservations = make_many_type_compound_reservations(many_rgs, semester_start)
-        other_compound_reservations = make_compound_reservations(other_rgs, semester_start)
+        many_compound_reservations = make_many_type_compound_reservations(many_rgs, semester_start, self.network_model)
+        other_compound_reservations = make_compound_reservations(other_rgs, semester_start, self.network_model)
         all_compound_reservations = many_compound_reservations + other_compound_reservations
 
         return all_compound_reservations
@@ -591,7 +591,7 @@ class SchedulerResult(object):
         for reservations in self.schedule.values():
             for reservation in reservations:
                 request_id = reservation.request.id
-                request_group_id = reservation.request_group.id
+                request_group_id = reservation.request_group_id
                 if not request_group_id in scheduled_requests_by_request_group_id:
                     scheduled_requests_by_request_group_id[request_group_id] = {}
                 scheduled_requests_by_request_group_id[request_group_id][request_id] = DataContainer(

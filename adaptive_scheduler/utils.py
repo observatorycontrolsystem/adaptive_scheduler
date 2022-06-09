@@ -12,6 +12,7 @@ import time
 from math import cos, radians
 import logging
 from unidecode import unidecode
+from time_intervals.intervals import Intervals
 from opentsdb_python_metrics import metric_wrappers
 from opentsdb_python_metrics.metric_wrappers import metric_wrapper, SendMetricMixin, metric_timer
 
@@ -195,6 +196,19 @@ def normalised_epoch_to_datetime(epoch_time, epoch_start):
        reference point (epoch_start) must be known.'''
     unnormed_epoch = unnormalise(epoch_time, epoch_start)
     return epoch_to_datetime(unnormed_epoch)
+
+
+def normalise_datetime_intervals(intervals, earliest_datetime):
+    '''Convert datetime Intervals into normalised kernel Intervals.'''
+
+    epoch_earliest = datetime_to_epoch(earliest_datetime)
+
+    epoch_timepoints = []
+    for tp in intervals.toDictList():
+        epoch_time = normalise(datetime_to_epoch(tp['time']), epoch_earliest)
+        epoch_timepoints.append({'time': epoch_time, 'type': tp['type']})
+
+    return Intervals(epoch_timepoints)
 
 
 def normalise(value, start):

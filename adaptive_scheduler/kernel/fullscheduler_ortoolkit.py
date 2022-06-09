@@ -201,8 +201,8 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
 
         # Objective: Maximize the merit functions of all scheduled requests (eq 1);
         objective = solver.Maximize(solver.Sum(
-            [isScheduled * (priority + (0.1 / (winidx + 1.0))) for req, winidx, priority, resource, isScheduled in
-             requestLocations]))
+            [isScheduled * priority for _, _, priority, _, isScheduled in requestLocations])
+        )
 
         # impose a time limit (ms) on the solve
         if timelimit > 0:

@@ -9,22 +9,22 @@ November 2011
 from nose.tools import assert_equal
 
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
+from adaptive_scheduler.kernel.reservation import Reservation, CompoundReservation
 
 
-class TestReservation_v3(object):
+class TestReservation(object):
 
     def setup(self):
         s1 = Intervals([{'time': 1, 'type': 'start'}, {'time': 2, 'type': 'end'}])
         s2 = Intervals([{'time': 2, 'type': 'start'}, {'time': 4, 'type': 'end'}])
         s3 = Intervals([{'time': 2, 'type': 'start'}, {'time': 6, 'type': 'end'}])
-        self.r1 = Reservation_v3(1, 1, {'foo': s1})
-        self.r2 = Reservation_v3(1, 2, {'bar': s2})
-        self.r3 = Reservation_v3(2, 1, {'foo': s3})
-        self.r4 = Reservation_v3(1, 1, {'foo': s1, 'bar': s2})
-        self.cr1 = CompoundReservation_v2([self.r1])
-        self.cr2 = CompoundReservation_v2([self.r1, self.r2], 'and')
-        self.cr3 = CompoundReservation_v2([self.r1, self.r3], 'oneof')
+        self.r1 = Reservation(1, 1, {'foo': s1})
+        self.r2 = Reservation(1, 2, {'bar': s2})
+        self.r3 = Reservation(2, 1, {'foo': s3})
+        self.r4 = Reservation(1, 1, {'foo': s1, 'bar': s2})
+        self.cr1 = CompoundReservation([self.r1])
+        self.cr2 = CompoundReservation([self.r1, self.r2], 'and')
+        self.cr3 = CompoundReservation([self.r1, self.r3], 'oneof')
 
     def test_create_reservation(self):
         assert_equal(self.r1.priority, 1)
