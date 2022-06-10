@@ -76,7 +76,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        event['lsc.lsc.lsc'].reason == 'There is a reason'
+        assert event['lsc.lsc.lsc'].reason == 'There is a reason'
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_event_if_consistent_sites_in_data_lists(self, mock_get_datum):
@@ -84,7 +84,7 @@ class TestAvailableForSchedulingMonitor(object):
 
         event = self.monitor.monitor()
 
-        'NOT AVAILABLE' == event.get('elp.elp.elp').type
+        assert 'NOT AVAILABLE' == event.get('elp.elp.elp').type
 
     @mock.patch('adaptive_scheduler.monitoring.monitors.get_datum')
     def test_no_events_when_available_for_scheduling(self, mock_get_datum):

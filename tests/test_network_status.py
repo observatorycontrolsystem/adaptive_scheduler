@@ -48,7 +48,7 @@ class TestNetworkStatus(object):
         self.mock_monitor2.monitor.return_value = {'1m0a.doma.bpl': self.e2}
 
         events = self.network.update()
-        events == {'1m0a.doma.bpl': [self.e1, self.e2]}
+        assert events == {'1m0a.doma.bpl': [self.e1, self.e2]}
 
     def test_flag_is_dirty_if_first_time(self):
         self.mock_monitor1.monitor.return_value = {'1m0a.doma.bpl': self.e1}
