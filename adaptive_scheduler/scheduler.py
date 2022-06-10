@@ -225,7 +225,7 @@ class Scheduler(SendMetricMixin):
                 except Exception as e:
                     logging.warning(f"Failed to store output file in S3 bucket: {repr(e)}")
             else:
-                with open('/data/adaptive_scheduler/output_schedule/{}'.format(filename), 'w') as schedule_out:
+                with open('data/output_schedule/{}'.format(filename), 'w') as schedule_out:
                     json.dump(schedule_data, schedule_out)
 
     def produce_schedule_metrics(self, schedule, estimated_scheduler_end, semester_details):

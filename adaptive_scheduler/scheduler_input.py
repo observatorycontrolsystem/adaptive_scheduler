@@ -250,7 +250,7 @@ class SchedulingInputUtils(SendMetricMixin):
     @staticmethod
     def write_input_to_file(normal_input_provider, rr_scheduler_now, rr_resource_usage_snapshot,
                             rr_estimated_scheduler_runtime, model_builder, s3_bucket, telescope_classes,
-                            output_path='/data/adaptive_scheduler/input_states/'):
+                            output_path='data/input_states/'):
         output = {
             'sched_params': normal_input_provider.sched_params,
             'normal': {
