@@ -18,7 +18,7 @@ of schedulable instruments.
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python == 3.6.x
+-   Python 3.7, 3.8, 3.9
 -   A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
 -   A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 -   (Optional) A running [Downtime Database](https://github.com/observatorycontrolsystem/downtime)
@@ -59,10 +59,10 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `TELESCOPE_CLASSES`             | Restrict the scheduler to only operate on the specified telescope classes (comma delimited) (e.g. `1m0,2m0`). Default empty string means all telescope classes.       | ``                                                 |
 |                        | `INITIAL_NORMAL_RUNTIME`             | Initial estimate of duration of normal scheduling cycle in seconds         | 360.0                                                 |
 |                        | `INITIAL_RAPID_RESPONSE_RUNTIME`  | Initial estimate of duration of rapid response scheduling cycle in seconds      | 120.0                                                 |
-| Debugging Settings     | `SAVE_PICKLE_INPUT_FILES`     | If True, stores pickled scheduler input files each run in `/data/adaptive_scheduler/input_states` | `False`                                                   |
-|                        | `SAVE_JSON_OUTPUT_FILES`      | If True, stores json scheduler output files each run in `/data/adaptive_scheduler/output_schedule` | `False`                                                   |
-|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `/logs/` | `False`                                                   |
-|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `/logs/` | `False`                                                   |
+| Debugging Settings     | `SAVE_PICKLE_INPUT_FILES`     | If True, stores pickled scheduler input files each run in `./data/input_states/` | `False`                                                   |
+|                        | `SAVE_JSON_OUTPUT_FILES`      | If True, stores json scheduler output files each run in `./data/output_schedule/` | `False`                                                   |
+|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `./logs/` | `False`                                                   |
+|                        | `SAVE_PER_REQUEST_LOGS`      | If True, stores a log file for each Request considered for scheduling in `./logs/` | `False`                                                   |
 |                        | `SCHEDULER_INPUT_FILE`      | Full path to scheduler pickle input file. If present, scheduler will run on the input file rather than getting current requests. | _`Empty string`_                                                 |
 |                        | `CURRENT_TIME_OVERRIDE`      | Overrides the current time during scheduling. Useful for debugging things in the past | _None_                                                 |
 
@@ -72,20 +72,32 @@ The scheduler can either be run directly on a machine, or in the provided Docker
 
 ### Native Run
 
-First install the requirements into a python3.6 virtualenv. There are a large number of input arguments, with defaults 
+Install using Poetry:
+
+`$ poetry install`
+
+If you'd like to use GLPK also install:
+
+`$ poetry run pip install -r ortools-glpk-reqs.txt`
+
+There are a large number of input arguments, with defaults 
 defined in the *SchedulerParameters* class in **adaptive_scheduler/scheduler_input.py**.
 
-`python as.py --help`
+`$ poetry run adaptive-scheduler --help`
 
 ### Docker Run 
 
-You can build the **Dockerfile** locally with local changes by running
+You can build the **Dockerfile** locally with local changes and run it:
 
-`docker build -t name_of_my_container .`
+``shell
+$ docker buildx build -t adaptive-scheduler . --load
+$ docker run --rm -it adaptive-scheduler
 
-You can then update the container name in the supplied **docker-compose.yml** and run the scheduler using
+You can also use `docker-compose`:
 
-`cd deploy; docker-compose up`
+```shell
+$ ./docker-compose.sh up --build
+```
 
 To run the unit tests instead of the actual scheduler, change the commented out command in the **deploy/docker-compose.yml** file to run nosetests with the desired arguments.
 

@@ -7,7 +7,7 @@ license = "GPLv3"
 
 [tool.poetry.dependencies]
 python = "^3.7"
-ortools = "^9.3"
+ortools = "^9.3.0"
 time-intervals = "^1"
 numpy = "^1"
 ocs-rise-set = "0.5.2"
@@ -33,4 +33,4 @@ requires = ["poetry-core>=1.0.0", "numpy ~= 1.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-ocs-scheduler = 'adaptive_scheduler.cli:main'
+adaptive-scheduler = 'adaptive_scheduler.cli:main'

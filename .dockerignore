@@ -1,3 +1,8 @@
-data
-logs
-.vscode
+**/*
+
+!README.md
+!pyproject.toml
+!poetry.lock
+!ortools-glpk-reqs.txt
+!adaptive_scheduler/
+!tests/
