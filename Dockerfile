@@ -100,7 +100,7 @@ EOT
 
 FROM base as app
 
-RUN adduser --shell /bin/bash --home /app app
+RUN adduser --shell /bin/bash --home /home/app app
 
 COPY --link --from=build /venv /venv
 
