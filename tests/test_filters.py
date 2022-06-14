@@ -2,12 +2,12 @@
 
 from __future__ import division
 
-from nose.tools import assert_equal, assert_not_equal
 from mock import patch, Mock
 from datetime import datetime, timedelta
 
 from adaptive_scheduler.models import (RequestGroup, Request, Windows)
-import test.helpers as helpers
+
+from . import helpers
 
 import adaptive_scheduler.request_filters
 from adaptive_scheduler.request_filters import (
@@ -56,8 +56,8 @@ class TestExpiryFilter(object):
         rg2 = self.create_request_group(self.future_expiry1)
         rg3 = self.create_request_group(self.future_expiry2)
 
-        assert_equal(rg1, rg2)
-        assert_not_equal(rg1, rg3)
+        assert rg1 == rg2
+        assert rg1 != rg3
 
 
 class TestWindowFilters(object):
@@ -91,7 +91,7 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, self.resource_name)
 
         expected_window = [window_list[1]]
-        assert_equal(received_windows, expected_window)
+        assert received_windows == expected_window
 
     def test_filters_out_only_past_windows_straddling_boundary(self):
 
@@ -113,7 +113,7 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, self.resource_name)
 
         expected_window = [window_list[0], window_list[1]]
-        assert_equal(received_windows, expected_window)
+        assert received_windows == expected_window
 
     @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_filters_out_only_future_windows(self, mock_semester_service):
@@ -147,7 +147,7 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, self.resource_name)
 
         expected_window = window_list[0]
-        assert_equal(received_windows, [expected_window])
+        assert received_windows == [expected_window]
 
     @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_filters_out_only_future_windows2(self, mock_semester_service):
@@ -175,7 +175,7 @@ class TestWindowFilters(object):
         received_windows = get_windows_from_request(request, self.resource_name)
 
         expected_window = window_list[0]
-        assert_equal(received_windows, [expected_window])
+        assert received_windows == [expected_window]
 
     def test_truncates_lower_crossing_windows(self):
 
@@ -192,7 +192,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows[0].start, self.current_time)
+        assert received_windows[0].start == self.current_time
 
     @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_truncates_upper_crossing_windows(self, mock_semester_service):
@@ -215,7 +215,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows[0].end, self.semester_end)
+        assert received_windows[0].end == self.semester_end
 
     @patch("adaptive_scheduler.observation_portal_connections.ObservationPortalInterface.get_semester_details")
     def test_truncates_upper_crossing_windows_extra_horizon(self, mock_semester_service):
@@ -237,7 +237,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows[0].end, horizon)
+        assert received_windows[0].end == horizon
 
     def test_filter_on_duration_window_larger_tdelta(self):
 
@@ -256,7 +256,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows, window_list)
+        assert received_windows == window_list
 
     def test_filter_on_duration_window_larger_float(self):
 
@@ -275,7 +275,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows, window_list)
+        assert received_windows == window_list
 
     def test_filter_on_duration_window_smaller_tdelta(self):
 
@@ -296,7 +296,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows, [])
+        assert received_windows == []
 
     def test_filter_on_duration_window_smaller_float(self):
 
@@ -315,7 +315,7 @@ class TestWindowFilters(object):
         request = received_rg_list[0].requests[0]
         received_windows = get_windows_from_request(request, self.resource_name)
 
-        assert_equal(received_windows, [])
+        assert received_windows == []
 
     def test_filter_on_duration_emits_user_feedback(self):
 
@@ -371,7 +371,7 @@ class TestWindowFilters(object):
         r.duration = 1 * 24 * 3600
 
         arg_list[1](w, rg, r)
-        assert_equal(rg.emit_rg_feedback.called, False)
+        assert rg.emit_rg_feedback.called == False
 
     def test_filter_on_type_AND_both_requests_have_windows(self):
         window_dict1 = {
@@ -387,7 +387,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_AND_neither_request_has_windows(self):
         windows = [(), ()]
@@ -395,7 +395,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 0)
+        assert len(received_rg_list) == 0
 
     def test_filter_on_type_AND_one_request_has_no_windows(self):
         window_dict1 = {
@@ -408,7 +408,7 @@ class TestWindowFilters(object):
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
 
-        assert_equal(len(received_rg_list), 0)
+        assert len(received_rg_list) == 0
 
     def test_filter_on_type_AND_two_windows_one_request_has_no_windows(self):
         window_dict1 = {
@@ -424,7 +424,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 0)
+        assert len(received_rg_list) == 0
 
     def test_filter_on_type_ONEOF_both_requests_have_windows(self):
         window_dict1 = {
@@ -440,7 +440,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_ONEOF_one_request_has_no_windows(self):
         window_dict1 = {
@@ -452,7 +452,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_ONEOF_two_windows_one_request_has_no_windows(self):
         window_dict1 = {
@@ -468,7 +468,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_ONEOF_neither_request_has_windows(self):
         windows = [(), ()]
@@ -476,7 +476,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 0)
+        assert len(received_rg_list) == 0
 
     def test_filter_on_type_SINGLE_no_window_one_request(self):
         windows = [()]
@@ -484,7 +484,7 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 0)
+        assert len(received_rg_list) == 0
 
     def test_filter_on_type_SINGLE_two_windows_one_request(self):
         window_dict1 = {
@@ -500,34 +500,32 @@ class TestWindowFilters(object):
 
         running_request_ids = []
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_SINGLE_no_windows_but_running(self):
         windows = [()]
         rg1, window_list = self.create_request_group(windows, operator='single')
         rg_list = [rg1]
-        assert_equal(1, len(rg_list))
-        assert_equal(1, len(rg_list[0].requests))
-        assert_equal(0, rg_list[0].requests[0].windows.size())
+        assert 1 == len(rg_list)
+        assert 1 == len(rg_list[0].requests)
+        assert 0 == rg_list[0].requests[0].windows.size()
         running_request_ids = [5]
         received_rg_list = filter_on_type([rg1], running_request_ids)
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_on_type_NON_SINGLE_both_requests_no_windows_but_running(self):
         for operator in ('and', 'many', 'oneof'):
             windows = [(), ()]
             rg1, window_list = self.create_request_group(windows, operator=operator)
             rg_list = [rg1]
-            assert_equal(1, len(rg_list))
-            assert_equal(2, len(rg_list[0].requests))
-            assert_equal(0, rg_list[0].requests[0].windows.size())
-            assert_equal(0, rg_list[0].requests[1].windows.size())
+            assert 1 == len(rg_list)
+            assert 2 == len(rg_list[0].requests)
+            assert 0 == rg_list[0].requests[0].windows.size()
+            assert 0 == rg_list[0].requests[1].windows.size()
             running_request_ids = [5, 6]
             received_rg_list = filter_on_type([rg1], running_request_ids)
-            assert_equal(len(received_rg_list), 1,
-                         msg="Request Group should not be filtered for operator '%s'" % operator)
-            assert_equal(2, len(rg_list[0].requests),
-                         msg="Requests should not be filtered from request group with operator '%s'" % operator)
+            assert len(received_rg_list) == 1, "Request Group should not be filtered for operator '%s'" % operator
+            assert 2 == len(rg_list[0].requests), "Requests should not be filtered from request group with operator '%s'" % operator
 
     def test_filter_on_type_NON_SINGLE_both_one_request_no_windows_but_running(self):
         for operator in ('and', 'many', 'oneof'):
@@ -538,16 +536,14 @@ class TestWindowFilters(object):
             windows = [(), (window_dict1,)]
             rg1, window_list = self.create_request_group(windows, operator='and')
             rg_list = [rg1]
-            assert_equal(1, len(rg_list))
-            assert_equal(2, len(rg_list[0].requests))
-            assert_equal(0, rg_list[0].requests[0].windows.size())
-            assert_equal(1, rg_list[0].requests[1].windows.size())
+            assert 1 == len(rg_list)
+            assert 2 == len(rg_list[0].requests)
+            assert 0 == rg_list[0].requests[0].windows.size()
+            assert 1 == rg_list[0].requests[1].windows.size()
             running_request_ids = [5]
             received_rg_list = filter_on_type([rg1], running_request_ids)
-            assert_equal(len(received_rg_list), 1,
-                         msg="Request Group should not be filtered for operator '%s'" % operator)
-            assert_equal(2, len(rg_list[0].requests),
-                         msg="Requests should not be filtered from request group with operator '%s'" % operator)
+            assert len(received_rg_list) == 1, "Request Group should not be filtered for operator '%s'" % operator
+            assert 2 == len(rg_list[0].requests), "Requests should not be filtered from request group with operator '%s'" % operator
 
     def test_drop_empty_requests(self):
         request_id = 5
@@ -569,7 +565,7 @@ class TestWindowFilters(object):
             submitter='',
         )
         received = drop_empty_requests([rg1])
-        assert_equal(received, [5])
+        assert received == [5]
 
     def test_filter_on_pending(self):
         request_id = 5
@@ -600,7 +596,7 @@ class TestWindowFilters(object):
 
         filter_on_pending([rg1])
 
-        assert_equal(rg1.requests, [r1])
+        assert rg1.requests == [r1]
 
     def test_run_all_filters(self):
         window_dict1 = {
@@ -615,7 +611,7 @@ class TestWindowFilters(object):
             mock_duration.__get__ = Mock(return_value=3600.0)
             received_rg_list = run_all_filters([rg1], running_request_ids)
 
-        assert_equal(len(received_rg_list), 1)
+        assert len(received_rg_list) == 1
 
     def test_filter_out_windows_for_running_requests_single(self):
         window_dict1 = {
@@ -631,13 +627,13 @@ class TestWindowFilters(object):
 
         running_request_ids = [5]
         rg_list = [rg1]
-        assert_equal(1, len(rg_list))
-        assert_equal(1, len(rg_list[0].requests))
-        assert_equal(2, rg_list[0].requests[0].windows.size())
+        assert 1 == len(rg_list)
+        assert 1 == len(rg_list[0].requests)
+        assert 2 == rg_list[0].requests[0].windows.size()
         received_rg_list = filter_out_windows_for_running_requests(rg_list, running_request_ids)
-        assert_equal(1, len(received_rg_list))
-        assert_equal(1, len(received_rg_list[0].requests))
-        assert_equal(0, received_rg_list[0].requests[0].windows.size())
+        assert 1 == len(received_rg_list)
+        assert 1 == len(received_rg_list[0].requests)
+        assert 0 == received_rg_list[0].requests[0].windows.size()
 
     def test_filter_out_windows_for_running_requests_many(self):
         window_dict1 = {
@@ -653,16 +649,16 @@ class TestWindowFilters(object):
 
         running_request_ids = [5]
         rg_list = [rg1]
-        assert_equal(1, len(rg_list))
-        assert_equal([5, 6], [r.id for r in rg_list[0].requests])
-        assert_equal(2, len(rg_list[0].requests))
-        assert_equal(2, rg_list[0].requests[0].windows.size())
-        assert_equal(2, rg_list[0].requests[1].windows.size())
+        assert 1 == len(rg_list)
+        assert [5, 6] == [r.id for r in rg_list[0].requests]
+        assert 2 == len(rg_list[0].requests)
+        assert 2 == rg_list[0].requests[0].windows.size()
+        assert 2 == rg_list[0].requests[1].windows.size()
         received_rg_list = filter_out_windows_for_running_requests([rg1], running_request_ids)
-        assert_equal(1, len(received_rg_list))
-        assert_equal(2, len(received_rg_list[0].requests))
+        assert 1 == len(received_rg_list)
+        assert 2 == len(received_rg_list[0].requests)
         for r in received_rg_list[0].requests:
             if r.id == 5:
-                assert_equal(0, r.windows.size())
+                assert 0 == r.windows.size()
             if r.id == 6:
-                assert_equal(2, r.windows.size())
+                assert 2 == r.windows.size()

@@ -37,6 +37,7 @@ class SchedulerParameters(object):
                  s3_bucket=os.getenv('AWS_BUCKET', ''),
                  save_output=to_bool(os.getenv('SAVE_JSON_OUTPUT_FILES', 'False')),
                  request_logs=to_bool(os.getenv('SAVE_PER_REQUEST_LOGS', 'False')),
+                 request_logs_dir=os.getenv('SAVE_PER_REQUEST_LOGS_DIR', 'logs'),
                  observation_portal_url=os.getenv('OBSERVATION_PORTAL_URL', 'http://127.0.0.1:8000'),
                  configdb_url=os.getenv('CONFIGDB_URL', 'http://127.0.0.1:7000'),
                  downtime_url=os.getenv('DOWNTIME_URL', 'http://127.0.0.1:7500'),
@@ -70,6 +71,7 @@ class SchedulerParameters(object):
         self.pickle = pickle
         self.save_output = save_output
         self.request_logs = request_logs
+        self.request_logs_dir = request_logs_dir
         self.profiling_enabled = profiling_enabled
         self.avg_reservation_save_time_seconds = avg_reservation_save_time_seconds
         self.normal_runtime_seconds = normal_runtime_seconds
@@ -248,7 +250,7 @@ class SchedulingInputUtils(SendMetricMixin):
     @staticmethod
     def write_input_to_file(normal_input_provider, rr_scheduler_now, rr_resource_usage_snapshot,
                             rr_estimated_scheduler_runtime, model_builder, s3_bucket, telescope_classes,
-                            output_path='/data/adaptive_scheduler/input_states/'):
+                            output_path='data/input_states/'):
         output = {
             'sched_params': normal_input_provider.sched_params,
             'normal': {

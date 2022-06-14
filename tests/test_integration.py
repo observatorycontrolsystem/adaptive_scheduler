@@ -1,6 +1,8 @@
 #!/usr/bin/python
 from __future__ import division
-from nose import SkipTest
+
+import pytest
+
 from datetime import datetime, timedelta
 
 # Import the modules to test
@@ -8,18 +10,17 @@ from adaptive_scheduler.models import (ICRSTarget, Proposal, Configuration,
                                        Request, RequestGroup,
                                        Windows, Window)
 
-from test.test_scheduler import create_scheduler_input_factory, create_running_request_group
+from .test_scheduler import create_scheduler_input_factory, create_running_request_group
 
 try:
     from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
 except ImportError:
-    raise SkipTest('ORToolkit is not properly installed, skipping these tests.')
+    pytest.skip('ORToolkit is not properly installed, skipping these tests.', allow_module_level=True)
 
 from adaptive_scheduler.scheduler_input import SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.utils import get_reservation_datetimes
 
-from nose.tools import assert_equal, assert_true, assert_false
 from mock import Mock
 
 
@@ -316,9 +317,9 @@ class TestIntegration(object):
                                          block_schedule_by_resource=rr_schedule)
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
-        assert_true(4 in scheduled_rgs)
-        assert_true(4 not in scheduled_rgs[4])
-        assert_true(3 in scheduled_rgs[4])
+        assert 4 in scheduled_rgs
+        assert 4 not in scheduled_rgs[4]
+        assert 3 in scheduled_rgs[4]
 
     def test_rr_requests_dont_schedule_over_running_rr(self):
         ''' Verifies that a RR will not preempt a currently running RR if it overlaps with its window completely
@@ -336,8 +337,8 @@ class TestIntegration(object):
                                          rapid_response_ids=[rapid_response_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure no RR was scheduled because the running request group was over it's time
-        assert_false(5 in scheduled_rgs)
-        assert_equal(scheduled_rgs, {})
+        assert not 5 in scheduled_rgs
+        assert scheduled_rgs == {}
 
     def test_rr_requests_do_schedule_over_running_normal(self):
         ''' Verifies that a RR will preempt a currently running normal request and be scheduled over it at its
@@ -357,12 +358,12 @@ class TestIntegration(object):
                                          rapid_response_ids=[rapid_response_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure RR was scheduled at its first time even though it overlaps with the currently running normal request
-        assert_true(5 in scheduled_rgs)
-        assert_true(5 in scheduled_rgs[5])
+        assert 5 in scheduled_rgs
+        assert 5 in scheduled_rgs[5]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
-        assert_equal(dt_start, self.window_3.start)
-        assert_equal(dt_end, self.window_3.start + timedelta(seconds=1750))
+        assert dt_start == self.window_3.start
+        assert dt_end == self.window_3.start + timedelta(seconds=1750)
 
     def test_rr_requests_schedule_after_running_rr(self):
         ''' Verifies that a RR will be scheduled after a currently running RR if it is able
@@ -382,12 +383,12 @@ class TestIntegration(object):
                                          rapid_response_ids=[rapid_response_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure RR was scheduled after the running RR since there was still time
-        assert_true(5 in scheduled_rgs)
-        assert_true(5 in scheduled_rgs[5])
+        assert 5 in scheduled_rgs
+        assert 5 in scheduled_rgs[5]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
-        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
+        assert dt_start == self.base_time + timedelta(hours=1, minutes=0, seconds=30)
+        assert dt_end == self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750)
 
     def test_normal_requests_dont_schedule_over_running_rr(self):
         ''' Verifies that a normal request will be blocked by a currently running RR
@@ -405,9 +406,9 @@ class TestIntegration(object):
                                          rapid_response_ids=[rr_request_group_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
-        assert_false(4 in scheduled_rgs)
-        assert_false(3 in scheduled_rgs)
-        assert_equal(scheduled_rgs, {})
+        assert not 4 in scheduled_rgs
+        assert not 3 in scheduled_rgs
+        assert scheduled_rgs == {}
 
     def test_normal_requests_can_schedule_after_rr(self):
         ''' Verifies that a normal request will respect a previously scheduled RR whose time overlaps with it's window.
@@ -421,13 +422,13 @@ class TestIntegration(object):
                                          block_schedule_by_resource=rr_schedule)
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure both requests can get scheduled, but request 4 is after the RR reservation in its window
-        assert_true(4 in scheduled_rgs)
-        assert_true(4 in scheduled_rgs[4])
-        assert_true(3 in scheduled_rgs[4])
+        assert 4 in scheduled_rgs
+        assert 4 in scheduled_rgs[4]
+        assert 3 in scheduled_rgs[4]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
-        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
+        assert dt_start == self.base_time + timedelta(hours=1, minutes=0, seconds=30)
+        assert dt_end == self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750)
 
     def test_normal_requests_can_schedule_after_running_rr(self):
         ''' Verifies that a normal request will respect a already running RR whose time overlaps with it's window.
@@ -448,13 +449,13 @@ class TestIntegration(object):
                                          rapid_response_ids=[rr_request_group_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure request 4 is after the RR running request in its window, and request 3 is blocked by the running RR
-        assert_true(4 in scheduled_rgs)
-        assert_true(4 in scheduled_rgs[4])
-        assert_false(3 in scheduled_rgs[4])
+        assert 4 in scheduled_rgs
+        assert 4 in scheduled_rgs[4]
+        assert not 3 in scheduled_rgs[4]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
-        assert_equal(dt_start, self.base_time + timedelta(hours=1, minutes=0, seconds=30))
-        assert_equal(dt_end, self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750))
+        assert dt_start == self.base_time + timedelta(hours=1, minutes=0, seconds=30)
+        assert dt_end == self.base_time + timedelta(hours=1, minutes=0, seconds=30) + timedelta(seconds=1750)
 
     def test_one_rr_has_correct_cancel_date_list(self):
         ''' Schedules a single RR and verifies it's time appears in the cancellation date list on the resource
@@ -465,8 +466,8 @@ class TestIntegration(object):
                                          block_schedule_by_resource={})
 
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
-        assert_true(5 in scheduled_rgs)
-        assert_true(5 in scheduled_rgs[5])
+        assert 5 in scheduled_rgs
+        assert 5 in scheduled_rgs[5]
 
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
@@ -476,10 +477,10 @@ class TestIntegration(object):
         cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(
             result.schedule)
 
-        assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
-        assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 1)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
+        assert '1m0a.doma.ogg' in cancel_date_list_by_resource
+        assert len(cancel_date_list_by_resource['1m0a.doma.ogg']) == 1
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][0][0] == dt_start
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][0][1] == dt_end
 
     def test_multiple_rr_has_correct_cancel_date_list(self):
         ''' Schedules three nearly back to back RRs. Checks that each of their scheduled time appears in the date list
@@ -492,11 +493,11 @@ class TestIntegration(object):
                                          block_schedule_by_resource={})
 
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
-        assert_true(5 in scheduled_rgs)
-        assert_true(5 in scheduled_rgs[5])
-        assert_true(6 in scheduled_rgs)
-        assert_true(3 in scheduled_rgs[6])
-        assert_true(1 in scheduled_rgs[6])
+        assert 5 in scheduled_rgs
+        assert 5 in scheduled_rgs[5]
+        assert 6 in scheduled_rgs
+        assert 3 in scheduled_rgs[6]
+        assert 1 in scheduled_rgs[6]
 
         semester_start = scheduler_start - timedelta(days=150)
         scheduler_runner = SchedulerRunner(SchedulerParameters(dry_run=True), Mock(), Mock(), Mock(), Mock())
@@ -504,18 +505,18 @@ class TestIntegration(object):
                                              'end': scheduler_start + timedelta(days=150)}
         cancel_date_list_by_resource = scheduler_runner._determine_schedule_cancelation_list_from_new_schedule(
             result.schedule)
-        assert_true('1m0a.doma.ogg' in cancel_date_list_by_resource)
-        assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
-        assert_equal(len(cancel_date_list_by_resource['1m0a.doma.ogg']), 3)
+        assert '1m0a.doma.ogg' in cancel_date_list_by_resource
+        assert len(cancel_date_list_by_resource['1m0a.doma.ogg']) == 3
+        assert len(cancel_date_list_by_resource['1m0a.doma.ogg']) == 3
 
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[6][1], semester_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][0], dt_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][0][1], dt_end)
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][0][0] == dt_start
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][0][1] == dt_end
 
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[6][3], semester_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][0], dt_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][1][1], dt_end)
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][1][0] == dt_start
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][1][1] == dt_end
 
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[5][5], semester_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][0], dt_start)
-        assert_equal(cancel_date_list_by_resource['1m0a.doma.ogg'][2][1], dt_end)
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][2][0] == dt_start
+        assert cancel_date_list_by_resource['1m0a.doma.ogg'][2][1] == dt_end
