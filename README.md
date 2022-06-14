@@ -99,6 +99,6 @@ You can also use `docker-compose`:
 $ ./docker-compose.sh up --build
 ```
 
-To run the unit tests instead of the actual scheduler, change the commented out command in the **deploy/docker-compose.yml** file to run nosetests with the desired arguments.
+To run the unit tests instead of the actual scheduler, change the commented out command in the **deploy/docker-compose.yml** file to run pytest with the desired arguments.
 
 Note you will likely want to change many of the environment variables to point to your services and adjust the settings of the scheduler.
