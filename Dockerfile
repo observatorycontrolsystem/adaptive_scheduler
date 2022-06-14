@@ -123,5 +123,5 @@ ENTRYPOINT ["adaptive-scheduler"]
 
 # set metadata
 ARG PYTHON_IMAGE_TAG
-ARG ORTOOLS_VERSION
+ARG GUROBI_VERSION
 LABEL python-image.tag=$PYTHON_IMAGE_TAG gurobi.version=$GUROBI_VERSION
