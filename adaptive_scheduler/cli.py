@@ -6,20 +6,20 @@ July 2012
 '''
 from __future__ import division
 
-from .eventbus import get_eventbus
-from .feedback import UserFeedbackLogger, TimingLogger
-from .interfaces import NetworkInterface
-from .observations import ObservationScheduleInterface
-from .observation_portal_connections import ObservationPortalInterface
-from .configdb_connections import ConfigDBInterface
-from .scheduler import LCOGTNetworkScheduler, SchedulerRunner
-from .scheduler_input import (
+from adaptive_scheduler.eventbus import get_eventbus
+from adaptive_scheduler.feedback import UserFeedbackLogger, TimingLogger
+from adaptive_scheduler.interfaces import NetworkInterface
+from adaptive_scheduler.observations import ObservationScheduleInterface
+from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
+from adaptive_scheduler.configdb_connections import ConfigDBInterface
+from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
+from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider,
   FileBasedSchedulingInputProvider, SchedulerParameters
 )
-from .monitoring.network_status import Network
-from .kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
-from .log import RequestGroupHandler
+from adaptive_scheduler.monitoring.network_status import Network
+from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit, ALGORITHMS
+from adaptive_scheduler.log import RequestGroupHandler
 
 from lcogt_logging import LCOGTFormatter
 
