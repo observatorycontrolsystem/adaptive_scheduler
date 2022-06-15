@@ -70,7 +70,7 @@ RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgr
 
 WORKDIR /src
 
-COPY ./README.md ./pyproject.toml ./poetry.lock ./ortools-glpk-reqs.txt .
+COPY ./README.md ./pyproject.toml ./poetry.lock .
 
 # install python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip <<EOT
