@@ -70,14 +70,13 @@ RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgr
 
 WORKDIR /src
 
-COPY ./README.md ./pyproject.toml ./poetry.lock ./ortools-glpk-reqs.txt .
+COPY ./README.md ./pyproject.toml ./poetry.lock .
 
 # install python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip <<EOT
 #!/bin/bash -ex
 pip install -r <(poetry export | grep "numpy")
 pip install -r <(poetry export)
-pip install -r ortools-glpk-reqs.txt
 EOT
 
 COPY . .

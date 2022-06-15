@@ -31,9 +31,6 @@ jobs:
         pip install --upgrade pip 'poetry>=1.1,<1.2'
         pip install "$(poetry export --without-hashes | grep numpy)" # pyslalib nastiness
         poetry install
-        # install our wheel with GLPK support
-        # poetry doesn't support custom wheels too well, so just use pip
-        poetry run pip install -r ortools-glpk-reqs.txt
     - name: Run tests
       run: poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
     - name: Generate and send coveralls report

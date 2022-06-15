@@ -76,10 +76,6 @@ Install using Poetry:
 
 `$ poetry install`
 
-If you'd like to use GLPK also install:
-
-`$ poetry run pip install -r ortools-glpk-reqs.txt`
-
 There are a large number of input arguments, with defaults 
 defined in the *SchedulerParameters* class in **adaptive_scheduler/scheduler_input.py**.
 
