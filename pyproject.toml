@@ -5,9 +5,16 @@ description = ""
 authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
 
+[[tool.poetry.source]]
+name = "ocs"
+url = "https://observatorycontrolsystem.github.io/pypi-simple/"
+
 [tool.poetry.dependencies]
-python = "^3.7"
-ortools = "^9.3.0"
+python = "^3.7,<3.11"
+ortools = [
+  { version = "9.3.9999", markers = "python_full_version >= '3.7.0' and python_full_version < '3.10.0' and sys_platform == 'linux' and (platform_machine == 'x86_64' or platform_machine == 'aarch64')", source = "ocs" },
+  { version = "^9.3,!=9.3.9999", markers = "python_full_version >= '3.10.0' or sys_platform != 'linux' or (platform_machine != 'x86_64' and platform_machine != 'aarch64')"},
+]
 time-intervals = "^1"
 numpy = "^1"
 ocs-rise-set = "0.5.2"

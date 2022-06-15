@@ -77,7 +77,6 @@ RUN --mount=type=cache,target=/root/.cache/pip <<EOT
 #!/bin/bash -ex
 pip install -r <(poetry export | grep "numpy")
 pip install -r <(poetry export)
-pip install -r ortools-glpk-reqs.txt
 EOT
 
 COPY . .
