@@ -74,12 +74,24 @@ def send_to_opensearch(metrics):
     pass
 
 
+def total_scheduled_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
+    # Sums the duration of all scheduled requests
+    all_scheduled_requests_by_rg_id = normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
+    total_scheduled_time = 0
+    for request_group in all_scheduled_requests_by_rg_id.values():
+        for request in request_group.values():
+            if request.scheduled:
+                total_scheduled_time += request.duration
+
+    return total_scheduled_time
+
 def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
     metrics = {
         'simulation_id': RUN_ID,
-        'metric1': 'value'
+        'total_scheduled_time': total_scheduled_time(normal_scheduled_requests_by_rg_id,
+                                                     rr_scheduled_requests_by_rg_id),
     }
     send_to_opensearch(metrics)
 
