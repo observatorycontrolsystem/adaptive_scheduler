@@ -86,9 +86,9 @@ def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_
     
     metrics = {
         'simulation_id': RUN_ID,
-        'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id)
-        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id)
-        'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id)
+        'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
+        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
+        'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
         'total_available_time' : total_available_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, 
                                                         scheduler_runner_scheduler, scheduler_runner_current_time),
     }
@@ -140,7 +140,8 @@ def main(argv=None):
         normal_scheduled_requests_by_rg_id = scheduler_runner.normal_scheduled_requests_by_rg
         scheduler_runner_scheduler = scheduler_runner.scheduler
         scheduler_runner_current_time = scheduler_runner.sched_params.simulate_now
-        record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, scheduler_runner_scheduler, scheduler_runner_current_time)
+        record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, 
+                       scheduler_runner_scheduler, scheduler_runner_current_time)
 
         current_time += timedelta(minutes=TIME_STEP)
         increment_input(current_time, TIME_STEP)

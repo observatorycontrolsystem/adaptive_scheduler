@@ -1,8 +1,8 @@
-from adaptive_scheduler.utils import time_in_capped_intervals
 """
 Metric calculation functions for the scheduler simulator.
 """
 
+from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
 
 
@@ -34,17 +34,18 @@ def total_scheduled_count(combined_scheduled_requests_by_rg_id):
     return total_scheduled_count
 
 
-def total_available_time(scheduler, combined_scheduled_requests_by_rg_id):
+def total_available_time(combined_scheduled_requests_by_rg_id, 
+                        scheduler_runner_scheduler, scheduler_runner_current_time):
     total_available_time = 0
     resources_scheduled = combined_scheduled_requests_by_rg_id.keys()
     for resource in resources_scheduled:
         available_time  = 0
-        if resource in scheduler.visibility_casche:
-            dark_intervals = scheduler.visibility_cache[resource]
-            available_seconds = time_in_capped_intervals(dark_intervals, estimated_scheduler_end,
-                                                                            scheduler.scheduling_horizon(
-                                                                                estimated_scheduler_end))
-
+        if resource in scheduler_runner_scheduler.visibility_casche:
+            dark_intervals = scheduler_runner_scheduler.visibility_cache[resource]
+            available_time = time_in_capped_intervals(dark_intervals, scheduler_runner_current_time,
+                scheduler_runner_scheduler.scheduling_horizon(scheduler_runner_current_time))
+        total_available_time += available_time
+    return total_available_time
         
         
 
@@ -63,8 +64,7 @@ def percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id):
     return scheduled/(scheduled + unscheduled) * 100
 
 
-<<<<<<< HEAD
-=======
+
 def request_group_data_populator(reservation):
     # assumes the proposal/requestgroup is in the format from the observation portal API
     request_group = reservation.request_group
@@ -75,8 +75,8 @@ def request_group_data_populator(reservation):
     for request in requests:
         request_id = request.id
         # assumes the airmass is the same for all configurations in a request
-        # again this assumes that configurations is a list of dicts matching the API
         # if not we can maybe aggregate with min/max or avg
+        # again this assumes that configurations is a list of dicts matching the API
         configuration = request.configurations[0]
         max_airmass = configuration['constraints']['max_airmass']
         max_airmass_by_request_id[request_id] = max_airmass
@@ -121,4 +121,13 @@ def bin_scheduler_result_by_airmass(scheduler_result):
     # the airmasses are in a list which is kind of annoying
     scheduled_requests_by_airmass = {}
 
->>>>>>> 7ca823e05797f3a57dc0af67ba27d882dfc4f699
+
+def cap_scheduler_results_by_effective_horizon(scheduler_result, horizon_length):
+    # need to confirm the time format for scheduled_start before doing anything
+    # but basically this function truncates the scheduler results to only include things
+    # scheduled within a certain period of time and modifies the schedule accordingly
+    for reservations in scheduler_result.values():
+        for reservation in reservations:
+            if reservation.scheduled_start: # is after the horizon
+                reservations.remove(reservation)
+    return scheduler_result
