@@ -78,12 +78,17 @@ def send_to_opensearch(metrics):
 def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
+    # maybe we should just pass in the scheduler result instead and get the normal and rr requests somewhere else
+    
+    # For aggregating across all requests, but not sure if this is the best method
+    combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
+        normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
+    
     metrics = {
         'simulation_id': RUN_ID,
-        'total_scheduled_time': total_scheduled_time(normal_scheduled_requests_by_rg_id,
-                                                     rr_scheduled_requests_by_rg_id),
-        'total_scheduled_count': total_scheduled_count(normal_scheduled_requests_by_rg_id,
-                                                       rr_scheduled_requests_by_rg_id),
+        'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id)
+        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id)
+        'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id)
     }
     send_to_opensearch(metrics)
 
