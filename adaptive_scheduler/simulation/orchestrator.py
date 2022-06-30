@@ -27,6 +27,7 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
+from adaptive_scheduler.simulation.metrics import *
 
 log = logging.getLogger('adaptive_scheduler')
 
@@ -73,32 +74,6 @@ def send_to_opensearch(metrics):
     # Send the json metrics to the opensearch index
     pass
 
-
-def total_scheduled_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
-    # Sums the duration of all scheduled requests
-    # note, not sure if this is gonna be a timedelta or float object
-    all_scheduled_requests_by_rg_id = normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
-    total_scheduled_time = 0
-    for request_group in all_scheduled_requests_by_rg_id.values():
-        for request in request_group.values():
-            if request.scheduled:
-                total_time += request.duration
-
-    return total_scheduled_time
-
-def total_scheduled_count(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
-    # Totals the number of requests that ended up scheduled to get percentage of requests scheduled
-    # we probably need to get the total number of input requests to calculate percent util, not sure how yet
-    # if we know that they are all guaranteed to be scheduled in here we can just sum() the lengths with
-    # list comprehension across the dict values
-    all_scheduled_requests_by_rg_id = normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
-    total_scheduled_count = 0
-    for request_group in all_scheduled_requests_by_rg_id.values():
-        for request in request_group.values():
-            if request.scheduled:
-                total_scheduled_count += 1
-
-    return total_scheduled_count
     
 def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
