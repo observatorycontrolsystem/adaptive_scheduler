@@ -75,7 +75,7 @@ def send_to_opensearch(metrics):
     pass
 
     
-def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
+def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, scheduler_runner_scheduler, scheduler_runner_current_time):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
     metrics = {
@@ -84,6 +84,9 @@ def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_
                                                      rr_scheduled_requests_by_rg_id),
         'total_scheduled_count': total_scheduled_count(normal_scheduled_requests_by_rg_id,
                                                        rr_scheduled_requests_by_rg_id),
+        'total_available_time' : total_available_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, 
+                                                        scheduler_runner_scheduler, scheduler_runner_current_time),
+        
     }
     send_to_opensearch(metrics)
 
@@ -131,7 +134,9 @@ def main(argv=None):
         # These are used to seed a warm start solution for the next run in the normal scheduler, but can be used to generate metrics here
         rr_scheduled_requests_by_rg_id = scheduler_runner.rr_scheduled_requests_by_rg
         normal_scheduled_requests_by_rg_id = scheduler_runner.normal_scheduled_requests_by_rg
-        record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
+        scheduler_runner_scheduler = scheduler_runner.scheduler
+        scheduler_runner_current_time = scheduler_runner.sched_params.simulate_now
+        record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, scheduler_runner_scheduler, scheduler_runner_current_time)
 
         current_time += timedelta(minutes=TIME_STEP)
         increment_input(current_time, TIME_STEP)
