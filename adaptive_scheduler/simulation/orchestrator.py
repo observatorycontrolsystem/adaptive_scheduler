@@ -76,15 +76,30 @@ def send_to_opensearch(metrics):
 
 def total_scheduled_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
     # Sums the duration of all scheduled requests
+    # note, not sure if this is gonna be a timedelta or float object
     all_scheduled_requests_by_rg_id = normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
     total_scheduled_time = 0
     for request_group in all_scheduled_requests_by_rg_id.values():
         for request in request_group.values():
             if request.scheduled:
-                total_scheduled_time += request.duration
+                total_time += request.duration
 
     return total_scheduled_time
 
+def total_scheduled_count(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
+    # Totals the number of requests that ended up scheduled to get percentage of requests scheduled
+    # we probably need to get the total number of input requests to calculate percent util, not sure how yet
+    # if we know that they are all guaranteed to be scheduled in here we can just sum() the lengths with
+    # list comprehension across the dict values
+    all_scheduled_requests_by_rg_id = normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
+    total_scheduled_count = 0
+    for request_group in all_scheduled_requests_by_rg_id.values():
+        for request in request_group.values():
+            if request.scheduled:
+                total_scheduled_count += 1
+
+    return total_scheduled_count
+    
 def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
@@ -92,6 +107,8 @@ def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_
         'simulation_id': RUN_ID,
         'total_scheduled_time': total_scheduled_time(normal_scheduled_requests_by_rg_id,
                                                      rr_scheduled_requests_by_rg_id),
+        'total_scheduled_count': total_scheduled_count(normal_scheduled_requests_by_rg_id,
+                                                       rr_scheduled_requests_by_rg_id),
     }
     send_to_opensearch(metrics)
 
