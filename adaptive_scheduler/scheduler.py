@@ -626,11 +626,11 @@ class SchedulerRunner(object):
         self.sched_params = sched_params
         self.warm_starts_setting = sched_params.warm_starts
         self.scheduler = scheduler
+        self.normal_scheduler_result = None
+        self.rr_scheduler_result = None
         self.network_interface = network_interface
         self.network_model = network_model
         self.input_factory = input_factory
-        self.normal_scheduled_requests_by_rg = {}
-        self.rr_scheduled_requests_by_rg = {}
         self.log = logging.getLogger(__name__)
         # List of strings to be printed in final scheduling summary
         self.summary_events = []
@@ -828,6 +828,10 @@ class SchedulerRunner(object):
             self.log.warn("Empty scheduler result. Schedule will not be saved.")
             return False
 
+        if self.sched_params.simulate_now:
+            # Don't care about deadlines if you are simulating a time in the past
+            return True
+
         estimated_apply_timedelta = self.avg_save_time_per_reservation_timedelta * scheduler_result.count_reservations()
         estimated_apply_completion = datetime.utcnow() + estimated_apply_timedelta
         self.log.info(
@@ -973,7 +977,7 @@ class SchedulerRunner(object):
             rr_scheduler_result = self.call_scheduler(scheduler_input, deadline)
 
             try:
-                self.rr_scheduled_requests_by_rg = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
+                self.rr_scheduler_result = rr_scheduler_result
                 self.apply_rr_result(rr_scheduler_result, scheduler_input, deadline)
                 rr_scheduling_end = datetime.utcnow()
                 rr_scheduling_timedelta = rr_scheduling_end - rr_scheduling_start
@@ -1019,7 +1023,7 @@ class SchedulerRunner(object):
             resources_to_clear = list(self.network_model.keys())
             try:
                 before_apply = datetime.utcnow()
-                self.normal_scheduled_requests_by_rg = scheduler_result.get_scheduled_requests_by_request_group_id()
+                self.normal_scheduler_result = scheduler_result
                 n_submitted = self.apply_normal_result(scheduler_result,
                                                        scheduler_input,
                                                        resources_to_clear, deadline)
@@ -1068,14 +1072,14 @@ class SchedulerRunner(object):
         if schedule_type == NORMAL_OBSERVATION_TYPE:
             scheduler_input = self.input_factory.create_normal_scheduling_input(
                 self.estimated_normal_run_timedelta.total_seconds(),
-                scheduled_requests_by_rg=self.normal_scheduled_requests_by_rg,
+                scheduled_requests_by_rg=self.normal_scheduler_result.get_scheduled_requests_by_request_group_id() if self.normal_scheduler_result else {},
                 rr_schedule=rr_schedule_result.schedule,
                 network_state_timestamp=network_state_timestamp)
             result = self.create_normal_schedule(scheduler_input)
         elif schedule_type == RR_OBSERVATION_TYPE:
             scheduler_input = self.input_factory.create_rr_scheduling_input(
                 self.estimated_rr_run_timedelta.total_seconds(),
-                scheduled_requests_by_rg=self.rr_scheduled_requests_by_rg,
+                scheduled_requests_by_rg=self.rr_scheduler_result.get_scheduled_requests_by_request_group_id() if self.rr_scheduler_result else {},
                 network_state_timestamp=network_state_timestamp)
             result = self.create_rr_schedule(scheduler_input)
         return result

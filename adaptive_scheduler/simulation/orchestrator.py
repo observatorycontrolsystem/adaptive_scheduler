@@ -34,7 +34,7 @@ log = logging.getLogger('adaptive_scheduler')
 RUN_ID = os.getenv("SIMULATION_RUN_ID", "1")
 START_TIME = parse(os.getenv("SIMULATION_START_TIME", "2022-06-23"))
 END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-07-07"))
-TIME_STEP = os.getenv("SIMULATION_TIME_STEP_MINUTES", "60")
+TIME_STEP = float(os.getenv("SIMULATION_TIME_STEP_MINUTES", "60"))
 
 
 def setup_logging():
@@ -57,6 +57,7 @@ def setup_input(current_time):
     # backwards until the time is reached. For the observation portal, it involves pulling over all requests
     # created and PENDING at a certain point in time for the semester, which should be doable by looking at the created
     # and modified timestamps and state. 
+    log.info(f"Placeholder for setting up input for time {current_time.isoformat}")
     pass
 
 def increment_input(current_time, time_step):
@@ -67,6 +68,7 @@ def increment_input(current_time, time_step):
     # down newer requests as well as cleaning up the state of old ones between time steps (completing/expiring as appropriate).
     # This also means that we should complete and fail the right percentages of observations that should have ended within the last
     # time_step, and set ones that are in progress to ATTEMPTED state.
+    log.info(f"Placeholder for incrementing input by {time_step} to time {current_time.isoformat}")
     pass
 
 def send_to_opensearch(metrics):
@@ -74,9 +76,9 @@ def send_to_opensearch(metrics):
     pass
 
 
-def record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id):
+def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
-
+    log.info("Recording metrics for scheduler simulation run")
     metrics = {
         'simulation_id': RUN_ID,
         'metric1': 'value'
@@ -91,7 +93,7 @@ def main(argv=None):
     # Set up and configure an application scope logger
     setup_logging()
 
-    log.info(f"Starting Scheduler Simulator with id {RUN_ID}")
+    log.info(f"Starting Scheduler Simulator with id {RUN_ID} and time range {START_TIME.isoformat()} to {END_TIME.isoformat()}")
 
     # All this setup is the same as the normal scheduling run - things will be setup based on the
     # scheduler environment variables set.
@@ -117,7 +119,8 @@ def main(argv=None):
     # Setup the input from configdb and observation portal using the current time
     setup_input(current_time)
     while current_time <= END_TIME:
-        sched_params.simulate_now = current_time.isoformat()
+        log.info(f"Simulating with current time {current_time.isoformat()}")
+        sched_params.simulate_now = f"{current_time.isoformat()}Z"
 
         # Scheduler run is invoked in the normal way, but it will just run a single time
         scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model, input_factory)
@@ -125,12 +128,16 @@ def main(argv=None):
 
         # Output scheduled requests are available within the runner after it completes a run
         # These are used to seed a warm start solution for the next run in the normal scheduler, but can be used to generate metrics here
-        rr_scheduled_requests_by_rg_id = scheduler_runner.rr_scheduled_requests_by_rg
-        normal_scheduled_requests_by_rg_id = scheduler_runner.normal_scheduled_requests_by_rg
-        record_metrics(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
+        record_metrics(
+            sched_params,
+            scheduler_runner.normal_scheduler_result,
+            scheduler_runner.rr_scheduler_result
+        )
 
         current_time += timedelta(minutes=TIME_STEP)
         increment_input(current_time, TIME_STEP)
+
+    log.info(f"Finished running simulation {RUN_ID}, exiting")
 
 
 if __name__ == '__main__':

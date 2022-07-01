@@ -44,3 +44,4 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 adaptive-scheduler = 'adaptive_scheduler.cli:main'
+simulation-orchestrator = 'adaptive_scheduler.simulation.orchestrator:main'
