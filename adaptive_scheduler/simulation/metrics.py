@@ -1,9 +1,12 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
-
+import numpy as np
+import datetime as dt
+from datetime import datetime
 from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
+
 
 
 def combine_normal_and_rr_requests_by_rg_id(normal_scheduled_requests_by_rg_id,
@@ -35,7 +38,7 @@ def total_scheduled_count(combined_scheduled_requests_by_rg_id):
 
 
 def total_available_time(combined_scheduled_requests_by_rg_id, 
-                        scheduler_runner_scheduler, scheduler_runner_current_time):
+                        scheduler_runner_scheduler, scheduler_runner_current_time, horizon_days):
     total_available_time = 0
     resources_scheduled = combined_scheduled_requests_by_rg_id.keys()
     for resource in resources_scheduled:
@@ -43,11 +46,10 @@ def total_available_time(combined_scheduled_requests_by_rg_id,
         if resource in scheduler_runner_scheduler.visibility_casche:
             dark_intervals = scheduler_runner_scheduler.visibility_cache[resource]
             available_time = time_in_capped_intervals(dark_intervals, scheduler_runner_current_time,
-                scheduler_runner_scheduler.scheduling_horizon(scheduler_runner_current_time))
+                scheduler_runner_current_time + dt.timedelta(days=horizon_days))
         total_available_time += available_time
     return total_available_time
-        
-        
+          
 
 def total_unscheduled_count(combined_scheduled_requests_by_rg_id):
     total_unscheduled_count = 0
@@ -131,3 +133,29 @@ def cap_scheduler_results_by_effective_horizon(scheduler_result, horizon_length)
             if reservation.scheduled_start: # is after the horizon
                 reservations.remove(reservation)
     return scheduler_result
+
+
+def calculate_best_airmass_vs_scheduled(scheduler_result):
+    """Calculate the percent difference between the best possible airmass vs the average airmass 
+    for each scheduled reservation.
+    """
+    best_airmass_vs_scheduled = []
+    best_case = 1
+    for reservation in scheduler_result.values():
+        airmasses = np.mean(request_group_data_populator(reservation)["airmasses"])
+        best_airmass_vs_scheduled.append((best_case - airmasses)/best_case *100)
+
+    return best_airmass_vs_scheduled
+
+
+def calculate_max_contraints_vs_scheduled(scheduler_result):
+    """Calculate the percent difference between the airmass max constraints vs the average airmass 
+    for each scheduled reservation.
+    """
+    airmass_constraints_vs_scheduled = []
+    best_case = 1
+    for reservation in scheduler_result.values():
+        airmasses = np.mean(request_group_data_populator(reservation)["max_airmass_by_request"])
+        airmass_constraints_vs_scheduled.append((best_case - airmasses)/best_case *100)
+
+    return airmass_constraints_vs_scheduled
