@@ -27,6 +27,7 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
+from adaptive_scheduler.simulation.metrics import *
 
 log = logging.getLogger('adaptive_scheduler')
 
@@ -79,9 +80,26 @@ def send_to_opensearch(metrics):
 def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result):
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
     log.info("Recording metrics for scheduler simulation run")
+    
+def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, scheduler_runner_scheduler):
+    normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
+    rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
+
+    # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
+
+    # maybe we should just pass in the scheduler result instead and get the normal and rr requests somewhere else
+    
+    # For aggregating across all requests, but not sure if this is the best method
+    combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
+        normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
+    
     metrics = {
         'simulation_id': RUN_ID,
-        'metric1': 'value'
+        'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
+        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
+        'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
+        'total_available_time' : total_available_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, 
+                                                        scheduler_runner_scheduler, sched_params.simulate_now),
     }
     send_to_opensearch(metrics)
 
@@ -131,7 +149,8 @@ def main(argv=None):
         record_metrics(
             sched_params,
             scheduler_runner.normal_scheduler_result,
-            scheduler_runner.rr_scheduler_result
+            scheduler_runner.rr_scheduler_result,
+            scheduler_runner.scheduler
         )
 
         current_time += timedelta(minutes=TIME_STEP)
