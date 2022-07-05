@@ -84,6 +84,7 @@ def combine_schedules(normal_schedule, rr_schedule):
     for resource, reservations in rr_schedule.items():
         for reservation in reservations:
             combined_schedule[resource].append(reservation)
+            
     return combined_schedule
 
 

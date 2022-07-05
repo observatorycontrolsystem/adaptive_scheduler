@@ -179,26 +179,32 @@ def bin_scheduler_result_by_airmass_constr(schedule):
             pass
 
 
-def calculate_best_airmass_vs_scheduled(scheduler_result):
+def calculate_best_airmass_vs_scheduled(normal_scheduler_result, rr_scheduler_result):
     """Calculate the percent difference between the best possible airmass vs the average airmass 
     for each scheduled reservation.
     """
+    normal_resources = normal_scheduler_result.resources_scheduled()
+    rr_resources = rr_scheduler_result.resources_scheduled()
+    scheduled_resources = list(set(normal_resources + rr_resources))
     best_airmass_vs_scheduled = []
     best_case = 1
-    for reservation in scheduler_result.values():
+    for reservation in scheduled_resources.values():
         airmasses = np.mean(request_group_data_populator(reservation)["airmasses"])
         best_airmass_vs_scheduled.append((best_case - airmasses)/best_case *100)
 
     return best_airmass_vs_scheduled
 
 
-def calculate_max_contraints_vs_scheduled(scheduler_result):
+def calculate_max_contraints_vs_scheduled(normal_scheduler_result, rr_scheduler_result):
     """Calculate the percent difference between the airmass max constraints vs the average airmass 
     for each scheduled reservation.
     """
+    normal_resources = normal_scheduler_result.resources_scheduled()
+    rr_resources = rr_scheduler_result.resources_scheduled()
+    scheduled_resources = list(set(normal_resources + rr_resources))
     airmass_constraints_vs_scheduled = []
     best_case = 1
-    for reservation in scheduler_result.values():
+    for reservation in scheduled_resources.values():
         airmasses = np.mean(request_group_data_populator(reservation)["max_airmass_by_request"])
         airmass_constraints_vs_scheduled.append((best_case - airmasses)/best_case *100)
 
