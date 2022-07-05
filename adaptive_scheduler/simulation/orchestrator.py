@@ -110,7 +110,7 @@ def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, s
         'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
         'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
                                                       scheduler, sched_params.metric_effective_horizon),
-        'effective_priority_bins': bin_scheduler_result_by_effective_priority(combined_schedule),
+        'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
         'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
     }
     send_to_opensearch(metrics)
