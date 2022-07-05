@@ -74,17 +74,25 @@ def increment_input(current_time, time_step):
 
 def send_to_opensearch(metrics):
     # Send the json metrics to the opensearch index
+    log.info(metrics) # send to output for now
     pass
 
 
-def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result):
-    # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
+def combine_schedules(normal_schedule, rr_schedule):
+    # For aggregating across all scheduled items
+    combined_schedule = normal_schedule.copy()
+    for resource, reservations in rr_schedule.items():
+        for reservation in reservations:
+            combined_schedule[resource].append(reservation)
+    return combined_schedule
+
+
+def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, scheduler):
     log.info("Recording metrics for scheduler simulation run")
-    
-def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, scheduler_runner_scheduler):
+
     normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
     rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
-
+    
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
     # maybe we should just pass in the scheduler result instead and get the normal and rr requests somewhere else
@@ -92,14 +100,18 @@ def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, s
     # For aggregating across all requests, but not sure if this is the best method
     combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
         normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
-    
+
+    combined_schedule = combine_schedules(normal_scheduler_result.schedule, rr_scheduler_result.schedule)
+
     metrics = {
         'simulation_id': RUN_ID,
         'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
         'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
         'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
-        'total_available_time' : total_available_time(normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id, 
-                                                        scheduler_runner_scheduler, sched_params.simulate_now),
+        'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
+                                                      scheduler, sched_params.metric_effective_horizon),
+        'effective_priority_bins': bin_scheduler_result_by_effective_priority(combined_schedule),
+        'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
     }
     send_to_opensearch(metrics)
 
@@ -146,6 +158,8 @@ def main(argv=None):
 
         # Output scheduled requests are available within the runner after it completes a run
         # These are used to seed a warm start solution for the next run in the normal scheduler, but can be used to generate metrics here
+        sched_params.metric_effective_horizon = 5 # days
+        
         record_metrics(
             sched_params,
             scheduler_runner.normal_scheduler_result,

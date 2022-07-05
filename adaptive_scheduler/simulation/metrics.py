@@ -1,19 +1,21 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
+import logging
 import numpy as np
 import datetime as dt
 from datetime import datetime
 from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
 
+log = logging.getLogger('adaptive_scheduler')
 
 
 def combine_normal_and_rr_requests_by_rg_id(normal_scheduled_requests_by_rg_id,
                                             rr_scheduled_requests_by_rg_id):
     # this assumes that a request unique to either normal or rr and cannot be in both
     # otherwise, write a check that excludes duplicates
-    return normal_scheduled_requests_by_rg_id.update(rr_scheduled_requests_by_rg_id)
+    return normal_scheduled_requests_by_rg_id | rr_scheduled_requests_by_rg_id
 
 
 def total_scheduled_time(combined_scheduled_requests_by_rg_id):
@@ -24,46 +26,47 @@ def total_scheduled_time(combined_scheduled_requests_by_rg_id):
     for request_group in combined_scheduled_requests_by_rg_id.values():
         for request in request_group.values():
             if request.scheduled:
-                total_time += request.duration
+                total_scheduled_time += request.duration
     return total_scheduled_time
 
 
 def total_scheduled_count(combined_scheduled_requests_by_rg_id):
-    total_scheduled_count = 0
+    counter = 0
     for request_group in combined_scheduled_requests_by_rg_id.values():
         for request in request_group.values():
             if request.scheduled:
-                total_scheduled_count += 1
-    return total_scheduled_count
+                counter += 1
+    return counter
 
 
-def total_available_time(combined_scheduled_requests_by_rg_id, 
-                        scheduler_runner_scheduler, scheduler_runner_current_time, horizon_days):
+def total_available_time(normal_scheduler_result, rr_scheduler_result, scheduler, horizon_days):
     total_available_time = 0
-    resources_scheduled = combined_scheduled_requests_by_rg_id.keys()
-    for resource in resources_scheduled:
-        available_time  = 0
-        if resource in scheduler_runner_scheduler.visibility_casche:
-            dark_intervals = scheduler_runner_scheduler.visibility_cache[resource]
-            available_time = time_in_capped_intervals(dark_intervals, scheduler_runner_current_time,
-                scheduler_runner_current_time + dt.timedelta(days=horizon_days))
+    normal_resources = normal_scheduler_result.resources_scheduled()
+    rr_resources = rr_scheduler_result.resources_scheduled()
+    scheduled_resources = list(set(normal_resources + rr_resources))
+    start_time = scheduler.estimated_scheduler_end
+    end_time = start_time + dt.timedelta(days=horizon_days)
+    for resource in scheduled_resources:
+        if resource in scheduler.visibility_cache:
+            dark_intervals = scheduler.visibility_cache[resource].dark_intervals
+            available_time = time_in_capped_intervals(dark_intervals, start_time, end_time)
         total_available_time += available_time
     return total_available_time
           
 
 def total_unscheduled_count(combined_scheduled_requests_by_rg_id):
-    total_unscheduled_count = 0
+    counter = 0
     for request_group in combined_scheduled_requests_by_rg_id.values():
         for request in request_group.values():
             if request.scheduled:
-                total_unscheduled_count += 1
-    return total_scheduled_count
+                counter += 1
+    return counter
 
 
 def percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id):
-    scheduled = total_scheduled_count(combined_scheduled_requests_by_rg_id)
-    unscheduled = total_unscheduled_count(combined_scheduled_requests_by_rg_id)
-    return scheduled/(scheduled + unscheduled) * 100
+    scheduled_count = total_scheduled_count(combined_scheduled_requests_by_rg_id)
+    unscheduled_count = total_unscheduled_count(combined_scheduled_requests_by_rg_id)
+    return scheduled_count/(scheduled_count + unscheduled_count) * 100
 
 
 
@@ -80,7 +83,7 @@ def request_group_data_populator(reservation):
         # if not we can maybe aggregate with min/max or avg
         # again this assumes that configurations is a list of dicts matching the API
         configuration = request.configurations[0]
-        max_airmass = configuration['constraints']['max_airmass']
+        max_airmass = configuration.constraints['max_airmass']
         max_airmass_by_request_id[request_id] = max_airmass
         
     data = DataContainer(
@@ -105,17 +108,30 @@ def populate_binned_data_dict_with_rg_data(data_dict, key, reservation):
     data_dict[key][request_group_id] = request_group_data
 
 
-def bin_scheduler_result_by_effective_priority(scheduler_result):
+def bin_scheduler_result_by_effective_priority(schedule):
     # this is somewhat structured differently to normal_scheduled_requests_by_rg_id
     # but we can change it to make it consistent if necessary
     scheduled_requests_by_priority = {}
-    for reservations in scheduler_result.values():
+    for reservations in schedule.values():
         for reservation in reservations:
             priority = str(reservation.priority)
             populate_binned_data_dict_with_rg_data(scheduled_requests_by_priority,
                                                    priority,
                                                    reservation)
     return scheduled_requests_by_priority
+
+
+def bin_scheduler_result_by_tac_priority(schedule):
+    scheduled_requests_by_tac_priority = {}
+    for reservations in schedule.values():
+        for reservation in reservations:
+            proposal = reservation.request_group.proposal
+            tac_priority = str(proposal.tac_priority)
+            populate_binned_data_dict_with_rg_data(scheduled_requests_by_tac_priority,
+                                                   tac_priority,
+                                                   reservation)
+    return scheduled_requests_by_tac_priority
+                
 
 
 def bin_scheduler_result_by_airmass(scheduler_result):
