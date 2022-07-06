@@ -88,9 +88,12 @@ def combine_schedules(normal_schedule, rr_schedule):
     return combined_schedule
 
 
-def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, scheduler):
+def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
     log.info("Recording metrics for scheduler simulation run")
 
+    sched_params = scheduler_runner.sched_params
+    observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
+    
     normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
     rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
     
@@ -113,6 +116,7 @@ def record_metrics(sched_params, normal_scheduler_result, rr_scheduler_result, s
                                                       scheduler, sched_params.metric_effective_horizon),
         'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
         'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
+        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule)
     }
     send_to_opensearch(metrics)
 
@@ -138,6 +142,7 @@ def main(argv=None):
                                          configdb_interface)
     kernel_class = FullScheduler_ortoolkit
     network_model = configdb_interface.get_telescope_info()
+    
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_rr_input=True)
     input_factory = SchedulingInputFactory(input_provider)
@@ -162,10 +167,10 @@ def main(argv=None):
         sched_params.metric_effective_horizon = 5 # days
         
         record_metrics(
-            sched_params,
             scheduler_runner.normal_scheduler_result,
             scheduler_runner.rr_scheduler_result,
-            scheduler_runner.scheduler
+            scheduler_runner.scheduler,
+            scheduler_runner,
         )
 
         current_time += timedelta(minutes=TIME_STEP)
