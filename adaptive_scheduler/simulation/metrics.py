@@ -10,13 +10,71 @@ import numpy as np
 from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
+from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch, merge_dicts
 from adaptive_scheduler.models import DataContainer
 from rise_set.astrometry import calculate_airmass_at_times
 
-log = logging.getLogger('adaptive_scheduler')
+
+def percent_diff(x, y):
+    """Returns the percent difference between x and y as a float."""
+    if x == y == 0:
+        return 0
+    mean = (abs(x)+abs(y))/2
+    return abs(x-y)/mean*100.
 
 
+class SimulatorMetrics():
+    """A class encapsulating the metric calculating functions for the scheduler simulator.
+
+    Args:
+        normal_scheduler_result (SchedulerResult): The normal schedule output of the scheduler.
+            The attribute of interest is SchedulerResult.schedule, which is a dictionary formatted
+            as follows:
+                {scheduled_resource, [reservations]}
+        rr_scheduler_result (SchedulerResult): The rapid-response schedule output of the scheduler.
+        scheduler (LCOGTNetworkScheduler): The instance of the scheduler used by the 1.900367548884168, 1.3311255510156763, 1.900367548884168, 1.2612518764062148, 1.2612518764062148, 1.2612518764062148simulator.
+        scheduler_runner (SchedulerRunner): The instance of the scheduler runner used by the simulator.
+    """
+    def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
+        self.normal_scheduler_result = normal_scheduler_result
+        self.rr_scheduler_result = rr_scheduler_result
+        self.scheduler = scheduler
+        self.scheduler_runner = scheduler_runner
+
+        self.normal_schedule = self.normal_scheduler_result.schedule
+        self.rr_schedule = self.rr_scheduler_result.schedule
+        self.combined_schedule = self.combine_normal_rr_schedules()
+
+    def combine_normal_rr_schedules(self):
+        self.combined_schedule = self.normal_schedule.copy()
+        for resource, reservations in self.rr_schedule.items():
+            for reservation in reservations:
+                self.combined_schedule[resource].append(reservation)
+
+    def total_scheduled_count(self, schedule):
+        counter = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                if reservation.scheduled:
+                    counter += 1
+        return counter
+
+    def total_unscheduled_count(self, schedule):
+        counter = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                if not reservation.scheduled:
+                    counter += 1
+        return counter
+
+    def total_scheduled_seconds(self, schedule):
+        total_scheduled_seconds = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                total_scheduled_seconds += reservation.duration
+        return total_scheduled_seconds
+        
+        
 def combine_normal_and_rr_requests_by_rg_id(normal_scheduled_requests_by_rg_id,
                                             rr_scheduled_requests_by_rg_id):
     """Combines normal and scheduled request results for aggregation.
@@ -37,23 +95,6 @@ def combine_normal_and_rr_requests_by_rg_id(normal_scheduled_requests_by_rg_id,
     return normal_scheduled_requests_by_rg_id | rr_scheduled_requests_by_rg_id
 
 
-def total_scheduled_time(scheduled_requests_by_rg_id):
-    """Aggregates the total scheduled time.
-
-    Args:
-        scheduled_requests_by_rg_id (dict): SchedulerResult.get_scheduled_requests_by_request_group_id() format.
-
-    Returns:
-        total_scheduled_time (int): The total scheduled time in seconds.
-    """
-    total_scheduled_time = 0
-    for request_group in scheduled_requests_by_rg_id.values():
-        for request in request_group.values():
-            if request.scheduled:
-                total_scheduled_time += request.duration
-    return total_scheduled_time
-
-
 def total_scheduled_count(scheduled_requests_by_rg_id):
     """Counts the number of scheduled requests."""
     counter = 0
@@ -72,13 +113,6 @@ def total_unscheduled_count(scheduled_requests_by_rg_id):
             if not request.scheduled:
                 counter += 1
     return counter
-
-
-def percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id):
-    """Simple percentage scheduled calculation."""
-    scheduled_count = total_scheduled_count(combined_scheduled_requests_by_rg_id)
-    unscheduled_count = total_unscheduled_count(combined_scheduled_requests_by_rg_id)
-    return scheduled_count/(scheduled_count + unscheduled_count) * 100
 
 
 def total_available_time(normal_scheduler_result, rr_scheduler_result, scheduler, horizon_days):
@@ -149,7 +183,7 @@ def fill_bin_with_reservation_data(data_dict, bin_name, reservation):
         data_dict[bin_name] = []
     reservation_data = reservation_data_populator(reservation)
     data_dict[bin_name].append(reservation_data)
-    
+
 
 def bin_scheduler_result_by_eff_priority(schedule):
     scheduled_requests_by_eff_priority = {}
@@ -265,7 +299,6 @@ def get_midpoint_airmasses_from_request(observation_portal_interface, request_id
 
 
 def get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start):
-    # semester_start = schedule.semester_details['start']
     midpoint_airmass_for_each_reservation = []
     for reservations in schedule.values():
         for reservation in reservations:
@@ -281,9 +314,3 @@ def get_midpoint_airmass_for_each_reservation(observation_portal_interface, sche
                     midpoint_airmass = midpoint_airmasses[site]
                 midpoint_airmass_for_each_reservation.append(midpoint_airmass)
     return midpoint_airmass_for_each_reservation
-
-
-
-def percent_difference(x, y):
-    """Calculate the percent difference between two values."""
-    return abs(x-y)/(x+y)*100
