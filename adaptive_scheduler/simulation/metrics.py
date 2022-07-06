@@ -3,14 +3,24 @@ Metric calculation functions for the scheduler simulator.
 """
 import requests
 import logging
+<<<<<<< HEAD
+from turtle import st
+import numpy as np
+import datetime as dt
+from datetime import datetime
+
+import requests
+=======
 import datetime as dt
 from datetime import datetime
 
 import numpy as np
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
+>>>>>>> 926da493af170417db73ae26ac4beb0aa53ad8c5
 from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
+from rise_set.astrometry import calculate_airmass_at_times
 
 log = logging.getLogger('adaptive_scheduler')
 
@@ -147,10 +157,7 @@ def fill_bin_with_reservation_data(data_dict, bin_name, reservation):
         data_dict[bin_name] = []
     reservation_data = reservation_data_populator(reservation)
     data_dict[bin_name].append(reservation_data)
-
-
-def bin_scheduler_result_by_eff_priority(schedule):
-    scheduled_requests_by_eff_priority = {}
+"location":
     for reservations in schedule.values():
         for reservation in reservations:
             eff_priority = str(reservation.priority)
@@ -206,14 +213,7 @@ def get_ideal_airmass_for_request(observation_portal_interface, request_id):
     
 
 def avg_ideal_airmass(observation_portal_interface, schedule):
-    """Calculates the average ideal airmass for scheduled observations.
-
-    Args:
-        schedule (dict): Formatted like {resource: reservations}.
-
-    Returns:
-        avg_ideal_airmass (float): The average ideal airmass.
-    """
+    """Calculates the average ideal airmass for scheduled observations."""
     sum_ideal_airmass = 0
     count = 0
     for reservations in schedule.values():
@@ -226,6 +226,50 @@ def avg_ideal_airmass(observation_portal_interface, schedule):
                     count += 1
     return sum_ideal_airmass / count
 
+
+def calculate_midpoint_airmass(scheduled_requests_by_rg_id):
+    # midpoint_airmass = 1.5
+    midpoint_airmass_each_request = {}
+    for request_group in scheduled_requests_by_rg_id.values():
+        for request in request_group.values():
+            if request.scheduled:
+                start_time = request.start()
+                end_time = request.end()
+                midpoint_time = [start_time + (end_time - start_time)/2]
+                target = request.get_target()
+                observation_sites = request.get_site()
+                midpoint_airmass_each_request[request] = {}
+                for site in observation_sites:
+                    obs_latitude =  site['latitdue']
+                    obs_longitude =  site['longitude']
+                    obs_height = site['elevation']
+                    midpoint_airmass = calculate_airmass_at_times(midpoint_time, target, obs_latitude, obs_longitude, obs_height)
+                    midpoint_airmass_each_request[request][site] = midpoint_airmass
+    return midpoint_airmass_each_request
+    
+    
+def get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start_time, end_time):
+    midpoint_airmasses = {}
+    midpoint_time = [start_time + (end_time - start_time)/2]
+    airmass_data = get_airmass_data_from_observation_portal(
+        observation_portal_interface, request_id)['airmass_data']
+    for site in airmass_data:
+        for times, airmasses in site.items():
+            target_time = times[0]
+            index = 0
+            time_diff = dt.timedelta(midpoint_time -times[0])
+            for i in range(len(times)):
+                temp_time_diff = dt.timedelta(midpoint_time - times[i])
+                if temp_time_diff < time_diff:
+                    time_diff = temp_time_diff
+                    index = i 
+            midpoint_airmass = airmasses[index]
+        midpoint_airmasses[site.key()] = midpoint_airmass
+    return midpoint_airmasses
+
+
+def get_midpoint_airmass_for_scheduler(observvation_portal_interface, scheduler):
+    
 
 def percent_difference(x, y):
     """Calculate the percent difference between two values."""
