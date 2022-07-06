@@ -1,10 +1,14 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
+import requests
 import logging
-import numpy as np
 import datetime as dt
 from datetime import datetime
+
+import numpy as np
+
+from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
 
@@ -113,7 +117,6 @@ def reservation_data_populator(reservation):
     request_group = reservation.request_group
     proposal = request_group.proposal
     requests = request_group.requests
-    # it may be helpful to directly set max_airmass as an attribute of a request itself
     request_id_configurations = {request.id: request.configurations
                                  for request in requests}
         
@@ -169,37 +172,61 @@ def bin_scheduler_result_by_tac_priority(schedule):
     return scheduled_requests_by_tac_priority
                 
 
+def get_airmass_data_from_observation_portal(observation_portal_interface, request_id):
+    """Pulls airmass data from the Observation Portal.
 
-def bin_scheduler_result_by_airmass_constr(schedule):
-    # TODO
-    # the airmasses are in a list which is kind of annoying
-    scheduled_requests_by_airmass_constr = {}
+    Args:
+        observation_portal_interface (ObservationPortalInterface): Instance of the Observation Portal
+            used by the scheduler.
+        request_id (str): The request id.
+
+    Returns:
+        airmass_data (dict): The airmass data returned from the API.
+    """
+    airmass_url = f'{observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass'
+    try:
+        response = requests.get(airmass_url, headers=observation_portal_interface.headers, timeout=180)
+        response.raise_for_status()
+        airmass_data = response.json()
+    except (RequestException, ValueError, Timeout) as e:
+        raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
+
+    return airmass_data
+
+
+def get_ideal_airmass_for_request(observation_portal_interface, request_id):
+    """Finds the minimum airmass across all sites for the request."""
+    ideal_airmass = 1000
+    airmass_data = get_airmass_data_from_observation_portal(
+        observation_portal_interface, request_id)
+    for site in airmass_data['airmass_data'].values():
+        ideal_for_site = min(site['airmasses'])
+        ideal_airmass = min(ideal_airmass, ideal_for_site)
+    return ideal_airmass
+    
+
+def avg_ideal_airmass(observation_portal_interface, schedule):
+    """Calculates the average ideal airmass for scheduled observations.
+
+    Args:
+        schedule (dict): Formatted like {resource: reservations}.
+
+    Returns:
+        avg_ideal_airmass (float): The average ideal airmass.
+    """
+    sum_ideal_airmass = 0
+    count = 0
     for reservations in schedule.values():
         for reservation in reservations:
-            pass
+            if reservation.scheduled:
+                for request in reservation.request_group.requests:
+                    request_id = request.id
+                    sum_ideal_airmass += get_ideal_airmass_for_request(
+                        observation_portal_interface, request_id)
+                    count += 1
+    return sum_ideal_airmass / count
 
 
-def calculate_best_airmass_vs_scheduled(scheduler_result):
-    """Calculate the percent difference between the best possible airmass vs the average airmass 
-    for each scheduled reservation.
-    """
-    best_airmass_vs_scheduled = []
-    best_case = 1
-    for reservation in scheduler_result.values():
-        airmasses = np.mean(request_group_data_populator(reservation)["airmasses"])
-        best_airmass_vs_scheduled.append((best_case - airmasses)/best_case *100)
-
-    return best_airmass_vs_scheduled
-
-
-def calculate_max_contraints_vs_scheduled(scheduler_result):
-    """Calculate the percent difference between the airmass max constraints vs the average airmass 
-    for each scheduled reservation.
-    """
-    airmass_constraints_vs_scheduled = []
-    best_case = 1
-    for reservation in scheduler_result.values():
-        airmasses = np.mean(request_group_data_populator(reservation)["max_airmass_by_request"])
-        airmass_constraints_vs_scheduled.append((best_case - airmasses)/best_case *100)
-
-    return airmass_constraints_vs_scheduled
+def percent_difference(x, y):
+    """Calculate the percent difference between two values."""
+    return abs(x-y)/(x+y)*100
