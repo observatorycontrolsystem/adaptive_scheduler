@@ -116,7 +116,9 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
                                                       scheduler, sched_params.metric_effective_horizon),
         'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
         'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
-        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule)
+        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule),
+        'midpoint_airmasses': get_midpoint_airmass_for_each_reservation(observation_portal_interface, 
+                                                                        combined_schedule, scheduler_runner.semester_details['start'])
     }
     send_to_opensearch(metrics)
 
@@ -161,7 +163,6 @@ def main(argv=None):
         # Scheduler run is invoked in the normal way, but it will just run a single time
         scheduler_runner = SchedulerRunner(sched_params, scheduler, network_interface, network_model, input_factory)
         scheduler_runner.run()
-
         # Output scheduled requests are available within the runner after it completes a run
         # These are used to seed a warm start solution for the next run in the normal scheduler, but can be used to generate metrics here
         sched_params.metric_effective_horizon = 5 # days

@@ -10,7 +10,7 @@ import numpy as np
 from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import time_in_capped_intervals
+from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import DataContainer
 from rise_set.astrometry import calculate_airmass_at_times
 
@@ -247,37 +247,37 @@ def calculate_midpoint_airmass(scheduled_requests_by_rg_id):
     
 def get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start_time, end_time):
     midpoint_airmasses = {}
-    midpoint_time = [start_time + (end_time - start_time)/2]
+    midpoint_time = start_time + (end_time - start_time)/2
     airmass_data = get_airmass_data_from_observation_portal(
         observation_portal_interface, request_id)['airmass_data']
-    for site in airmass_data:
-        for times, airmasses in site.items():
-            target_time = times[0]
-            index = 0
-            time_diff = dt.timedelta(midpoint_time -times[0])
-            for i in range(len(times)):
-                temp_time_diff = dt.timedelta(midpoint_time - times[i])
-                if temp_time_diff < time_diff:
-                    time_diff = temp_time_diff
-                    index = i 
-            midpoint_airmass = airmasses[index]
-        midpoint_airmasses[site.key()] = midpoint_airmass
+    for site, details in airmass_data.items():
+        times, airmasses = list(details.values())[0], list(details.values())[1]
+        index = 0
+        time_diff = midpoint_time -datetime.strptime(times[0],'%Y-%m-%dT%H:%M')
+        for i in range(len(times)):
+            temp_time_diff = midpoint_time - datetime.strptime(times[i],'%Y-%m-%dT%H:%M')
+            if temp_time_diff < time_diff:
+                time_diff = temp_time_diff
+                index = i 
+        midpoint_airmass = airmasses[index]
+        midpoint_airmasses[site] = midpoint_airmass
     return midpoint_airmasses
 
 
-def get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule):
+def get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start):
+    # semester_start = schedule.semester_details['start']
     midpoint_airmass_for_each_reservation = []
     for reservations in schedule.values():
         for reservation in reservations:
             if reservation.scheduled:
                 for request in reservation.request_group.requests:
-                    request_id = request
-                    start_time = reservation.scheduled_start
-                    end_time = reservation.scheduled_start + reservation.duration
+                    request_id = request.id
+                    start_time = normalised_epoch_to_datetime(reservation.scheduled_start, datetime_to_epoch(semester_start))
+                    end_time = start_time + dt.timedelta(seconds = reservation.duration)
                     midpoint_airmasses = get_midpoint_airmasses_from_request(
                                         observation_portal_interface, request_id,
                                         start_time, end_time)
-                    site = reservation.scheduled_resource
+                    site = reservation.scheduled_resource[-3:]
                     midpoint_airmass = midpoint_airmasses[site]
                 midpoint_airmass_for_each_reservation.append(midpoint_airmass)
     return midpoint_airmass_for_each_reservation
