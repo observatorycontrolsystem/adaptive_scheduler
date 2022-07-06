@@ -314,3 +314,20 @@ def get_midpoint_airmass_for_each_reservation(observation_portal_interface, sche
                     midpoint_airmass = midpoint_airmasses[site]
                 midpoint_airmass_for_each_reservation.append(midpoint_airmass)
     return midpoint_airmass_for_each_reservation
+
+
+def midpoint_airmass_vs_priority(observation_portal_interface, schedule, semester_start):
+    midpoint_airmass_vs_priority={}
+    midpoint_airmass_for_each_reservation = get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start)
+    eff_priorities = []
+    for reservations in schedule.values():
+        for reservation in reservations:
+            if reservation.scheduled:
+                eff_priority = reservation.priority
+                eff_priorities.append(eff_priority)
+    midpoint_airmass_vs_priority['midpoint_airmass']= midpoint_airmass_for_each_reservation
+    midpoint_airmass_vs_priority['eff_priorities'] = eff_priorities
+    return midpoint_airmass_vs_priority
+
+    
+    
