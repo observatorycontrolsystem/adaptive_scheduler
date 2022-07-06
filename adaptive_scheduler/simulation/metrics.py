@@ -265,13 +265,23 @@ def get_midpoint_airmasses_from_request(observation_portal_interface, request_id
     return midpoint_airmasses
 
 
-def get_midpoint_airmass_for_scheduler(observation_portal_interface, schedule):
+def get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule):
+    midpoint_airmass_for_each_reservation = []
     for reservations in schedule.values():
         for reservation in reservations:
             if reservation.scheduled:
                 for request in reservation.request_group.requests:
-                    request_id = request.id
-                    start_time = request.
+                    request_id = request
+                    start_time = reservation.scheduled_start
+                    end_time = reservation.scheduled_start + reservation.duration
+                    midpoint_airmasses = get_midpoint_airmasses_from_request(
+                                        observation_portal_interface, request_id,
+                                        start_time, end_time)
+                    site = reservation.scheduled_resource
+                    midpoint_airmass = midpoint_airmasses[site]
+                midpoint_airmass_for_each_reservation.append(midpoint_airmass)
+    return midpoint_airmass_for_each_reservation
+
 
 
 def percent_difference(x, y):
