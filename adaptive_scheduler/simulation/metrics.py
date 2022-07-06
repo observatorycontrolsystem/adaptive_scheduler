@@ -1,23 +1,15 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
-import requests
 import logging
-<<<<<<< HEAD
-from turtle import st
-import numpy as np
 import datetime as dt
 from datetime import datetime
 
 import requests
-=======
-import datetime as dt
-from datetime import datetime
-
 import numpy as np
+from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
->>>>>>> 926da493af170417db73ae26ac4beb0aa53ad8c5
 from adaptive_scheduler.utils import time_in_capped_intervals
 from adaptive_scheduler.models import DataContainer
 from rise_set.astrometry import calculate_airmass_at_times
@@ -157,13 +149,17 @@ def fill_bin_with_reservation_data(data_dict, bin_name, reservation):
         data_dict[bin_name] = []
     reservation_data = reservation_data_populator(reservation)
     data_dict[bin_name].append(reservation_data)
-"location":
+    
+
+def bin_scheduler_result_by_eff_priority(schedule):
+    scheduled_requests_by_eff_priority = {}
     for reservations in schedule.values():
         for reservation in reservations:
-            eff_priority = str(reservation.priority)
-            fill_bin_with_reservation_data(scheduled_requests_by_eff_priority,
-                                           eff_priority,
-                                           reservation)
+            if reservation.scheduled:
+                eff_priority = str(reservation.priority)
+                fill_bin_with_reservation_data(scheduled_requests_by_eff_priority,
+                                               eff_priority,
+                                               reservation)
     return scheduled_requests_by_eff_priority
 
 
@@ -171,11 +167,12 @@ def bin_scheduler_result_by_tac_priority(schedule):
     scheduled_requests_by_tac_priority = {}
     for reservations in schedule.values():
         for reservation in reservations:
-            proposal = reservation.request_group.proposal
-            tac_priority = str(proposal.tac_priority)
-            fill_bin_with_reservation_data(scheduled_requests_by_tac_priority,
-                                           tac_priority,
-                                           reservation)
+            if reservation.scheduled:
+                proposal = reservation.request_group.proposal
+                tac_priority = str(proposal.tac_priority)
+                fill_bin_with_reservation_data(scheduled_requests_by_tac_priority,
+                                               tac_priority,
+                                               reservation)
     return scheduled_requests_by_tac_priority
                 
 
@@ -268,8 +265,14 @@ def get_midpoint_airmasses_from_request(observation_portal_interface, request_id
     return midpoint_airmasses
 
 
-def get_midpoint_airmass_for_scheduler(observvation_portal_interface, scheduler):
-    
+def get_midpoint_airmass_for_scheduler(observation_portal_interface, schedule):
+    for reservations in schedule.values():
+        for reservation in reservations:
+            if reservation.scheduled:
+                for request in reservation.request_group.requests:
+                    request_id = request.id
+                    start_time = request.
+
 
 def percent_difference(x, y):
     """Calculate the percent difference between two values."""
