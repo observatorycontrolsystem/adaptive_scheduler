@@ -99,7 +99,6 @@ class TestMetrics():
                 assert expected[bin_name][i].__dict__ == item.__dict__
 
 
-
     def test_airmass_functions(self):
         with open('tests/airmass_data.json') as f:
             airmass_data = json.load(f)
