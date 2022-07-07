@@ -1,4 +1,7 @@
-from adaptive_scheduler.simulation.metrics import (MetricCalculator, fill_bin_with_reservation_data,
+import re
+
+from numpy import average
+from adaptive_scheduler.simulation.metrics import (MetricCalculator, avg_ideal_airmass, fill_bin_with_reservation_data, get_ideal_airmass_for_request,
                                                    percent_reservations_scheduled,
                                                    total_scheduled_seconds,
                                                    total_available_seconds,
@@ -10,7 +13,7 @@ from adaptive_scheduler.models import DataContainer
 
 from mock import Mock, patch
 
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import pytest
 
 
@@ -99,16 +102,7 @@ class TestMetrics():
 
 
 
-    @patch('get_airmass_data_from_observation_portal')
     def test_airmass_functions(self):
-        # test with fake airmass data in the same format as returned by Observation Portal
-        # PLACEHOLDER: some test ideal airmass
-        # PLACEHOLDER: some test midpoint airmass
-        # PLACEHOLDER: some tests with airmass averaging functions
-        # site = 'tfn'
-        # airmasses = Mock()
-        # airmasses['airmass_data'] = Mock()
-        # airmasses['airmass_data'][site] = Mock()
         airmasses = {
             "airmass_data": {
                 "tfn": {
@@ -160,13 +154,27 @@ class TestMetrics():
             },
             "airmass_limit": 10.1
         }
-        mock_reservation = Mock(scheduled_start=0)
-        scheduled_reservations = [mock_reservation]
-
-        start = datetime.strptime("2022-07-06 00:30:00", '%Y-%m-%d %H:%M:%S')
-        end = start + timedelta(minutes=90)
-        observation_portal_interface = Mock()
-        request_id = Mock()
-        get_airmass_data_from_observation_portal.return_value = airmasses
-        assert get_midpoint_airmasses_from_request(observation_portal_interface ,request_id, start, end) == {'tfn':7}
         
+        with patch('adaptive_scheduler.simulation.metrics.get_airmass_data_from_observation_portal', return_value=airmasses):
+            request_id = Mock()
+            request = Mock(id = request_id)
+            request_group = Mock(requests = [request])
+            mock_reservation = Mock(scheduled_start=0, scheduled_resource ='1m0a.doma.tfn', request_group = request_group,
+                                    duration =5400 )
+            scheduled_reservations = [mock_reservation]
+            schedule = {'reservations': scheduled_reservations}
+
+            start = datetime.strptime("2022-07-06T00:30", '%Y-%m-%dT%H:%M')
+            end = start + timedelta(minutes=90)
+            observation_portal_interface = Mock()
+            semester_start = start
+            
+            assert get_midpoint_airmasses_from_request(observation_portal_interface ,request_id, start, end) == {'tfn':7}
+            assert get_ideal_airmass_for_request(observation_portal_interface, request_id) == 1
+            
+            with patch('adaptive_scheduler.utils.normalised_epoch_to_datetime', return_value= start):
+                with patch('adaptive_scheduler.utils.datetime_to_epoch', autospec=True, return_value=Mock()):
+                    assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
+                    assert get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start) == [7]
+                
+            

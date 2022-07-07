@@ -254,9 +254,10 @@ def get_midpoint_airmasses_from_request(observation_portal_interface, request_id
     for site, details in airmass_data.items():
         times, airmasses = list(details.values())[0], list(details.values())[1]
         index = 0
-        time_diff = midpoint_time - datetime.strptime(times[0],'%Y-%m-%dT%H:%M')
+        time_diff = abs((midpoint_time - datetime.strptime(times[0],'%Y-%m-%dT%H:%M')).total_seconds())
+        
         for i in range(len(times)):
-            temp_time_diff = midpoint_time - datetime.strptime(times[i],'%Y-%m-%dT%H:%M')
+            temp_time_diff = abs((midpoint_time - datetime.strptime(times[i],'%Y-%m-%dT%H:%M')).total_seconds())
             if temp_time_diff < time_diff:
                 time_diff = temp_time_diff
                 index = i 
