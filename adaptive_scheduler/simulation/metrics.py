@@ -27,7 +27,7 @@ def percent_diff(x, y):
     return abs(x-y)/mean*100.
 
 
-class SimulatorMetrics():
+class MetricCalculator():
     """A class encapsulating the metric calculating functions for the scheduler simulator.
 
     Args:
@@ -41,85 +41,51 @@ class SimulatorMetrics():
     """
     def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
         self.normal_scheduler_result = normal_scheduler_result
+        # THERE IS NOT ALWAYS A RR RESULT - ADD CHECKS FOR THIS
         self.rr_scheduler_result = rr_scheduler_result
         self.scheduler = scheduler
         self.scheduler_runner = scheduler_runner
 
         self.normal_schedule = self.normal_scheduler_result.schedule
         self.rr_schedule = self.rr_scheduler_result.schedule
-        self.combined_schedule = self.combine_normal_rr_schedules()
+        self.combined_schedule = self._combine_normal_rr_schedules()
 
-    def combine_normal_rr_schedules(self):
+    def _combine_normal_rr_schedules(self):
         self.combined_schedule = self.normal_schedule.copy()
         for resource, reservations in self.rr_schedule.items():
             for reservation in reservations:
                 self.combined_schedule[resource].append(reservation)
 
-    def total_scheduled_count(self, schedule):
-        counter = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                if reservation.scheduled:
-                    counter += 1
-        return counter
-
-    def total_unscheduled_count(self, schedule):
-        counter = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                if not reservation.scheduled:
-                    counter += 1
-        return counter
-
-    def total_scheduled_seconds(self, schedule):
-        total_scheduled_seconds = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                total_scheduled_seconds += reservation.duration
-        return total_scheduled_seconds
-        
-        
-def combine_normal_and_rr_requests_by_rg_id(normal_scheduled_requests_by_rg_id,
-                                            rr_scheduled_requests_by_rg_id):
-    """Combines normal and scheduled request results for aggregation.
-
-    Args:
-        normal_scheduled_requests_by_rg_id (dict): This is the output of
-            SchedulerResult.get_scheduled_requests_by_request_group_id()
-            which is a dictionary formatted as follows:
-            {rg_id1: {request1: request1_data, request2: request2_data},
-             rg_id2: ...}
-        rr_scheduled_requests_by_rg_id (dict): The same format of results but for
-            rapid response scheduler results.
-
-    Returns:
-        combined_scheduled_requests_by_rg_id (dict): Merged dictionaries with duplicate
-            keys being excluded (OR).
-    """
-    return normal_scheduled_requests_by_rg_id | rr_scheduled_requests_by_rg_id
-
-
-def total_scheduled_count(scheduled_requests_by_rg_id):
-    """Counts the number of scheduled requests."""
+                
+def count_scheduled(schedule):
     counter = 0
-    for request_group in scheduled_requests_by_rg_id.values():
-        for request in request_group.values():
-            if request.scheduled:
-                counter += 1
-    return counter
-   
-
-def total_unscheduled_count(scheduled_requests_by_rg_id):
-    """Counts the number of unscheduled requests."""
-    counter = 0
-    for request_group in scheduled_requests_by_rg_id.values():
-        for request in request_group.values():
-            if not request.scheduled:
+    for reservations in schedule.values():
+        for reservation in reservations:
+            if reservation.scheduled:
                 counter += 1
     return counter
 
+def count_unscheduled(schedule):
+    counter = 0
+    for reservations in schedule.values():
+        for reservation in reservations:
+            if not reservation.scheduled:
+                counter += 1
+    return counter
 
-def total_available_time(normal_scheduler_result, rr_scheduler_result, scheduler, horizon_days):
+def percent_reservations_scheduled(schedule):
+    total = count_scheduled(schedule) + count_unscheduled(schedule)
+    return percent_of(count_scheduled(schedule), total)
+
+
+def total_scheduled_seconds(schedule):
+    total_scheduled_seconds = 0
+    for reservations in schedule.values():
+        for reservation in reservations:
+            total_scheduled_seconds += reservation.duration
+    return total_scheduled_seconds        
+        
+def total_available_seconds(normal_scheduler_result, rr_scheduler_result, scheduler, horizon_days):
     """Aggregates the total available time, calculated from dark intervals.
 
     Args:
