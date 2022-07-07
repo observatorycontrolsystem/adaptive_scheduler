@@ -109,16 +109,18 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
 
     metrics = {
         'simulation_id': RUN_ID,
-        'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
+        # 'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
         'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
-        'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
+        # 'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
         'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
                                                       scheduler, sched_params.metric_effective_horizon),
         'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
         'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
         'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule),
         'midpoint_airmasses': get_midpoint_airmass_for_each_reservation(observation_portal_interface, 
-                                                                        combined_schedule, scheduler_runner.semester_details['start'])
+                                                                        combined_schedule, scheduler_runner.semester_details['start']),
+        'midpoint_airmass_vs_priority':midpoint_airmass_vs_priority(observation_portal_interface, 
+                                                                    combined_schedule, scheduler_runner.semester_details['start'])
     }
     send_to_opensearch(metrics)
 
