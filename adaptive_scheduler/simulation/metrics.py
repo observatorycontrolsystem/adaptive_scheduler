@@ -40,15 +40,17 @@ class MetricCalculator():
         scheduler_runner (SchedulerRunner): The instance of the scheduler runner used by the simulator.
     """
     def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
-        self.normal_scheduler_result = normal_scheduler_result
-        # THERE IS NOT ALWAYS A RR RESULT - ADD CHECKS FOR THIS
-        self.rr_scheduler_result = rr_scheduler_result
         self.scheduler = scheduler
         self.scheduler_runner = scheduler_runner
 
+        self.normal_scheduler_result = normal_scheduler_result
         self.normal_schedule = self.normal_scheduler_result.schedule
-        self.rr_schedule = self.rr_scheduler_result.schedule
-        self.combined_schedule = self._combine_normal_rr_schedules()
+        if rr_scheduler_result:
+            self.rr_scheduler_result = rr_scheduler_result
+            self.rr_schedule = self.rr_scheduler_result.schedule
+            self.combined_schedule = self._combine_normal_rr_schedules()
+        else:
+            self.combined_schedule = self.normal_schedule
 
     def _combine_normal_rr_schedules(self):
         self.combined_schedule = self.normal_schedule.copy()
@@ -99,7 +101,7 @@ def total_available_seconds(normal_scheduler_result, rr_scheduler_result, schedu
     """
     total_available_time = 0
     normal_resources = normal_scheduler_result.resources_scheduled()
-    rr_resources = rr_scheduler_result.resources_scheduled()
+    rr_resources = rr_scheduler_result.resources_scheduled() if rr_scheduler_result else []
     scheduled_resources = list(set(normal_resources + rr_resources))
     start_time = scheduler.estimated_scheduler_end
     end_time = start_time + dt.timedelta(days=horizon_days)
