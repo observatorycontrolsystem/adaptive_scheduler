@@ -1,8 +1,10 @@
-from adaptive_scheduler.simulator.metrics import (SimulatorMetrics, percent_of,
-                                                  percent_diff, merge_dicts)
+from adaptive_scheduler.simulation.metrics import SimulatorMetrics, fill_bin_with_reservation_data
 from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
+from adaptive_scheduler.models import DataContainer
 
 from mock import Mock, patch
+
+from datetime import datetime
 
 import pytest
 
@@ -10,12 +12,9 @@ import pytest
 class TestMetrics():
 
     def setup(self):
-        # PLACEHOLDER: replace the following with fake instances
-        # self.normal_scheduler_result = SchedulerResult()
-        # self.rr_scheduler_result = SchedulerResult()
-        # self.scheduler = Scheduler()
-        # self.scheduler_runner = SchedulerRunner()
-        pass
+        self.mock_reservation = Mock()
+        self.mock_requests = Mock(return_value=[])
+        
 
     def test_percent_scheduled_counters(self):
         # testing input is SchedulerResult with fake Reservation() data
@@ -43,10 +42,44 @@ class TestMetrics():
         # PLACEHOLDER: some test different horizon days
         pass
 
-    def test_binning_functions(self):
-        # TODO: refactor metrics.py so binning functions are more modular
-        # PLACEHOLDER: some tests with binned data
-        pass
+    def test_fill_bin_with_reservation_data(self):
+        data_dict = {}
+        start_time = datetime.utcnow()
+        
+        self.mock_reservation.request_group.requests = self.mock_requests
+        self.mock_reservation.request_group.ipp_value = 20
+        self.mock_reservation.request_group.proposal.tac_priority = 50
+        self.mock_reservation.request_group.id = 1
+        self.mock_reservation.duration = 10
+        self.mock_reservation.scheduled_resource = 'bpl'
+        self.mock_reservation.scheduled_start = start_time
+        self.mock_reservation.scheduled = True
+        
+        expected_datacontainer = DataContainer(
+            request_group_id=1,
+            duration=10,
+            scheduled_resource='bpl',
+            scheduled=True,
+            scheduled_start=start_time,
+            ipp_value=20,
+            tac_priority=50,
+            requests=self.mock_requests,
+        )
+        
+        bin_data = {
+            'bin1': self.mock_reservation,
+            'bin2': self.mock_reservation,
+        }
+        for bin_name, reservation in bin_data.items():
+            fill_bin_with_reservation_data(data_dict, bin_name, reservation)
+
+        expected = {
+            'bin1': [expected_datacontainer],
+            'bin2': [expected_datacontainer],
+        }
+        for bin_name, data in data_dict.items():
+            for i, item in enumerate(data):
+                assert expected[bin_name][i].__dict__ == item.__dict__
 
     def test_airmass_functions(self):
         # test with fake airmass data in the same format as returned by Observation Portal
