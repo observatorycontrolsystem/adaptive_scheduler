@@ -15,6 +15,10 @@ from adaptive_scheduler.models import DataContainer
 from rise_set.astrometry import calculate_airmass_at_times
 
 
+def percent_of(x, y):
+    """Returns x/y as a percentage (float)."""
+    return x/y*100.
+
 def percent_diff(x, y):
     """Returns the percent difference between x and y as a float."""
     if x == y == 0:
@@ -32,7 +36,7 @@ class SimulatorMetrics():
             as follows:
                 {scheduled_resource, [reservations]}
         rr_scheduler_result (SchedulerResult): The rapid-response schedule output of the scheduler.
-        scheduler (LCOGTNetworkScheduler): The instance of the scheduler used by the 1.900367548884168, 1.3311255510156763, 1.900367548884168, 1.2612518764062148, 1.2612518764062148, 1.2612518764062148simulator.
+        scheduler (LCOGTNetworkScheduler): The instance of the scheduler used by the simulator.
         scheduler_runner (SchedulerRunner): The instance of the scheduler runner used by the simulator.
     """
     def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
@@ -153,8 +157,6 @@ def reservation_data_populator(reservation):
     request_group = reservation.request_group
     proposal = request_group.proposal
     requests = request_group.requests
-    request_id_configurations = {request.id: request.configurations
-                                 for request in requests}
         
     data = DataContainer(
         request_group_id=reservation.request_group.id,
@@ -165,7 +167,6 @@ def reservation_data_populator(reservation):
         ipp_value=reservation.request_group.ipp_value,
         tac_priority=proposal.tac_priority,
         requests=reservation.request_group.requests,
-        configurations_by_request_id=request_id_configurations,
     )
     return data
 
