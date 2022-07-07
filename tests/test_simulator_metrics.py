@@ -1,14 +1,16 @@
 from adaptive_scheduler.simulation.metrics import (MetricCalculator, fill_bin_with_reservation_data,
                                                    percent_reservations_scheduled,
                                                    total_scheduled_seconds,
-                                                   total_available_seconds,)
+                                                   total_available_seconds,
+                                                   get_midpoint_airmasses_from_request, 
+                                                   get_airmass_data_from_observation_portal,
+                                                   get_midpoint_airmass_for_each_reservation)
 from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerResult
 from adaptive_scheduler.models import DataContainer
 
-from mock import Mock
+from mock import Mock, patch
 
 from datetime import datetime, timedelta
-
 import pytest
 
 
@@ -35,7 +37,6 @@ class TestMetrics():
         res3 = Mock(duration=30)
         fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
 
-        assert total_scheduled_seconds(fake_schedule) == 60
 
     def test_total_available_seconds(self):
         seconds_in_day = 86400
@@ -96,9 +97,76 @@ class TestMetrics():
             for i, item in enumerate(data):
                 assert expected[bin_name][i].__dict__ == item.__dict__
 
+
+
+    @patch('get_airmass_data_from_observation_portal')
     def test_airmass_functions(self):
         # test with fake airmass data in the same format as returned by Observation Portal
         # PLACEHOLDER: some test ideal airmass
         # PLACEHOLDER: some test midpoint airmass
         # PLACEHOLDER: some tests with airmass averaging functions
-        pass
+        # site = 'tfn'
+        # airmasses = Mock()
+        # airmasses['airmass_data'] = Mock()
+        # airmasses['airmass_data'][site] = Mock()
+        airmasses = {
+            "airmass_data": {
+                "tfn": {
+                    "times": [
+                        "2022-07-06T00:11",
+                        "2022-07-06T00:21",
+                        "2022-07-06T00:31",
+                        "2022-07-06T00:41",
+                        "2022-07-06T00:51",
+                        "2022-07-06T01:01",
+                        "2022-07-06T01:11",
+                        "2022-07-06T01:21",
+                        "2022-07-06T01:31",
+                        "2022-07-06T01:41",
+                        "2022-07-06T01:51",
+                        "2022-07-06T02:01",
+                        "2022-07-06T02:11",
+                        "2022-07-06T02:21",
+                        "2022-07-06T02:31",
+                        "2022-07-06T02:41",
+                        "2022-07-06T02:51",
+                        "2022-07-06T03:01",
+                        "2022-07-06T03:11",
+                        "2022-07-06T03:21"
+                    ],
+                    "airmasses": [
+                        1,
+                        2,
+                        3,
+                        4,
+                        5,
+                        6,
+                        7,
+                        8,
+                        9,
+                        10,
+                        11,
+                        12,
+                        13,
+                        14,
+                        15,
+                        16,
+                        17,
+                        18,
+                        19,
+                        20
+                    ]
+                }
+            },
+            "airmass_limit": 10.1
+        }
+        mock_reservation = Mock(scheduled_start=0)
+        scheduled_reservations = [mock_reservation]
+
+        start = datetime.strptime("2022-07-06 00:30:00", '%Y-%m-%d %H:%M:%S')
+        end = start + timedelta(minutes=90)
+        observation_portal_interface = Mock()
+        request_id = Mock()
+        get_airmass_data_from_observation_portal.return_value = airmasses
+        assert get_midpoint_airmasses_from_request(observation_portal_interface ,request_id, start, end) == {'tfn':7}
+        
