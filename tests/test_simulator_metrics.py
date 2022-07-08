@@ -1,21 +1,56 @@
-from adaptive_scheduler.simulation.metrics import (fill_bin_with_reservation_data,
-                                                   percent_reservations_scheduled,
-                                                   total_scheduled_seconds,
-                                                   total_available_seconds,
+from adaptive_scheduler.simulation.metrics import (MetricCalculator,
+                                                   fill_bin_with_reservation_data,
                                                    get_midpoint_airmasses_from_request,
                                                    get_midpoint_airmass_for_each_reservation,
                                                    get_ideal_airmass_for_request,
                                                    avg_ideal_airmass)
 from adaptive_scheduler.models import DataContainer
 
+import os
 import json
+from datetime import datetime, timedelta
 from mock import Mock, patch
-
-from datetime import date, datetime, timedelta
-import pytest
 
 
 class TestMetrics():
+
+    def setup(self):
+        self.scheduler_run_time = datetime.utcnow()
+        scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj']}
+        self.mock_scheduler_result = Mock(**scheduler_result_attrs)
+        self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
+        self.mock_scheduler_runner = Mock()
+
+        res1 = Mock(duration=10)
+        res2 = Mock(duration=20)
+        res3 = Mock(duration=30)
+        fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
+        self.mock_scheduler_result.schedule = fake_schedule
+
+        self.metrics = MetricCalculator(self.mock_scheduler_result,
+                                        self.mock_scheduler_result,
+                                        self.mock_scheduler,
+                                        self.mock_scheduler_runner)
+
+    def test_combining_schedules(self):
+        scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj', 'ogg']}
+        fake_schedule1 = {'bpl': ['hi', 'there'], 'coj': ['person']}
+        fake_schedule2 = {'ogg': ['lco', 'rocks'], 'coj': ['woohoo!']}
+        mock_normal_scheduler_result = Mock(schedule=fake_schedule1, **scheduler_result_attrs)
+        mock_rr_scheduler_result = Mock(schedule=fake_schedule2, **scheduler_result_attrs)
+
+        only_normal = MetricCalculator(mock_normal_scheduler_result, None,
+                                       self.mock_scheduler, self.mock_scheduler_runner)
+        both_schedules = MetricCalculator(mock_normal_scheduler_result, mock_rr_scheduler_result,
+                                          self.mock_scheduler, self.mock_scheduler_runner)
+        same_schedule = MetricCalculator(mock_normal_scheduler_result, mock_normal_scheduler_result,
+                                         self.mock_scheduler, self.mock_scheduler_runner)
+
+        assert only_normal.combined_schedule == fake_schedule1
+        assert both_schedules.combined_schedule == {'bpl': ['hi', 'there'],
+                                                    'coj': ['woohoo!', 'person'],
+                                                    'ogg': ['lco', 'rocks']}
+        assert same_schedule.combined_schedule == fake_schedule1
 
     def test_percent_scheduled(self):
         scheduled_reservation = Mock(scheduled=True)
@@ -27,35 +62,29 @@ class TestMetrics():
         multiple_sites = {'bpl': [scheduled_reservation, unscheduled_reservation],
                           'coj': [scheduled_reservation, scheduled_reservation]}
 
-        assert percent_reservations_scheduled(all_scheduled) == 100.
-        assert percent_reservations_scheduled(half_scheduled) == 50.
-        assert percent_reservations_scheduled(none_scheduled) == 0.
-        assert percent_reservations_scheduled(multiple_sites) == 75.
+        assert self.metrics.percent_reservations_scheduled(all_scheduled) == 100.
+        assert self.metrics.percent_reservations_scheduled(half_scheduled) == 50.
+        assert self.metrics.percent_reservations_scheduled(none_scheduled) == 0.
+        assert self.metrics.percent_reservations_scheduled(multiple_sites) == 75.
 
-    def test_total_scheduled_seconds(self):
-        res1 = Mock(duration=10)
-        res2 = Mock(duration=20)
-        res3 = Mock(duration=30)
-        fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
-
-
-    def test_total_available_seconds(self):
+    def test_total_time_aggregators(self):
         seconds_in_day = 86400
-        test_time = datetime.utcnow()
-        
-        scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj']}
-        mock_scheduler_result = Mock(**scheduler_result_attrs)
-        
-        mock_scheduler = Mock(estimated_scheduler_end=test_time)
-        mock_scheduler.visibility_cache = {'bpl': Mock(), 'coj': Mock()}
-        mock_scheduler.visibility_cache['bpl'].dark_intervals = [(test_time-timedelta(days=5), test_time-timedelta(days=4)),
-                                                                 (test_time, test_time+timedelta(days=1)),
-                                                                 (test_time+timedelta(days=2), test_time+timedelta(days=3))]
-        mock_scheduler.visibility_cache['coj'].dark_intervals = [(test_time, test_time+timedelta(days=2))]
 
-        assert total_available_seconds(mock_scheduler_result, mock_scheduler_result, mock_scheduler, 0) == 0
-        assert total_available_seconds(mock_scheduler_result, mock_scheduler_result, mock_scheduler, 1) == 2*seconds_in_day
-        assert total_available_seconds(mock_scheduler_result, mock_scheduler_result, mock_scheduler, 5) == 4*seconds_in_day
+        self.mock_scheduler.visibility_cache = {'bpl': Mock(), 'coj': Mock()}
+        self.mock_scheduler.visibility_cache['bpl'].dark_intervals = [
+            (self.scheduler_run_time-timedelta(days=5), self.scheduler_run_time-timedelta(days=4)),
+            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=1)),
+            (self.scheduler_run_time+timedelta(days=2), self.scheduler_run_time+timedelta(days=3)),
+        ]
+        self.mock_scheduler.visibility_cache['coj'].dark_intervals = [
+            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=2))]
+
+        assert self.metrics.total_scheduled_seconds(self.mock_scheduler_result.schedule) == 60
+        assert self.metrics.total_available_seconds(['bpl', 'coj'], 0) == 0
+        assert self.metrics.total_available_seconds(['bpl', 'coj'], 1) == 2*seconds_in_day
+        assert self.metrics.total_available_seconds(['bpl', 'coj'], 5) == 4*seconds_in_day
+        assert self.metrics.total_available_seconds(['bpl'], 1) == seconds_in_day
+        assert self.metrics.total_available_seconds([], 1) == 0
 
     def test_fill_bin_with_reservation_data(self):
         data_dict = {}
@@ -67,22 +96,22 @@ class TestMetrics():
             scheduled_start=start_time,
             scheduled=True,
         )
-        mock_reservation.request_group.requests = []
         mock_reservation.request_group.ipp_value = 20
         mock_reservation.request_group.proposal.tac_priority = 50
         mock_reservation.request_group.id = 1
+        mock_reservation.request.id = 2
 
         expected_datacontainer = DataContainer(
             request_group_id=1,
+            request_id=2,
             duration=10,
             scheduled_resource='bpl',
             scheduled=True,
             scheduled_start=start_time,
             ipp_value=20,
             tac_priority=50,
-            requests=[],
         )
-        
+
         bin_data = {
             'bin1': mock_reservation,
             'bin2': mock_reservation,
@@ -98,12 +127,12 @@ class TestMetrics():
             for i, item in enumerate(data):
                 assert expected[bin_name][i].__dict__ == item.__dict__
 
-
-
     def test_airmass_functions(self):
-        with open('tests/airmass_data.json') as f:
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        data_path = os.path.join(dir_path, 'airmass_data.json')
+        with open(data_path) as f:
             airmass_data = json.load(f)
-        
+
         with patch('adaptive_scheduler.simulation.metrics.get_airmass_data_from_observation_portal', return_value=airmass_data):
             request_id = Mock()
             request = Mock(id=request_id)
@@ -119,13 +148,11 @@ class TestMetrics():
             end = start + timedelta(minutes=90)
             observation_portal_interface = Mock()
             semester_start = start
-            
+
             assert get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start, end) == {'tfn': 7}
             assert get_ideal_airmass_for_request(observation_portal_interface, request_id) == 1
-            
+
             with patch('adaptive_scheduler.utils.normalised_epoch_to_datetime', return_value=start):
                 with patch('adaptive_scheduler.utils.datetime_to_epoch', autospec=True, return_value=Mock()):
                     assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
                     assert get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start) == [7]
-                
-            

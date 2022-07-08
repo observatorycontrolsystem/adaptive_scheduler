@@ -1,23 +1,26 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
-import logging
 import datetime as dt
 from datetime import datetime
+from collections import defaultdict
 
 import requests
-import numpy as np
 from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch, merge_dicts
+from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import DataContainer
 from rise_set.astrometry import calculate_airmass_at_times
+
+
+DEFAULT_EFFECTIVE_HORIZON_DAYS = 5
 
 
 def percent_of(x, y):
     """Returns x/y as a percentage (float)."""
     return x/y*100.
+
 
 def percent_diff(x, y):
     """Returns the percent difference between x and y as a float."""
@@ -43,74 +46,91 @@ class MetricCalculator():
         self.scheduler = scheduler
         self.scheduler_runner = scheduler_runner
 
+        if self.scheduler_runner.sched_params.metric_effective_horizon:
+            self.effective_horizon = self.scheduler_runner.sched_params.metric_effective_horizon
+        else:
+            self.effective_horizon = DEFAULT_EFFECTIVE_HORIZON_DAYS
+
         self.normal_scheduler_result = normal_scheduler_result
         self.normal_schedule = self.normal_scheduler_result.schedule
         if rr_scheduler_result:
             self.rr_scheduler_result = rr_scheduler_result
             self.rr_schedule = self.rr_scheduler_result.schedule
-            self.combined_schedule = self._combine_normal_rr_schedules()
+            self._combine_normal_rr_schedules()
+            self._combine_resources_scheduled()
         else:
             self.combined_schedule = self.normal_schedule
+            self.combined_resources_scheduled = self.normal_scheduler_result.resources_scheduled()
+
+    def _combine_resources_scheduled(self):
+        normal_resources = self.normal_scheduler_result.resources_scheduled()
+        rr_resources = self.rr_scheduler_result.resources_scheduled()
+        self.combined_resources_scheduled = list(set(normal_resources + rr_resources))
 
     def _combine_normal_rr_schedules(self):
-        self.combined_schedule = self.normal_schedule.copy()
+        self.combined_schedule = defaultdict(list)
         for resource, reservations in self.rr_schedule.items():
             for reservation in reservations:
                 self.combined_schedule[resource].append(reservation)
+        for resource, reservations in self.normal_schedule.items():
+            for reservation in reservations:
+                if reservation not in self.combined_schedule[resource]:
+                    self.combined_schedule[resource].append(reservation)
 
-                
-def count_scheduled(schedule):
-    counter = 0
-    for reservations in schedule.values():
-        for reservation in reservations:
-            if reservation.scheduled:
-                counter += 1
-    return counter
+    def count_scheduled(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        counter = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                if reservation.scheduled:
+                    counter += 1
+        return counter
 
-def count_unscheduled(schedule):
-    counter = 0
-    for reservations in schedule.values():
-        for reservation in reservations:
-            if not reservation.scheduled:
-                counter += 1
-    return counter
+    def count_unscheduled(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        counter = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                if not reservation.scheduled:
+                    counter += 1
+        return counter
 
-def percent_reservations_scheduled(schedule):
-    total = count_scheduled(schedule) + count_unscheduled(schedule)
-    return percent_of(count_scheduled(schedule), total)
+    def percent_reservations_scheduled(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        total = self.count_scheduled(schedule) + self.count_unscheduled(schedule)
+        return percent_of(self.count_scheduled(schedule), total)
 
+    def total_scheduled_seconds(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        total_scheduled_seconds = 0
+        for reservations in schedule.values():
+            for reservation in reservations:
+                total_scheduled_seconds += reservation.duration
+        return total_scheduled_seconds
 
-def total_scheduled_seconds(schedule):
-    total_scheduled_seconds = 0
-    for reservations in schedule.values():
-        for reservation in reservations:
-            total_scheduled_seconds += reservation.duration
-    return total_scheduled_seconds        
-        
-def total_available_seconds(normal_scheduler_result, rr_scheduler_result, scheduler, horizon_days):
-    """Aggregates the total available time, calculated from dark intervals.
+    def total_available_seconds(self, scheduled_resources=None, horizon_days=None):
+        """Aggregates the total available time, calculated from dark intervals.
 
-    Args:
-        normal_scheduler_result (SchedulerResult): The normal scheduler result.
-        rr_scheduler_result (SchedulerResult): The rapid response scheduler result.
-        scheduler (LCOGTNetworkScheduler): The scheduler object used by the scheduler runner.
-        horizon_days (float): The length of the horizon in days to calculate the metric.
+        Args:
+            scheduled_resources (list): The list of sites scheduled, if nothing is passed then use the
+                list generated when MetricCalculators is initialized.
+            horizon_days (float): The number of days to cap, basically an effective horizon. If nothing
+                is passed then use the value in sched_params.
 
-    Returns:
-        total_available_time (float): The dark intervals capped by the horizon.
-    """
-    total_available_time = 0
-    normal_resources = normal_scheduler_result.resources_scheduled()
-    rr_resources = rr_scheduler_result.resources_scheduled() if rr_scheduler_result else []
-    scheduled_resources = list(set(normal_resources + rr_resources))
-    start_time = scheduler.estimated_scheduler_end
-    end_time = start_time + dt.timedelta(days=horizon_days)
-    for resource in scheduled_resources:
-        if resource in scheduler.visibility_cache:
-            dark_intervals = scheduler.visibility_cache[resource].dark_intervals
-            available_time = time_in_capped_intervals(dark_intervals, start_time, end_time)
-        total_available_time += available_time
-    return total_available_time
+        Returns:
+            total_available_time (float): The dark intervals capped by the horizon.
+        """
+        scheduled_resources = self.combined_scheduled_resources if scheduled_resources is None else scheduled_resources
+        horizon_days = self.effective_horizon if horizon_days is None else horizon_days
+        total_available_time = 0
+        start_time = self.scheduler.estimated_scheduler_end
+        end_time = start_time + dt.timedelta(days=horizon_days)
+        for resource in scheduled_resources:
+            if resource in self.scheduler.visibility_cache:
+                dark_intervals = self.scheduler.visibility_cache[resource].dark_intervals
+                available_time = time_in_capped_intervals(dark_intervals, start_time, end_time)
+                total_available_time += available_time
+        return total_available_time
 
 
 def reservation_data_populator(reservation):
@@ -124,17 +144,16 @@ def reservation_data_populator(reservation):
     """
     request_group = reservation.request_group
     proposal = request_group.proposal
-    requests = request_group.requests
-        
+
     data = DataContainer(
         request_group_id=reservation.request_group.id,
+        request_id=reservation.request.id,
         duration=reservation.duration,
         scheduled_resource=reservation.scheduled_resource,
         scheduled=reservation.scheduled,
         scheduled_start=reservation.scheduled_start,
         ipp_value=reservation.request_group.ipp_value,
         tac_priority=proposal.tac_priority,
-        requests=reservation.request_group.requests,
     )
     return data
 
@@ -148,7 +167,7 @@ def fill_bin_with_reservation_data(data_dict, bin_name, reservation):
         bin_name (str): The name of the bin to create or populate.
         reservation (Reservation_v3): A Reservation object.
     """
-    if not bin_name in data_dict:
+    if bin_name not in data_dict:
         data_dict[bin_name] = []
     reservation_data = reservation_data_populator(reservation)
     data_dict[bin_name].append(reservation_data)
@@ -177,7 +196,7 @@ def bin_scheduler_result_by_tac_priority(schedule):
                                                tac_priority,
                                                reservation)
     return scheduled_requests_by_tac_priority
-                
+
 
 def get_airmass_data_from_observation_portal(observation_portal_interface, request_id):
     """Pulls airmass data from the Observation Portal.
@@ -210,7 +229,7 @@ def get_ideal_airmass_for_request(observation_portal_interface, request_id):
         ideal_for_site = min(site['airmasses'])
         ideal_airmass = min(ideal_airmass, ideal_for_site)
     return ideal_airmass
-    
+
 
 def avg_ideal_airmass(observation_portal_interface, schedule):
     """Calculates the average ideal airmass for scheduled observations."""
@@ -219,11 +238,10 @@ def avg_ideal_airmass(observation_portal_interface, schedule):
     for reservations in schedule.values():
         for reservation in reservations:
             if reservation.scheduled:
-                for request in reservation.request_group.requests:
-                    request_id = request.id
-                    sum_ideal_airmass += get_ideal_airmass_for_request(
-                        observation_portal_interface, request_id)
-                    count += 1
+                request_id = reservation.request.id
+                sum_ideal_airmass += get_ideal_airmass_for_request(
+                    observation_portal_interface, request_id)
+                count += 1
     return sum_ideal_airmass / count
 
 
@@ -240,14 +258,14 @@ def calculate_midpoint_airmass(scheduled_requests_by_rg_id):
                 observation_sites = request.get_site()
                 midpoint_airmass_each_request[request] = {}
                 for site in observation_sites:
-                    obs_latitude =  site['latitdue']
-                    obs_longitude =  site['longitude']
+                    obs_latitude = site['latitdue']
+                    obs_longitude = site['longitude']
                     obs_height = site['elevation']
                     midpoint_airmass = calculate_airmass_at_times(midpoint_time, target, obs_latitude, obs_longitude, obs_height)
                     midpoint_airmass_each_request[request][site] = midpoint_airmass
     return midpoint_airmass_each_request
-    
-    
+
+
 def get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start_time, end_time):
     midpoint_airmasses = {}
     midpoint_time = start_time + (end_time - start_time)/2
@@ -256,13 +274,13 @@ def get_midpoint_airmasses_from_request(observation_portal_interface, request_id
     for site, details in airmass_data.items():
         times, airmasses = list(details.values())[0], list(details.values())[1]
         index = 0
-        time_diff = abs((midpoint_time - datetime.strptime(times[0],'%Y-%m-%dT%H:%M')).total_seconds())
-        
+        time_diff = abs((midpoint_time - datetime.strptime(times[0], '%Y-%m-%dT%H:%M')).total_seconds())
+
         for i in range(len(times)):
-            temp_time_diff = abs((midpoint_time - datetime.strptime(times[i],'%Y-%m-%dT%H:%M')).total_seconds())
+            temp_time_diff = abs((midpoint_time - datetime.strptime(times[i], '%Y-%m-%dT%H:%M')).total_seconds())
             if temp_time_diff < time_diff:
                 time_diff = temp_time_diff
-                index = i 
+                index = i
         midpoint_airmass = airmasses[index]
         midpoint_airmasses[site] = midpoint_airmass
     return midpoint_airmasses
@@ -276,7 +294,7 @@ def get_midpoint_airmass_for_each_reservation(observation_portal_interface, sche
                 for request in reservation.request_group.requests:
                     request_id = request.id
                     start_time = normalised_epoch_to_datetime(reservation.scheduled_start, datetime_to_epoch(semester_start))
-                    end_time = start_time + dt.timedelta(seconds = reservation.duration)
+                    end_time = start_time + dt.timedelta(seconds=reservation.duration)
                     midpoint_airmasses = get_midpoint_airmasses_from_request(
                                         observation_portal_interface, request_id,
                                         start_time, end_time)
@@ -287,7 +305,7 @@ def get_midpoint_airmass_for_each_reservation(observation_portal_interface, sche
 
 
 def midpoint_airmass_vs_priority(observation_portal_interface, schedule, semester_start):
-    midpoint_airmass_vs_priority={}
+    midpoint_airmass_vs_priority = {}
     midpoint_airmass_for_each_reservation = get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start)
     eff_priorities = []
     for reservations in schedule.values():
@@ -295,9 +313,6 @@ def midpoint_airmass_vs_priority(observation_portal_interface, schedule, semeste
             if reservation.scheduled:
                 eff_priority = reservation.priority
                 eff_priorities.append(eff_priority)
-    midpoint_airmass_vs_priority['midpoint_airmass']= midpoint_airmass_for_each_reservation
+    midpoint_airmass_vs_priority['midpoint_airmass'] = midpoint_airmass_for_each_reservation
     midpoint_airmass_vs_priority['eff_priorities'] = eff_priorities
     return midpoint_airmass_vs_priority
-
-    
-    
