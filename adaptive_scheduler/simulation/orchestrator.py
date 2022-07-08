@@ -12,7 +12,8 @@ import sys
 import os
 from urllib.parse import urljoin
 
-from datetime import timedelta
+import requests
+from datetime import datetime, timedelta
 
 from lcogt_logging import LCOGTFormatter
 from dateutil.parser import parse
@@ -28,8 +29,8 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
-from adaptive_scheduler.simulation.metrics import (MetricCalculator, bin_scheduler_result_by_eff_priority,
-                                                   bin_scheduler_result_by_tac_priority, avg_ideal_airmass,
+from adaptive_scheduler.simulation.metrics import (MetricCalculator,
+                                                   avg_ideal_airmass,
                                                    avg_midpoint_airmass,)
 
 
@@ -100,8 +101,8 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
 
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
-<<<<<<< HEAD
     semester_start = scheduler_runner.semester_details['start']
+    sched_params = scheduler_runner.sched_params
 
     metrics = {
         'simulation_id': RUN_ID,
