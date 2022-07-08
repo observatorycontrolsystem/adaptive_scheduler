@@ -10,9 +10,10 @@ advancing time and input when simulating over a period of time.
 import logging
 import sys
 import os
-from datetime import datetime, timedelta
+from urllib.parse import urljoin
 
-from opensearchpy import OpenSearch
+from datetime import timedelta
+
 from lcogt_logging import LCOGTFormatter
 from dateutil.parser import parse
 
@@ -77,8 +78,20 @@ def increment_input(current_time, time_step):
     pass
 
 
-def send_to_opensearch(metrics):
+def send_to_opensearch(os_url, os_index, metrics):
     # Send the json metrics to the opensearch index
+    if os_url and os_index:
+        doc_name = f"{metrics['simulation_id']}_{metrics['record_time']}"
+        try:
+            requests.post(
+                urljoin(os_url, f'{os_index}/_doc/{doc_name}'), json=metrics
+            ).raise_for_status()
+        except Exception as ex:
+            log.warning(f"Failed to save metrics to Opensearch at {os_url} in index {os_index}: {repr(ex)}")
+
+        log.info(f"Successfully saved metrics for {metrics['simulation_id']}")
+    else:
+        log.warning("Not configured to save metrics in opensearch. Please set OPENSEARCH_URL and SIMULATION_OPENSEARCH_INDEX.")
     log.info(metrics)  # send to output for now
 
 
@@ -87,18 +100,26 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
 
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
+<<<<<<< HEAD
     semester_start = scheduler_runner.semester_details['start']
 
     metrics = {
         'simulation_id': RUN_ID,
+        'simulation_start_time': sched_params.simulate_now,
+        'horizon_days': sched_params.horizon_days,
+        'slicesize_seconds': sched_params.slicesize_seconds,
+        'kernel': sched_params.kernel,
+        'mip_gap': sched_params.mip_gap,
+        'record_time': datetime.utcnow().isoformat(),
+
         'total_scheduled_count': metrics.count_scheduled(),
         'total_scheduled_seconds': metrics.total_scheduled_seconds(),
         'total_available_seconds': metrics.total_available_seconds(),
         'percent_time_utilization': metrics.percent_time_utilization(),
         'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, metrics.combined_schedule),
-        'avg_midpoint_airmass': avg_midpoint_airmass(observation_portal_interface, metrics.combined_schedule, semester_start)
+        'avg_midpoint_airmass': avg_midpoint_airmass(observation_portal_interface, metrics.combined_schedule, semester_start),
     }
-    send_to_opensearch(metrics)
+    send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
 
 def main(argv=None):

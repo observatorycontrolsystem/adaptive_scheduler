@@ -216,7 +216,7 @@ def get_airmass_data_from_observation_portal(observation_portal_interface, reque
     Returns:
         airmass_data (dict): The airmass data returned from the API.
     """
-    airmass_url = f'{observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass'
+    airmass_url = f'{observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
     try:
         response = requests.get(airmass_url, headers=observation_portal_interface.headers, timeout=180)
         response.raise_for_status()
