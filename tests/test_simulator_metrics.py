@@ -109,7 +109,7 @@ class TestMetrics():
             request = Mock(id=request_id)
             mock_reservation = Mock(scheduled_start=0,
                                     scheduled_resource='1m0a.doma.tfn',
-                                    request = request,
+                                    request=request,
                                     duration=5400)
             scheduled_reservations = [mock_reservation]
             schedule = {'reservations': scheduled_reservations}
