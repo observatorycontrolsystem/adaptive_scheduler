@@ -10,9 +10,10 @@ advancing time and input when simulating over a period of time.
 import logging
 import sys
 import os
-from datetime import datetime, timedelta
+from urllib.parse import urljoin
 
-from opensearchpy import OpenSearch
+from datetime import timedelta
+
 from lcogt_logging import LCOGTFormatter
 from dateutil.parser import parse
 
@@ -72,10 +73,21 @@ def increment_input(current_time, time_step):
     log.info(f"Placeholder for incrementing input by {time_step} to time {current_time.isoformat}")
     pass
 
-def send_to_opensearch(metrics):
+def send_to_opensearch(os_url, os_index, metrics):
     # Send the json metrics to the opensearch index
+    if os_url and os_index:
+        doc_name = f"{metrics['simulation_id']}_{metrics['record_time']}"
+        try:
+            requests.post(
+                urljoin(os_url, f'{os_index}/_doc/{doc_name}'), json=metrics
+            ).raise_for_status()
+        except Exception as ex:
+            log.warning(f"Failed to save metrics to Opensearch at {os_url} in index {os_index}: {repr(ex)}")
+
+        log.info(f"Successfully saved metrics for {metrics['simulation_id']}")
+    else:
+        log.warning("Not configured to save metrics in opensearch. Please set OPENSEARCH_URL and SIMULATION_OPENSEARCH_INDEX.")
     log.info(metrics) # send to output for now
-    pass
 
 
 def combine_schedules(normal_schedule, rr_schedule):
@@ -94,35 +106,44 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
     sched_params = scheduler_runner.sched_params
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
     
-    normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
-    rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
+    # normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
+    # rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
     
     # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
 
     # maybe we should just pass in the scheduler result instead and get the normal and rr requests somewhere else
     
     # For aggregating across all requests, but not sure if this is the best method
-    combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
-        normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
+    # combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
+    #     normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
 
-    combined_schedule = combine_schedules(normal_scheduler_result.schedule, rr_scheduler_result.schedule)
+    if not rr_scheduler_result:
+        combined_schedule = normal_scheduler_result.schedule
+    else:
+        combined_schedule = combine_schedules(normal_scheduler_result.schedule, rr_scheduler_result.schedule)
 
     metrics = {
         'simulation_id': RUN_ID,
+        'simulation_start_time': sched_params.simulate_now,
+        'horizon_days': sched_params.horizon_days,
+        'slicesize_seconds': sched_params.slicesize_seconds,
+        'kernel': sched_params.kernel,
+        'mip_gap': sched_params.mip_gap,
+        'record_time': datetime.utcnow().isoformat(),
         # 'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
-        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
+        #'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
         # 'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
-        'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
-                                                      scheduler, sched_params.metric_effective_horizon),
-        'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
-        'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
+        #'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
+        #                                              scheduler, sched_params.metric_effective_horizon),
+        #'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
+        #'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
         'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule),
-        'midpoint_airmasses': get_midpoint_airmass_for_each_reservation(observation_portal_interface, 
-                                                                        combined_schedule, scheduler_runner.semester_details['start']),
-        'midpoint_airmass_vs_priority':midpoint_airmass_vs_priority(observation_portal_interface, 
-                                                                    combined_schedule, scheduler_runner.semester_details['start'])
+        #'midpoint_airmasses': get_midpoint_airmass_for_each_reservation(observation_portal_interface,
+        #                                                                combined_schedule, scheduler_runner.semester_details['start']),
+        #'midpoint_airmass_vs_priority':midpoint_airmass_vs_priority(observation_portal_interface,
+        #                                                            combined_schedule, scheduler_runner.semester_details['start'])
     }
-    send_to_opensearch(metrics)
+    send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
 
 def main(argv=None):
