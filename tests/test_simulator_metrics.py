@@ -158,4 +158,3 @@ class TestMetrics():
             assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
             assert get_midpoint_airmass_for_each_reservation(observation_portal_interface,
                                                              schedule, semester_start) == [7, 3]
-
