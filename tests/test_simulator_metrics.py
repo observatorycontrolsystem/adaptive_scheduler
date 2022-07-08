@@ -1,9 +1,9 @@
 from adaptive_scheduler.simulation.metrics import (MetricCalculator,
                                                    fill_bin_with_reservation_data,
                                                    get_midpoint_airmasses_from_request,
-                                                   get_midpoint_airmass_for_each_reservation,
                                                    get_ideal_airmass_for_request,
-                                                   avg_ideal_airmass)
+                                                   avg_ideal_airmass,
+                                                   avg_midpoint_airmass)
 from adaptive_scheduler.models import DataContainer
 
 import os
@@ -20,12 +20,22 @@ class TestMetrics():
         self.mock_scheduler_result = Mock(**scheduler_result_attrs)
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
         self.mock_scheduler_runner = Mock()
+        self.mock_scheduler_runner.sched_params.metric_effective_horizon = 5
 
         res1 = Mock(duration=10)
         res2 = Mock(duration=20)
         res3 = Mock(duration=30)
         fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
         self.mock_scheduler_result.schedule = fake_schedule
+
+        self.mock_scheduler.visibility_cache = {'bpl': Mock(), 'coj': Mock()}
+        self.mock_scheduler.visibility_cache['bpl'].dark_intervals = [
+            (self.scheduler_run_time-timedelta(days=5), self.scheduler_run_time-timedelta(days=4)),
+            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=1)),
+            (self.scheduler_run_time+timedelta(days=2), self.scheduler_run_time+timedelta(days=3)),
+        ]
+        self.mock_scheduler.visibility_cache['coj'].dark_intervals = [
+            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=2))]
 
         self.metrics = MetricCalculator(self.mock_scheduler_result,
                                         self.mock_scheduler_result,
@@ -70,21 +80,19 @@ class TestMetrics():
     def test_total_time_aggregators(self):
         seconds_in_day = 86400
 
-        self.mock_scheduler.visibility_cache = {'bpl': Mock(), 'coj': Mock()}
-        self.mock_scheduler.visibility_cache['bpl'].dark_intervals = [
-            (self.scheduler_run_time-timedelta(days=5), self.scheduler_run_time-timedelta(days=4)),
-            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=1)),
-            (self.scheduler_run_time+timedelta(days=2), self.scheduler_run_time+timedelta(days=3)),
-        ]
-        self.mock_scheduler.visibility_cache['coj'].dark_intervals = [
-            (self.scheduler_run_time, self.scheduler_run_time+timedelta(days=2))]
-
         assert self.metrics.total_scheduled_seconds(self.mock_scheduler_result.schedule) == 60
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 0) == 0
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 1) == 2*seconds_in_day
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 5) == 4*seconds_in_day
         assert self.metrics.total_available_seconds(['bpl'], 1) == seconds_in_day
         assert self.metrics.total_available_seconds([], 1) == 0
+        assert self.metrics.total_scheduled_seconds() == 60
+        assert self.metrics.total_available_seconds() == 4*seconds_in_day
+
+    def test_percent_time_utilization(self):
+        test_schedule = {'bpl': [Mock(duration=86400)]}
+        assert self.metrics.percent_time_utilization(test_schedule, ['bpl'], 1) == 100.
+        assert self.metrics.percent_time_utilization() == 60/(86400*4)*100
 
     def test_fill_bin_with_reservation_data(self):
         data_dict = {}
@@ -156,5 +164,4 @@ class TestMetrics():
                                                        start, end) == {'tfn': 7, 'egg': 3}
             assert get_ideal_airmass_for_request(observation_portal_interface, request_id_2) == 1
             assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
-            assert get_midpoint_airmass_for_each_reservation(observation_portal_interface,
-                                                             schedule, semester_start) == [7, 3]
+            assert avg_midpoint_airmass(observation_portal_interface, schedule, semester_start) == 5

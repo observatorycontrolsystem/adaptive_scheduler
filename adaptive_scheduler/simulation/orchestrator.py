@@ -27,7 +27,10 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
-from adaptive_scheduler.simulation.metrics import *
+from adaptive_scheduler.simulation.metrics import (MetricCalculator, bin_scheduler_result_by_eff_priority,
+                                                   bin_scheduler_result_by_tac_priority, avg_ideal_airmass,
+                                                   avg_midpoint_airmass,)
+
 
 log = logging.getLogger('adaptive_scheduler')
 
@@ -61,6 +64,7 @@ def setup_input(current_time):
     log.info(f"Placeholder for setting up input for time {current_time.isoformat}")
     pass
 
+
 def increment_input(current_time, time_step):
     # This will eventually call endpoints in configdb and the observation portal to increment the state of them forward 
     # by the time step specified. Incrementing time forward is slightly different then the initial setup of a starting time.
@@ -72,55 +76,27 @@ def increment_input(current_time, time_step):
     log.info(f"Placeholder for incrementing input by {time_step} to time {current_time.isoformat}")
     pass
 
+
 def send_to_opensearch(metrics):
     # Send the json metrics to the opensearch index
-    log.info(metrics) # send to output for now
-    pass
-
-
-def combine_schedules(normal_schedule, rr_schedule):
-    # For aggregating across all scheduled items
-    combined_schedule = normal_schedule.copy()
-    for resource, reservations in rr_schedule.items():
-        for reservation in reservations:
-            combined_schedule[resource].append(reservation)
-            
-    return combined_schedule
+    log.info(metrics)  # send to output for now
 
 
 def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
     log.info("Recording metrics for scheduler simulation run")
 
-    sched_params = scheduler_runner.sched_params
+    metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
-    
-    normal_scheduled_requests_by_rg_id = normal_scheduler_result.get_scheduled_requests_by_request_group_id()
-    rr_scheduled_requests_by_rg_id = rr_scheduler_result.get_scheduled_requests_by_request_group_id()
-    
-    # Derive whatever metrics we want using the supplied scheduled requests and send them to opensearch here
-
-    # maybe we should just pass in the scheduler result instead and get the normal and rr requests somewhere else
-    
-    # For aggregating across all requests, but not sure if this is the best method
-    combined_scheduled_requests_by_rg_id = combine_normal_and_rr_requests_by_rg_id(
-        normal_scheduled_requests_by_rg_id, rr_scheduled_requests_by_rg_id)
-
-    combined_schedule = combine_schedules(normal_scheduler_result.schedule, rr_scheduler_result.schedule)
+    semester_start = scheduler_runner.semester_details['start']
 
     metrics = {
         'simulation_id': RUN_ID,
-        # 'total_scheduled_time': total_scheduled_time(combined_scheduled_requests_by_rg_id),
-        'total_scheduled_count': total_scheduled_count(combined_scheduled_requests_by_rg_id),
-        # 'percent_scheduled': percent_of_requests_scheduled(combined_scheduled_requests_by_rg_id),
-        'total_available_time' : total_available_time(normal_scheduler_result, rr_scheduler_result,
-                                                      scheduler, sched_params.metric_effective_horizon),
-        'effective_priority_bins': bin_scheduler_result_by_eff_priority(combined_schedule),
-        'tac_priority_bins': bin_scheduler_result_by_tac_priority(combined_schedule),
-        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, combined_schedule),
-        'midpoint_airmasses': get_midpoint_airmass_for_each_reservation(observation_portal_interface, 
-                                                                        combined_schedule, scheduler_runner.semester_details['start']),
-        'midpoint_airmass_vs_priority':midpoint_airmass_vs_priority(observation_portal_interface, 
-                                                                    combined_schedule, scheduler_runner.semester_details['start'])
+        'total_scheduled_count': metrics.count_scheduled(),
+        'total_scheduled_seconds': metrics.total_scheduled_seconds(),
+        'total_available_seconds': metrics.total_available_seconds(),
+        'percent_time_utilization': metrics.percent_time_utilization(),
+        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, metrics.combined_schedule),
+        'avg_midpoint_airmass': avg_midpoint_airmass(observation_portal_interface, metrics.combined_schedule, semester_start)
     }
     send_to_opensearch(metrics)
 
@@ -146,7 +122,7 @@ def main(argv=None):
                                          configdb_interface)
     kernel_class = FullScheduler_ortoolkit
     network_model = configdb_interface.get_telescope_info()
-    
+
     scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
     input_provider = SchedulingInputProvider(sched_params, network_interface, network_model, is_rr_input=True)
     input_factory = SchedulingInputFactory(input_provider)
@@ -167,8 +143,8 @@ def main(argv=None):
         scheduler_runner.run()
         # Output scheduled requests are available within the runner after it completes a run
         # These are used to seed a warm start solution for the next run in the normal scheduler, but can be used to generate metrics here
-        sched_params.metric_effective_horizon = 5 # days
-        
+        sched_params.metric_effective_horizon = 5  # days
+
         record_metrics(
             scheduler_runner.normal_scheduler_result,
             scheduler_runner.rr_scheduler_result,
