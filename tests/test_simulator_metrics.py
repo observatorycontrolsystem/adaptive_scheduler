@@ -133,15 +133,18 @@ class TestMetrics():
         with open(data_path) as f:
             airmass_data = json.load(f)
 
-        with patch('adaptive_scheduler.simulation.metrics.get_airmass_data_from_observation_portal', return_value=airmass_data):
-            request_id = Mock()
-            request = Mock(id=request_id)
-            request_group = Mock(requests=[request])
-            mock_reservation = Mock(scheduled_start=0,
-                                    scheduled_resource='1m0a.doma.tfn',
-                                    request_group=request_group,
-                                    duration=5400)
-            scheduled_reservations = [mock_reservation]
+        with patch('adaptive_scheduler.simulation.metrics.get_airmass_data_from_observation_portal',
+                   return_value=airmass_data):
+            request_id_1 = Mock()
+            request_1 = Mock(id=request_id_1)
+            mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
+                                      request=request_1, duration=5400)
+            request_id_2 = Mock()
+            request_2 = Mock(id=request_id_2)
+            mock_reservation_2 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.egg',
+                                      request=request_2, duration=5400)
+            scheduled_reservations = [mock_reservation_1, mock_reservation_2]
+
             schedule = {'reservations': scheduled_reservations}
 
             start = datetime.strptime("2022-07-06T00:30", '%Y-%m-%dT%H:%M')
@@ -149,10 +152,10 @@ class TestMetrics():
             observation_portal_interface = Mock()
             semester_start = start
 
-            assert get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start, end) == {'tfn': 7}
-            assert get_ideal_airmass_for_request(observation_portal_interface, request_id) == 1
+            assert get_midpoint_airmasses_from_request(observation_portal_interface, request_id_1,
+                                                       start, end) == {'tfn': 7, 'egg': 3}
+            assert get_ideal_airmass_for_request(observation_portal_interface, request_id_2) == 1
+            assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
+            assert get_midpoint_airmass_for_each_reservation(observation_portal_interface,
+                                                             schedule, semester_start) == [7, 3]
 
-            with patch('adaptive_scheduler.utils.normalised_epoch_to_datetime', return_value=start):
-                with patch('adaptive_scheduler.utils.datetime_to_epoch', autospec=True, return_value=Mock()):
-                    assert avg_ideal_airmass(observation_portal_interface, schedule) == 1
-                    assert get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start) == [7]

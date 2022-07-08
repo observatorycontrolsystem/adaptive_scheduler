@@ -7,11 +7,10 @@ from collections import defaultdict
 
 import requests
 from requests.exceptions import RequestException, Timeout
-
+from rise_set.astrometry import calculate_airmass_at_times
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import DataContainer
-from rise_set.astrometry import calculate_airmass_at_times
 
 
 DEFAULT_EFFECTIVE_HORIZON_DAYS = 5
@@ -19,15 +18,15 @@ DEFAULT_EFFECTIVE_HORIZON_DAYS = 5
 
 def percent_of(x, y):
     """Returns x/y as a percentage (float)."""
-    return x/y*100.
+    return x / y * 100.
 
 
 def percent_diff(x, y):
     """Returns the percent difference between x and y as a float."""
     if x == y == 0:
         return 0
-    mean = (abs(x)+abs(y))/2
-    return abs(x-y)/mean*100.
+    mean = (abs(x) + abs(y)) / 2
+    return abs(x - y) / mean * 100.
 
 
 class MetricCalculator():
@@ -253,7 +252,7 @@ def calculate_midpoint_airmass(scheduled_requests_by_rg_id):
             if request.scheduled:
                 start_time = request.start()
                 end_time = request.end()
-                midpoint_time = [start_time + (end_time - start_time)/2]
+                midpoint_time = [start_time + (end_time - start_time) / 2]
                 target = request.get_target()
                 observation_sites = request.get_site()
                 midpoint_airmass_each_request[request] = {}
@@ -261,14 +260,15 @@ def calculate_midpoint_airmass(scheduled_requests_by_rg_id):
                     obs_latitude = site['latitdue']
                     obs_longitude = site['longitude']
                     obs_height = site['elevation']
-                    midpoint_airmass = calculate_airmass_at_times(midpoint_time, target, obs_latitude, obs_longitude, obs_height)
+                    midpoint_airmass = calculate_airmass_at_times(midpoint_time,
+                                                                  target, obs_latitude, obs_longitude, obs_height)
                     midpoint_airmass_each_request[request][site] = midpoint_airmass
     return midpoint_airmass_each_request
 
 
 def get_midpoint_airmasses_from_request(observation_portal_interface, request_id, start_time, end_time):
     midpoint_airmasses = {}
-    midpoint_time = start_time + (end_time - start_time)/2
+    midpoint_time = start_time + (end_time - start_time) / 2
     airmass_data = get_airmass_data_from_observation_portal(
         observation_portal_interface, request_id)['airmass_data']
     for site, details in airmass_data.items():
@@ -291,22 +291,23 @@ def get_midpoint_airmass_for_each_reservation(observation_portal_interface, sche
     for reservations in schedule.values():
         for reservation in reservations:
             if reservation.scheduled:
-                for request in reservation.request_group.requests:
-                    request_id = request.id
-                    start_time = normalised_epoch_to_datetime(reservation.scheduled_start, datetime_to_epoch(semester_start))
-                    end_time = start_time + dt.timedelta(seconds=reservation.duration)
-                    midpoint_airmasses = get_midpoint_airmasses_from_request(
-                                        observation_portal_interface, request_id,
-                                        start_time, end_time)
-                    site = reservation.scheduled_resource[-3:]
-                    midpoint_airmass = midpoint_airmasses[site]
+                request = reservation.request
+                request_id = request.id
+                start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
+                                                          datetime_to_epoch(semester_start))
+                end_time = start_time + dt.timedelta(seconds=reservation.duration)
+                midpoint_airmasses = get_midpoint_airmasses_from_request(observation_portal_interface,
+                                                                         request_id, start_time, end_time)
+                site = reservation.scheduled_resource[-3:]
+                midpoint_airmass = midpoint_airmasses[site]
                 midpoint_airmass_for_each_reservation.append(midpoint_airmass)
     return midpoint_airmass_for_each_reservation
 
 
 def midpoint_airmass_vs_priority(observation_portal_interface, schedule, semester_start):
     midpoint_airmass_vs_priority = {}
-    midpoint_airmass_for_each_reservation = get_midpoint_airmass_for_each_reservation(observation_portal_interface, schedule, semester_start)
+    midpoint_airmass_for_each_reservation = get_midpoint_airmass_for_each_reservation(observation_portal_interface,
+                                                                                      schedule, semester_start)
     eff_priorities = []
     for reservations in schedule.values():
         for reservation in reservations:
