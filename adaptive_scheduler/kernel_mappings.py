@@ -163,7 +163,7 @@ def construct_many_compound_reservation(request_group, request_index, semester_s
     request = request_group.requests[request_index]
     kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
 
-    # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here. 
+    # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
     if request.optimization_type == 'AIRMASS':
         request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
 

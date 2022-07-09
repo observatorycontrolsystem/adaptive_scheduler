@@ -363,7 +363,6 @@ class Windows(EqualityMixin):
     def request_window_to_kernel_intervals(windows):
         '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
         kernel Intervals (an object that stores Timepoints).'''
-
         intervals = []
         for window in windows:
             intervals.append((window.start, window.end))
