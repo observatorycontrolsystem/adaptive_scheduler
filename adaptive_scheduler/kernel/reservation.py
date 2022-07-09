@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-'''
-Reservation and CompoundReservation classes for scheduling.
+''' Reservation and CompoundReservation classes for scheduling.
 
 Author: Sotiria Lampoudi (slampoud@gmail.com)
 December 2012
