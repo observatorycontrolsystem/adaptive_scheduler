@@ -29,9 +29,7 @@ from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
-from adaptive_scheduler.simulation.metrics import (MetricCalculator,
-                                                   avg_ideal_airmass,
-                                                   avg_midpoint_airmass,)
+from adaptive_scheduler.simulation.metrics import MetricCalculator
 
 
 log = logging.getLogger('adaptive_scheduler')
@@ -117,8 +115,8 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'total_scheduled_seconds': metrics.total_scheduled_seconds(),
         'total_available_seconds': metrics.total_available_seconds(),
         'percent_time_utilization': metrics.percent_time_utilization(),
-        'avg_ideal_airmass': avg_ideal_airmass(observation_portal_interface, metrics.combined_schedule),
-        'avg_midpoint_airmass': avg_midpoint_airmass(observation_portal_interface, metrics.combined_schedule, semester_start),
+        'avg_ideal_airmass': metrics.avg_ideal_airmass(metrics.combined_schedule),
+        'avg_midpoint_airmass': metrics.avg_midpoint_airmass(metrics.combined_schedule, semester_start),
     }
     send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
