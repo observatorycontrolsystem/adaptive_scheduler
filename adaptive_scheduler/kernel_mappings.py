@@ -42,7 +42,6 @@ from adaptive_scheduler.log import RequestGroupLogger
 
 from multiprocessing import cpu_count, current_process, TimeoutError, get_context
 import pickle
-import os
 
 # Set up and configure a module scope logger
 import logging
@@ -144,7 +143,7 @@ def construct_compound_reservation(request_group, semester_start, network_model)
     for index, request in enumerate(request_group.requests):
         kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
 
-        # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here. 
+        # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
         if request.optimization_type == 'AIRMASS':
             request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
 
@@ -374,7 +373,7 @@ def compute_request_availability(request, target_intervals_by_resource, downtime
     for resource, target_intervals in target_intervals_by_resource.items():
         # Intersect with any window provided in the user request
         user_windows = request.windows.at(resource)
-        user_intervals = Windows.req_window_to_kernel_intervals(user_windows)
+        user_intervals = Windows.request_window_to_kernel_intervals(user_windows)
         intervals_for_resource[resource] = target_intervals.intersect([user_intervals])
         if resource in downtime_intervals:
             for instrument_type, intervals in downtime_intervals[resource].items():

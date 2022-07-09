@@ -200,7 +200,6 @@ def normalised_epoch_to_datetime(epoch_time, epoch_start):
 
 def normalise_datetime_intervals(intervals, earliest_datetime):
     '''Convert datetime Intervals into normalised kernel Intervals.'''
-
     epoch_earliest = datetime_to_epoch(earliest_datetime)
 
     epoch_timepoints = []

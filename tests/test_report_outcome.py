@@ -12,7 +12,7 @@ from adaptive_scheduler.event_utils import report_scheduling_outcome
 from adaptive_scheduler.kernel.reservation import CompoundReservation
 from adaptive_scheduler.models import RequestGroup
 
-from mock import Mock, patch
+from mock import patch
 
 
 class TestReportOutcome(object):

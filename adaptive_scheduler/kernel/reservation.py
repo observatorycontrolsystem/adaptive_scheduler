@@ -5,12 +5,12 @@ Reservation and CompoundReservation classes for scheduling.
 Author: Sotiria Lampoudi (slampoud@gmail.com)
 December 2012
 
-Reservation does not associate a single resource with each reservation. 
-Instead, the possible_windows field has become possible_windows_dict, a 
+Reservation does not associate a single resource with each reservation.
+Instead, the possible_windows field has become possible_windows_dict, a
 dictionary mapping :
 resource -> possible windows on that resource
 
-Additionally, it is allowed to explicitly specify the resID, so as to 
+Additionally, it is allowed to explicitly specify the resID, so as to
 keep a uniform ID space between this and other parts of the scheduler.
 '''
 
@@ -106,8 +106,8 @@ class Reservation(object):
         )
 
     def __lt__(self, other):
-        ''' Higher priority number is higher priority. 
-        If priority numbers are equal, then reservation belonging to 
+        ''' Higher priority number is higher priority.
+        If priority numbers are equal, then reservation belonging to
         c.r.s are ranked as and < single < oneof '''
         if self.priority == other.priority:
             if (self.compound_reservation_parent) and (other.compound_reservation_parent):

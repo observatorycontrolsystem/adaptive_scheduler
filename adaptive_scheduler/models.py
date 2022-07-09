@@ -10,7 +10,6 @@ July 2012
 
 # Required for true (non-integer) division
 from __future__ import division
-from pickletools import optimize
 
 from time_intervals.intervals import Intervals
 from rise_set.sky_coordinates import RightAscension, Declination
@@ -355,13 +354,13 @@ class Windows(EqualityMixin):
         return self.size() > 0
 
     def to_window_intervals(self):
-        '''Convert windows for resources into intervals for resources. This shouldn't be called until the windows have been paired down
+        '''Convert windows for resources into intervals for resources. This shouldn't be called until the windows have been pared down
         to only those available for scheduling within.
         '''
-        return {resource: Windows.req_window_to_kernel_intervals(windows) for resource, windows in self.windows_for_resource.items()}
+        return {resource: Windows.request_window_to_kernel_intervals(windows) for resource, windows in self.windows_for_resource.items()}
 
     @staticmethod
-    def req_window_to_kernel_intervals(windows):
+    def request_window_to_kernel_intervals(windows):
         '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
         kernel Intervals (an object that stores Timepoints).'''
 
@@ -470,7 +469,7 @@ class Request(EqualityMixin):
                 obs_latitude = Angle(degrees=resource_info['latitude'])
                 obs_longitude = Angle(degrees=resource_info['longitude'])
                 obs_height = resource_info['elevation']
-                visibility_intervals = Windows.req_window_to_kernel_intervals(self.windows.at(resource_info["name"])).toTupleList()
+                visibility_intervals = Windows.request_window_to_kernel_intervals(self.windows.at(resource_info["name"])).toTupleList()
                 for (start, end) in visibility_intervals.toTupleList():
                     current_datetime = start
                     current_time = datetime_to_normalised_epoch(start, semester_start)
