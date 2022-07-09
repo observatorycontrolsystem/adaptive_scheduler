@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 from __future__ import division
 
-from nose.tools import assert_equal
 from mock import patch
 
 from adaptive_scheduler.eventbus import get_eventbus
@@ -51,4 +50,4 @@ class TestUserFeedbackLogger(object):
             request_group_id=self.request_group_id
         )
 
-        assert_equal(event1, event2)
+        assert event1 == event2

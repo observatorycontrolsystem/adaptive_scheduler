@@ -21,8 +21,8 @@ class ConfigDBInterface(SendMetricMixin):
         in data as needed.
     """
 
-    def __init__(self, configdb_url, telescope_classes, telescopes_file='/data/adaptive_scheduler/telescopes.json',
-                 active_instruments_file='/data/adaptive_scheduler/active_instruments.json'):
+    def __init__(self, configdb_url, telescope_classes, telescopes_file='data/telescopes.json',
+                 active_instruments_file='data/active_instruments.json'):
         self.configdb_url = configdb_url
         if not self.configdb_url.endswith('/'):
             self.configdb_url += '/'

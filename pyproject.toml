@@ -1,0 +1,46 @@
+[tool.poetry]
+name = "adaptive_scheduler"
+version = "1.4.0"
+description = ""
+authors = ["LCO <ocs@lco.global>"]
+license = "GPLv3"
+
+[[tool.poetry.source]]
+name = "ocs"
+url = "https://observatorycontrolsystem.github.io/pypi-simple/"
+
+[tool.poetry.dependencies]
+python = "^3.7,<3.11"
+ortools = [
+  { version = "9.3.9999", markers = "python_version >= '3.7' and python_version < '3.10' and platform_machine == 'x86_64'", source = "ocs" },
+  { version = "9.3.9999", markers = "python_version >= '3.7' and python_version < '3.10' and platform_machine == 'aarch64'", source = "ocs" },
+  { version = "9.3.10497", markers = "python_version >= '3.10'"},
+  { version = "9.3.10497", markers = "sys_platform != 'linux'"},
+  { version = "9.3.10497", markers = "sys_platform == 'linux' and (platform_machine != 'x86_64' and platform_machine != 'aarch64')"},
+]
+time-intervals = "^1"
+numpy = "^1"
+ocs-rise-set = "0.5.2"
+requests = "^2"
+redis = "^3"
+retry = "^0.9"
+opentsdb-http-client = "^0.2"
+opentsdb-python-metrics = "^0.2"
+lcogt-logging = "^0.3.2"
+python-dateutil = "^2"
+unidecode = "<1.2.0"
+opensearch-py = "^1"
+boto3 = "^1"
+
+[tool.poetry.dev-dependencies]
+mock = "<=3.1.0"
+responses = "<=0.17.0"
+pytest = "7.0.1"
+coverage = "^6.4.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0", "numpy ~= 1.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+adaptive-scheduler = 'adaptive_scheduler.cli:main'

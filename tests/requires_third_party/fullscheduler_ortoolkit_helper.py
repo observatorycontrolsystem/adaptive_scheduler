@@ -1,10 +1,13 @@
 from time_intervals.intervals import Intervals
 import copy
 
+import pytest
+
 try:
     from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
 except ImportError:
-    raise SkipTest('ORToolkit is not properly installed, skipping these tests.')
+    pytest.skip('ORToolkit is not properly installed, skipping these tests.', allow_module_level=True)
+
 from adaptive_scheduler.kernel.reservation import Reservation, CompoundReservation
 
 

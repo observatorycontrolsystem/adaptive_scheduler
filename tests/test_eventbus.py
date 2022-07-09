@@ -5,8 +5,6 @@ Author: Martin Norbury
 October 2013
 '''
 
-from nose.tools import eq_, assert_is
-
 from adaptive_scheduler import eventbus
 
 import gc
@@ -48,18 +46,18 @@ class TestEventBus(object):
         eventbus1 = eventbus.get_eventbus()
         eventbus2 = eventbus.get_eventbus()
 
-        assert_is(eventbus1, eventbus2)
+        assert eventbus1 is eventbus2
 
     def test_adding_listener(self):
         self.eventbus.add_listener(listener)
 
-        eq_(self.eventbus.number_of_listeners(event_type), 1)
+        assert self.eventbus.number_of_listeners(event_type) == 1
 
     def test_removing_listener(self):
         self.eventbus.add_listener(listener)
         self.eventbus.remove_listener(listener)
 
-        eq_(self.eventbus.number_of_listeners(event_type), 0)
+        assert self.eventbus.number_of_listeners(event_type) ==  0
 
     def test_listener_removed_after_garbage_collection(self):
         listener1 = FakeListener1()
@@ -72,7 +70,7 @@ class TestEventBus(object):
         gc.collect()
         self.eventbus.fire_event(event)
 
-        eq_(self.eventbus.number_of_listeners(event_type), 0)
+        assert self.eventbus.number_of_listeners(event_type) ==  0
 
     def test_listener_not_removed_after_garbage_collection_if_persistent(self):
         listener1 = FakeListener1()
@@ -85,7 +83,7 @@ class TestEventBus(object):
         gc.collect()
         self.eventbus.fire_event(event)
 
-        eq_(self.eventbus.number_of_listeners(event_type), 1)
+        assert self.eventbus.number_of_listeners(event_type) == 1
 
     def test_adding_multiple_listeners(self):
         listener1 = FakeListener1()
@@ -94,7 +92,7 @@ class TestEventBus(object):
         self.eventbus.add_listener(listener1)
         self.eventbus.add_listener(listener2)
 
-        eq_(self.eventbus.number_of_listeners(event_type), 2)
+        assert self.eventbus.number_of_listeners(event_type) == 2
 
     def test_firing_an_event(self):
         event = FakeListener1.create_event(10)
@@ -102,4 +100,4 @@ class TestEventBus(object):
         self.eventbus.add_listener(listener)
         self.eventbus.fire_event(event)
 
-        eq_(listener.last_update, 10)
+        assert listener.last_update == 10

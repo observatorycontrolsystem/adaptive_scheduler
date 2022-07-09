@@ -7,7 +7,6 @@ Dec 2012
 '''
 # TODO: write test for make_windows_consistent()
 
-from nose.tools import assert_equal
 import copy
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.scheduler import Scheduler
@@ -58,45 +57,45 @@ class TestScheduler(object):
         assert self.sched.order_equals(self.r2)
 
     def test_create(self):
-        assert_equal(self.sched.compound_reservation_list, [self.cr1, self.cr2, self.cr3])
-        assert_equal(self.sched.globally_possible_windows_dict, self.gpw2)
-        assert_equal(self.sched.contractual_obligation_list, [])
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0]['time'], 1)
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[0]['type'], 'start')
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1]['time'], 5)
-        assert_equal(self.sched.schedule_dict_free['foo'].timepoints[1]['type'], 'end')
+        assert self.sched.compound_reservation_list == [self.cr1, self.cr2, self.cr3]
+        assert self.sched.globally_possible_windows_dict == self.gpw2
+        assert self.sched.contractual_obligation_list == []
+        assert self.sched.schedule_dict_free['foo'].timepoints[0]['time'] == 1
+        assert self.sched.schedule_dict_free['foo'].timepoints[0]['type'] == 'start'
+        assert self.sched.schedule_dict_free['foo'].timepoints[1]['time'] == 5
+        assert self.sched.schedule_dict_free['foo'].timepoints[1]['type'] == 'end'
 
     def test_create_2(self):
-        assert_equal(set(self.sched2.resource_list), set(['foo', 'bar']))
-        assert_equal(self.sched2.schedule_dict['foo'], [])
-        assert_equal(self.sched2.schedule_dict['bar'], [])
+        assert set(self.sched2.resource_list) == set(['foo', 'bar'])
+        assert self.sched2.schedule_dict['foo'] == []
+        assert self.sched2.schedule_dict['bar'] == []
 
     def test_convert_compound_to_simple_1(self):
-        assert_equal(self.sched.reservation_list[0], self.r1)
-        assert_equal(self.sched.reservation_list[1], self.r3)
-        assert_equal(self.sched.reservation_list[2], self.r2)
-        assert_equal(self.sched.reservation_list[3], self.r4)
-        assert_equal(self.sched.and_constraints[0][0], self.r3)
-        assert_equal(self.sched.and_constraints[0][1], self.r2)
+        assert self.sched.reservation_list[0] == self.r1
+        assert self.sched.reservation_list[1] == self.r3
+        assert self.sched.reservation_list[2] == self.r2
+        assert self.sched.reservation_list[3] == self.r4
+        assert self.sched.and_constraints[0][0] == self.r3
+        assert self.sched.and_constraints[0][1] == self.r2
 
     def test_convert_compound_to_simple_2(self):
-        assert_equal(self.sched3.reservation_list[0], self.r4)
-        assert_equal(self.sched3.reservation_list[1], self.r5)
-        assert_equal(self.sched3.oneof_constraints[0][0], self.r4)
-        assert_equal(self.sched3.oneof_constraints[0][1], self.r5)
+        assert self.sched3.reservation_list[0] == self.r4
+        assert self.sched3.reservation_list[1] == self.r5
+        assert self.sched3.oneof_constraints[0][0] == self.r4
+        assert self.sched3.oneof_constraints[0][1] == self.r5
 
     def test_commit_reservation_to_schedule_1(self):
         self.r1.schedule(1, 1, 'foo', 'test')
         self.sched2.commit_reservation_to_schedule(self.r1)
-        assert_equal(self.sched2.schedule_dict['foo'][0].scheduled_start, 1)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0]['time'], 1)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[0]['type'], 'start')
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1]['time'], 2)
-        assert_equal(self.sched2.schedule_dict_busy['foo'].timepoints[1]['type'], 'end')
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0]['time'], 2)
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[0]['type'], 'start')
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1]['time'], 5)
-        assert_equal(self.sched2.schedule_dict_free['foo'].timepoints[1]['type'], 'end')
+        assert self.sched2.schedule_dict['foo'][0].scheduled_start == 1
+        assert self.sched2.schedule_dict_busy['foo'].timepoints[0]['time'] == 1
+        assert self.sched2.schedule_dict_busy['foo'].timepoints[0]['type'] == 'start'
+        assert self.sched2.schedule_dict_busy['foo'].timepoints[1]['time'] == 2
+        assert self.sched2.schedule_dict_busy['foo'].timepoints[1]['type'] == 'end'
+        assert self.sched2.schedule_dict_free['foo'].timepoints[0]['time'] == 2
+        assert self.sched2.schedule_dict_free['foo'].timepoints[0]['type'] == 'start'
+        assert self.sched2.schedule_dict_free['foo'].timepoints[1]['time'] == 5
+        assert self.sched2.schedule_dict_free['foo'].timepoints[1]['type'] == 'end'
 
     def test_uncommit_reservation_from_schedule(self):
         assert self.r1 in self.sched2.unscheduled_reservation_list
@@ -109,4 +108,4 @@ class TestScheduler(object):
     def test_get_reservation_by_ID(self):
         request_id = self.r1.get_ID()
         r = self.sched.get_reservation_by_ID(request_id)
-        assert_equal(r, self.r1)
+        assert r == self.r1
