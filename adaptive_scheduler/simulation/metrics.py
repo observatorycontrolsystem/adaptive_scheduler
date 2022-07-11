@@ -164,27 +164,32 @@ class MetricCalculator():
         """Finds the minimum airmass across all sites for the request."""
         ideal_airmass = 1000
         airmass_data = self._get_airmass_data_from_observation_portal(request_id)
+        print("ideal get")
         for site in airmass_data['airmass_data'].values():
             ideal_for_site = min(site['airmasses'])
             ideal_airmass = min(ideal_airmass, ideal_for_site)
         return ideal_airmass
 
-    def avg_ideal_airmass(self, schedule):
+    def avg_ideal_airmass(self, schedule=None):
         """Calculates the average ideal airmass for scheduled observations."""
+        schedule = self.combined_schedule if schedule is None else schedule
         sum_ideal_airmass = 0
         count = 0
+        print (len(list(schedule.values())))
         for reservations in schedule.values():
             for reservation in reservations:
                 if reservation.scheduled:
                     request_id = reservation.request.id
                     sum_ideal_airmass += self._get_ideal_airmass_for_request(request_id)
                     count += 1
+        print(sum_ideal_airmass, count)
         return sum_ideal_airmass / count
 
     def _get_midpoint_airmasses_from_request(self, request_id, start_time, end_time):
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
         airmass_data = self._get_airmass_data_from_observation_portal(request_id)['airmass_data']
+        print("midpoint get")
         for site, details in airmass_data.items():
             times, airmasses = list(details.values())[0], list(details.values())[1]
             index = 0
@@ -199,7 +204,9 @@ class MetricCalculator():
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
-    def avg_midpoint_airmass(self, schedule, semester_start):
+    def avg_midpoint_airmass(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        semester_start = self.scheduler_runner.semester_details['start']
         midpoint_airmass_for_each_reservation = []
         sum_midpoint_airmass = 0
         count = 0

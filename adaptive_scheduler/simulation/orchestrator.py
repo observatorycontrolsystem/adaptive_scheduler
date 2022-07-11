@@ -99,7 +99,6 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
 
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
-    semester_start = scheduler_runner.semester_details['start']
     sched_params = scheduler_runner.sched_params
 
     metrics = {
@@ -115,8 +114,8 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'total_scheduled_seconds': metrics.total_scheduled_seconds(),
         'total_available_seconds': metrics.total_available_seconds(),
         'percent_time_utilization': metrics.percent_time_utilization(),
-        'avg_ideal_airmass': metrics.avg_ideal_airmass(metrics.combined_schedule),
-        'avg_midpoint_airmass': metrics.avg_midpoint_airmass(metrics.combined_schedule, semester_start),
+        'avg_ideal_airmass': metrics.avg_ideal_airmass(),
+        'avg_midpoint_airmass': metrics.avg_midpoint_airmass(),
     }
     send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 

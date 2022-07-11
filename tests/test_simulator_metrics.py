@@ -11,13 +11,16 @@ from mock import Mock, patch
 class TestMetrics():
 
     def setup(self):
+        self.start = datetime.strptime("2022-07-06T00:30", '%Y-%m-%dT%H:%M')
+        self.end = self.start + timedelta(minutes=90)
         self.scheduler_run_time = datetime.utcnow()
         scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj']}
         self.mock_scheduler_result = Mock(**scheduler_result_attrs)
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
-        self.mock_scheduler_runner = Mock()
+        self.mock_scheduler_runner = Mock(semester_details={'start': self.start})
         self.mock_scheduler_runner.sched_params.metric_effective_horizon = 5
-
+        
+        # self.mock_scheduler_runner = start
         res1 = Mock(duration=10)
         res2 = Mock(duration=20)
         res3 = Mock(duration=30)
@@ -153,11 +156,7 @@ class TestMetrics():
         scheduled_reservations = [mock_reservation_1, mock_reservation_2]
         schedule = {'reservations': scheduled_reservations}
 
-        start = datetime.strptime("2022-07-06T00:30", '%Y-%m-%dT%H:%M')
-        end = start + timedelta(minutes=90)
-        semester_start = start
-
-        assert self.metrics._get_midpoint_airmasses_from_request(request_id_1, start, end) == {'tfn': 7, 'egg': 3}
+        assert self.metrics._get_midpoint_airmasses_from_request(request_id_1, self.start, self.end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(request_id_2) == 1
         assert self.metrics.avg_ideal_airmass(schedule) == 2
-        assert self.metrics.avg_midpoint_airmass(schedule, semester_start) == 5
+        assert self.metrics.avg_midpoint_airmass(schedule) == 5
