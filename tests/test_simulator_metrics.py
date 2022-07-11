@@ -36,13 +36,7 @@ class TestMetrics():
         self.metrics = MetricCalculator(self.mock_scheduler_result,
                                         self.mock_scheduler_result,
                                         self.mock_scheduler,
-                                        self.mock_scheduler_runner)
-        
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        data_path = os.path.join(dir_path, 'airmass_data.json')
-        with open(data_path) as f:
-            airmass_data = json.load(f)
-        self.metrics._get_airmass_data_from_observation_portal = Mock(return_value=airmass_data)
+                                        self.mock_scheduler_runner)      
 
     def test_combining_schedules(self):
         scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj', 'ogg']}
@@ -96,52 +90,58 @@ class TestMetrics():
         assert self.metrics.percent_time_utilization(test_schedule, ['bpl'], 1) == 100.
         assert self.metrics.percent_time_utilization() == 60/(86400*4)*100
 
-    def test_fill_bin_with_reservation_data(self):
-        data_dict = {}
-        start_time = datetime.utcnow()
+    # def test_fill_bin_with_reservation_data(self):
+    #     data_dict = {}
+    #     start_time = datetime.utcnow()
 
-        mock_reservation = Mock(
-            duration=10,
-            scheduled_resource='bpl',
-            scheduled_start=start_time,
-            scheduled=True,
-        )
-        mock_reservation.request_group.ipp_value = 20
-        mock_reservation.request_group.proposal.tac_priority = 50
-        mock_reservation.request_group.id = 1
-        mock_reservation.request.id = 2
+    #     mock_reservation = Mock(
+    #         duration=10,
+    #         scheduled_resource='bpl',
+    #         scheduled_start=start_time,
+    #         scheduled=True,
+    #     )
+    #     mock_reservation.request_group.ipp_value = 20
+    #     mock_reservation.request_group.proposal.tac_priority = 50
+    #     mock_reservation.request_group.id = 1
+    #     mock_reservation.request.id = 2
 
-        expected_datacontainer = DataContainer(
-            request_group_id=1,
-            request_id=2,
-            duration=10,
-            scheduled_resource='bpl',
-            scheduled=True,
-            scheduled_start=start_time,
-            ipp_value=20,
-            tac_priority=50,
-        )
+    #     expected_datacontainer = DataContainer(
+    #         request_group_id=1,
+    #         request_id=2,
+    #         duration=10,
+    #         scheduled_resource='bpl',
+    #         scheduled=True,
+    #         scheduled_start=start_time,
+    #         ipp_value=20,
+    #         tac_priority=50,
+    #     )
 
-        bin_data = {
-            'bin1': mock_reservation,
-            'bin2': mock_reservation,
-        }
-        for bin_name, reservation in bin_data.items():
-            fill_bin_with_reservation_data(data_dict, bin_name, reservation)
+    #     bin_data = {
+    #         'bin1': mock_reservation,
+    #         'bin2': mock_reservation,
+    #     }
+    #     for bin_name, reservation in bin_data.items():
+    #         fill_bin_with_reservation_data(data_dict, bin_name, reservation)
 
-        expected = {
-            'bin1': [expected_datacontainer],
-            'bin2': [expected_datacontainer],
-        }
-        for bin_name, data in data_dict.items():
-            for i, item in enumerate(data):
-                assert expected[bin_name][i].__dict__ == item.__dict__
+    #     expected = {
+    #         'bin1': [expected_datacontainer],
+    #         'bin2': [expected_datacontainer],
+    #     }
+    #     for bin_name, data in data_dict.items():
+    #         for i, item in enumerate(data):
+    #             assert expected[bin_name][i].__dict__ == item.__dict__
 
     def test_airmass_functions(self):
-       
-
-        # with patch('adaptive_scheduler.simulation.metrics.get_airmass_data_from_observation_portal',
-        #            return_value=airmass_data):
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        data_path_1 = os.path.join(dir_path, 'airmass_data.json')
+        data_path_2 = os.path.join(dir_path, 'airmass_data_2.json')
+        with open(data_path_1) as f:
+            airmass_data_1 = json.load(f)
+        with open(data_path_2) as f:
+            airmass_data_2 = json.load(f)
+        self.metrics._get_airmass_data_from_observation_portal = Mock(side_effect=[airmass_data_1, airmass_data_1,
+                                                                                   airmass_data_1, airmass_data_2,
+                                                                                   airmass_data_1, airmass_data_2])
         request_id_1 = Mock()
         request_1 = Mock(id=request_id_1)
         mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
@@ -151,7 +151,6 @@ class TestMetrics():
         mock_reservation_2 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.egg',
                                     request=request_2, duration=5400)
         scheduled_reservations = [mock_reservation_1, mock_reservation_2]
-
         schedule = {'reservations': scheduled_reservations}
 
         start = datetime.strptime("2022-07-06T00:30", '%Y-%m-%dT%H:%M')
@@ -160,5 +159,5 @@ class TestMetrics():
 
         assert self.metrics._get_midpoint_airmasses_from_request(request_id_1, start, end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(request_id_2) == 1
-        assert self.metrics.avg_ideal_airmass(schedule) == 1
+        assert self.metrics.avg_ideal_airmass(schedule) == 2
         assert self.metrics.avg_midpoint_airmass(schedule, semester_start) == 5
