@@ -144,6 +144,8 @@ class TestMetrics():
             airmass_data_2 = json.load(f)
         self.metrics._get_airmass_data_from_observation_portal = Mock(side_effect=[airmass_data_1, airmass_data_1,
                                                                                    airmass_data_1, airmass_data_2,
+                                                                                   airmass_data_1, airmass_data_2,
+                                                                                   airmass_data_1, airmass_data_2,
                                                                                    airmass_data_1, airmass_data_2])
         request_id_1 = Mock()
         request_1 = Mock(id=request_id_1)
@@ -160,3 +162,5 @@ class TestMetrics():
         assert self.metrics._get_ideal_airmass_for_request(request_id_2) == 1
         assert self.metrics.avg_ideal_airmass(schedule) == 2
         assert self.metrics.avg_midpoint_airmass(schedule) == 5
+        assert self.metrics.avg_ideal_airmass() == float(5/3)
+        
