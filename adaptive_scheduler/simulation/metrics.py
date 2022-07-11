@@ -192,8 +192,9 @@ class MetricCalculator():
             ideal_airmass = min(ideal_airmass, ideal_for_site)
         return ideal_airmass
 
-    def avg_ideal_airmass(self, schedule):
+    def avg_ideal_airmass(self, schedule=None):
         """Calculates the average ideal airmass for scheduled observations."""
+        schedule = self.combined_schedule if schedule is None else schedule
         sum_ideal_airmass = 0
         count = 0
         for reservations in schedule.values():
@@ -222,7 +223,9 @@ class MetricCalculator():
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
-    def avg_midpoint_airmass(self, schedule, semester_start):
+    def avg_midpoint_airmass(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        semester_start = self.scheduler_runner.semester_details['start']
         midpoint_airmass_for_each_reservation = []
         sum_midpoint_airmass = 0
         count = 0
