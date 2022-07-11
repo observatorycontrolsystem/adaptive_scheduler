@@ -15,16 +15,18 @@ class TestMetrics():
         self.end = self.start + timedelta(minutes=90)
         self.scheduler_run_time = datetime.utcnow()
         scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj']}
-        self.mock_scheduler_result = Mock(**scheduler_result_attrs)
+        res1 = Mock(duration=10, scheduled=True)
+        res2 = Mock(duration=20, scheduled=True)
+        res3 = Mock(duration=30, scheduled=True)
+        res4 = Mock(scheduled=False)
+        res5 = Mock(scheduled=False)
+        fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
+        fake_comp_res = Mock(reservation_list=[res1, res2, res3, res4, res5])
+        self.mock_scheduler_result = Mock(input_reservations=[fake_comp_res], **scheduler_result_attrs)
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
         self.mock_scheduler_runner = Mock(semester_details={'start': self.start})
-        self.mock_scheduler_runner.sched_params.metric_effective_horizon = 5
+        self.mock_scheduler_runner.sched_params.horizon_days = 5
 
-        # self.mock_scheduler_runner = start
-        res1 = Mock(duration=10)
-        res2 = Mock(duration=20)
-        res3 = Mock(duration=30)
-        fake_schedule = {'bpl': [res1, res2], 'coj': [res3]}
         self.mock_scheduler_result.schedule = fake_schedule
 
         self.mock_scheduler.visibility_cache = {'bpl': Mock(), 'coj': Mock()}
@@ -45,8 +47,11 @@ class TestMetrics():
         scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj', 'ogg']}
         fake_schedule1 = {'bpl': ['hi', 'there'], 'coj': ['person']}
         fake_schedule2 = {'ogg': ['lco', 'rocks'], 'coj': ['woohoo!']}
+        fake_input = [Mock(reservation_list=['foo', 'bar'])]
         mock_normal_scheduler_result = Mock(schedule=fake_schedule1, **scheduler_result_attrs)
+        mock_normal_scheduler_result.input_reservations = fake_input
         mock_rr_scheduler_result = Mock(schedule=fake_schedule2, **scheduler_result_attrs)
+        mock_rr_scheduler_result.input_reservations = fake_input
 
         only_normal = MetricCalculator(mock_normal_scheduler_result, None,
                                        self.mock_scheduler, self.mock_scheduler_runner)
@@ -65,16 +70,11 @@ class TestMetrics():
         scheduled_reservation = Mock(scheduled=True)
         unscheduled_reservation = Mock(scheduled=False)
 
-        all_scheduled = {'bpl': [scheduled_reservation]}
-        half_scheduled = {'bpl': [scheduled_reservation, unscheduled_reservation]}
-        none_scheduled = {'bpl': [unscheduled_reservation]}
-        multiple_sites = {'bpl': [scheduled_reservation, unscheduled_reservation],
-                          'coj': [scheduled_reservation, scheduled_reservation]}
+        mock_schedule = {'bpl': [scheduled_reservation], 'coj': [scheduled_reservation, scheduled_reservation]}
+        mock_scheduler_input = [unscheduled_reservation, scheduled_reservation, scheduled_reservation, scheduled_reservation]
 
-        assert self.metrics.percent_reservations_scheduled(all_scheduled) == 100.
-        assert self.metrics.percent_reservations_scheduled(half_scheduled) == 50.
-        assert self.metrics.percent_reservations_scheduled(none_scheduled) == 0.
-        assert self.metrics.percent_reservations_scheduled(multiple_sites) == 75.
+        assert self.metrics.percent_reservations_scheduled(mock_scheduler_input, mock_schedule) == 75.
+        assert self.metrics.percent_reservations_scheduled() == 60.
 
     def test_total_time_aggregators(self):
         seconds_in_day = 86400

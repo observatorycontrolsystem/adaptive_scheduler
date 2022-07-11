@@ -13,9 +13,6 @@ from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_
 from adaptive_scheduler.models import DataContainer
 
 
-DEFAULT_EFFECTIVE_HORIZON_DAYS = 5
-
-
 def percent_of(x, y):
     """Returns x/y as a percentage (float)."""
     return x / y * 100.
@@ -30,6 +27,7 @@ def percent_diff(x, y):
 
 
 def generate_bin_names(bin_size, bin_range):
+    """Creates bins named 'start-end' for dictionary keys."""
     start = int(bin_range[0])
     end = int(bin_range[1])
     if bin_size == 1:
@@ -48,6 +46,17 @@ def generate_bin_names(bin_size, bin_range):
 
 
 def bin_data(data, bin_size=1, bin_range=None):
+    """Bins data to create a histogram. Currently only supports integer bin resolution.
+    Float input is casted to an integer for counting.
+
+    Args:
+        data (list): The input data can be float or int.
+        bin_size (int): The width of the bins.
+        bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
+
+    Returns:
+        data_dict (str: int): The frequency count of the data.
+    """
     bin_range = (min(data), max(data)) if bin_range is None else bin_range
     data_dict = {bin_name: 0 for bin_name in generate_bin_names(bin_size, bin_range)}
     for i in data:
@@ -76,21 +85,24 @@ class MetricCalculator():
         self.scheduler = scheduler
         self.scheduler_runner = scheduler_runner
         self.observation_portal_interface = self.scheduler_runner.network_interface.observation_portal_interface
-        if self.scheduler_runner.sched_params.metric_effective_horizon:
-            self.effective_horizon = self.scheduler_runner.sched_params.metric_effective_horizon
-        else:
-            self.effective_horizon = DEFAULT_EFFECTIVE_HORIZON_DAYS
+        self.horizon_days = self.scheduler_runner.sched_params.horizon_days
 
         self.normal_scheduler_result = normal_scheduler_result
         self.normal_schedule = self.normal_scheduler_result.schedule
+        self.normal_input_reservations = self.normal_scheduler_result.input_reservations
+        self.combined_input_reservations = []
         if rr_scheduler_result:
             self.rr_scheduler_result = rr_scheduler_result
             self.rr_schedule = self.rr_scheduler_result.schedule
+            self.rr_input_reservations = self.rr_scheduler_result.input_reservations
             self._combine_normal_rr_schedules()
             self._combine_resources_scheduled()
+            self._combine_normal_rr_input_reservations()
         else:
             self.combined_schedule = self.normal_schedule
             self.combined_resources_scheduled = self.normal_scheduler_result.resources_scheduled()
+            for comp_res in self.normal_input_reservations:
+                self.combined_input_reservations.extend(comp_res.reservation_list)
 
         self.airmass_data_by_request_id = defaultdict(dict)
 
@@ -109,20 +121,26 @@ class MetricCalculator():
                 if reservation not in self.combined_schedule[resource]:
                     self.combined_schedule[resource].append(reservation)
 
-    def count_scheduled(self, schedule=None):
-        schedule = self.combined_schedule if schedule is None else schedule
-        counter = 0
-        total = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                total += 1
-                if reservation.scheduled:
-                    counter += 1
-        return counter, total
+    def _combine_normal_rr_input_reservations(self):
+        for comp_res in self.normal_input_reservations:
+            self.combined_input_reservations.extend(comp_res.reservation_list)
+        for comp_res in self.rr_input_reservations:
+            res_list = [f for f in comp_res.reservation_list if f not in self.combined_input_reservations]
+            self.combined_input_reservations.extend(res_list)
 
-    def percent_reservations_scheduled(self, schedule=None):
+    def count_scheduled(self, input_reservations=None, schedule=None):
+        input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
-        scheduled, total = self.count_scheduled(schedule)
+        scheduled_reservations = []
+        for reservations in schedule.values():
+            scheduled_reservations.extend(reservations)
+        total_reservations = [res for res in input_reservations]
+        return len(scheduled_reservations), len(total_reservations)
+
+    def percent_reservations_scheduled(self, input_reservations=None, schedule=None):
+        input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
+        schedule = self.combined_schedule if schedule is None else schedule
+        scheduled, total = self.count_scheduled(input_reservations, schedule)
         return percent_of(scheduled, total)
 
     def total_scheduled_seconds(self, schedule=None):
@@ -137,7 +155,7 @@ class MetricCalculator():
         """Aggregates the total available time, calculated from dark intervals.
 
         Args:
-            scheduled_resources (list): The list of sites scheduled, if nothing is passed then use the
+            resources_scheduled (list): The list of sites scheduled, if nothing is passed then use the
                 list generated when MetricCalculators is initialized.
             horizon_days (float): The number of days to cap, basically an effective horizon. If nothing
                 is passed then use the value in sched_params.
@@ -146,7 +164,7 @@ class MetricCalculator():
             total_available_time (float): The dark intervals capped by the horizon.
         """
         resources_scheduled = self.combined_resources_scheduled if resources_scheduled is None else resources_scheduled
-        horizon_days = self.effective_horizon if horizon_days is None else horizon_days
+        horizon_days = self.horizon_days if horizon_days is None else horizon_days
         total_available_time = 0
         start_time = self.scheduler.estimated_scheduler_end
         end_time = start_time + dt.timedelta(days=horizon_days)
@@ -160,7 +178,7 @@ class MetricCalculator():
     def percent_time_utilization(self, schedule=None, resources_scheduled=None, horizon_days=None):
         schedule = self.combined_schedule if schedule is None else schedule
         resources_scheduled = self.combined_resources_scheduled if resources_scheduled is None else resources_scheduled
-        horizon_days = self.effective_horizon if horizon_days is None else horizon_days
+        horizon_days = self.horizon_days if horizon_days is None else horizon_days
         return percent_of(self.total_scheduled_seconds(schedule),
                           self.total_available_seconds(resources_scheduled, horizon_days))
 
@@ -211,15 +229,17 @@ class MetricCalculator():
         return sum_ideal_airmass / count
 
     def _get_midpoint_airmasses_for_request(self, request_id, start_time, end_time):
-        """From the observation portal get the midpoint airmasses for one request.
+        """"Gets the midpoint airmasses by site for a request. This is done by finding the time
+        closest matching the calculated midpoint of the observation in the observe portal airmass data.
 
         Args:
-            request_id (integer): The id of the request we want to get airmass data of.
-            start_time (datetime): The start time of the scheduled observation.
-            end_time (datetime): The end time of the scheduled observation.
+            request_id (int): The id of the request we want to get airmass data of.
+            start_time (datetime.datetime): The start time of the scheduled observation.
+            end_time (datetime.datetime): The end time of the scheduled observation.
 
         Returns:
-            midpoint_airmasses (dictionary): A dictionaory with observation sites as keys and corresponding  midpoint airmasses as values.
+            midpoint_airmasses (str: float): A dictionary with observation sites as keys and corresponding
+                midpoint airmasses as values.
         """
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
@@ -241,7 +261,7 @@ class MetricCalculator():
         return midpoint_airmasses
 
     def avg_midpoint_airmass(self, schedule=None):
-        """Calculate the average midpoint airmass of all scheudled reservations for a single schedule. 
+        """Calculate the average midpoint airmass of all scheduled reservations for a single schedule.
 
         Args:
             schedule (scheduler, optional): the schedule we calculate our metricses on. Defaults to None.
@@ -271,6 +291,7 @@ class MetricCalculator():
         return sum_midpoint_airmass / count
 
     def tac_priority_histogram(self, schedule=None):
+        """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""
         schedule = self.combined_schedule if schedule is None else schedule
         bin_size = 10
         tac_priority_values = []

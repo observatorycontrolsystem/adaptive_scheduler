@@ -111,6 +111,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'record_time': datetime.utcnow().isoformat(),
 
         'total_scheduled_count': metrics.count_scheduled()[0],
+        'total_request_count': metrics.count_scheduled()[1],
         'percent_reservations_scheduled': metrics.percent_reservations_scheduled(),
         'total_scheduled_seconds': metrics.total_scheduled_seconds(),
         'total_available_seconds': metrics.total_available_seconds(),
