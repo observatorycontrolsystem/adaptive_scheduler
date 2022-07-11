@@ -626,6 +626,8 @@ class SchedulerRunner(object):
         self.sched_params = sched_params
         self.warm_starts_setting = sched_params.warm_starts
         self.scheduler = scheduler
+        self.normal_scheduler_input = None
+        self.rr_scheduler_input = None
         self.normal_scheduler_result = None
         self.rr_scheduler_result = None
         self.network_interface = network_interface
@@ -1070,18 +1072,18 @@ class SchedulerRunner(object):
         set_schedule_type(schedule_type)
         result = None
         if schedule_type == NORMAL_OBSERVATION_TYPE:
-            scheduler_input = self.input_factory.create_normal_scheduling_input(
+            self.normal_scheduler_input = self.input_factory.create_normal_scheduling_input(
                 self.estimated_normal_run_timedelta.total_seconds(),
                 scheduled_requests_by_rg=self.normal_scheduler_result.get_scheduled_requests_by_request_group_id() if self.normal_scheduler_result else {},
                 rr_schedule=rr_schedule_result.schedule,
                 network_state_timestamp=network_state_timestamp)
-            result = self.create_normal_schedule(scheduler_input)
+            result = self.create_normal_schedule(self.normal_scheduler_input)
         elif schedule_type == RR_OBSERVATION_TYPE:
-            scheduler_input = self.input_factory.create_rr_scheduling_input(
+            self.rr_scheduler_input = self.input_factory.create_rr_scheduling_input(
                 self.estimated_rr_run_timedelta.total_seconds(),
                 scheduled_requests_by_rg=self.rr_scheduler_result.get_scheduled_requests_by_request_group_id() if self.rr_scheduler_result else {},
                 network_state_timestamp=network_state_timestamp)
-            result = self.create_rr_schedule(scheduler_input)
+            result = self.create_rr_schedule(self.rr_scheduler_input)
         return result
 
 
