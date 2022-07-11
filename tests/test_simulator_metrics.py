@@ -19,7 +19,7 @@ class TestMetrics():
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
         self.mock_scheduler_runner = Mock(semester_details={'start': self.start})
         self.mock_scheduler_runner.sched_params.metric_effective_horizon = 5
-        
+
         # self.mock_scheduler_runner = start
         res1 = Mock(duration=10)
         res2 = Mock(duration=20)
@@ -39,7 +39,7 @@ class TestMetrics():
         self.metrics = MetricCalculator(self.mock_scheduler_result,
                                         self.mock_scheduler_result,
                                         self.mock_scheduler,
-                                        self.mock_scheduler_runner)      
+                                        self.mock_scheduler_runner)
 
     def test_combining_schedules(self):
         scheduler_result_attrs = {'resources_scheduled.return_value': ['bpl', 'coj', 'ogg']}
@@ -123,20 +123,17 @@ class TestMetrics():
                                                                                    airmass_data_1, airmass_data_2,
                                                                                    airmass_data_1, airmass_data_2,
                                                                                    airmass_data_1, airmass_data_2])
-        request_id_1 = Mock()
-        request_1 = Mock(id=request_id_1)
+        request_1 = Mock(id=1)
         mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
-                                    request=request_1, duration=5400)
-        request_id_2 = Mock()
-        request_2 = Mock(id=request_id_2)
+                                  request=request_1, duration=5400)
+        request_2 = Mock(id=2)
         mock_reservation_2 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.egg',
-                                    request=request_2, duration=5400)
+                                  request=request_2, duration=5400)
         scheduled_reservations = [mock_reservation_1, mock_reservation_2]
         schedule = {'reservations': scheduled_reservations}
 
-        assert self.metrics._get_midpoint_airmasses_from_request(request_id_1, self.start, self.end) == {'tfn': 7, 'egg': 3}
-        assert self.metrics._get_ideal_airmass_for_request(request_id_2) == 1
+        assert self.metrics._get_midpoint_airmasses_for_request(1, self.start, self.end) == {'tfn': 7, 'egg': 3}
+        assert self.metrics._get_ideal_airmass_for_request(2) == 1
         assert self.metrics.avg_ideal_airmass(schedule) == 2
         assert self.metrics.avg_midpoint_airmass(schedule) == 5
         assert self.metrics.avg_ideal_airmass() == float(5/3)
-        

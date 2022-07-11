@@ -92,6 +92,8 @@ class MetricCalculator():
             self.combined_schedule = self.normal_schedule
             self.combined_resources_scheduled = self.normal_scheduler_result.resources_scheduled()
 
+        self.airmass_data_by_request_id = defaultdict(dict)
+
     def _combine_resources_scheduled(self):
         normal_resources = self.normal_scheduler_result.resources_scheduled()
         rr_resources = self.rr_scheduler_result.resources_scheduled()
@@ -177,7 +179,8 @@ class MetricCalculator():
         try:
             response = requests.get(airmass_url, headers=self.observation_portal_interface.headers, timeout=180)
             response.raise_for_status()
-            airmass_data = response.json()
+            airmass_data = response.json()['airmass_data']
+            self.airmass_data_by_request_id[request_id] = airmass_data
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
 
@@ -186,8 +189,10 @@ class MetricCalculator():
     def _get_ideal_airmass_for_request(self, request_id):
         """Finds the minimum airmass across all sites for the request."""
         ideal_airmass = 1000
-        airmass_data = self._get_airmass_data_from_observation_portal(request_id)
-        for site in airmass_data['airmass_data'].values():
+        airmass_data = self.airmass_data_by_request_id[request_id]
+        if not airmass_data:
+            airmass_data = self._get_airmass_data_from_observation_portal(request_id)
+        for site in airmass_data.values():
             ideal_for_site = min(site['airmasses'])
             ideal_airmass = min(ideal_airmass, ideal_for_site)
         return ideal_airmass
@@ -205,16 +210,18 @@ class MetricCalculator():
                     count += 1
         return sum_ideal_airmass / count
 
-    def _get_midpoint_airmasses_from_request(self, request_id, start_time, end_time):
+    def _get_midpoint_airmasses_for_request(self, request_id, start_time, end_time):
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
-        airmass_data = self._get_airmass_data_from_observation_portal(request_id)['airmass_data']
+        airmass_data = self.airmass_data_by_request_id[request_id]
+        if not airmass_data:
+            airmass_data = self._get_airmass_data_from_observation_portal(request_id)
         for site, details in airmass_data.items():
             times, airmasses = list(details.values())[0], list(details.values())[1]
             index = 0
             time_diff = abs((midpoint_time - datetime.strptime(times[0], '%Y-%m-%dT%H:%M')).total_seconds())
 
-            for i,_ in enumerate(times):
+            for i, _ in enumerate(times):
                 temp_time_diff = abs((midpoint_time - datetime.strptime(times[i], '%Y-%m-%dT%H:%M')).total_seconds())
                 if temp_time_diff < time_diff:
                     time_diff = temp_time_diff
@@ -237,7 +244,7 @@ class MetricCalculator():
                     start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
                                                               datetime_to_epoch(semester_start))
                     end_time = start_time + dt.timedelta(seconds=reservation.duration)
-                    midpoint_airmasses = self._get_midpoint_airmasses_from_request(request_id, start_time, end_time)
+                    midpoint_airmasses = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
                     site = reservation.scheduled_resource[-3:]
                     midpoint_airmass = midpoint_airmasses[site]
                     midpoint_airmass_for_each_reservation.append(midpoint_airmass)
