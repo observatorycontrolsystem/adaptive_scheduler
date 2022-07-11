@@ -393,7 +393,7 @@ class Scheduler(SendMetricMixin):
 
         print_compound_reservations(compound_reservations)
         # Prepare scheduler result
-        scheduler_result = SchedulerResult()
+        scheduler_result = SchedulerResult(input_reservations=compound_reservations)
         scheduler_result.schedule = {}
         scheduler_result.resource_schedules_to_cancel = list(available_resources)
 
@@ -569,7 +569,7 @@ class SchedulerResult(object):
     '''Aggregates together output of a scheduler run
     '''
 
-    def __init__(self, schedule=None, resource_schedules_to_cancel=None):
+    def __init__(self, schedule=None, resource_schedules_to_cancel=None, input_reservations=None):
         '''
         schedule - Expected to be a dict mapping resource to scheduled reservations
         resource_schedules_to_cancel - List of resources to cancel schedules on - this is the list of all available
@@ -577,6 +577,7 @@ class SchedulerResult(object):
         removed from the list.
         '''
         self.schedule = schedule if schedule else {}
+        self.input_reservations = input_reservations if input_reservations else []
         self.resource_schedules_to_cancel = resource_schedules_to_cancel if resource_schedules_to_cancel else []
 
     def count_reservations(self):
