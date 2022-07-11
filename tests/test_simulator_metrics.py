@@ -1,5 +1,5 @@
 from adaptive_scheduler.simulation.metrics import (MetricCalculator,
-                                                   fill_bin_with_reservation_data)
+                                                   bin_data)
 from adaptive_scheduler.models import DataContainer
 
 import os
@@ -37,7 +37,7 @@ class TestMetrics():
                                         self.mock_scheduler_result,
                                         self.mock_scheduler,
                                         self.mock_scheduler_runner)
-        
+
         dir_path = os.path.dirname(os.path.realpath(__file__))
         data_path = os.path.join(dir_path, 'airmass_data.json')
         with open(data_path) as f:
@@ -96,46 +96,22 @@ class TestMetrics():
         assert self.metrics.percent_time_utilization(test_schedule, ['bpl'], 1) == 100.
         assert self.metrics.percent_time_utilization() == 60/(86400*4)*100
 
-    def test_fill_bin_with_reservation_data(self):
-        data_dict = {}
-        start_time = datetime.utcnow()
+    def test_bin_data(self):
+        data = [1, 3, 4, 2, 6, 5, 3, 2, 3, 4, 7, 9, 3, 8, 6, 4]
+        data2 = [0.5, 3.7, 2.8, 6.9, 1.8]
+        bin_range = (1, 9)
 
-        mock_reservation = Mock(
-            duration=10,
-            scheduled_resource='bpl',
-            scheduled_start=start_time,
-            scheduled=True,
-        )
-        mock_reservation.request_group.ipp_value = 20
-        mock_reservation.request_group.proposal.tac_priority = 50
-        mock_reservation.request_group.id = 1
-        mock_reservation.request.id = 2
+        expected1 = {'1-3': 7, '4-6': 6, '7-9': 3}
+        expected2 = {'1': 1, '2': 2, '3': 4, '4': 3, '5': 1, '6': 2, '7': 1, '8': 1, '9': 1}
+        expected3 = {'1-2': 3, '3-4': 7, '5-6': 3, '7-8': 2, '9': 1}
+        expected4 = {'0': 1, '1': 1, '2': 1, '3': 1,  '6': 1}
+        expected5 = {'0': 1, '1': 1, '2': 1, '3': 1}
 
-        expected_datacontainer = DataContainer(
-            request_group_id=1,
-            request_id=2,
-            duration=10,
-            scheduled_resource='bpl',
-            scheduled=True,
-            scheduled_start=start_time,
-            ipp_value=20,
-            tac_priority=50,
-        )
-
-        bin_data = {
-            'bin1': mock_reservation,
-            'bin2': mock_reservation,
-        }
-        for bin_name, reservation in bin_data.items():
-            fill_bin_with_reservation_data(data_dict, bin_name, reservation)
-
-        expected = {
-            'bin1': [expected_datacontainer],
-            'bin2': [expected_datacontainer],
-        }
-        for bin_name, data in data_dict.items():
-            for i, item in enumerate(data):
-                assert expected[bin_name][i].__dict__ == item.__dict__
+        assert bin_data(data, 3, bin_range) == expected1
+        assert bin_data(data) == expected2
+        assert bin_data(data, 2) == expected3
+        assert bin_data(data2) == expected4
+        assert bin_data(data2, bin_range=(0, 4)) == expected5
 
     def test_airmass_functions(self):
        

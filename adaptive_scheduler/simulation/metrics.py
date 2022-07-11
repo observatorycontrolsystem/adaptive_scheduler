@@ -7,7 +7,7 @@ from collections import defaultdict
 
 import requests
 from requests.exceptions import RequestException, Timeout
-from rise_set.astrometry import calculate_airmass_at_times
+
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import DataContainer
@@ -27,6 +27,37 @@ def percent_diff(x, y):
         return 0
     mean = (abs(x) + abs(y)) / 2
     return abs(x - y) / mean * 100.
+
+
+def generate_bin_names(bin_size, bin_range):
+    start = int(bin_range[0])
+    end = int(bin_range[1])
+    if bin_size == 1:
+        return [str(n) for n in range(start, end+1)]
+    bin_names = []
+    bin_start = list(range(start, end+1, bin_size))
+    for start_num in bin_start:
+        end_num = start_num + bin_size - 1
+        end_num = end_num if end_num < end else end
+        if end_num == start_num:
+            bin_name = str(start_num)
+        else:
+            bin_name = f'{start_num}-{end_num}'
+        bin_names.append(bin_name)
+    return bin_names
+
+
+def bin_data(data, bin_size=1, bin_range=None):
+    bin_range = (min(data), max(data)) if bin_range is None else bin_range
+    data_dict = {bin_name: 0 for bin_name in generate_bin_names(bin_size, bin_range)}
+    for i in data:
+        if i < bin_range[0] or i > bin_range[1]+1:
+            continue
+        index = int((i - bin_range[0]) / bin_size)
+        keyname = list(data_dict)[index]
+        data_dict[keyname] += 1
+    data_dict = {key: val for key, val in data_dict.items() if val != 0}
+    return data_dict
 
 
 class MetricCalculator():
@@ -79,25 +110,17 @@ class MetricCalculator():
     def count_scheduled(self, schedule=None):
         schedule = self.combined_schedule if schedule is None else schedule
         counter = 0
+        total = 0
         for reservations in schedule.values():
             for reservation in reservations:
+                total += 1
                 if reservation.scheduled:
                     counter += 1
-        return counter
-
-    def count_unscheduled(self, schedule=None):
-        schedule = self.combined_schedule if schedule is None else schedule
-        counter = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                if not reservation.scheduled:
-                    counter += 1
-        return counter
+        return counter, total
 
     def percent_reservations_scheduled(self, schedule=None):
         schedule = self.combined_schedule if schedule is None else schedule
-        scheduled = self.count_scheduled(schedule)
-        total = scheduled + self.count_unscheduled(schedule)
+        scheduled, total = self.count_scheduled(schedule)
         return percent_of(scheduled, total)
 
     def total_scheduled_seconds(self, schedule=None):
@@ -138,7 +161,7 @@ class MetricCalculator():
         horizon_days = self.effective_horizon if horizon_days is None else horizon_days
         return percent_of(self.total_scheduled_seconds(schedule),
                           self.total_available_seconds(resources_scheduled, horizon_days))
-        
+
     def _get_airmass_data_from_observation_portal(self, request_id):
         """Pulls airmass data from the Observation Portal.
 
@@ -159,7 +182,7 @@ class MetricCalculator():
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
 
         return airmass_data
-    
+
     def _get_ideal_airmass_for_request(self, request_id):
         """Finds the minimum airmass across all sites for the request."""
         ideal_airmass = 1000
@@ -209,7 +232,7 @@ class MetricCalculator():
                     request = reservation.request
                     request_id = request.id
                     start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
-                                                            datetime_to_epoch(semester_start))
+                                                              datetime_to_epoch(semester_start))
                     end_time = start_time + dt.timedelta(seconds=reservation.duration)
                     midpoint_airmasses = self._get_midpoint_airmasses_from_request(request_id, start_time, end_time)
                     site = reservation.scheduled_resource[-3:]
@@ -218,6 +241,15 @@ class MetricCalculator():
                     sum_midpoint_airmass += midpoint_airmass
                     count += 1
         return sum_midpoint_airmass / count
+
+    def tac_priority_histogram(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        bin_size = 10
+        tac_priority_values = []
+        for reservations in schedule.values():
+            for reservation in reservations:
+                tac_priority_values.append(reservation.request_group.proposal.tac_priority)
+        return bin_data(tac_priority_values, bin_size=bin_size)
 
 
 def reservation_data_populator(reservation):
@@ -243,33 +275,3 @@ def reservation_data_populator(reservation):
         tac_priority=proposal.tac_priority,
     )
     return data
-
-
-def fill_bin_with_reservation_data(data_dict, bin_name, reservation):
-    """Populates bins in a dictionary with the reservation data container. The original
-    dictionary is modified, instead of creating and returning a copy.
-
-    Args:
-        data_dict (dict): Binned data dictionary. Each bin contains a list of DataContainer's.
-        bin_name (str): The name of the bin to create or populate.
-        reservation (Reservation_v3): A Reservation object.
-    """
-    if bin_name not in data_dict:
-        data_dict[bin_name] = []
-    reservation_data = reservobservation_portal_interface, _reservation_data(scheduled_requests_by_eff_priority,
-                                               eff_priority,
-                                               reservation)
-    return scheduled_requests_by_eff_priority
-
-
-def bin_scheduler_result_by_tac_priority(schedule):
-    scheduled_requests_by_tac_priority = {}
-    for reservations in schedule.values():
-        for reservation in reservations:
-            if reservation.scheduled:
-                proposal = reservation.request_group.proposal
-                tac_priority = str(proposal.tac_priority)
-                fill_bin_with_reservation_data(scheduled_requests_by_tac_priority,
-                                               tac_priority,
-                                               reservation)
-    return scheduled_requests_by_tac_priority
