@@ -211,6 +211,16 @@ class MetricCalculator():
         return sum_ideal_airmass / count
 
     def _get_midpoint_airmasses_for_request(self, request_id, start_time, end_time):
+        """From the observation portal get the midpoint airmasses for one request.
+
+        Args:
+            request_id (integer): The id of the request we want to get airmass data of.
+            start_time (datetime): The start time of the scheduled observation.
+            end_time (datetime): The end time of the scheduled observation.
+
+        Returns:
+            midpoint_airmasses (dictionary): A dictionaory with observation sites as keys and corresponding  midpoint airmasses as values.
+        """
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
         airmass_data = self.airmass_data_by_request_id[request_id]
@@ -231,6 +241,14 @@ class MetricCalculator():
         return midpoint_airmasses
 
     def avg_midpoint_airmass(self, schedule=None):
+        """Calculate the average midpoint airmass of all scheudled reservations for a single schedule. 
+
+        Args:
+            schedule (scheduler, optional): the schedule we calculate our metricses on. Defaults to None.
+
+        Returns:
+            average(float): the average midpoint airmass of all scheduled reservation for one schedule.
+        """
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
         midpoint_airmass_for_each_reservation = []
