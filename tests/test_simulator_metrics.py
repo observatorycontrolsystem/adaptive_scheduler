@@ -1,11 +1,11 @@
 from adaptive_scheduler.simulation.metrics import (MetricCalculator,
                                                    bin_data)
-from adaptive_scheduler.models import DataContainer
 
 import os
 import json
 from datetime import datetime, timedelta
-from mock import Mock, patch
+
+from mock import Mock
 
 
 class TestMetrics():
@@ -94,21 +94,26 @@ class TestMetrics():
         assert self.metrics.percent_time_utilization() == 60/(86400*4)*100
 
     def test_bin_data(self):
-        data = [1, 3, 4, 2, 6, 5, 3, 2, 3, 4, 7, 9, 3, 8, 6, 4]
-        data2 = [0.5, 3.7, 2.8, 6.9, 1.8]
+        bin_by    = [1, 3, 4, 2, 6, 5, 3, 2, 3, 4, 7, 9, 3, 8, 6, 4]
+        bin_data_ = [1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 2]
+        bin_by_float = [0.5, 2.1, 2.8, 6.9, 1.8]
         bin_range = (1, 9)
 
-        expected1 = {'1-3': 7, '4-6': 6, '7-9': 3}
-        expected2 = {'1': 1, '2': 2, '3': 4, '4': 3, '5': 1, '6': 2, '7': 1, '8': 1, '9': 1}
-        expected3 = {'1-2': 3, '3-4': 7, '5-6': 3, '7-8': 2, '9': 1}
-        expected4 = {'0': 1, '1': 1, '2': 1, '3': 1,  '6': 1}
-        expected5 = {'0': 1, '1': 1, '2': 1, '3': 1}
+        allparams = {'1-3': 7, '4-6': 6, '7-9': 3}
+        defaults = {'1': 1, '2': 2, '3': 4, '4': 3, '5': 1, '6': 2, '7': 1, '8': 1, '9': 1}
+        unevenbins = {'1-2': 3, '3-4': 7, '5-6': 3, '7-8': 2, '9': 1}
+        floats = {'0': 1, '1': 1, '2': 2,  '6': 1}
+        capped_floats = {'0': 1, '1': 1, '2': 2}
+        sumdata = {'1-3': 36, '4-6': 27, '7-9': 17}
+        mindata = {'1-3': 1, '4-6': 2, '7-9': 4}
 
-        assert bin_data(data, 3, bin_range) == expected1
-        assert bin_data(data) == expected2
-        assert bin_data(data, 2) == expected3
-        assert bin_data(data2) == expected4
-        assert bin_data(data2, bin_range=(0, 4)) == expected5
+        assert bin_data(bin_by, bin_size=3, bin_range=bin_range) == allparams
+        assert bin_data(bin_by) == defaults
+        assert bin_data(bin_by, bin_size=2) == unevenbins
+        assert bin_data(bin_by_float) == floats
+        assert bin_data(bin_by_float, bin_range=(0, 4)) == capped_floats
+        assert bin_data(bin_by, bin_data_, bin_size=3) == sumdata
+        assert bin_data(bin_by, bin_data_, bin_size=3, aggregation=min) == mindata
 
     def test_airmass_functions(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))

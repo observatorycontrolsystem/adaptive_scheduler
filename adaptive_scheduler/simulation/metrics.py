@@ -45,28 +45,40 @@ def generate_bin_names(bin_size, bin_range):
     return bin_names
 
 
-def bin_data(data, bin_size=1, bin_range=None):
+def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
     """Bins data to create a histogram. Currently only supports integer bin resolution.
     Float input is casted to an integer for counting.
 
     Args:
-        data (list): The input data can be float or int.
+        bin_by (list): A list of data to bin by. Can be float or int.
+        data (list): Additional data points associated with the data to bin by. If the lengths are
+            mismatched, you will get an IndexError if the data list is too short. If it is too long,
+            extra values are thrown out. The aggregation function is applied to the data at the end.
         bin_size (int): The width of the bins.
         bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
+        aggregation (func): The aggregation function to apply over the list of data. Must be callable.
 
     Returns:
         data_dict (str: int): The frequency count of the data.
     """
-    bin_range = (min(data), max(data)) if bin_range is None else bin_range
-    data_dict = {bin_name: 0 for bin_name in generate_bin_names(bin_size, bin_range)}
-    for i in data:
-        if i < bin_range[0] or i > bin_range[1]+1:
+    if bin_range is None:
+        bin_range = (int(min(bin_by)), int(max(bin_by)))
+    else:
+        (int(bin_range[0]), int(bin_range[1]))
+
+    bin_dict = {bin_name: [] for bin_name in generate_bin_names(bin_size, bin_range)}
+
+    for i, value in enumerate(bin_by):
+        if value < bin_range[0] or value > bin_range[1]+1:
             continue
-        index = int((i - bin_range[0]) / bin_size)
-        keyname = list(data_dict)[index]
-        data_dict[keyname] += 1
-    data_dict = {key: val for key, val in data_dict.items() if val != 0}
-    return data_dict
+        index = int((value - bin_range[0]) / bin_size)
+        keyname = list(bin_dict)[index]
+        if data:
+            bin_dict[keyname].append(data[i])
+        else:
+            bin_dict[keyname].append(1)
+    bin_dict = {key: aggregation(val) for key, val in bin_dict.items() if val}
+    return bin_dict
 
 
 class MetricCalculator():
@@ -299,28 +311,3 @@ class MetricCalculator():
             for reservation in reservations:
                 tac_priority_values.append(reservation.request_group.proposal.tac_priority)
         return bin_data(tac_priority_values, bin_size=bin_size)
-
-
-def reservation_data_populator(reservation):
-    """Creates a new data container containing parameters useful in calculating metrics.
-
-    Args:
-        reservation (Reservation_v3): A Reservation object (obtained from the values of Scheduler.schedule).
-
-    Returns:
-        data (DataContainer): An object with data values of interest as attributes.
-    """
-    request_group = reservation.request_group
-    proposal = request_group.proposal
-
-    data = DataContainer(
-        request_group_id=reservation.request_group.id,
-        request_id=reservation.request.id,
-        duration=reservation.duration,
-        scheduled_resource=reservation.scheduled_resource,
-        scheduled=reservation.scheduled,
-        scheduled_start=reservation.scheduled_start,
-        ipp_value=reservation.request_group.ipp_value,
-        tac_priority=proposal.tac_priority,
-    )
-    return data
