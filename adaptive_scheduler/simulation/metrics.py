@@ -226,18 +226,27 @@ class MetricCalculator():
             ideal_airmass = min(ideal_airmass, ideal_for_site)
         return ideal_airmass
 
-    def avg_ideal_airmass(self, schedule=None):
-        """Calculates the average ideal airmass for scheduled observations."""
-        schedule = self.combined_schedule if schedule is None else schedule
-        sum_ideal_airmass = 0
-        count = 0
-        for reservations in schedule.values():
-            for reservation in reservations:
-                if reservation.scheduled:
-                    request_id = reservation.request.id
-                    sum_ideal_airmass += self._get_ideal_airmass_for_request(request_id)
-                    count += 1
-        return sum_ideal_airmass / count
+    # def avg_ideal_airmass(self, schedule=None):
+    #     """Calculates the average ideal airmass for scheduled observations."""
+    #     ideal_airmass_for_each_reservation = []
+    #     duration_for_each_reservation = []
+    #     schedule = self.combined_schedule if schedule is None else schedule
+    #     sum_ideal_airmass = 0
+    #     count = 0
+    #     for reservations in schedule.values():
+    #         for reservation in reservations:
+    #             if reservation.scheduled:
+    #                 request_id = reservation.request.id
+    #                 ideal_airmass = self._get_ideal_airmass_for_request(request_id)
+    #                 sum_ideal_airmass += ideal_airmass
+    #                 ideal_airmass_for_each_reservation.append(ideal_airmass)
+    #                 count += 1
+    #     return {'avg_ideal_airmass':(sum_ideal_airmass / count), 
+    #             'confidence_interval_midpoint_airmass':[[np.percentile(midpoint_airmass_for_each_reservation, 2.5), 
+    #                                                     np.percentile(midpoint_airmass_for_each_reservation, 97.5)]], 
+    #             'duration_vs_midpoint_airmass': [{'duration': duration_for_each_reservation, 
+    #                                              'midpoint_airmass': midpoint_airmass_for_each_reservation}]}
+        
 
     def _get_midpoint_airmasses_for_request(self, request_id, start_time, end_time):
         """"Gets the midpoint airmasses by site for a request. This is done by finding the time
@@ -271,7 +280,7 @@ class MetricCalculator():
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
-    def midpoint_airmass_metrics(self, schedule=None):
+    def airmass_metrics(self, schedule=None):
         """Calculate the average midpoint airmass of all scheduled reservations for a single schedule.
 
         Args:
@@ -285,6 +294,8 @@ class MetricCalculator():
         midpoint_airmass_for_each_reservation = []
         duration_for_each_reservation = []
         sum_midpoint_airmass = 0
+        sum_ideal_airmass = 0
+        ideal_airmass_for_each_reservation = []
         count = 0
         for reservations in schedule.values():
             for reservation in reservations:
@@ -297,15 +308,23 @@ class MetricCalculator():
                     midpoint_airmasses = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
                     site = reservation.scheduled_resource[-3:]
                     midpoint_airmass = midpoint_airmasses[site]
-                    duration_for_each_reservation.append(reservation.duration)
                     midpoint_airmass_for_each_reservation.append(midpoint_airmass)
                     sum_midpoint_airmass += midpoint_airmass
+                    ideal_airmass = self._get_ideal_airmass_for_request(request_id)
+                    ideal_airmass_for_each_reservation.append(ideal_airmass)
+                    sum_ideal_airmass += ideal_airmass
+                    duration_for_each_reservation.append(reservation.duration)
                     count += 1
-        return {'avg_midpoint_airmass':(sum_midpoint_airmass / count), 
-                'confidence_interval_midpoint_airmass':[np.percentile(midpoint_airmass_for_each_reservation, 2.5), 
-                                                        np.percentile(midpoint_airmass_for_each_reservation, 97.5)], 
-                'duration_vs_midpoint_airmass': {'duration': duration_for_each_reservation, 
-                                                 'midpoint_airmass': midpoint_airmass_for_each_reservation}}
+                    
+        airmass_data = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmass_for_each_reservation},
+                                             {'ideal_airmasses': ideal_airmass_for_each_reservation},
+                                             {'durations': duration_for_each_reservation},],
+                        'avg_midpoint_airmass': (sum_midpoint_airmass / count),
+                        'avg_ideal_airmass': (sum_ideal_airmass / count),
+                        'ci_midpoint_airmass': [[np.percentile(midpoint_airmass_for_each_reservation, 2.5), 
+                                                np.percentile(midpoint_airmass_for_each_reservation, 97.5)]], 
+                        }
+        return airmass_data
         
 
     def tac_priority_histogram(self, schedule=None):
