@@ -102,7 +102,8 @@ class TestMetrics():
         allparams = {'1-3': 7, '4-6': 6, '7-9': 3}
         defaults = {'1': 1, '2': 2, '3': 4, '4': 3, '5': 1, '6': 2, '7': 1, '8': 1, '9': 1}
         unevenbins = {'1-2': 3, '3-4': 7, '5-6': 3, '7-8': 2, '9': 1}
-        floats = {'0': 1, '1': 1, '2': 2,  '6': 1}
+        floatbinsize = {'0.0-2.5': 3, '2.5-5.0': 7, '5.0-7.5': 4, '7.5-9.0': 1}
+        floats = {'0.5-1.5': 1, '1.5-2.5': 2, '2.5-3.5': 1, '6.5-6.9': 1}
         capped_floats = {'0': 1, '1': 1, '2': 2}
         sumdata = {'1-3': 36, '4-6': 27, '7-9': 17}
         mindata = {'1-3': 1, '4-6': 2, '7-9': 4}
@@ -110,6 +111,7 @@ class TestMetrics():
         assert bin_data(bin_by, bin_size=3, bin_range=bin_range) == allparams
         assert bin_data(bin_by) == defaults
         assert bin_data(bin_by, bin_size=2) == unevenbins
+        assert bin_data(bin_by, bin_size=2.5, bin_range=(0, 9)) == floatbinsize
         assert bin_data(bin_by_float) == floats
         assert bin_data(bin_by_float, bin_range=(0, 4)) == capped_floats
         assert bin_data(bin_by, bin_data_, bin_size=3) == sumdata

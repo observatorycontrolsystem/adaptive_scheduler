@@ -5,12 +5,12 @@ import datetime as dt
 from datetime import datetime
 from collections import defaultdict
 
+import numpy as np
 import requests
 from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
-from adaptive_scheduler.models import DataContainer
 
 
 def percent_of(x, y):
@@ -27,16 +27,18 @@ def percent_diff(x, y):
 
 
 def generate_bin_names(bin_size, bin_range):
-    """Creates bins named 'start-end' for dictionary keys."""
-    start = int(bin_range[0])
-    end = int(bin_range[1])
-    if bin_size == 1:
-        return [str(n) for n in range(start, end+1)]
+    """Creates labels for the bins."""
+    start = bin_range[0]
+    end = bin_range[1]
     bin_names = []
-    bin_start = list(range(start, end+1, bin_size))
+    bin_start = np.arange(start, end+1, bin_size)
     for start_num in bin_start:
-        end_num = start_num + bin_size - 1
-        end_num = end_num if end_num < end else end
+        if np.issubdtype(bin_start.dtype, np.integer):
+            end_num = start_num + bin_size - 1
+            end_num = end_num if end_num < end else end
+        else:
+            end_num = start_num + bin_size
+            end_num = end_num if end_num < end else float(end)
         if end_num == start_num:
             bin_name = str(start_num)
         else:
@@ -46,8 +48,10 @@ def generate_bin_names(bin_size, bin_range):
 
 
 def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
-    """Bins data to create a histogram. Currently only supports integer bin resolution.
-    Float input is casted to an integer for counting.
+    """Bins data to create a histogram. Each bin is half-open, i.e. defined on the interval [a, b) for every bin
+    except for the last bin, which is defined on the interval [a, b]. The naming convention is different for
+    integers and floats. For example, for the label '1-2', this means the discrete values 1 and 2, whereas
+    for the label '1.0-2.0' this means the values on the interval [1.0, 2.0).
 
     Args:
         bin_by (list): A list of data to bin by. Can be float or int.
@@ -61,11 +65,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
     Returns:
         data_dict (str: int): The frequency count of the data.
     """
-    if bin_range is None:
-        bin_range = (int(min(bin_by)), int(max(bin_by)))
-    else:
-        (int(bin_range[0]), int(bin_range[1]))
-
+    bin_range = (min(bin_by), max(bin_by)) if bin_range is None else bin_range
     bin_dict = {bin_name: [] for bin_name in generate_bin_names(bin_size, bin_range)}
 
     for i, value in enumerate(bin_by):
