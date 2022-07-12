@@ -2,7 +2,7 @@
 Metric calculation functions for the scheduler simulator.
 """
 import datetime as dt
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 import numpy as np
 import requests
@@ -59,7 +59,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
             extra values are thrown out. The aggregation function is applied to the data at the end.
         bin_size (int): The width of the bins.
         bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
-        aggregation (func): The aggregation function to apply over the list of data. Must be callable.
+        aggregation (func): The aggregation function to apply over the list of data. Must be callable on an array.
 
     Returns:
         data_dict (str: int): The frequency count of the data.
@@ -154,6 +154,14 @@ class MetricCalculator():
         scheduled, total = self.count_scheduled(input_reservations, schedule)
         return percent_of(scheduled, total)
 
+    def total_scheduled_eff_priority(self, schedule=None):
+        schedule = self.combined_schedule if schedule is None else schedule
+        effective_priorities = []
+        for reservations in schedule.values():
+            for reservation in reservations:
+                effective_priorities.append(reservation.priority)
+        return sum(effective_priorities), effective_priorities
+
     def total_scheduled_seconds(self, schedule=None):
         schedule = self.combined_schedule if schedule is None else schedule
         total_scheduled_seconds = 0
@@ -178,7 +186,7 @@ class MetricCalculator():
         horizon_days = self.horizon_days if horizon_days is None else horizon_days
         total_available_time = 0
         start_time = self.scheduler.estimated_scheduler_end
-        end_time = start_time + dt.timedelta(days=horizon_days)
+        end_time = start_time + timedelta(days=horizon_days)
         for resource in resources_scheduled:
             if resource in self.scheduler.visibility_cache:
                 dark_intervals = self.scheduler.visibility_cache[resource].dark_intervals
@@ -267,47 +275,52 @@ class MetricCalculator():
         """
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
-        midpoint_airmass_for_each_reservation = []
-        duration_for_each_reservation = []
-        sum_midpoint_airmass = 0
-        sum_ideal_airmass = 0
-        ideal_airmass_for_each_reservation = []
-        count = 0
+        midpoint_airmasses = []
+        durations = []
+        ideal_airmasses = []
         for reservations in schedule.values():
             for reservation in reservations:
-                if reservation.scheduled:
-                    request = reservation.request
-                    request_id = request.id
-                    start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
-                                                              datetime_to_epoch(semester_start))
-                    end_time = start_time + dt.timedelta(seconds=reservation.duration)
-                    midpoint_airmasses = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
-                    site = reservation.scheduled_resource[-3:]
-                    midpoint_airmass = midpoint_airmasses[site]
-                    midpoint_airmass_for_each_reservation.append(midpoint_airmass)
-                    sum_midpoint_airmass += midpoint_airmass
-                    ideal_airmass = self._get_ideal_airmass_for_request(request_id)
-                    ideal_airmass_for_each_reservation.append(ideal_airmass)
-                    sum_ideal_airmass += ideal_airmass
-                    duration_for_each_reservation.append(reservation.duration)
-                    count += 1     
-        airmass_data = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmass_for_each_reservation},
-                                             {'ideal_airmasses': ideal_airmass_for_each_reservation},
-                                             {'durations': duration_for_each_reservation},],
-                        'avg_midpoint_airmass': (sum_midpoint_airmass / count),
-                        'avg_ideal_airmass': (sum_ideal_airmass / count),
-                        'ci_midpoint_airmass': [[np.percentile(midpoint_airmass_for_each_reservation, 2.5), 
-                                                np.percentile(midpoint_airmass_for_each_reservation, 97.5)]], 
+                request_id = reservation.request.id
+                start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
+                                                          datetime_to_epoch(semester_start))
+                end_time = start_time + timedelta(seconds=reservation.duration)
+                midpoint_airmasses_for_request = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
+                site = reservation.scheduled_resource[-3:]
+                midpoint_airmasses.append(midpoint_airmasses_for_request[site])
+                ideal_airmass = self._get_ideal_airmass_for_request(request_id)
+                ideal_airmasses.append(ideal_airmass)
+                durations.append(reservation.duration)
+        airmass_data = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmasses},
+                                             {'ideal_airmasses': ideal_airmasses},
+                                             {'durations': durations}],
+                        'avg_midpoint_airmass': sum(midpoint_airmasses)/len(midpoint_airmasses),
+                        'avg_ideal_airmass': sum(ideal_airmasses)/len(ideal_airmasses),
+                        'ci_midpoint_airmass': [[np.percentile(midpoint_airmasses, 2.5),
+                                                np.percentile(midpoint_airmasses, 97.5)]],
                         }
         return airmass_data
-        
 
-    def tac_priority_histogram(self, schedule=None):
+    def binned_tac_priority_metrics(self, input_reservations=None, schedule=None):
         """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""
+        input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
         bin_size = 10
-        tac_priority_values = []
+        sched_tac_priority_values = []
+        sched_reservation_durations = []
+        all_tac_priority_values = []
+        all_reservation_durations = []
         for reservations in schedule.values():
             for reservation in reservations:
-                tac_priority_values.append(reservation.request_group.proposal.tac_priority)
-        return bin_data(tac_priority_values, bin_size=bin_size)
+                sched_tac_priority_values.append(reservation.request_group.proposal.tac_priority)
+                sched_reservation_durations.append(reservation.duration)
+        for reservation in input_reservations:
+            all_tac_priority_values.append(reservation.request_group.proposal.tac_priority)
+            all_reservation_durations.append(reservation.duration)
+
+        output_dict = {
+            'sched_histogram': bin_data(sched_tac_priority_values, bin_size=bin_size),
+            'sched_durations': bin_data(sched_tac_priority_values, sched_reservation_durations, bin_size=bin_size),
+            'full_histogram': bin_data(all_tac_priority_values, bin_size=bin_size),
+            'all_durations': bin_data(all_tac_priority_values, all_reservation_durations, bin_size=bin_size),
+        }
+        return output_dict
