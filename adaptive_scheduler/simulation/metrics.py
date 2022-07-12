@@ -4,7 +4,6 @@ Metric calculation functions for the scheduler simulator.
 import datetime as dt
 from datetime import datetime
 from collections import defaultdict
-
 import numpy as np
 import requests
 from requests.exceptions import RequestException, Timeout
@@ -272,7 +271,7 @@ class MetricCalculator():
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
-    def avg_midpoint_airmass(self, schedule=None):
+    def midpoint_airmass_metrics(self, schedule=None):
         """Calculate the average midpoint airmass of all scheduled reservations for a single schedule.
 
         Args:
@@ -284,6 +283,7 @@ class MetricCalculator():
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
         midpoint_airmass_for_each_reservation = []
+        duration_for_each_reservation = []
         sum_midpoint_airmass = 0
         count = 0
         for reservations in schedule.values():
@@ -297,10 +297,16 @@ class MetricCalculator():
                     midpoint_airmasses = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
                     site = reservation.scheduled_resource[-3:]
                     midpoint_airmass = midpoint_airmasses[site]
+                    duration_for_each_reservation.append(reservation.duration)
                     midpoint_airmass_for_each_reservation.append(midpoint_airmass)
                     sum_midpoint_airmass += midpoint_airmass
                     count += 1
-        return sum_midpoint_airmass / count
+        return {'avg_midpoint_airmass':(sum_midpoint_airmass / count), 
+                'confidence_interval_midpoint_airmass':[np.percentile(midpoint_airmass_for_each_reservation, 2.5), 
+                                                        np.percentile(midpoint_airmass_for_each_reservation, 97.5)], 
+                'duration_vs_midpoint_airmass': {'duration': duration_for_each_reservation, 
+                                                 'midpoint_airmass': midpoint_airmass_for_each_reservation}}
+        
 
     def tac_priority_histogram(self, schedule=None):
         """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""

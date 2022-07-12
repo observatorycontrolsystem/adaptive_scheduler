@@ -91,7 +91,6 @@ def send_to_opensearch(os_url, os_index, metrics):
         log.info(f"Successfully saved metrics for {metrics['simulation_id']}")
     else:
         log.warning("Not configured to save metrics in opensearch. Please set OPENSEARCH_URL and SIMULATION_OPENSEARCH_INDEX.")
-    log.info(metrics)  # send to output for now
 
 
 def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
@@ -100,7 +99,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     observation_portal_interface = scheduler_runner.network_interface.observation_portal_interface
     sched_params = scheduler_runner.sched_params
-
+    midpoint_airmass_metricses = metrics.midpoint_airmass_metrics()
     metrics = {
         'simulation_id': RUN_ID,
         'simulation_start_time': sched_params.simulate_now,
@@ -118,9 +117,12 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'percent_time_utilization': metrics.percent_time_utilization(),
         'tac_priority_histogram': metrics.tac_priority_histogram(),
         'avg_ideal_airmass': metrics.avg_ideal_airmass(),
-        'avg_midpoint_airmass': metrics.avg_midpoint_airmass(),
+        'avg_midpoint_airmass':midpoint_airmass_metricses['avg_midpoint_airmass'],
+        'confidence_interval_midpoint_airmass': midpoint_airmass_metricses['confidence_interval_midpoint_airmass'],
+        'duration_vs_midpoint_airmass': midpoint_airmass_metricses['duration_vs_midpoint_airmass'],
     }
-    send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
+    log.info(metrics)
+    # send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
 
 def main(argv=None):
