@@ -141,6 +141,4 @@ class TestMetrics():
 
         assert self.metrics._get_midpoint_airmasses_for_request(1, self.start, self.end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(2) == 1
-        assert self.metrics.avg_ideal_airmass(schedule) == 2
-        assert self.metrics.avg_midpoint_airmass(schedule) == 5
-        assert self.metrics.avg_ideal_airmass() == float(5/3)
+        assert self.metrics.airmass_metrics == 
