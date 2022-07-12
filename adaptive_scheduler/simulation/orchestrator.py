@@ -98,12 +98,9 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
 
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     sched_params = scheduler_runner.sched_params
-<<<<<<< Updated upstream
     airmass_metrics = metrics.airmass_metrics()
-=======
     binned_tac_priority_metrics = metrics.binned_tac_priority_metrics()
-    midpoint_airmass_metrics = metrics.midpoint_airmass_metrics()
->>>>>>> Stashed changes
+
     metrics = {
         'simulation_id': RUN_ID,
         'simulation_start_time': sched_params.simulate_now,
