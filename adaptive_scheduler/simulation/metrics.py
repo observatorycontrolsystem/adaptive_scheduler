@@ -12,7 +12,7 @@ from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
-from adaptive_scheduler.kernel_mappings import redis
+from adaptive_scheduler.models import redis_instance
 
 
 def percent_of(x, y):
@@ -212,7 +212,7 @@ class MetricCalculator():
         """
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
         try:
-            cached_airmass_data = pickle.loads(redis.get('airmass_data_by_request_id'))
+            cached_airmass_data = pickle.loads(redis_instance.get('airmass_data_by_request_id'))
             cached_airmass_data[request_id]
             self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
             return cached_airmass_data[request_id]
@@ -224,7 +224,7 @@ class MetricCalculator():
             response.raise_for_status()
             airmass_data_for_request = response.json()['airmass_data']
             self.airmass_data_by_request_id[request_id] = airmass_data_for_request
-            redis.set('airmass_data_by_request_id', pickle.dumps(dict(self.airmass_data_by_request_id)))
+            redis_instance.set('airmass_data_by_request_id', pickle.dumps(dict(self.airmass_data_by_request_id)))
             return airmass_data_for_request
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
