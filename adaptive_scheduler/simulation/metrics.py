@@ -1,15 +1,17 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
-import datetime as dt
+import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
+
 import numpy as np
 import requests
 from requests.exceptions import RequestException, Timeout
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
+from adaptive_scheduler.kernel_mappings import redis
 
 
 def percent_of(x, y):
@@ -198,7 +200,7 @@ class MetricCalculator():
         return percent_of(sum(self.get_scheduled_durations(schedule)),
                           self.total_available_seconds(resources_scheduled, horizon_days))
 
-    def _get_airmass_data_from_observation_portal(self, request_id):
+    def _get_airmass_data_for_request(self, request_id):
         """Pulls airmass data from the Observation Portal.
 
         Args:
@@ -211,26 +213,32 @@ class MetricCalculator():
         """
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
         try:
+            cached_airmass_data = pickle.loads(redis.get('airmass_data_by_request_id'))
+            self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
+            print(f'got cached data for {request_id}')
+            return cached_airmass_data[request_id]
+        except Exception:
+            # the request has not been cached yet, get the data from the portal
+            pass
+        try:
             response = requests.get(airmass_url, headers=self.observation_portal_interface.headers, timeout=180)
             response.raise_for_status()
-            airmass_data = response.json()['airmass_data']
-            self.airmass_data_by_request_id[request_id] = airmass_data
+            airmass_data_for_request = response.json()['airmass_data']
+            self.airmass_data_by_request_id[request_id] = airmass_data_for_request
+            redis.set('airmass_data_by_request_id', pickle.dumps(self.airmass_data_by_request_id))
+            return airmass_data_for_request
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
-        return airmass_data
 
-    def _get_ideal_airmass_for_request(self, request_id):
-        """Finds the minimum airmass across all sites for the request."""
+    def _get_ideal_airmass(self, airmass_data):
+        """Finds the minimum airmass across all sites."""
         ideal_airmass = 1000
-        airmass_data = self.airmass_data_by_request_id[request_id]
-        if not airmass_data:
-            airmass_data = self._get_airmass_data_from_observation_portal(request_id)
         for site in airmass_data.values():
             ideal_for_site = min(site['airmasses'])
             ideal_airmass = min(ideal_airmass, ideal_for_site)
         return ideal_airmass
 
-    def _get_midpoint_airmasses_for_request(self, request_id, start_time, end_time):
+    def _get_midpoint_airmasses_by_site(self, airmass_data, start_time, end_time):
         """"Gets the midpoint airmasses by site for a request. This is done by finding the time
         closest matching the calculated midpoint of the observation in the observe portal airmass data.
 
@@ -245,9 +253,7 @@ class MetricCalculator():
         """
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
-        airmass_data = self.airmass_data_by_request_id[request_id]
-        if not airmass_data:
-            airmass_data = self._get_airmass_data_from_observation_portal(request_id)
+        print(airmass_data)
         for site, details in airmass_data.items():
             details = list(details.values())
             times, airmasses = details[0], details[1]
@@ -259,6 +265,7 @@ class MetricCalculator():
                     time_diff = temp_time_diff
                     index = i
             midpoint_airmass = airmasses[index]
+            print(midpoint_airmass)
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
@@ -273,29 +280,30 @@ class MetricCalculator():
         """
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
+
         midpoint_airmasses = []
         ideal_airmasses = []
         durations = self.get_scheduled_durations(schedule)
         for reservations in schedule.values():
             for reservation in reservations:
-                request_id = reservation.request.id
+                airmass_data = self._get_airmass_data_for_request(reservation.request.id)
                 start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
                                                           datetime_to_epoch(semester_start))
                 end_time = start_time + timedelta(seconds=reservation.duration)
-                midpoint_airmasses_for_request = self._get_midpoint_airmasses_for_request(request_id, start_time, end_time)
+                midpoint_airmasses_by_site = self._get_midpoint_airmasses_by_site(airmass_data, start_time, end_time)
                 site = reservation.scheduled_resource[-3:]
-                midpoint_airmasses.append(midpoint_airmasses_for_request[site])
-                ideal_airmass = self._get_ideal_airmass_for_request(request_id)
+                midpoint_airmasses.append(midpoint_airmasses_by_site[site])
+                ideal_airmass = self._get_ideal_airmass(airmass_data)
                 ideal_airmasses.append(ideal_airmass)
-        airmass_data = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmasses},
-                                             {'ideal_airmasses': ideal_airmasses},
-                                             {'durations': durations}],
-                        'avg_midpoint_airmass': sum(midpoint_airmasses)/len(midpoint_airmasses),
-                        'avg_ideal_airmass': sum(ideal_airmasses)/len(ideal_airmasses),
-                        'ci_midpoint_airmass': [[np.percentile(midpoint_airmasses, 2.5),
-                                                np.percentile(midpoint_airmasses, 97.5)]],
-                        }
-        return airmass_data
+        airmass_metrics = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmasses},
+                                                {'ideal_airmasses': ideal_airmasses},
+                                                {'durations': durations}],
+                           'avg_midpoint_airmass': sum(midpoint_airmasses)/len(midpoint_airmasses),
+                           'avg_ideal_airmass': sum(ideal_airmasses)/len(ideal_airmasses),
+                           'ci_midpoint_airmass': [[np.percentile(midpoint_airmasses, 2.5),
+                                                    np.percentile(midpoint_airmasses, 97.5)]],
+                           }
+        return airmass_metrics
 
     def binned_tac_priority_metrics(self, input_reservations=None, schedule=None):
         """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""
