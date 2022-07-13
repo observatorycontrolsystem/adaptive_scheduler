@@ -126,7 +126,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'percent_duration_by_priority': [binned_tac_priority_metrics['percent_duration']],
     }
     log.info(metrics)
-    #send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
+    send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
 
 def main(argv=None):
