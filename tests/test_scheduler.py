@@ -2,12 +2,11 @@ from adaptive_scheduler.scheduler import Scheduler, SchedulerRunner, SchedulerRe
 from adaptive_scheduler.scheduler_input import SchedulerParameters, SchedulingInputProvider, SchedulingInput
 from adaptive_scheduler.models import RequestGroup, Window, Windows
 from adaptive_scheduler.interfaces import RunningRequest, RunningRequestGroup, ResourceUsageSnapshot
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
-from adaptive_scheduler.kernel_mappings import normalise_dt_intervals
+from adaptive_scheduler.kernel.reservation import Reservation
+from adaptive_scheduler.kernel.reservation import CompoundReservation as CompoundReservation
 from adaptive_scheduler.kernel.fullscheduler_ortoolkit import FullScheduler_ortoolkit
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.utils import datetime_to_normalised_epoch
+from adaptive_scheduler.utils import datetime_to_normalised_epoch, normalise_datetime_intervals
 
 from mock import Mock, patch
 
@@ -87,7 +86,7 @@ class TestScheduler(object):
         estimated_scheduler_runtime = timedelta(seconds=300)
 
         kernel_class_mock = Mock()
-        scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock)
+        scheduler = Scheduler(kernel_class_mock, sched_params, event_bus_mock, self.network_model)
         model_builder = Mock()
         model_builder.semester_details = {'start': datetime.utcnow() - timedelta(days=7)}
         scheduler_input = SchedulingInput(sched_params, datetime.utcnow(), estimated_scheduler_runtime,
@@ -112,7 +111,7 @@ class TestScheduler(object):
         }
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combined = scheduler.combine_excluded_intervals(running, rr)
 
         expected = {
@@ -134,7 +133,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = [('tel1', 1), ('tel2', 2)]
@@ -151,7 +150,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = [('tel1', 1)]
@@ -166,7 +165,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = []
@@ -187,7 +186,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2', 'tel3']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = [('tel2', 1), ('tel3', 2)]
@@ -206,7 +205,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2', 'tel3']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = [('tel1', 1), ('tel2', 2)]
@@ -229,7 +228,7 @@ class TestScheduler(object):
         telescopes = ['tel1', 'tel2']
 
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
         combinations = scheduler.compute_optimal_combination(tel_rg_value_dict, request_group_ids, telescopes)
 
         expected_combinations = [('tel1', 1), ('tel1', 2)]
@@ -238,7 +237,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_no_running_requests(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
         running_request_groups = []
@@ -254,7 +253,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_running_rr(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
 
@@ -276,7 +275,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_running_rr_failed(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
 
@@ -299,7 +298,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_running_request_preemption_disabled(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
 
@@ -321,7 +320,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_running_request_failed_preemption_disabled(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
 
@@ -344,7 +343,7 @@ class TestScheduler(object):
 
     def test_create_resource_mask_running_request_preemption_enabled(self):
         mock_kernel_class = Mock()
-        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(mock_kernel_class, self.sched_params, self.event_bus_mock, self.network_model)
 
         available_resources = ['1m0a.doma.bpl']
 
@@ -426,7 +425,7 @@ class TestScheduler(object):
                                     )
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=False)
@@ -493,7 +492,7 @@ class TestScheduler(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300))
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -571,7 +570,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = normal_request_groups
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -669,7 +668,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = normal_request_groups
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -767,7 +766,7 @@ class TestScheduler(object):
         scheduler_input._scheduler_model_normal_request_groups = []
 
         # Start scheduler run
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -825,7 +824,7 @@ class TestScheduler(object):
                                     estimated_scheduler_runtime=timedelta(seconds=300))
         mock_scheduler_input.invalid_request_groups = []
         mock_scheduler_input.invalid_requests = []
-        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock)
+        scheduler = Scheduler(FullScheduler_ortoolkit, self.sched_params, self.event_bus_mock, self.network_model)
         estimated_scheduler_end = datetime.utcnow() + timedelta(seconds=300)
         scheduler_result = scheduler.run_scheduler(mock_scheduler_input, estimated_scheduler_end,
                                                    self.fake_semester, preemption_enabled=True)
@@ -894,8 +893,7 @@ class TestScheduler(object):
                     intervals = self.build_intervals(start_end_tuples, normalize_windows_to)
                     intervals_by_resource[resource] = intervals
 
-            res = Reservation(rg.priority, request.duration, intervals_by_resource)
-            res.request = request
+            res = Reservation(rg.priority, request.duration, intervals_by_resource, request=request, request_group_id=rg.id)
             reservation_list.append(res)
 
         compound_reservation_mock = CompoundReservation(reservation_list, 'single')
@@ -912,7 +910,7 @@ class TestScheduler(object):
 
         intervals = Intervals(timepoints)
         if normalize_to:
-            intervals = normalise_dt_intervals(intervals, normalize_to)
+            intervals = normalise_datetime_intervals(intervals, normalize_to)
         return intervals
 
 
@@ -1006,7 +1004,7 @@ class TestSchedulerRunner(object):
         self.mock_kernel_class = Mock()
         self.sched_params = SchedulerParameters(run_once=True, warm_starts=True)
         self.mock_event_bus = Mock()
-        self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus)
+        self.scheduler_mock = Scheduler(self.mock_kernel_class, self.sched_params, self.mock_event_bus, {})
 
         self.network_interface_mock = Mock()
         self.network_interface_mock.cancel = Mock(return_value=0)

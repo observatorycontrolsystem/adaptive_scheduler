@@ -10,7 +10,7 @@ Dec 2012
 import copy
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.scheduler import Scheduler
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
+from adaptive_scheduler.kernel.reservation import Reservation, CompoundReservation
 
 
 class TestScheduler(object):
@@ -24,17 +24,17 @@ class TestScheduler(object):
         s4 = copy.copy(s1)
         s5 = copy.copy(s2)
 
-        self.r1 = Reservation_v3(1, 1, {'foo': s1})
-        self.r2 = Reservation_v3(2, 2, {'bar': s2})
-        self.r3 = Reservation_v3(1, 1, {'foo': s3})
-        self.r4 = Reservation_v3(1, 1, {'foo': s4})
-        self.r5 = Reservation_v3(2, 2, {'bar': s5})
+        self.r1 = Reservation(1, 1, {'foo': s1})
+        self.r2 = Reservation(2, 2, {'bar': s2})
+        self.r3 = Reservation(1, 1, {'foo': s3})
+        self.r4 = Reservation(1, 1, {'foo': s4})
+        self.r5 = Reservation(2, 2, {'bar': s5})
 
-        self.cr1 = CompoundReservation_v2([self.r1])
-        self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
-        self.cr3 = CompoundReservation_v2([self.r4])
-        self.cr4 = CompoundReservation_v2([self.r5])
-        self.cr5 = CompoundReservation_v2([self.r4, self.r5], 'oneof')
+        self.cr1 = CompoundReservation([self.r1])
+        self.cr2 = CompoundReservation([self.r3, self.r2], 'and')
+        self.cr3 = CompoundReservation([self.r4])
+        self.cr4 = CompoundReservation([self.r5])
+        self.cr5 = CompoundReservation([self.r4, self.r5], 'oneof')
 
         self.gpw = {}
         self.gpw['foo'] = [{'time': 1, 'type': 'start'}, {'time': 5, 'type': 'end'}]

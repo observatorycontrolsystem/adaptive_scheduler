@@ -1,29 +1,30 @@
 #!/usr/bin/env python
-'''
-Reservation_v3 and CompoundReservation_v2 classes for scheduling.
+''' Reservation and CompoundReservation classes for scheduling.
 
 Author: Sotiria Lampoudi (slampoud@gmail.com)
 December 2012
 
-Reservation_v3 does not associate a single resource with each reservation. 
-Instead, the possible_windows field has become possible_windows_dict, a 
+Reservation does not associate a single resource with each reservation.
+Instead, the possible_windows field has become possible_windows_dict, a
 dictionary mapping :
 resource -> possible windows on that resource
 
-Additionally, it is allowed to explicitly specify the resID, so as to 
+Additionally, it is allowed to explicitly specify the resID, so as to
 keep a uniform ID space between this and other parts of the scheduler.
 '''
 
 import copy
 
 
-class Reservation_v3(object):
+class Reservation(object):
     resID = 0
 
-    def __init__(self, priority, duration, possible_windows_dict, resID=None, previous_solution_reservation=None):
+    def __init__(self, priority, duration, possible_windows_dict, previous_solution_reservation=None, request=None, request_group_id=None):
         self.priority = priority
         self.duration = int(duration)
         self.previous_solution_reservation = previous_solution_reservation
+        self.request = request
+        self.request_group_id = request_group_id
         self.possible_windows_dict = possible_windows_dict
         # free_windows keeps track of which of the possible_windows
         # are free.
@@ -31,15 +32,10 @@ class Reservation_v3(object):
         # clean up free windows by removing ones that are too small:
         for resource in self.free_windows_dict.keys():
             self.clean_up_free_windows(resource)
+
         # set a unique resID.
-        # ALERT: possible pitfall! Mixing incremented resID's and assigned
-        # resID's is unsafe, because they can clash. Pick one and stick with
-        # it. Either always let the class do IDs or always assign them.
-        if resID:
-            self.resID = resID
-        else:
-            Reservation_v3.resID += 1
-            self.resID = Reservation_v3.resID
+        Reservation.resID += 1
+        self.resID = Reservation.resID
         # these fields are defined when the reservation is ultimately scheduled
         self.scheduled_start = None
         self.scheduled_quantum = None
@@ -109,8 +105,8 @@ class Reservation_v3(object):
         )
 
     def __lt__(self, other):
-        ''' Higher priority number is higher priority. 
-        If priority numbers are equal, then reservation belonging to 
+        ''' Higher priority number is higher priority.
+        If priority numbers are equal, then reservation belonging to
         c.r.s are ranked as and < single < oneof '''
         if self.priority == other.priority:
             if (self.compound_reservation_parent) and (other.compound_reservation_parent):
@@ -142,7 +138,7 @@ class Reservation_v3(object):
         self.free_windows_dict[resource].remove_intervals_smaller_than(self.duration)
 
 
-class CompoundReservation_v2(object):
+class CompoundReservation(object):
     valid_types = {
         'single': 'A single one of the provided blocks is to be scheduled',
         'oneof': 'One of the provided blocks are to be scheduled',

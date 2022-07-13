@@ -5,19 +5,17 @@ import copy
 
 from adaptive_scheduler.models import (ICRSTarget, Request, Proposal,
                                        RequestGroup, Window, Windows, Configuration)
-from adaptive_scheduler.utils import (datetime_to_epoch,
+from adaptive_scheduler.utils import (datetime_to_epoch, normalise_datetime_intervals,
                                       normalised_epoch_to_datetime)
 from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 construct_compound_reservation,
                                                 construct_many_compound_reservation,
                                                 construct_global_availability,
-                                                normalise_dt_intervals,
                                                 filter_on_scheduling_horizon,
                                                 compute_request_availability,
                                                 get_rise_set_timepoint_intervals,
-                                                make_cache_key,
-                                                req_windows_to_kernel_intervals)
+                                                make_cache_key)
 from datetime import datetime
 
 import pytest
@@ -292,7 +290,7 @@ class TestKernelMappings(object):
         request_group.proposal.tac_priority = 1
 
         received = construct_compound_reservation(request_group,
-                                                  sem_start)
+                                                  sem_start, {})
 
         assert len(received.reservation_list) == len(requests)
         assert received.type == operator
@@ -310,7 +308,8 @@ class TestKernelMappings(object):
         received = construct_many_compound_reservation(
             request_group,
             0,
-            sem_start)
+            sem_start,
+            {})
 
         assert len(received.reservation_list) == 1
         assert received.type == 'single'
@@ -444,7 +443,7 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
         compute_request_availability(req, intervals_for_resource, {})
-        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
+        received = req.windows.to_window_intervals()
 
         date_format = '%Y-%m-%d %H:%M:%S.%f'
         rise_set_dark_intervals = (
@@ -492,7 +491,7 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
         compute_request_availability(req, intervals_for_resource, {})
-        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
+        received = req.windows.to_window_intervals()
 
         # The user windows constrain the available observing windows (compare to
         # previous test)
@@ -537,7 +536,7 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
         compute_request_availability(req, intervals_for_resource, {})
-        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
+        received = req.windows.to_window_intervals()
 
         # The user windows constrain the available observing windows (compare to
         # previous tests)
@@ -602,7 +601,7 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
         compute_request_availability(req, intervals_for_resource, {})
-        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
+        received = req.windows.to_window_intervals()
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
         expected_tps = [
@@ -669,7 +668,7 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
         compute_request_availability(req, intervals_for_resource, {})
-        received = req_windows_to_kernel_intervals(req.windows.windows_for_resource)
+        received = req.windows.to_window_intervals()
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
         expected_tps = [
@@ -701,7 +700,7 @@ class TestKernelMappings(object):
                 {'time': dt1, 'type': 'end'},
             ]
         )
-        epoch_resource_int = normalise_dt_intervals(dt_resource_int, sem_start)
+        epoch_resource_int = normalise_datetime_intervals(dt_resource_int, sem_start)
         resource_windows = {
             tel_name: epoch_resource_int
         }
@@ -742,12 +741,12 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
         compute_request_availability(req_no_airmass, intervals_for_resource, {})
-        received_no_airmass = req_windows_to_kernel_intervals(req_no_airmass.windows.windows_for_resource)
+        received_no_airmass = req_no_airmass.windows.to_window_intervals()
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].toDictList()
 
         intervals_for_resource = self.make_rise_set_intervals(req_airmass3, visibilities)
         compute_request_availability(req_airmass3, intervals_for_resource, {})
-        received_airmass3 = req_windows_to_kernel_intervals(req_airmass3.windows.windows_for_resource)
+        received_airmass3 = req_airmass3.windows.to_window_intervals()
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].toDictList()
 
         assert timepoints_no_airmass == timepoints_airmass3
@@ -761,11 +760,11 @@ class TestKernelMappings(object):
 
         intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
         compute_request_availability(req_no_airmass, intervals_for_resource, {})
-        received_no_airmass = req_windows_to_kernel_intervals(req_no_airmass.windows.windows_for_resource)
+        received_no_airmass = req_no_airmass.windows.to_window_intervals()
 
         intervals_for_resource = self.make_rise_set_intervals(req_airmass1, visibilities)
         compute_request_availability(req_airmass1, intervals_for_resource, {})
-        received_airmass1 = req_windows_to_kernel_intervals(req_airmass1.windows.windows_for_resource)
+        received_airmass1 = req_airmass1.windows.to_window_intervals()
 
         assert received_airmass1 != received_no_airmass
         assert len(received_airmass1) == 0
