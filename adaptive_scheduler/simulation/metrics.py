@@ -1,6 +1,7 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
+from email.policy import default
 import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -214,10 +215,10 @@ class MetricCalculator():
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
         try:
             cached_airmass_data = pickle.loads(redis.get('airmass_data_by_request_id'))
+            cached_airmass_data[request_id]
             self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
-            print(f'got cached data for {request_id}')
             return cached_airmass_data[request_id]
-        except Exception:
+        except Exception as e:
             # the request has not been cached yet, get the data from the portal
             pass
         try:
@@ -225,7 +226,7 @@ class MetricCalculator():
             response.raise_for_status()
             airmass_data_for_request = response.json()['airmass_data']
             self.airmass_data_by_request_id[request_id] = airmass_data_for_request
-            redis.set('airmass_data_by_request_id', pickle.dumps(self.airmass_data_by_request_id))
+            redis.set('airmass_data_by_request_id', pickle.dumps(dict(self.airmass_data_by_request_id)))
             return airmass_data_for_request
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
@@ -253,7 +254,6 @@ class MetricCalculator():
         """
         midpoint_airmasses = {}
         midpoint_time = start_time + (end_time - start_time) / 2
-        print(airmass_data)
         for site, details in airmass_data.items():
             details = list(details.values())
             times, airmasses = details[0], details[1]
@@ -265,7 +265,6 @@ class MetricCalculator():
                     time_diff = temp_time_diff
                     index = i
             midpoint_airmass = airmasses[index]
-            print(midpoint_airmass)
             midpoint_airmasses[site] = midpoint_airmass
         return midpoint_airmasses
 
