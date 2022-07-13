@@ -79,13 +79,13 @@ class TestMetrics():
     def test_total_time_aggregators(self):
         seconds_in_day = 86400
 
-        assert self.metrics.total_scheduled_seconds(self.mock_scheduler_result.schedule) == 60
+        assert sum(self.metrics.get_scheduled_durations(self.mock_scheduler_result.schedule)) == 60
+        assert sum(self.metrics.get_scheduled_durations()) == 60
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 0) == 0
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 1) == 2*seconds_in_day
         assert self.metrics.total_available_seconds(['bpl', 'coj'], 5) == 4*seconds_in_day
         assert self.metrics.total_available_seconds(['bpl'], 1) == seconds_in_day
         assert self.metrics.total_available_seconds([], 1) == 0
-        assert self.metrics.total_scheduled_seconds() == 60
         assert self.metrics.total_available_seconds() == 4*seconds_in_day
 
     def test_percent_time_utilization(self):
@@ -115,7 +115,7 @@ class TestMetrics():
         assert bin_data(bin_by_float) == floats
         assert bin_data(bin_by_float, bin_range=(0, 4)) == capped_floats
         assert bin_data(bin_by, bin_data_, bin_size=3) == sumdata
-        assert bin_data(bin_by, bin_data_, bin_size=3, aggregation=min) == mindata
+        assert bin_data(bin_by, bin_data_, bin_size=3, aggregator=min) == mindata
 
     def test_airmass_functions(self):
         dir_path = os.path.dirname(os.path.realpath(__file__))
@@ -141,4 +141,4 @@ class TestMetrics():
 
         assert self.metrics._get_midpoint_airmasses_for_request(1, self.start, self.end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(2) == 1
-        assert self.metrics.airmass_metrics == 
+#        assert self.metrics.airmass_metrics == 

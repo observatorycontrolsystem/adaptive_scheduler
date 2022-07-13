@@ -13,7 +13,7 @@ from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_
 
 
 def percent_of(x, y):
-    """Returns x/y as a percentage (float)."""
+    """Returns x/y as a percentage."""
     return x / y * 100.
 
 
@@ -46,7 +46,7 @@ def generate_bin_names(bin_size, bin_range):
     return bin_names
 
 
-def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
+def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
     """Bins data to create a histogram. Each bin is half-open, i.e. defined on the interval [a, b) for every bin
     except for the last bin, which is defined on the interval [a, b]. The naming convention is different for
     integers and floats. For example, for the label '1-2', this means the discrete values 1 and 2, whereas
@@ -59,7 +59,8 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
             extra values are thrown out. The aggregation function is applied to the data at the end.
         bin_size (int): The width of the bins.
         bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
-        aggregation (func): The aggregation function to apply over the list of data. Must be callable on an array.
+        aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
+            Additional items can be passed to the aggregation function.
 
     Returns:
         data_dict (str: int): The frequency count of the data.
@@ -76,7 +77,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregation=sum):
             bin_dict[keyname].append(data[i])
         else:
             bin_dict[keyname].append(1)
-    bin_dict = {key: aggregation(val) for key, val in bin_dict.items() if val}
+    bin_dict = {key: aggregator(val) for key, val in bin_dict.items() if val}
     return bin_dict
 
 
@@ -101,6 +102,7 @@ class MetricCalculator():
         self.normal_scheduler_result = normal_scheduler_result
         self.normal_schedule = self.normal_scheduler_result.schedule
         self.normal_input_reservations = self.normal_scheduler_result.input_reservations
+        self.combined_schedule = defaultdict(dict)
         self.combined_input_reservations = []
         if rr_scheduler_result:
             self.rr_scheduler_result = rr_scheduler_result
@@ -125,19 +127,17 @@ class MetricCalculator():
     def _combine_normal_rr_schedules(self):
         self.combined_schedule = defaultdict(list)
         for resource, reservations in self.rr_schedule.items():
-            for reservation in reservations:
-                self.combined_schedule[resource].append(reservation)
+            self.combined_schedule[resource].extend(reservations)
         for resource, reservations in self.normal_schedule.items():
-            for reservation in reservations:
-                if reservation not in self.combined_schedule[resource]:
-                    self.combined_schedule[resource].append(reservation)
+            reservations = [res for res in reservations if res not in self.combined_schedule[resource]]
+            self.combined_schedule[resource].extend(reservations)
 
     def _combine_normal_rr_input_reservations(self):
         for comp_res in self.normal_input_reservations:
             self.combined_input_reservations.extend(comp_res.reservation_list)
         for comp_res in self.rr_input_reservations:
-            res_list = [f for f in comp_res.reservation_list if f not in self.combined_input_reservations]
-            self.combined_input_reservations.extend(res_list)
+            reservations = [res for res in comp_res.reservation_list if res not in self.combined_input_reservations]
+            self.combined_input_reservations.extend(reservations)
 
     def count_scheduled(self, input_reservations=None, schedule=None):
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
@@ -145,8 +145,7 @@ class MetricCalculator():
         scheduled_reservations = []
         for reservations in schedule.values():
             scheduled_reservations.extend(reservations)
-        total_reservations = [res for res in input_reservations]
-        return len(scheduled_reservations), len(total_reservations)
+        return len(scheduled_reservations), len(input_reservations)
 
     def percent_reservations_scheduled(self, input_reservations=None, schedule=None):
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
@@ -158,17 +157,15 @@ class MetricCalculator():
         schedule = self.combined_schedule if schedule is None else schedule
         effective_priorities = []
         for reservations in schedule.values():
-            for reservation in reservations:
-                effective_priorities.append(reservation.priority)
+            effective_priorities.extend([res.priority for res in reservations])
         return sum(effective_priorities), effective_priorities
 
-    def total_scheduled_seconds(self, schedule=None):
+    def get_scheduled_durations(self, schedule=None):
         schedule = self.combined_schedule if schedule is None else schedule
-        total_scheduled_seconds = 0
+        durations = []
         for reservations in schedule.values():
-            for reservation in reservations:
-                total_scheduled_seconds += reservation.duration
-        return total_scheduled_seconds
+            durations.extend([res.duration for res in reservations])
+        return durations
 
     def total_available_seconds(self, resources_scheduled=None, horizon_days=None):
         """Aggregates the total available time, calculated from dark intervals.
@@ -198,7 +195,7 @@ class MetricCalculator():
         schedule = self.combined_schedule if schedule is None else schedule
         resources_scheduled = self.combined_resources_scheduled if resources_scheduled is None else resources_scheduled
         horizon_days = self.horizon_days if horizon_days is None else horizon_days
-        return percent_of(self.total_scheduled_seconds(schedule),
+        return percent_of(sum(self.get_scheduled_durations(schedule)),
                           self.total_available_seconds(resources_scheduled, horizon_days))
 
     def _get_airmass_data_from_observation_portal(self, request_id):
@@ -252,7 +249,8 @@ class MetricCalculator():
         if not airmass_data:
             airmass_data = self._get_airmass_data_from_observation_portal(request_id)
         for site, details in airmass_data.items():
-            times, airmasses = list(details.values())[0], list(details.values())[1]
+            details = list(details.values())
+            times, airmasses = details[0], details[1]
             index = 0
             time_diff = abs((midpoint_time - datetime.strptime(times[0], '%Y-%m-%dT%H:%M')).total_seconds())
             for i, _ in enumerate(times):
@@ -276,8 +274,8 @@ class MetricCalculator():
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
         midpoint_airmasses = []
-        durations = []
         ideal_airmasses = []
+        durations = self.get_scheduled_durations(schedule)
         for reservations in schedule.values():
             for reservation in reservations:
                 request_id = reservation.request.id
@@ -289,7 +287,6 @@ class MetricCalculator():
                 midpoint_airmasses.append(midpoint_airmasses_for_request[site])
                 ideal_airmass = self._get_ideal_airmass_for_request(request_id)
                 ideal_airmasses.append(ideal_airmass)
-                durations.append(reservation.duration)
         airmass_data = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmasses},
                                              {'ideal_airmasses': ideal_airmasses},
                                              {'durations': durations}],
@@ -305,22 +302,31 @@ class MetricCalculator():
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
         bin_size = 10
-        sched_tac_priority_values = []
-        sched_reservation_durations = []
-        all_tac_priority_values = []
-        all_reservation_durations = []
+        sched_priority_values = []
+        sched_durations = self.get_scheduled_durations(schedule)
+        all_priority_values = []
+        all_durations = []
         for reservations in schedule.values():
-            for reservation in reservations:
-                sched_tac_priority_values.append(reservation.request_group.proposal.tac_priority)
-                sched_reservation_durations.append(reservation.duration)
+            sched_priority_values.extend([res.request_group.proposal.tac_priority for res in reservations])
         for reservation in input_reservations:
-            all_tac_priority_values.append(reservation.request_group.proposal.tac_priority)
-            all_reservation_durations.append(reservation.duration)
+            all_priority_values.append(reservation.request_group.proposal.tac_priority)
+            all_durations.append(reservation.duration)
+
+        sched_histogram = bin_data(sched_priority_values, bin_size=bin_size)
+        bin_sched_durations = bin_data(sched_priority_values, sched_durations, bin_size)
+        full_histogram = bin_data(all_priority_values, bin_size=bin_size)
+        bin_all_durations = bin_data(all_priority_values, all_durations, bin_size)
+        bin_percent_count = {bin_: percent_of(np.array(sched_histogram[bin_]), np.array(full_histogram[bin_]))
+                             for bin_ in sched_histogram}
+        bin_percent_duration = {bin_: percent_of(np.array(bin_sched_durations[bin_]), np.array(bin_all_durations[bin_]))
+                                for bin_ in bin_sched_durations}
 
         output_dict = {
-            'sched_histogram': bin_data(sched_tac_priority_values, bin_size=bin_size),
-            'sched_durations': bin_data(sched_tac_priority_values, sched_reservation_durations, bin_size=bin_size),
-            'full_histogram': bin_data(all_tac_priority_values, bin_size=bin_size),
-            'all_durations': bin_data(all_tac_priority_values, all_reservation_durations, bin_size=bin_size),
+            'sched_histogram': sched_histogram,
+            'sched_durations': bin_sched_durations,
+            'full_histogram': full_histogram,
+            'all_durations': bin_all_durations,
+            'percent_count': bin_percent_count,
+            'percent_duration': bin_percent_duration,
         }
         return output_dict

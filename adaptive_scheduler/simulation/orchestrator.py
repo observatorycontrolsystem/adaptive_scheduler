@@ -100,6 +100,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
     sched_params = scheduler_runner.sched_params
     airmass_metrics = metrics.airmass_metrics()
     binned_tac_priority_metrics = metrics.binned_tac_priority_metrics()
+
     metrics = {
         'simulation_id': RUN_ID,
         'simulation_start_time': sched_params.simulate_now,
@@ -112,8 +113,8 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'total_effective_priority': metrics.total_scheduled_eff_priority()[0],
         'total_scheduled_count': metrics.count_scheduled()[0],
         'total_request_count': metrics.count_scheduled()[1],
-        'percent_reservations_scheduled': metrics.percent_reservations_scheduled(),
-        'total_scheduled_seconds': metrics.total_scheduled_seconds(),
+        'percent_requests_scheduled': metrics.percent_reservations_scheduled(),
+        'total_scheduled_seconds': sum(metrics.get_scheduled_durations()),
         'total_available_seconds': metrics.total_available_seconds(),
         'percent_time_utilization': metrics.percent_time_utilization(),
         'airmass_metrics': airmass_metrics,
@@ -121,7 +122,8 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'scheduled_seconds_by_priority': [binned_tac_priority_metrics['sched_durations']],
         'total_req_by_priority': [binned_tac_priority_metrics['full_histogram']],
         'total_seconds_by_priority': [binned_tac_priority_metrics['all_durations']],
-        'avg_ideal_airmass': metrics.avg_ideal_airmass(),
+        'percent_sched_by_priority': [binned_tac_priority_metrics['percent_count']],
+        'percent_duration_by_priority': [binned_tac_priority_metrics['percent_duration']],
     }
     log.info(metrics)
     send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
