@@ -1,6 +1,7 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
+from email.policy import default
 import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -214,9 +215,10 @@ class MetricCalculator():
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
         try:
             cached_airmass_data = pickle.loads(redis.get('airmass_data_by_request_id'))
+            cached_airmass_data[request_id]
             self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
             return cached_airmass_data[request_id]
-        except Exception:
+        except Exception as e:
             # the request has not been cached yet, get the data from the portal
             pass
         try:
