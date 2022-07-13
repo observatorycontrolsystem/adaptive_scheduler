@@ -22,7 +22,7 @@ class ConfigDBInterface(SendMetricMixin):
     """
 
     def __init__(self, configdb_url, telescope_classes, telescopes_file='data/telescopes.json',
-                 active_instruments_file='data/active_instruments.json'):
+                 active_instruments_file='data/active_instruments.json', overrides=None):
         self.configdb_url = configdb_url
         if not self.configdb_url.endswith('/'):
             self.configdb_url += '/'
@@ -31,11 +31,28 @@ class ConfigDBInterface(SendMetricMixin):
         self.active_instruments_file = active_instruments_file
         self.active_instruments = None
         self.telescope_info = None
+        self.overrides = overrides
         self.update_configdb_structures()
 
     def update_configdb_structures(self):
         self.update_telescope_info()
+        self.apply_overrides_to_telescopes()
         self.update_active_instruments()
+        self.apply_overrides_to_instruments()
+
+    def apply_overrides_to_telescopes(self):
+        if self.overrides:
+            for telescope in self.overrides.get('telescopes', {}).keys():
+                if telescope in self.telescope_info and 'status' in self.overrides['telescopes'][telescope]:
+                    self.telescope_info[telescope]['status'] = self.overrides['telescopes'][telescope]['status']
+
+    def apply_overrides_to_instruments(self):
+        if self.overrides and self.overrides.get('instruments', {}):
+            for instrument in self.active_instruments:
+                if instrument['code'] in self.overrides['instruments']:
+                    instrument['state'] = self.overrides['instruments'][instrument['code']].get('state', instrument['state'])
+                if instrument['instrument_type']['code'] in self.overrides['instruments']:
+                    instrument['state'] = self.overrides['instruments'][instrument['instrument_type']['code']].get('state', instrument['state'])
 
     def update_active_instruments(self):
         try:

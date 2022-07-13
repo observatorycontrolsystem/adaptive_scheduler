@@ -10,6 +10,7 @@ advancing time and input when simulating over a period of time.
 import logging
 import sys
 import os
+import json
 from urllib.parse import urljoin
 
 import requests
@@ -138,7 +139,11 @@ def main(argv=None):
     schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
     observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url)
     # TODO: If there is a configuration override file detected then incorporate that into the configdb_interface
-    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes)
+    overrides = None
+    if os.path.exists('/app/data/simulation_overrides.json'):
+        with open('/app/data/simulation_overrides.json', 'r') as fp:
+            overrides = json.load(fp)
+    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes, overrides=overrides)
     network_state_interface = Network(configdb_interface, sched_params)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
                                          configdb_interface)
