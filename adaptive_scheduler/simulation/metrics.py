@@ -202,15 +202,13 @@ class MetricCalculator():
                           self.total_available_seconds(resources_scheduled, horizon_days))
 
     def _get_airmass_data_for_request(self, request_id):
-        """Pulls airmass data from the Observation Portal.
+        """Pulls airmass data from the Observation Portal, cache it in our local directory.
 
         Args:
-            observation_portal_interface (ObservationPortalInterface): Instance of the Observation Portal
-                used by the scheduler.
             request_id (str): The request id.
 
         Returns:
-            airmass_data (dict): The airmass data returned from the API.
+            airmass_data (dict): The airmass data returned from the API or the cache.
         """
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
         try:
@@ -244,7 +242,7 @@ class MetricCalculator():
         closest matching the calculated midpoint of the observation in the observe portal airmass data.
 
         Args:
-            request_id (int): The id of the request we want to get airmass data of.
+            airmass_data (dict): The airmass data we want to use to calculate midpoint of.
             start_time (datetime.datetime): The start time of the scheduled observation.
             end_time (datetime.datetime): The end time of the scheduled observation.
 
@@ -269,13 +267,14 @@ class MetricCalculator():
         return midpoint_airmasses
 
     def airmass_metrics(self, schedule=None):
-        """Calculate the average midpoint airmass of all scheduled reservations for a single schedule.
+        """Generat the airmass metrics of all scheduled reservations for a single schedule.
 
         Args:
             schedule (scheduler, optional): the schedule we calculate our metricses on. Defaults to None.
 
         Returns:
-            average(float): the average midpoint airmass of all scheduled reservation for one schedule.
+            airmass_metrics (dict): Variety of airmass metrics including raw data, average midpoint airmass, average
+            ideal airmass and 95% confidence interval for midpoint airmass.
         """
         schedule = self.combined_schedule if schedule is None else schedule
         semester_start = self.scheduler_runner.semester_details['start']
