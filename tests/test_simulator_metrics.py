@@ -4,7 +4,7 @@ from adaptive_scheduler.simulation.metrics import (MetricCalculator,
 import os
 import json
 from datetime import datetime, timedelta
-
+import numpy as np
 from mock import Mock
 
 
@@ -126,9 +126,7 @@ class TestMetrics():
         with open(data_path_2) as f:
             airmass_data_2 = json.load(f)
         self.metrics._get_airmass_data_from_observation_portal = Mock(side_effect=[airmass_data_1, airmass_data_1,
-                                                                                   airmass_data_1, airmass_data_2,
-                                                                                   airmass_data_1, airmass_data_2,
-                                                                                   airmass_data_1, airmass_data_2,
+                                                                                   airmass_data_1, airmass_data_1,
                                                                                    airmass_data_1, airmass_data_2])
         request_1 = Mock(id=1)
         mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
@@ -141,4 +139,14 @@ class TestMetrics():
 
         assert self.metrics._get_midpoint_airmasses_for_request(1, self.start, self.end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(2) == 1
-#        assert self.metrics.airmass_metrics == 
+
+        airmass_metrics = self.metrics.airmass_metrics(schedule)
+        midpoint_airmasses = [7, 3]
+        assert type(airmass_metrics) is dict
+        assert list(airmass_metrics.keys()) == ['raw_airmass_data', 'avg_midpoint_airmass',
+                                                       'avg_ideal_airmass', 'ci_midpoint_airmass']
+        assert airmass_metrics['avg_midpoint_airmass'] == 5
+        assert airmass_metrics['avg_ideal_airmass'] == 2
+        assert airmass_metrics['raw_airmass_data'][0]['midpoint_airmasses'] == midpoint_airmasses
+        assert airmass_metrics['ci_midpoint_airmass'] == [[np.percentile(midpoint_airmasses, 2.5),
+                                                           np.percentile(midpoint_airmasses, 97.5)]]
