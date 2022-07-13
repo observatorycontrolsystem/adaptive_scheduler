@@ -4,7 +4,7 @@ from adaptive_scheduler.simulation.metrics import (MetricCalculator,
 import os
 import json
 from datetime import datetime, timedelta
-
+import numpy as np
 from mock import Mock
 
 
@@ -141,4 +141,13 @@ class TestMetrics():
 
         assert self.metrics._get_midpoint_airmasses_for_request(1, self.start, self.end) == {'tfn': 7, 'egg': 3}
         assert self.metrics._get_ideal_airmass_for_request(2) == 1
-        assert self.metrics.airmass_metrics == 
+        
+        airmass_metrics = self.metrics.airmass_metrics()
+        midpoint_airmasses = [7,3]
+        assert type (airmass_metrics) is dict 
+        assert airmass_metrics.keys() == ['raw_airmass_data', 'avg_midpoint_airmass',
+                                                       'avg_ideal_airmass', 'ci_midpoint_airmass']
+        assert airmass_metrics['avg_midpoint_airmass'] == 5
+        assert airmass_metrics['avg_ideal_airmass'] == 2
+        assert airmass_metrics['raw_airmass_data']['midpoint_airmasses'] == midpoint_airmasses
+        assert airmass_metrics['ci_midpoint_airmass'] == [[np.percentile(midpoint_airmasses, 2.5), np.percentile(midpoint_airmasses, 97.5)]]
