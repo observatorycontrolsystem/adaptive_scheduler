@@ -491,7 +491,7 @@ class Request(EqualityMixin):
                         airmass_by_targets[rs_target_key] = calculate_airmass_at_times(datetimes, rs_target, obs_latitude, obs_longitude, obs_height)
 
                 if len(airmass_by_targets) == 1:
-                    airmasses = airmass_by_targets.values()[0]
+                    airmasses = list(airmass_by_targets.values())[0]
                 else:
                     numpy_airmasses = np.array(airmass_by_targets.values())
                     airmasses = np.mean(numpy_airmasses, axis=0).tolist()
