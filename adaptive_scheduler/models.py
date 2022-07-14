@@ -486,7 +486,7 @@ class Request(EqualityMixin):
                 rs_targets = [configuration.target.in_rise_set_format() for configuration in self.configurations]
                 airmass_by_targets = {}
                 for rs_target in rs_targets:
-                    rs_target_key = json.dumps(rs_target)
+                    rs_target_key = f"{rs_target.items()}"
                     if rs_target_key not in airmass_by_targets:
                         airmass_by_targets[rs_target_key] = calculate_airmass_at_times(datetimes, rs_target, obs_latitude, obs_longitude, obs_height)
 
