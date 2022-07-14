@@ -502,7 +502,7 @@ class Request(EqualityMixin):
                 best_airmass = min(airmasses)
                 worst_airmass = max(airmasses)
                 # This should give us something ranging from 0 to AIRMASS_WEIGHTING_COEFFICIENT to add to the effective priority
-                airmasses = [AIRMASS_WEIGHTING_COEFFICIENT * (1 - (airmass - best_airmass) / (worst_airmass - best_airmass)) for airmass in airmasses]
+                airmasses = [float(AIRMASS_WEIGHTING_COEFFICIENT) * (1 - (airmass - best_airmass) / (worst_airmass - best_airmass)) for airmass in airmasses]
                 # Now store the airmasses and times in the redis cache
                 airmass_at_times = {
                     'airmasses': airmasses,
