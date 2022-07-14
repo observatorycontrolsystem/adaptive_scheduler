@@ -40,6 +40,7 @@ RUN_ID = os.getenv("SIMULATION_RUN_ID", "1")
 START_TIME = parse(os.getenv("SIMULATION_START_TIME", "2022-06-23"))
 END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-07-07"))
 TIME_STEP = float(os.getenv("SIMULATION_TIME_STEP_MINUTES", "60"))
+AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
 
 
 def setup_logging():
@@ -61,16 +62,16 @@ def setup_input(current_time):
     # source based on the current timestamp of the scheduling run. For configdb, this involves playing the records
     # backwards until the time is reached. For the observation portal, it involves pulling over all requests
     # created and PENDING at a certain point in time for the semester, which should be doable by looking at the created
-    # and modified timestamps and state. 
+    # and modified timestamps and state.
     log.info(f"Placeholder for setting up input for time {current_time.isoformat}")
     pass
 
 
 def increment_input(current_time, time_step):
-    # This will eventually call endpoints in configdb and the observation portal to increment the state of them forward 
+    # This will eventually call endpoints in configdb and the observation portal to increment the state of them forward
     # by the time step specified. Incrementing time forward is slightly different then the initial setup of a starting time.
     # This will be called as you step forward in time to make sure these data sources contain the right input data.
-    # For configdb, this involves moving the records back forwards a bit. For the observation portal, it involves pulling 
+    # For configdb, this involves moving the records back forwards a bit. For the observation portal, it involves pulling
     # down newer requests as well as cleaning up the state of old ones between time steps (completing/expiring as appropriate).
     # This also means that we should complete and fail the right percentages of observations that should have ended within the last
     # time_step, and set ones that are in progress to ATTEMPTED state.
@@ -110,6 +111,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'kernel': sched_params.kernel,
         'mip_gap': sched_params.mip_gap,
         'record_time': datetime.utcnow().isoformat(),
+        'airmass_weighting_coefficient': AIRMASS_WEIGHTING_COEFFICIENT,
 
         'total_effective_priority': metrics.total_scheduled_eff_priority()[0],
         'total_scheduled_count': metrics.count_scheduled()[0],
