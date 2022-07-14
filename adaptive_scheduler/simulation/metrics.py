@@ -216,7 +216,7 @@ class MetricCalculator():
             cached_airmass_data[request_id]
             self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
             return cached_airmass_data[request_id]
-        except AttributeError:
+        except Exception:
             # the request has not been cached yet, get the data from the portal
             pass
         try:
@@ -311,6 +311,8 @@ class MetricCalculator():
         sched_durations = self.get_scheduled_durations(schedule)
         all_durations = [res.duration for res in input_reservations]
         request_groups = self.scheduler_runner.normal_scheduler_input.request_groups
+        if self.scheduler_runner.rr_scheduler_input:
+            request_groups.extend(self.scheduler_runner.rr_scheduler_input.request_groups)
         priority_values_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in request_groups}
         all_priority_values = list(priority_values_by_rg_id.values())
         sched_priority_values = []
