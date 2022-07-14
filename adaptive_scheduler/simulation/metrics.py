@@ -216,7 +216,7 @@ class MetricCalculator():
             cached_airmass_data[request_id]
             self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
             return cached_airmass_data[request_id]
-        except Exception as e:
+        except AttributeError:
             # the request has not been cached yet, get the data from the portal
             pass
         try:
@@ -308,15 +308,15 @@ class MetricCalculator():
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
         bin_size = 10
-        sched_priority_values = []
         sched_durations = self.get_scheduled_durations(schedule)
-        all_priority_values = []
-        all_durations = []
+        all_durations = [res.duration for res in input_reservations]
+        request_groups = self.scheduler_runner.normal_scheduler_input.request_groups
+        priority_values_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in request_groups}
+        all_priority_values = list(priority_values_by_rg_id.values())
+        sched_priority_values = []
         for reservations in schedule.values():
-            sched_priority_values.extend([res.request_group.proposal.tac_priority for res in reservations])
-        for reservation in input_reservations:
-            all_priority_values.append(reservation.request_group.proposal.tac_priority)
-            all_durations.append(reservation.duration)
+            sched_priority_values.extend([priority_values_by_rg_id[res.request_group_id]
+                                          for res in reservations])
 
         sched_histogram = bin_data(sched_priority_values, bin_size=bin_size)
         bin_sched_durations = bin_data(sched_priority_values, sched_durations, bin_size)
