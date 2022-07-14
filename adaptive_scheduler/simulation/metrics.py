@@ -314,7 +314,7 @@ class MetricCalculator():
         if self.scheduler_runner.rr_scheduler_input:
             request_groups.extend(self.scheduler_runner.rr_scheduler_input.request_groups)
         priority_values_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in request_groups}
-        all_priority_values = list(priority_values_by_rg_id.values())
+        all_priority_values = [priority_values_by_rg_id[res.request_group_id] for res in input_reservations]
         sched_priority_values = []
         for reservations in schedule.values():
             sched_priority_values.extend([priority_values_by_rg_id[res.request_group_id]
