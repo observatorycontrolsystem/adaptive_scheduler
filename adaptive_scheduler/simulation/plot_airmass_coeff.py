@@ -131,7 +131,7 @@ def plot_pct_scheduled_bins():
 
 def plot_pct_duration_bins():
     fig = plt.figure(figsize=(20, 10))
-    fig.suptitle(f'{search_suffix} Percentage Duration of Requests Scheduled', fontsize=20)
+    fig.suptitle(f'{search_suffix} Percentage Requested Time Scheduled', fontsize=20)
     fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
     ax = fig.add_subplot()
 

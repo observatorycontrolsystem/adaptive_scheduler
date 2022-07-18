@@ -1,7 +1,7 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
-from email.policy import default
+import logging
 import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
@@ -13,6 +13,11 @@ from requests.exceptions import RequestException, Timeout
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import redis_instance
+
+
+log = logging.getLogger('adaptive_scheduler')
+
+DTFORMAT = '%Y-%m-%dT%H:%M'
 
 
 def percent_of(x, y):
@@ -229,15 +234,20 @@ class MetricCalculator():
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
 
-    def _get_ideal_airmass(self, airmass_data):
-        """Finds the minimum airmass across all sites."""
-        ideal_airmass = 1000
+    def _get_minmax_airmass(self, airmass_data, midpoint_duration):
+        """Finds the minimum and maximum midpoint airmass across all sites."""
+        max_airmasses = []
+        min_airmasses = []
         for site in airmass_data.values():
-            ideal_for_site = min(site['airmasses'])
-            ideal_airmass = min(ideal_airmass, ideal_for_site)
-        return ideal_airmass
+            times, airmasses = site.values()
+            airmasses = np.array(airmasses)
+            times = np.array([datetime.strptime(time, DTFORMAT) for time in times])
+            # site_airmasses = airmasses[(times >= times[0]+midpoint_duration) & (times <= times[-1]-midpoint_duration)]
+            min_airmasses.append(min(airmasses))
+            max_airmasses.append(max(airmasses))
+        return min(min_airmasses), max(max_airmasses)
 
-    def _get_midpoint_airmasses_by_site(self, airmass_data, start_time, end_time):
+    def _get_midpoint_airmasses_by_site(self, airmass_data, midpoint_time):
         """"Gets the midpoint airmasses by site for a request. This is done by finding the time
         closest matching the calculated midpoint of the observation in the observe portal airmass data.
 
@@ -251,26 +261,20 @@ class MetricCalculator():
                 midpoint airmasses as values.
         """
         midpoint_airmasses = {}
-        midpoint_time = start_time + (end_time - start_time) / 2
         for site, details in airmass_data.items():
             details = list(details.values())
-            times, airmasses = details[0], details[1]
-            index = 0
-            time_diff = abs((midpoint_time - datetime.strptime(times[0], '%Y-%m-%dT%H:%M')).total_seconds())
-            for i, _ in enumerate(times):
-                temp_time_diff = abs((midpoint_time - datetime.strptime(times[i], '%Y-%m-%dT%H:%M')).total_seconds())
-                if temp_time_diff < time_diff:
-                    time_diff = temp_time_diff
-                    index = i
-            midpoint_airmass = airmasses[index]
-            midpoint_airmasses[site] = midpoint_airmass
+            times, airmasses = details
+            airmasses = np.array(airmasses)
+            times = np.array([datetime.strptime(time, DTFORMAT) for time in times])
+            midpoint_airmasses[site] = airmasses[np.argmin(np.abs(times-midpoint_time))]
         return midpoint_airmasses
 
     def airmass_metrics(self, schedule=None):
-        """Generat the airmass metrics of all scheduled reservations for a single schedule.
+        """Generate the airmass metrics of all scheduled reservations for a single schedule.
 
         Args:
-            schedule (scheduler, optional): the schedule we calculate our metricses on. Defaults to None.
+            schedule (scheduler, optional): the schedule we calculate our metrics on. Uses the schedule stored in
+                the MetricCalculator instance if nothing is passed.
 
         Returns:
             airmass_metrics (dict): Variety of airmass metrics including raw data, average midpoint airmass, average
@@ -280,26 +284,26 @@ class MetricCalculator():
         semester_start = self.scheduler_runner.semester_details['start']
 
         midpoint_airmasses = []
-        ideal_airmasses = []
-        durations = self.get_scheduled_durations(schedule)
+        min_airmasses = []
+        max_airmasses = []
         for reservations in schedule.values():
             for reservation in reservations:
                 airmass_data = self._get_airmass_data_for_request(reservation.request.id)
                 start_time = normalised_epoch_to_datetime(reservation.scheduled_start,
                                                           datetime_to_epoch(semester_start))
-                end_time = start_time + timedelta(seconds=reservation.duration)
-                midpoint_airmasses_by_site = self._get_midpoint_airmasses_by_site(airmass_data, start_time, end_time)
+                midpoint_duration = timedelta(seconds=reservation.duration/2)
+                midpoint_time = start_time + midpoint_duration
+                midpoint_airmasses_by_site = self._get_midpoint_airmasses_by_site(airmass_data, midpoint_time)
                 site = reservation.scheduled_resource[-3:]
                 midpoint_airmasses.append(midpoint_airmasses_by_site[site])
-                ideal_airmass = self._get_ideal_airmass(airmass_data)
-                ideal_airmasses.append(ideal_airmass)
+                min_airmass, max_airmass = self._get_minmax_airmass(airmass_data, midpoint_duration)
+                min_airmasses.append(min_airmass)
+                max_airmasses.append(max_airmass)
         airmass_metrics = {'raw_airmass_data': [{'midpoint_airmasses': midpoint_airmasses},
-                                                {'ideal_airmasses': ideal_airmasses},
-                                                {'durations': durations}],
+                                                {'min_poss_airmasses': min_airmasses},
+                                                {'max_poss_airmasses': max_airmasses}],
                            'avg_midpoint_airmass': sum(midpoint_airmasses)/len(midpoint_airmasses),
-                           'avg_ideal_airmass': sum(ideal_airmasses)/len(ideal_airmasses),
-                           'ci_midpoint_airmass': [[np.percentile(midpoint_airmasses, 2.5),
-                                                    np.percentile(midpoint_airmasses, 97.5)]],
+                           'avg_min_poss_airmass': sum(min_airmasses)/len(min_airmasses),
                            }
         return airmass_metrics
 

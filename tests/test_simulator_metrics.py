@@ -128,23 +128,21 @@ class TestMetrics():
         self.metrics._get_airmass_data_for_request = Mock(side_effect=[airmass_data_1, airmass_data_2])
         request_1 = Mock(id=1)
         mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
-                                  request=request_1, duration=5400)
+                                  request=request_1, duration=2400)
         request_2 = Mock(id=2)
         mock_reservation_2 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.egg',
-                                  request=request_2, duration=5400)
+                                  request=request_2, duration=2400)
         scheduled_reservations = [mock_reservation_1, mock_reservation_2]
         schedule = {'reservations': scheduled_reservations}
+        midpoint_time = self.start + timedelta(seconds=mock_reservation_1.duration/2)
+        midpoint_duration = timedelta(seconds=mock_reservation_1.duration/2)
 
-        assert self.metrics._get_midpoint_airmasses_by_site(airmass_data_1, self.start, self.end) == {'tfn': 7, 'egg': 3}
-        assert self.metrics._get_ideal_airmass(airmass_data_1) == 1
+        assert self.metrics._get_midpoint_airmasses_by_site(airmass_data_1, midpoint_time) == {'tfn': 5, 'egg': 4}
+        assert self.metrics._get_minmax_airmass(airmass_data_1, midpoint_duration) == (1, 20)
 
         airmass_metrics = self.metrics.airmass_metrics(schedule)
-        midpoint_airmasses = [7, 3]
+        midpoint_airmasses = [5, 3]
         assert type(airmass_metrics) is dict
-        assert list(airmass_metrics.keys()) == ['raw_airmass_data', 'avg_midpoint_airmass',
-                                                'avg_ideal_airmass', 'ci_midpoint_airmass']
-        assert airmass_metrics['avg_midpoint_airmass'] == 5
-        assert airmass_metrics['avg_ideal_airmass'] == 2
+        assert airmass_metrics['avg_midpoint_airmass'] == 4
+        assert airmass_metrics['avg_min_poss_airmass'] == 1
         assert airmass_metrics['raw_airmass_data'][0]['midpoint_airmasses'] == midpoint_airmasses
-        assert airmass_metrics['ci_midpoint_airmass'] == [[np.percentile(midpoint_airmasses, 2.5),
-                                                           np.percentile(midpoint_airmasses, 97.5)]]
