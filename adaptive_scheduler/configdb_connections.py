@@ -113,7 +113,7 @@ class ConfigDBInterface(SendMetricMixin):
             return json_results['results']
 
     def get_specific_instrument(self, instrument_type_code, site, enclosure, telescope):
-        """Get the specific instrument name.
+        """Get the specific instrument code.
 
         Parameters:
             instrument_type: Instrument type
@@ -121,9 +121,9 @@ class ConfigDBInterface(SendMetricMixin):
             enclosure: 4-letter enclosure code
             telescope: 4-letter telescope code
         Returns:
-            The matching specific instrument name
+            The matching specific instrument code
         Raises:
-            ConfigDBError: If the specific instrument name is not found
+            ConfigDBError: If the specific instrument code is not found
         """
         fallback_instrument = ''
         for instrument in self.active_instruments:
@@ -131,10 +131,10 @@ class ConfigDBInterface(SendMetricMixin):
                 temp_instrument_type = instrument['instrument_type']['code']
                 if case_insensitive_equals(instrument_type_code, temp_instrument_type):
                     split_string = instrument['__str__'].split('.')
-                    temp_site, temp_observatory, temp_telescope, _ = split_string
+                    temp_site, temp_enclosure, temp_telescope, _ = split_string
                     if (
                             case_insensitive_equals(site, temp_site) and
-                            case_insensitive_equals(enclosure, temp_observatory) and
+                            case_insensitive_equals(enclosure, temp_enclosure) and
                             case_insensitive_equals(telescope, temp_telescope)
                     ):
                         if instrument['state'] == 'SCHEDULABLE':
@@ -150,38 +150,48 @@ class ConfigDBInterface(SendMetricMixin):
                 .format(instrument_type_code, '.'.join([site, enclosure, telescope]))
         )
 
-    def get_autoguider_for_instrument(self, instrument_name, self_guide):
-        """Get the autoguider instrument name.
+    def get_autoguider_for_instrument(self, instrument_code, self_guide, site, enclosure, telescope):
+        """Get the autoguider instrument code.
 
         Parameters:
-            instrument_name: Science camera instrument name
+            instrument_code: Science camera instrument code
             self_guide: Boolean indicating whether to self-guide
+            site: 3-letter site code
+            enclosure: 4-letter enclosure code
+            telescope: 4-letter telescope code
         Returns:
-             Instrument name to be used for autoguiding
+             Instrument code to be used for autoguiding
         Raises:
             ConfigDBError: If unable to determine a suitable autoguider
         """
         fallback_instrument = ''
         for instrument in self.active_instruments:
             if instrument['state'] != ['DISABLED']:
-                if case_insensitive_equals(instrument_name, instrument['code']):
-                    if instrument['state'] == 'SCHEDULABLE':
-                        if not self_guide:
-                            return instrument['autoguider_camera']['code']
-                        elif instrument['instrument_type']['allow_self_guiding']:
-                            return instrument['code']
-                    else:
-                        if not self_guide:
-                            fallback_instrument = instrument['autoguider_camera']['code']
-                        elif instrument['instrument_type']['allow_self_guiding']:
-                            fallback_instrument = instrument['code']
+                if case_insensitive_equals(instrument_code, instrument['code']):
+                    split_string = instrument['__str__'].split('.')
+                    temp_site, temp_enclosure, temp_telescope, _ = split_string
+                    if (
+                            case_insensitive_equals(site, temp_site) and
+                            case_insensitive_equals(enclosure, temp_enclosure) and
+                            case_insensitive_equals(telescope, temp_telescope)
+                    ):
+                        if instrument['state'] == 'SCHEDULABLE':
+                            if not self_guide:
+                                return instrument['autoguider_camera']['code']
+                            elif instrument['instrument_type']['allow_self_guiding']:
+                                return instrument['code']
+                        else:
+                            if not self_guide:
+                                fallback_instrument = instrument['autoguider_camera']['code']
+                            elif instrument['instrument_type']['allow_self_guiding']:
+                                fallback_instrument = instrument['code']
 
         if fallback_instrument:
             return fallback_instrument
 
         raise ConfigDBError(
             'get_autoguider_for_instrument failed: unable to find autoguider for instrument {} where self_guide={}'
-                .format(instrument_name, self_guide)
+                .format(instrument_code, self_guide)
         )
 
     @staticmethod
