@@ -311,7 +311,7 @@ class MetricCalculator():
         """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
-        bin_size = 10
+        bin_size = 45
         sched_durations = self.get_scheduled_durations(schedule)
         all_durations = [res.duration for res in input_reservations]
         request_groups = self.scheduler_runner.normal_scheduler_input.request_groups
