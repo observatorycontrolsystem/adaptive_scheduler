@@ -1,3 +1,7 @@
+"""
+Plotting functions for an airmass optimization experiment.
+"""
+import argparse
 from datetime import datetime
 
 import numpy as np
@@ -45,7 +49,8 @@ def plot_normed_airmass_histogram():
     ax.set_xlabel('Airmass Score (0 is worst, 1 is closest to ideal)')
     ax.set_ylabel('Count')
     ax.legend()
-    plotutils.export_to_image(f'1m0_normed_airmass_hist_{timestamp}', fig)
+    if not displayonly:
+        plotutils.export_to_image(f'1m0_normed_airmass_hist_{timestamp}', fig)
     plt.show()
 
 
@@ -63,7 +68,8 @@ def plot_midpoint_airmass_histogram():
         ax.set_ylabel('Count')
         ax.set_xlim(1.0, 2.0)
         ax.set_ylim(0, 120)
-    plotutils.export_to_image(f'1m0_midpoint_airmass_hist_{timestamp}', fig)
+    if not displayonly:
+        plotutils.export_to_image(f'1m0_midpoint_airmass_hist_{timestamp}', fig)
     plt.show()
 
 
@@ -95,7 +101,8 @@ def plot_pct_scheduled_bins():
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent of Requests Scheduled')
     ax.legend()
-    plotutils.export_to_image(f'1m0_pct_count_scheduled_{timestamp}', fig)
+    if not displayonly:
+        plotutils.export_to_image(f'1m0_pct_count_scheduled_{timestamp}', fig)
     plt.show()
 
 
@@ -119,12 +126,40 @@ def plot_pct_time_scheduled_bins():
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent Time Scheduled')
     ax.legend()
-    plotutils.export_to_image(f'1m0_pct_time_scheduled_{timestamp}', fig)
+    if not displayonly:
+        plotutils.export_to_image(f'1m0_pct_time_scheduled_{timestamp}', fig)
     plt.show()
 
 
 if __name__ == '__main__':
-    plot_midpoint_airmass_histogram()
-    plot_normed_airmass_histogram()
-    plot_pct_scheduled_bins()
-    plot_pct_time_scheduled_bins()
+    plots = {
+        'normed_airmass_hist': {'func': plot_normed_airmass_histogram,
+                                'desc': 'Airmass distribution, normalized so that 0 is worst airmass and 1 is best'},
+        'midpoint_airmass_hist': {'func': plot_midpoint_airmass_histogram,
+                                  'desc': 'Midpoint airmass distributions for different airmass weighting coefficients'},
+        'percent_scheduled_binned': {'func': plot_pct_scheduled_bins,
+                                     'desc': 'Percent of requests scheduled binned by priority level'},
+        'percent_time_scheduled_binned': {'func': plot_pct_time_scheduled_bins,
+                                          'desc': 'Percent of time requested scheduled binned by priority level'},
+    }
+
+    description = 'Plotting functions for airmass optimization experiment.'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('plot_name', type=str.lower, nargs='*',
+                        help="The name of the plot(s) to display. `all` can be passed to show all.")
+    parser.add_argument('-l', '--list', help='List plot info. `-l all` to show all available plots.', action='store_true')
+    parser.add_argument('-d', '--displayonly', help='Display the plots without exporting them.', action='store_true')
+    args = parser.parse_args()
+    global displayonly
+    displayonly = args.displayonly
+
+    if args.list:
+        spacing = max([len(name) for name in plots.keys()]) + 4
+        print(f'{"NAME":{spacing}}DESCRIPTION')
+        print(f'{"====":{spacing}}===========')
+        for name, details in plots.items():
+            print(f'{name:{spacing}}{details["desc"]}')
+    else:
+        plots_to_show = list(plots.keys()) if args.plot_name == ['all'] else args.plot_name
+        for plot_name in plots_to_show:
+            plots[plot_name]['func']()
