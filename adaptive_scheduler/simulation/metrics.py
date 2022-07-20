@@ -35,8 +35,7 @@ def percent_diff(x, y):
 
 def generate_bin_names(bin_size, bin_range):
     """Creates labels for the bins."""
-    start = bin_range[0]
-    end = bin_range[1]
+    start, end = bin_range
     bin_names = []
     bin_start = np.arange(start, end+1, bin_size)
     for start_num in bin_start:
@@ -58,7 +57,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
     """Bins data to create a histogram. Each bin is half-open, i.e. defined on the interval [a, b) for every bin
     except for the last bin, which is defined on the interval [a, b]. The naming convention is different for
     integers and floats. For example, for the label '1-2', this means the discrete values 1 and 2, whereas
-    for the label '1.0-2.0' this means the values on the interval [1.0, 2.0).
+    for the label '1.0-2.0' this means the values on the interval [1.0, 2.0). Bins are uniformly spaced.
 
     Args:
         bin_by (list): A list of data to bin by. Can be float or int.
@@ -236,16 +235,15 @@ class MetricCalculator():
 
     def _get_minmax_airmass(self, airmass_data, midpoint_duration):
         """Finds the minimum and maximum midpoint airmass across all sites."""
-        max_airmasses = []
-        min_airmasses = []
+        max_airmass = 0
+        min_airmass = 1000
         for site in airmass_data.values():
             times, airmasses = site.values()
             airmasses = np.array(airmasses)
             times = np.array([datetime.strptime(time, DTFORMAT) for time in times])
-            # site_airmasses = airmasses[(times >= times[0]+midpoint_duration) & (times <= times[-1]-midpoint_duration)]
-            min_airmasses.append(min(airmasses))
-            max_airmasses.append(max(airmasses))
-        return min(min_airmasses), max(max_airmasses)
+            min_airmass = min(airmasses, min_airmass)
+            max_airmass = max(airmasses, max_airmass)
+        return min_airmass, max_airmass
 
     def _get_midpoint_airmasses_by_site(self, airmass_data, midpoint_time):
         """"Gets the midpoint airmasses by site for a request. This is done by finding the time
@@ -308,7 +306,7 @@ class MetricCalculator():
         return airmass_metrics
 
     def binned_tac_priority_metrics(self, input_reservations=None, schedule=None):
-        """Bins TAC Priority into the following bins: '10-19', '20-29', '30-39', '1000'."""
+        """Bins into 10-19, 20-29, and 30 by default, but may be modified with bin_size and bin_range."""
         input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
         schedule = self.combined_schedule if schedule is None else schedule
         bin_size = 45
@@ -323,7 +321,6 @@ class MetricCalculator():
         for reservations in schedule.values():
             sched_priority_values.extend([priority_values_by_rg_id[res.request_group_id]
                                           for res in reservations])
-
         sched_histogram = bin_data(sched_priority_values, bin_size=bin_size)
         bin_sched_durations = bin_data(sched_priority_values, sched_durations, bin_size)
         full_histogram = bin_data(all_priority_values, bin_size=bin_size)
