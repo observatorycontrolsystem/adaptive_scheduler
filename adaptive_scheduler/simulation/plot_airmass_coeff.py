@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import adaptive_scheduler.simulation.plotutils as plotutils
 from adaptive_scheduler.simulation.plotutils import opensearch_client, default_colors
 
-AIRMASS_TEST_VALUES = [0, 0.01, 0.05, 0.1, 1, 10, 100, 1000, 1000000]
+AIRMASS_TEST_VALUES = [0, 0.01, 0.05, 0.1, 1.0, 10, 100, 1000, 1000000]
 
 control_id = '1m0-simulation-real-airmass-control-1_2022-07-18T23:59:44.770684'
 control = opensearch_client.get('scheduler-simulations', control_id)
@@ -61,6 +61,8 @@ def plot_midpoint_airmass_histogram():
         ax.set_title(f'Airmass Coefficient: {airmass_coeff}')
         ax.set_xlabel('Midpoint Airmass')
         ax.set_ylabel('Count')
+        ax.set_xlim(1.0, 2.0)
+        ax.set_ylim(0, 120)
     plotutils.export_to_image(f'1m0_midpoint_airmass_hist_{timestamp}', fig)
     plt.show()
 
