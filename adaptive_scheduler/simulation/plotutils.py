@@ -10,17 +10,6 @@ OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', 'https://logs.lco.global/')
 OPENSEARCH_INDEX = os.getenv('OPENSEARCH_INDEX', 'scheduler-simulations')
 opensearch_client = OpenSearch(OPENSEARCH_URL)
 
-default_colors = ['deeppink',
-                  'forestgreen',
-                  'limegreen',
-                  'mediumseagreen',
-                  'mediumturquoise',
-                  'royalblue',
-                  'slateblue',
-                  'darkorchid',
-                  'indigo',
-                  'navy']
-
 
 def export_to_image(fname, fig):
     """Takes a matplotlib Figure object and saves the figure. If the output
@@ -42,7 +31,7 @@ def export_to_image(fname, fig):
         print(f'Plot exported to {fpath}')
 
 
-def plot_barplot(ax, data, colors, labels, binnames, barwidth=0.04):
+def plot_barplot(ax, data, labels, binnames, barwidth=0.04):
     """Generates a barplot for multiple datasets.
 
     Args:
@@ -56,7 +45,7 @@ def plot_barplot(ax, data, colors, labels, binnames, barwidth=0.04):
     """
     ticks = np.arange(len(data[0]))
     for i, datavalues in enumerate(data):
-        ax.bar(ticks+barwidth*i, datavalues, barwidth, color=colors[i], label=labels[i], alpha=0.8)
+        ax.bar(ticks+barwidth*i, datavalues, barwidth, label=labels[i], alpha=0.8)
     ax.set_xticks(ticks+barwidth*i/2, binnames)
 
 
