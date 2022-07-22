@@ -132,8 +132,6 @@ class MetricCalculator():
         if self.scheduler_runner.rr_scheduler_input:
             self.request_groups.extend(self.scheduler_runner.rr_scheduler_input.request_groups)
 
-        self._get_scheduled_rg_ids()
-
         self.airmass_data_by_request_id = defaultdict(dict)
 
     def _combine_resources_scheduled(self):
@@ -177,26 +175,17 @@ class MetricCalculator():
             effective_priorities.extend([res.priority for res in reservations])
         return sum(effective_priorities), effective_priorities
 
-    def _get_scheduled_rg_ids(self):
-        self.sched_rg_ids = []
-        self.input_rg_ids = [res.request_group_id for res in self.combined_input_reservations]
-        for reservations in self.combined_schedule.values():
-            self.sched_rg_ids.extend([res.request_group_id for res in reservations])
-        return self.sched_rg_ids
-
     def get_duration_data(self):
         """Returns scheduled and unscheduled durations."""
-        durations_by_rg_id = {res.request_group_id: res.duration for res in self.combined_input_reservations}
-        sched_durations = [durations_by_rg_id[rg_id] for rg_id in self.sched_rg_ids]
-        unsched_durations = [durations_by_rg_id[rg_id] for rg_id in self.input_rg_ids if rg_id not in self.sched_rg_ids]
+        sched_durations = [res.duration for res in self.combined_input_reservations if res.scheduled]
+        unsched_durations = [res.duration for res in self.combined_input_reservations if not res.scheduled]
         return sched_durations, unsched_durations
 
     def get_priority_data(self):
         """Returns scheduled and unscheduled priority values. Accesses them in the same order as durations so
         they can be cross-matched. Scaling changes the priorities to a different range of numbers."""
-        priority_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in self.request_groups}
-        sched_priorities = [priority_by_rg_id[rg_id] for rg_id in self.sched_rg_ids]
-        unsched_priorities = [priority_by_rg_id[rg_id] for rg_id in self.input_rg_ids if rg_id not in self.sched_rg_ids]
+        sched_priorities = [res.priority for res in self.combined_input_reservations if res.scheduled]
+        unsched_priorities = [res.priority for res in self.combined_input_reservations if not res.scheduled]
         # uncomment to remap the priorities
         # scale = (100, 10, 30, 10)
         # sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
