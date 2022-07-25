@@ -58,7 +58,7 @@ def generate_bin_names(bin_size, bin_range):
     return bin_names
 
 
-def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
+def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=sum):
     """Bins data to create a histogram. Each bin is half-open, i.e. defined on the interval [a, b) for every bin
     except for the last bin, which is defined on the interval [a, b]. The naming convention is different for
     integers and floats. For example, for the label '1-2', this means the discrete values 1 and 2, whereas
@@ -71,8 +71,9 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
             extra values are thrown out. The aggregation function is applied to the data at the end.
         bin_size (int): The width of the bins.
         bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
+        fill: The data value to fill with if the bin is empty. If None, then remove empty bins.
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
-            Additional items can be passed to the aggregation function. Pass None to aggregator to store the raw
+            The aggregator will be applied to fill values. Pass None to aggregator to store the raw
             list into the bin.
 
     Returns:
@@ -105,10 +106,12 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
             bin_dict[keyname].append(data[i])
         else:
             bin_dict[keyname].append(1)
-    if aggregator:
-        bin_dict = {key: aggregator(vals) for key, vals in bin_dict.items() if vals}
+    if fill is not None:
+        bin_dict = {key: vals if vals else [fill] for key, vals in bin_dict.items()}
     else:
         bin_dict = {key: vals for key, vals in bin_dict.items() if vals}
+    bin_dict = {key: aggregator(vals) if aggregator else vals for key, vals in bin_dict.items()}
+
     return bin_dict
 
 
