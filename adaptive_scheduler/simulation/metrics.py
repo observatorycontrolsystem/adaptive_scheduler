@@ -72,10 +72,26 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
         bin_size (int): The width of the bins.
         bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
-            Additional items can be passed to the aggregation function.
+            Additional items can be passed to the aggregation function. Pass None to aggregator to store the raw
+            list into the bin.
 
     Returns:
-        data_dict (str: int): The frequency count of the data.
+        data_dict (str: int): The binned data.
+
+    Examples:
+        Simple frequency count:
+        >>> bin_data([1, 2, 3, 2])
+        {'1': 1, '2': 2, '3': 1}
+
+        Bin a list by values in an associated list, e.g. highest test score by age group:
+        >>> ages =   [12, 13, 11, 14, 15, 12, 13, 10, 10, 13]
+        >>> scores = [76, 84, 92, 56, 91, 87, 72, 95, 89, 77]
+        >>> bin_data(ages, scores, bin_size=2, bin_range=(10, 15), aggregator=max)
+        {'10-11': 95, '12-13': 87, '14-15': 91}
+
+        Get the raw list of items in each bin:
+        >>> bin_data([4, 4, 5, 6, 9], [4, 4, 5, 6, 9], aggregator=None)
+        {'4': [4, 4], '5': [5], '6': [6], '9': [9]}
     """
     bin_range = (min(bin_by), max(bin_by)) if bin_range is None else bin_range
     bin_dict = {bin_name: [] for bin_name in generate_bin_names(bin_size, bin_range)}
@@ -89,7 +105,10 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, aggregator=sum):
             bin_dict[keyname].append(data[i])
         else:
             bin_dict[keyname].append(1)
-    bin_dict = {key: aggregator(val) for key, val in bin_dict.items() if val}
+    if aggregator:
+        bin_dict = {key: aggregator(vals) for key, vals in bin_dict.items() if vals}
+    else:
+        bin_dict = {key: vals for key, vals in bin_dict.items() if vals}
     return bin_dict
 
 
