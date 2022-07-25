@@ -107,7 +107,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=
         else:
             bin_dict[keyname].append(1)
     if fill is not None:
-        bin_dict = {key: vals if vals else [fill] for key, vals in bin_dict.items()}
+        bin_dict = {key: vals if vals else list(fill) for key, vals in bin_dict.items()}
     else:
         bin_dict = {key: vals for key, vals in bin_dict.items() if vals}
     bin_dict = {key: aggregator(vals) if aggregator else vals for key, vals in bin_dict.items()}
