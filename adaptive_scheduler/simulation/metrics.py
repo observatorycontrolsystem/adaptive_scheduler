@@ -34,6 +34,7 @@ def percent_diff(x, y):
 
 
 def scalefunc(p, newmax, newmin, oldmax, oldmin):
+    """Remaps a range of values to another range of values."""
     return (p-oldmin)*(newmax-newmin)/(oldmax-oldmin) + newmin
 
 
@@ -154,45 +155,47 @@ class MetricCalculator():
             reservations = [res for res in comp_res.reservation_list if res not in self.combined_input_reservations]
             self.combined_input_reservations.extend(reservations)
 
-    def count_scheduled(self, input_reservations=None, schedule=None):
-        input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
-        schedule = self.combined_schedule if schedule is None else schedule
+    def count_scheduled(self):
         scheduled_reservations = []
-        for reservations in schedule.values():
+        for reservations in self.combined_schedule.values():
             scheduled_reservations.extend(reservations)
-        return len(scheduled_reservations), len(input_reservations)
+        return len(scheduled_reservations), len(self.combined_input_reservations)
 
-    def percent_reservations_scheduled(self, input_reservations=None, schedule=None):
-        input_reservations = self.combined_input_reservations if input_reservations is None else input_reservations
-        schedule = self.combined_schedule if schedule is None else schedule
-        scheduled, total = self.count_scheduled(input_reservations, schedule)
+    def percent_reservations_scheduled(self):
+        scheduled, total = self.count_scheduled()
         return percent_of(scheduled, total)
 
-    def total_scheduled_eff_priority(self, schedule=None):
-        schedule = self.combined_schedule if schedule is None else schedule
+    def total_scheduled_eff_priority(self):
         effective_priorities = []
-        for reservations in schedule.values():
+        for reservations in self.combined_schedule.values():
             effective_priorities.extend([res.priority for res in reservations])
         return sum(effective_priorities), effective_priorities
 
     def get_duration_data(self):
         """Returns scheduled and unscheduled durations."""
-        sched_durations = [res.duration for res in self.combined_input_reservations if res.scheduled]
-        unsched_durations = [res.duration for res in self.combined_input_reservations if not res.scheduled]
+        sched_durations = []
+        unsched_durations = []
+        for res in self.combined_input_reservations:
+            sched_durations.append(res.duration) if res.scheduled else unsched_durations.append(res.duration)
         return sched_durations, unsched_durations
 
     def get_priority_data(self):
         """Returns scheduled and unscheduled priority values. Accesses them in the same order as durations so
         they can be cross-matched. Scaling changes the priorities to a different range of numbers."""
-        sched_priorities = [res.priority for res in self.combined_input_reservations if res.scheduled]
-        unsched_priorities = [res.priority for res in self.combined_input_reservations if not res.scheduled]
+        sched_rg_ids = []
+        unsched_rg_ids = []
+        for res in self.combined_input_reservations:
+            sched_rg_ids.append(res.request_group_id) if res.scheduled else unsched_rg_ids.append(res.request_group_id)
+        priorities_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in self.request_groups}
+        sched_priorities = [priorities_by_rg_id[rg_id] for rg_id in sched_rg_ids]
+        unsched_priorities = [priorities_by_rg_id[rg_id] for rg_id in unsched_rg_ids]
         # uncomment to remap the priorities
-        # scale = (100, 10, 30, 10)
-        # sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
-        # unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
+        scale = (100, 10, 30, 10)
+        sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
+        unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
         return sched_priorities, unsched_priorities
 
-    def total_available_seconds(self, resources_scheduled=None, horizon_days=None):
+    def total_available_seconds(self):
         """Aggregates the total available time, calculated from dark intervals.
 
         Args:
@@ -204,25 +207,19 @@ class MetricCalculator():
         Returns:
             total_available_time (float): The dark intervals capped by the horizon.
         """
-        resources_scheduled = self.combined_resources_scheduled if resources_scheduled is None else resources_scheduled
-        horizon_days = self.horizon_days if horizon_days is None else horizon_days
         total_available_time = 0
         start_time = self.scheduler.estimated_scheduler_end
-        end_time = start_time + timedelta(days=horizon_days)
-        for resource in resources_scheduled:
+        end_time = start_time + timedelta(days=self.horizon_days)
+        for resource in self.combined_resources_scheduled:
             if resource in self.scheduler.visibility_cache:
                 dark_intervals = self.scheduler.visibility_cache[resource].dark_intervals
                 available_time = time_in_capped_intervals(dark_intervals, start_time, end_time)
                 total_available_time += available_time
         return total_available_time
 
-    def percent_time_utilization(self, schedule=None, resources_scheduled=None, horizon_days=None):
-        schedule = self.combined_schedule if schedule is None else schedule
-        resources_scheduled = self.combined_resources_scheduled if resources_scheduled is None else resources_scheduled
-        horizon_days = self.horizon_days if horizon_days is None else horizon_days
+    def percent_time_utilization(self):
         scheduled_durations, _ = self.get_duration_data()
-        return percent_of(sum(scheduled_durations),
-                          self.total_available_seconds(resources_scheduled, horizon_days))
+        return percent_of(sum(scheduled_durations), self.total_available_seconds())
 
     def _get_airmass_data_for_request(self, request_id):
         """Pulls airmass data from the Observation Portal, cache it in our local directory.
@@ -325,7 +322,7 @@ class MetricCalculator():
 
     def binned_tac_priority_metrics(self):
         """Bins metrics based on TAC priority."""
-        bin_size = 10
+        bin_size = 45
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
@@ -336,9 +333,9 @@ class MetricCalculator():
         bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size)
         full_histogram = bin_data(all_priorities, bin_size=bin_size)
         bin_all_durations = bin_data(all_priorities, all_durations, bin_size)
-        bin_percent_count = {bin_: percent_of(np.array(sched_histogram[bin_]), np.array(full_histogram[bin_]))
+        bin_percent_count = {bin_: percent_of(sched_histogram[bin_], full_histogram[bin_])
                              for bin_ in sched_histogram}
-        bin_percent_duration = {bin_: percent_of(np.array(bin_sched_durations[bin_]), np.array(bin_all_durations[bin_]))
+        bin_percent_duration = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
                                 for bin_ in bin_sched_durations}
 
         output_dict = {
