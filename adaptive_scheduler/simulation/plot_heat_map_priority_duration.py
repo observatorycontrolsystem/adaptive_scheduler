@@ -1,11 +1,16 @@
+import sched
 from xml.dom.pulldom import default_bufsize
 import numpy as np
 import matplotlib.pyplot as plt
 from opensearchpy import OpenSearch
-from plotutils import get_data_from_opensearch
+from adaptive_scheduler.simulation.plotutils import get_data_from_opensearch
 from adaptive_scheduler.simulation.metrics import bin_data
-VARIABLE = ['no-duration-v2','no-duration-scaled-100-v2']
-            # 'with-duration-scaled-100','no-duration','no-duration-scaled-100',]
+import seaborn as sns
+from colorspacious import cspace_converter
+VARIABLE = [ 'with-duration-v3',
+            'no-duration-v3',
+            'with-duration-scaled-100-v3',
+            'no-duration-scaled-100-v3',]
 
 markers = ["o" , "," ,"v" , "^" , "<", ">"]
 colors = ['r','b','c','m', 'y', 'k']
@@ -19,7 +24,7 @@ def plot_sched_priority_duration_dotplot():
     fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
     for i, id in enumerate(VARIABLE):
         data = get_data_from_opensearch(f'1m0-optimize-airmass-{id}')
-        if id in ['no-duration-scaled-100-v2', 'with-duration-scaled-100-v2']:
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
             data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
         # print(id, len(data['raw_scheduled_priorities']), len(data['raw_unscheduled_priorities']))
         # ax1.scatter(rand_jitter(data['raw_scheduled_priorities']), rand_jitter(data['raw_scheduled_durations']), 
@@ -32,7 +37,7 @@ def plot_sched_priority_duration_dotplot():
     ax1.legend()
     for i, id in enumerate(VARIABLE):
         data = get_data_from_opensearch(f'1m0-optimize-airmass-{id}')
-        if id in ['no-duration-scaled-100-v2', 'with-duration-scaled-100-v2']:
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
             data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
         # ax2.scatter(rand_jitter(data['raw_unscheduled_priorities']), rand_jitter(data['raw_unscheduled_durations']),
         #            c =colors[i], marker=markers[i],s=10, label = f'unscheduled requests {id}', alpha = 0.3)
@@ -45,19 +50,58 @@ def plot_sched_priority_duration_dotplot():
 
 
 def plot_heat_map_priority_duration():
-    fig = plt.subplot()
-    fig.suptitle()
-    fig.subplots_adjust()
+    fig, axs= plt.subplots(2, 2, figsize=(25, 12))
+    fig.suptitle(f'1m0 Network Requests Heatmap With Airmass Optimization', fontsize=20)
+    fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
+    ax_list = [axs[0,0],axs[0,1],axs[1,0], axs[1,1]]
     for i, id in enumerate(VARIABLE):
         data = get_data_from_opensearch(f'1m0-optimize-airmass-{id}')
-        if id in ['no-duration-scaled-100-v2', 'with-duration-scaled-100-v2']:
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
+            data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
             data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
-            sched_priorities = data['raw_scheduled_priorities']
-            sched_durations = data['raw_scheduled_durations']
-            unsched_priorities = data['raw_unscheduled_priorities']
-            unsched_durations = data['raw_unscheduled_durations']
-            level_1_bins = bin_data(sched_priorities, sched_durations, bin_size=5, aggregator=None)
-            print(level_1_bins)
+        sched_priorities = data['raw_scheduled_priorities']
+        sched_durations = data['raw_scheduled_durations']
+        unsched_priorities = data['raw_unscheduled_priorities']
+        unsched_durations = data['raw_unscheduled_durations']
+        # total_priorities = sched_priorities.extend(unsched_priorities)
+        # total_durations = sched_durations.extend()
+        level_1_bins = bin_data(sched_priorities, sched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_2_bins = {bin_key: bin_data(bin_values, bin_size=250, bin_range=(0, 4000)) for bin_key, bin_values in level_1_bins.items()}
+        # print(level_2_bins)
+        level_1_bins_unsched = bin_data(unsched_priorities, unsched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_2_bins_unsched = {bin_key: bin_data(bin_values, bin_size=250, bin_range=(0, 4000)) for bin_key, bin_values in level_1_bins_unsched.items()}
+        priority_bins = list(level_2_bins.keys())
+        duration_bins = list(list(level_2_bins.values())[0].keys())
+        heat_map_elements = []
+        heat_map_elements_unsched = []
+        for durations in level_2_bins.values():
+            heat_map_elements.append(list(durations.values()))
+        for durations in level_2_bins_unsched.values():
+            heat_map_elements_unsched.append(list(durations.values()))
+        
+        heat_map_elements = np.array(heat_map_elements)
+        heat_map_elements_unsched = np.array(heat_map_elements_unsched)
+        axis = ax_list[i]
+        cmap=plt.get_cmap('coolwarm')
+        cmap2 = plt.get_cmap('gray')
+        heatplot = axis.imshow(heat_map_elements,cmap=cmap)
+        axis.set_ylabel('Priority')
+        axis.set_xlabel('Duration')
+        axis.set_xticks(np.arange(len(duration_bins)), labels=duration_bins)
+        axis.set_yticks(np.arange(len(priority_bins)), labels=priority_bins)
+        plt.setp(axis.get_xticklabels(), rotation=45, ha="right",
+            rotation_mode="anchor")
+        for i in range(len(priority_bins)):
+            for j in range(len(duration_bins)):
+                value = heat_map_elements[i, j]
+                text1 = axis.text(j, i, f'{heat_map_elements[i, j]}|{ heat_map_elements_unsched[i, j]}',
+                            ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
+                # text2 = axis.text(j, i, heat_map_elements_unsched[i, j],
+                #             position=(0, 0), fontsize='medium', fontweight='medium', color=cmap2(0.001/value))
+        axis.set_title(f'{id} (sched|unsched)', fontweight='semibold')
+    # cb = fig.colorbar(heatplot)
+    fig.tight_layout()
+    plt.show()
         
 
 if __name__ == '__main__':
