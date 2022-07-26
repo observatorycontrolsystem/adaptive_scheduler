@@ -58,34 +58,40 @@ def generate_bin_names(bin_size, bin_range):
     return bin_names
 
 
-def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=sum):
-    """Bins data to create a histogram. Each bin is half-open, i.e. defined on the interval [a, b) for every bin
-    except for the last bin, which is defined on the interval [a, b]. The naming convention is different for
-    integers and floats. For example, for the label '1-2', this means the discrete values 1 and 2, whereas
-    for the label '1.0-2.0' this means the values on the interval [1.0, 2.0). Bins are uniformly spaced.
+def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=[], aggregator=len):
+    """Bins data to create a histogram. For float values, each bin is half-open, i.e. defined on
+    the interval [a, b) for every bin except for the last bin, which is defined on the interval [a, b].
+    The naming convention is different for integers, which use open intervals [a, b] since they are discrete.
+    For example, for the label '1-3', this means the values 1, 2, and 3, whereas for the label '1.0-3.0'
+    this means the values on the interval [1.0, 3.0). Bins are uniformly spaced.
 
     Args:
         bin_by (list): A list of data to bin by. Can be float or int.
-        data (list): Additional data points associated with the data to bin by. If the lengths are
-            mismatched, you will get an IndexError if the data list is too short. If it is too long,
-            extra values are thrown out. The aggregation function is applied to the data at the end.
-        bin_size (int): The width of the bins.
-        bin_range (int, int): Override the bin ranges. Otherwise, use the min/max of the data.
-        fill: The data value to fill with if the bin is empty. If None, then remove empty bins.
+        data (list): Additional data points associated with the data to bin by. It is best for the length
+            of this array to match the length of bin_by. The aggregation function is applied to the data
+            after binning, on a per-bin basis.
+        bin_size: The width of the bins.
+        bin_range: A tuple of numbers. Overrides the bin ranges. Otherwise, use the min/max of the data.
+        fill: The data value to fill with if the bin is empty. If None is passed, then empty bins are removed.
+            The aggregator will be applied to fill values as well.
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
-            The aggregator will be applied to fill values. Pass None to aggregator to store the raw
-            list into the bin.
+            If None is passed, then the raw values are stored in a list.
 
     Returns:
-        data_dict (str: int): The binned data.
+        data_dict: The binned data. Each key is a label corresponding to either a list of values or a single number,
+            depending on the type of aggregation function used.
 
     Examples:
         Simple frequency count:
-        >>> bin_data([1, 2, 3, 2])
-        {'1': 1, '2': 2, '3': 1}
+        >>> bin_data([1, 2, 3, 2, 6])
+        {'1': 1, '2': 2, '3': 1, '4': 0, '5': 0, '6': 1}
 
-        Bin a list by values in an associated list, e.g. highest test score by age group:
-        >>> ages =   [12, 13, 11, 14, 15, 12, 13, 10, 10, 13]
+        Frequency count without empty bins ('3' is removed):
+        >>> bin_data([4, 4, 5, 6, 7, 2], fill=None)
+        {'2': 1, '4': 2, '5': 1, '6': 1, '7': 1}
+
+        Bin two lists of data, e.g. highest test score by age group:
+        >>> ages = [12, 13, 11, 14, 15, 12, 13, 10, 10, 13]
         >>> scores = [76, 84, 92, 56, 91, 87, 72, 95, 89, 77]
         >>> bin_data(ages, scores, bin_size=2, bin_range=(10, 15), aggregator=max)
         {'10-11': 95, '12-13': 87, '14-15': 91}
@@ -105,9 +111,13 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=
         if data:
             bin_dict[keyname].append(data[i])
         else:
-            bin_dict[keyname].append(1)
+            bin_dict[keyname].append(value)
     if fill is not None:
-        bin_dict = {key: vals if vals else [fill] for key, vals in bin_dict.items()}
+        try:
+            fill = list(fill)
+        except TypeError:
+            fill = [fill]
+        bin_dict = {key: vals if vals else fill for key, vals in bin_dict.items()}
     else:
         bin_dict = {key: vals for key, vals in bin_dict.items() if vals}
     bin_dict = {key: aggregator(vals) if aggregator else vals for key, vals in bin_dict.items()}
