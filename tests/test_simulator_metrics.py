@@ -102,13 +102,13 @@ class TestMetrics():
         sumdata = {'1-3': 36, '4-6': 27, '7-9': 17}
         mindata = {'1-3': 1, '4-6': 2, '7-9': 4}
 
-        assert bin_data(bin_by, bin_size=3, bin_range=bin_range) == allparams
-        assert bin_data(bin_by) == defaults
-        assert bin_data(bin_by, bin_size=2) == unevenbins
-        assert bin_data(bin_by, bin_size=2.5, bin_range=(0, 9)) == floatbinsize
-        assert bin_data(bin_by_float) == floats
-        assert bin_data(bin_by_float, bin_range=(0, 4)) == capped_floats
-        assert bin_data(bin_by, bin_data_, bin_size=3) == sumdata
+        assert bin_data(bin_by, bin_size=3, bin_range=bin_range, fill=None) == allparams
+        assert bin_data(bin_by, fill=None) == defaults
+        assert bin_data(bin_by, bin_size=2, fill=None) == unevenbins
+        assert bin_data(bin_by, bin_size=2.5, bin_range=(0, 9), fill=None) == floatbinsize
+        assert bin_data(bin_by_float, fill=None) == floats
+        assert bin_data(bin_by_float, bin_range=(0, 4), fill=None) == capped_floats
+        assert bin_data(bin_by, bin_data_, bin_size=3, fill=None, aggregator=sum) == sumdata
         assert bin_data(bin_by, bin_data_, bin_size=3, aggregator=min) == mindata
 
     def test_airmass_functions(self):
