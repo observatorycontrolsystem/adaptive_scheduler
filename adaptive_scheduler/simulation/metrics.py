@@ -58,7 +58,7 @@ def generate_bin_names(bin_size, bin_range):
     return bin_names
 
 
-def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=len):
+def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=[], aggregator=len):
     """Bins data to create a histogram. For float values, each bin is half-open, i.e. defined on
     the interval [a, b) for every bin except for the last bin, which is defined on the interval [a, b].
     The naming convention is different for integers, which use open intervals [a, b] since they are discrete.
@@ -83,12 +83,12 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=None, aggregator=
 
     Examples:
         Simple frequency count:
-        >>> bin_data([1, 2, 3, 2, 8])
-        {'1': 1, '2': 2, '3': 1, '8': 1}
+        >>> bin_data([1, 2, 3, 2, 6])
+        {'1': 1, '2': 2, '3': 1, '4': 0, '5': 0, '6': 1}
 
-        Frequency count with zero values:
-        >>> bin_data([4, 4, 5, 6, 7, 2], fill=[])
-        {'2': 1, '3': 0, '4': 2, '5': 1, '6': 1, '7': 1}
+        Frequency count without empty bins ('3' is removed):
+        >>> bin_data([4, 4, 5, 6, 7, 2], fill=None)
+        {'2': 1, '4': 2, '5': 1, '6': 1, '7': 1}
 
         Bin two lists of data, e.g. highest test score by age group:
         >>> ages = [12, 13, 11, 14, 15, 12, 13, 10, 10, 13]
