@@ -3,8 +3,13 @@ from adaptive_scheduler.simulation.metrics import (MetricCalculator,
 
 import os
 import json
+import calendar
 from datetime import datetime, timedelta
 from mock import Mock
+from rise_set import astrometry
+from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.angle import Angle
+import numpy as np
 
 
 class TestMetrics():
@@ -25,6 +30,7 @@ class TestMetrics():
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
         self.mock_scheduler_runner = Mock(semester_details={'start': self.start})
         self.mock_scheduler_runner.sched_params.horizon_days = 5
+        self.mock_scheduler_runner.sched_params.simulate_now = self.scheduler_run_time
 
         self.mock_scheduler_result.schedule = fake_schedule
 
@@ -140,3 +146,59 @@ class TestMetrics():
         assert airmass_metrics['avg_midpoint_airmass'] == 4
         assert airmass_metrics['avg_min_poss_airmass'] == 1
         assert airmass_metrics['raw_airmass_data'][0]['midpoint_airmasses'] == midpoint_airmasses
+
+    def test_avg_slew_distance(self):
+        conf1 = {'target': Mock(name='star1',
+                                ra=RightAscension(degrees=35),
+                                dec=Declination(degrees=0))}
+        conf2 = {'target': Mock(name='star2',
+                                ra=RightAscension(degrees=35),
+                                dec=Declination(degrees=15))}
+        conf3 = {'target': Mock(name='star3',
+                                ra=RightAscension(degrees=10),
+                                dec=Declination(degrees=15))}
+        conf4 = {'target': Mock(name='star4',
+                                ra=RightAscension(degrees=60),
+                                dec=Declination(degrees=10))}
+        conf5 = {'target': Mock(name='star5',
+                                ra=RightAscension(degrees=80),
+                                dec=Declination(degrees=10))}
+        conf6 = {'target': Mock(name='star6',
+                                ra=RightAscension(degrees=80),
+                                dec=Declination(degrees=-10))}
+        res1 = Mock(scheduled_start=10)
+        res2 = Mock(scheduled_start=20)
+        res3 = Mock(scheduled_start=10)
+        res4 = Mock(scheduled_start=20)
+        res5 = Mock(scheduled_start=30)
+        res1.request.configurations = [conf1, conf2]
+        res2.request.configurations = [conf3]
+        res3.request.configurations = [conf4]
+        res4.request.configurations = [conf5, conf5, conf5]
+        res5.request.configurations = [conf6]
+        fake_schedule1 = {'bpl': [res1, res2], 'coj': [res5, res4, res3]}
+        d = timedelta(seconds=10)
+        radec1 = astrometry.mean_to_apparent({'ra': Angle(degrees=35), 'dec': Angle(degrees=0)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+d))
+        radec2 = astrometry.mean_to_apparent({'ra': Angle(degrees=35), 'dec': Angle(degrees=15)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+d))
+        radec3 = astrometry.mean_to_apparent({'ra': Angle(degrees=10), 'dec': Angle(degrees=15)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+2*d))
+        radec4 = astrometry.mean_to_apparent({'ra': Angle(degrees=60), 'dec': Angle(degrees=10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+3*d))
+        radec5 = astrometry.mean_to_apparent({'ra': Angle(degrees=80), 'dec': Angle(degrees=10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+4*d))
+        radec6 = astrometry.mean_to_apparent({'ra': Angle(degrees=80), 'dec': Angle(degrees=-10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+5*d))
+        slewdists = [astrometry.angular_distance_between(*radec1, *radec2),
+                     astrometry.angular_distance_between(*radec2, *radec3),
+                     astrometry.angular_distance_between(*radec4, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec6)]
+        slewdists = [a.in_degrees() for a in slewdists]
+        metrics = MetricCalculator(self.mock_scheduler_result, None, self.mock_scheduler, self.mock_scheduler_runner)
+        metrics.combined_schedule = fake_schedule1
+        metrics.scheduler_runner.semester_details['start'] = self.scheduler_run_time
+
+        assert np.isclose(metrics.avg_slew_distance(), np.mean(slewdists))

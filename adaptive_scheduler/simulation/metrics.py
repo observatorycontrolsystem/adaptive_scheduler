@@ -9,6 +9,7 @@ from collections import defaultdict
 import numpy as np
 import requests
 from requests.exceptions import RequestException, Timeout
+from rise_set import astrometry
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
@@ -71,9 +72,10 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=[], aggregator=le
             of this array to match the length of bin_by. The aggregation function is applied to the data
             after binning, on a per-bin basis.
         bin_size: The width of the bins.
-        bin_range: A tuple of numbers. Overrides the bin ranges. Otherwise, use the min/max of the data.
-        fill: The data value to fill with if the bin is empty. If None is passed, then empty bins are removed.
-            The aggregator will be applied to fill values as well.
+        bin_range: A tuple of numbers to override the bin ranges. Otherwise, use the min/max of the data.
+        fill: The data value(s) to fill with if the bin is empty. An iterable may be passed, in which case it is
+            casted to a list. If None is passed, then empty bins are removed. The aggregator will be applied
+            to fill values as well.
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
             If None is passed, then the raw values are stored in a list.
 
@@ -141,6 +143,7 @@ class MetricCalculator():
         self.scheduler = scheduler
         self.scheduler_runner = scheduler_runner
         self.observation_portal_interface = self.scheduler_runner.network_interface.observation_portal_interface
+        self.simulation_start = self.scheduler_runner.sched_params.simulate_now
         self.horizon_days = self.scheduler_runner.sched_params.horizon_days
 
         self.normal_scheduler_result = normal_scheduler_result
@@ -379,3 +382,25 @@ class MetricCalculator():
             'percent_duration': bin_percent_duration,
         }
         return output_dict
+
+    def avg_slew_distance(self):
+        semester_start = self.scheduler_runner.semester_details['start']
+        slew_distances = []
+        for reservations in self.combined_schedule.values():
+            apparent_radecs = []
+            reservations.sort(key=lambda r: r.scheduled_start)
+            for res in reservations:
+                res_startdt = normalised_epoch_to_datetime(res.scheduled_start, datetime_to_epoch(semester_start))
+                tdb = astrometry.date_to_tdb(res_startdt)
+                config_radecs = [astrometry.mean_to_apparent({'ra': c['target'].ra, 'dec': c['target'].dec}, tdb)
+                                 for c in res.request.configurations]
+                apparent_radecs.extend(config_radecs)
+            for i, radec in enumerate(apparent_radecs):
+                try:
+                    next_radec = apparent_radecs[i+1]
+                    ang_dist = astrometry.angular_distance_between(*radec, *next_radec)
+                    slew_distances.append(ang_dist.in_degrees())
+                except IndexError:
+                    break
+
+        return np.mean(slew_distances)
