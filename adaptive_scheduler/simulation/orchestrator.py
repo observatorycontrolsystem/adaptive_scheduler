@@ -31,6 +31,7 @@ from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
 from adaptive_scheduler.simulation.metrics import MetricCalculator
+from adaptive_scheduler.utils import timeit
 
 
 log = logging.getLogger('adaptive_scheduler')
@@ -79,6 +80,7 @@ def increment_input(current_time, time_step):
     pass
 
 
+@timeit
 def send_to_opensearch(os_url, os_index, metrics):
     # Send the json metrics to the opensearch index
     if os_url and os_index:
