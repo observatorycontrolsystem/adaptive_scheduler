@@ -135,6 +135,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'raw_unscheduled_durations': unsched_durations,
         'raw_scheduled_priorities': sched_priorities,
         'raw_unscheduled_priorities': unsched_priorities,
+        'average_slew_distance': metrics.avg_slew_distance(),
     }
     send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
