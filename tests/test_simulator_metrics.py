@@ -148,24 +148,19 @@ class TestMetrics():
         assert airmass_metrics['raw_airmass_data'][0]['midpoint_airmasses'] == midpoint_airmasses
 
     def test_avg_slew_distance(self):
-        conf1 = {'target': Mock(name='star1',
-                                ra=RightAscension(degrees=35),
-                                dec=Declination(degrees=0))}
-        conf2 = {'target': Mock(name='star2',
-                                ra=RightAscension(degrees=35),
-                                dec=Declination(degrees=15))}
-        conf3 = {'target': Mock(name='star3',
-                                ra=RightAscension(degrees=10),
-                                dec=Declination(degrees=15))}
-        conf4 = {'target': Mock(name='star4',
-                                ra=RightAscension(degrees=60),
-                                dec=Declination(degrees=10))}
-        conf5 = {'target': Mock(name='star5',
-                                ra=RightAscension(degrees=80),
-                                dec=Declination(degrees=10))}
-        conf6 = {'target': Mock(name='star6',
-                                ra=RightAscension(degrees=80),
-                                dec=Declination(degrees=-10))}
+        conf1 = Mock()
+        conf1.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=35), 'dec': Angle(degrees=0)})
+        conf2 = Mock()
+        conf2.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=35), 'dec': Angle(degrees=15)})
+        conf3 = Mock()
+        conf3.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=10), 'dec': Angle(degrees=15)})
+        conf4 = Mock()
+        conf4.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=60), 'dec': Angle(degrees=10)})
+        conf5 = Mock()
+        conf5.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=80), 'dec': Angle(degrees=10)})
+        conf6 = Mock()
+        conf6.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=80), 'dec': Angle(degrees=-10)})
+
         res1 = Mock(scheduled_start=10)
         res2 = Mock(scheduled_start=20)
         res3 = Mock(scheduled_start=10)
@@ -177,6 +172,7 @@ class TestMetrics():
         res4.request.configurations = [conf5, conf5, conf5]
         res5.request.configurations = [conf6]
         fake_schedule1 = {'bpl': [res1, res2], 'coj': [res5, res4, res3]}
+
         d = timedelta(seconds=10)
         radec1 = astrometry.mean_to_apparent({'ra': Angle(degrees=35), 'dec': Angle(degrees=0)},
                                              astrometry.date_to_tdb(self.scheduler_run_time+d))

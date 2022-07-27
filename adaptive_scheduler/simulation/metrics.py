@@ -8,12 +8,16 @@ from collections import defaultdict
 
 import numpy as np
 import requests
+import rise_set
 from requests.exceptions import RequestException, Timeout
 from rise_set import astrometry
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch, timeit
-from adaptive_scheduler.models import redis_instance
+from adaptive_scheduler.utils import (time_in_capped_intervals,
+                                      normalised_epoch_to_datetime,
+                                      datetime_to_epoch, timeit)
+from adaptive_scheduler.models import redis_instance, ICRSTarget
+
 log = logging.getLogger('adaptive_scheduler')
 
 DTFORMAT = '%Y-%m-%dT%H:%M'
@@ -397,9 +401,13 @@ class MetricCalculator():
             for res in reservations:
                 res_startdt = normalised_epoch_to_datetime(res.scheduled_start, datetime_to_epoch(semester_start))
                 tdb = astrometry.date_to_tdb(res_startdt)
-                config_radecs = [astrometry.mean_to_apparent({'ra': c['target'].ra, 'dec': c['target'].dec}, tdb)
-                                 for c in res.request.configurations]
-                apparent_radecs.extend(config_radecs)
+                for c in res.request.configurations:
+                    try:
+                        apparent_radecs.append(astrometry.mean_to_apparent(c.target.in_rise_set_format(), tdb))
+                    except rise_set.exceptions.IncompleteTargetError:
+                        # set a conservative estimate
+                        ra = dec = rise_set.angle.Angle(degrees=0)
+                        apparent_radecs.append((ra, dec))
             for i, radec in enumerate(apparent_radecs):
                 try:
                     next_radec = apparent_radecs[i+1]
