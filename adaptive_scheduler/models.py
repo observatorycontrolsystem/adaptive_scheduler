@@ -49,7 +49,7 @@ redis_instance = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), soc
               socket_timeout=30)
 
 
-AIRMASS_WEIGHTING_COEFFICIENT = 0.1
+AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
 
 
 def n_requests(request_groups):
@@ -468,30 +468,32 @@ class Request(EqualityMixin):
                 obs_latitude = Angle(degrees=resource_info['latitude'])
                 obs_longitude = Angle(degrees=resource_info['longitude'])
                 obs_height = resource_info['elevation']
-                visibility_intervals = Windows.request_window_to_kernel_intervals(self.windows.at(resource_info["name"])).toTupleList()
+                visibility_intervals = Windows.request_window_to_kernel_intervals(self.windows.at(resource_info["name"]))
                 for (start, end) in visibility_intervals.toTupleList():
                     current_datetime = start
                     current_time = datetime_to_normalised_epoch(start, semester_start)
                     # Add the start point, and then a timepoint at interval_size spacing until you reach the end
                     while current_datetime < end:
-                        datetimes.add(current_datetime)
+                        datetimes.append(current_datetime)
                         current_datetime += timedelta(seconds=interval_size)
-                        times.add(current_time)
+                        times.append(current_time)
                         current_time += interval_size
                     # Add the end point on so we have a complete set of airmasses spanning the interval
-                    datetimes.add(end)
-                    times.add(datetime_to_normalised_epoch(end, semester_start))
+                    datetimes.append(end)
+                    times.append(datetime_to_normalised_epoch(end, semester_start))
+                if not datetimes:
+                    continue
                 # Now that we have a full set of datetimes and unix/kernel times, calculate the airmass values within those times
                 # Calculate the airmasses for each target in the configuration and attempt to merge them all... This could be improved upon
                 rs_targets = [configuration.target.in_rise_set_format() for configuration in self.configurations]
                 airmass_by_targets = {}
                 for rs_target in rs_targets:
-                    rs_target_key = json.dumps(rs_target)
+                    rs_target_key = f"{rs_target.items()}"
                     if rs_target_key not in airmass_by_targets:
                         airmass_by_targets[rs_target_key] = calculate_airmass_at_times(datetimes, rs_target, obs_latitude, obs_longitude, obs_height)
 
                 if len(airmass_by_targets) == 1:
-                    airmasses = airmass_by_targets.keys()[0]
+                    airmasses = list(airmass_by_targets.values())[0]
                 else:
                     numpy_airmasses = np.array(airmass_by_targets.values())
                     airmasses = np.mean(numpy_airmasses, axis=0).tolist()
@@ -500,10 +502,10 @@ class Request(EqualityMixin):
                 best_airmass = min(airmasses)
                 worst_airmass = max(airmasses)
                 # This should give us something ranging from 0 to AIRMASS_WEIGHTING_COEFFICIENT to add to the effective priority
-                airmasses = [AIRMASS_WEIGHTING_COEFFICIENT * (1 - (airmass - best_airmass) / (worst_airmass - best_airmass)) for airmass in airmasses]
+                airmasses = [float(AIRMASS_WEIGHTING_COEFFICIENT) * (1 - (airmass - best_airmass) / (worst_airmass - best_airmass)) for airmass in airmasses]
                 # Now store the airmasses and times in the redis cache
                 airmass_at_times = {
-                    'airmass': airmasses,
+                    'airmasses': airmasses,
                     'times': times
                 }
                 redis_instance.set(cache_key, json.dumps(airmass_at_times))
