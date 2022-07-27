@@ -96,7 +96,7 @@ def send_to_opensearch(os_url, os_index, metrics):
     else:
         log.warning("Not configured to save metrics in opensearch. Please set OPENSEARCH_URL and SIMULATION_OPENSEARCH_INDEX.")
 
-
+@timeit
 def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
     log.info("Recording metrics for scheduler simulation run")
 

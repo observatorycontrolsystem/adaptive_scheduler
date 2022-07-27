@@ -384,8 +384,3 @@ class MetricCalculator():
             'percent_duration': bin_percent_duration,
         }
         return output_dict
-
-    def avg_slew_distance(self):
-        schedule = self.combined_schedule if schedule is None else schedule
-        
-        
