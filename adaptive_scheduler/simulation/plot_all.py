@@ -10,6 +10,7 @@ import matplotlib.style as style
 
 import adaptive_scheduler.simulation.plotutils as plotutils
 from adaptive_scheduler.simulation.plotutils import opensearch_client
+from adaptive_scheduler.simulation.metrics import bin_data
 
 AIRMASS_TEST_VALUES = [0, 0.01, 0.05, 0.1, 1.0, 10, 100, 1000, 1000000]
 EFF_PRI_SCALING_TEST_LABELS = ['airmass', 'airmass-with-duration-scaled-100',
@@ -237,11 +238,11 @@ def plot_duration_histogram():
                                                '1m0-optimize-airmass-with-duration_2022-07-21T21:48:02.586407')
     no_duration_data = opensearch_client.get('scheduler-simulations',
                                              '1m0-optimize-airmass-no-duration_2022-07-21T21:52:46.316207')
-    duration_data = [with_duration_data['_source']['raw_scheduled_durations']]
-    duration_data.append(no_duration_data['_source']['raw_scheduled_durations'])
-    labels = ['eff. prio scaled by duration', 'eff. prio not scaled by duration']
+    duration_data = [np.array(with_duration_data['_source']['raw_scheduled_durations'])/60]
+    duration_data.append(np.array(no_duration_data['_source']['raw_scheduled_durations'])/60)
+    labels = ['With Duration', 'No Duration']
     ax.hist(duration_data, bins=50, label=labels)
-    ax.set_xlabel('Duration [s]')
+    ax.set_xlabel('Duration [min]')
     ax.set_ylabel('Counts')
     ax.set_title('Optimize by Airmass')
     ax.legend()
@@ -251,25 +252,84 @@ def plot_duration_histogram():
 
 
 def plot_eff_prio_duration_scatter():
-    fig = plt.figure(figsize=(20, 10))
+    fig, axs = plt.subplots(1, 2, figsize=(24, 8))
     fig.suptitle('1m0 Scatterplot of Effective Priority and Duration', fontsize=20)
     fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
-    ax = fig.add_subplot()
     tagnames = ['with-duration-v2', 'with-duration-scaled-100-v2']
-    labels = ['priority 10-30', 'priority 10-100']
-    for i, tag in enumerate(tagnames):
-        data = plotutils.get_data_from_opensearch(f'1m0-optimize-airmass-{tag}')
+    labels = ['Priority 10-30', 'Priority 10-100']
+    colors = [('#006BA4', '#5F9ED1'), ('#C85200', '#FF800E')]
+    for i, ax in enumerate(axs):
+        data = plotutils.get_data_from_opensearch(f'1m0-optimize-airmass-{tagnames[i]}')
         prio_scheduled = np.array(data['raw_scheduled_priorities'])
         prio_unscheduled = np.array(data['raw_unscheduled_priorities'])
-        dur_scheduled = np.array(data['raw_scheduled_durations'])
-        dur_unscheduled = np.array(data['raw_unscheduled_durations'])
-        ax.scatter(dur_scheduled, prio_scheduled*dur_scheduled, label=f'{labels[i]}, scheduled', marker='+')
-        ax.scatter(dur_unscheduled, prio_unscheduled*dur_unscheduled, label=f'{labels[i]}, unscheduled', marker='x')
-    ax.set_ylabel('Effective Priority (base priority x duration)')
-    ax.set_xlabel('Duration [s]')
-    ax.legend()
+        dur_scheduled = np.array(data['raw_scheduled_durations'])/60
+        dur_unscheduled = np.array(data['raw_unscheduled_durations'])/60
+        ax.scatter(dur_scheduled, prio_scheduled*dur_scheduled,
+                   label=f'{labels[i]}, scheduled', marker='x', color=colors[i][0])
+        ax.scatter(dur_unscheduled, prio_unscheduled*dur_unscheduled,
+                   label=f'{labels[i]}, unscheduled', marker='x', alpha=0.5, color=colors[i][1])
+        ax.set_ylabel('Effective Priority (base priority x duration)')
+        ax.set_xlabel('Duration [min]')
+        ax.set_title(f'Optimize by Airmass, With Duration, {labels[i]}')
+        ax.legend()
     if not displayonly:
         plotutils.export_to_image(f'1m0_eff_prio_duration_scatter_{timestamp}', fig)
+    plt.show()
+
+
+def plot_pct_sched_bin_eff_prio():
+    fig, axs = plt.subplots(2, 2, figsize=(20, 12))
+    fig.suptitle('1m0 Eff. Priority Distribution', fontsize=20)
+    fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
+    test_names = ['with', 'no']
+    for k, test_name in enumerate(test_names):
+        data = plotutils.get_data_from_opensearch(f'1m0-optimize-airmass-{test_name}-duration-v3')
+        prio_scheduled = data['raw_scheduled_priorities']
+        prio_unscheduled = data['raw_unscheduled_priorities']
+        prio_all = np.array(prio_scheduled + prio_unscheduled)
+        dur_scheduled = data['raw_scheduled_durations']
+        dur_unscheduled = data['raw_unscheduled_durations']
+        dur_all = np.array(dur_scheduled + dur_unscheduled)/60
+        dur_scheduled = np.array(dur_scheduled)/60
+        dur_unscheduled = np.array(dur_unscheduled)/60
+        eff_prio_scheduled = prio_scheduled*dur_scheduled
+        eff_prio_unscheduled = prio_unscheduled*dur_unscheduled
+        eff_prio_all = prio_all*dur_all
+        bin_size = 100
+        bin_range = (0, 4000)
+        level1_sched_bin = bin_data(eff_prio_scheduled, list(prio_scheduled),
+                                    bin_size=bin_size, bin_range=bin_range, aggregator=None)
+        level2_sched_bin = [list(bin_data(bin_values, bin_size=10, bin_range=(10, 30)).values())
+                            for bin_values in level1_sched_bin.values()]
+        level1_unsched_bin = bin_data(eff_prio_unscheduled, list(prio_unscheduled),
+                                      bin_size=bin_size, bin_range=bin_range, aggregator=None)
+        level2_unsched_bin = [list(bin_data(bin_values, bin_size=10, bin_range=(10, 30), fill=[]).values())
+                              for bin_values in level1_unsched_bin.values()]
+        all_bin = bin_data(eff_prio_all, bin_size=bin_size, bin_range=bin_range)
+        all_bin_array = np.array(list(all_bin.values()))
+        sched_bin_array = np.array([np.array(vals) for vals in level2_sched_bin])
+        pct_bin_array = 100*sched_bin_array/all_bin_array[:, np.newaxis]
+        pct_bin_array = np.nan_to_num(pct_bin_array)
+        xaxis = np.arange(0, 4001, 50)
+        priority_labels = ['10-19', '20-29', '30']
+        colors = ['#006BA4', '#FF800E', '#ABABAB']
+        barwidth = 14
+        for i, bin_ in enumerate(level2_sched_bin):
+            for j, label in enumerate(priority_labels):
+                axs[0][k].bar(xaxis[i]+j*barwidth, bin_[j], barwidth, label=label, color=colors[j])
+        for i, bin_ in enumerate(level2_unsched_bin):
+            for j, label in enumerate(priority_labels):
+                axs[1][k].bar(xaxis[i]+j*barwidth, bin_[j], barwidth, label=label, color=colors[j])
+
+        handles, labels = axs[0][0].get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        axs[0][k].set_title(f'Scheduled Requests ({test_name} duration)')
+        axs[1][k].set_title(f'Unscheduled Requests ({test_name} duration)')
+        for ax in axs[k]:
+            ax.legend(by_label.values(), by_label.keys(), title='Priority')
+            ax.set_xlabel('Effective Priority (base priority x duration [min])')
+            ax.set_ylabel('Number of Requests')
+            ax.set_ylim(0, 240)
     plt.show()
 
 
@@ -300,6 +360,8 @@ if __name__ == '__main__':
                           'desc': 'Scheduled request duration distribution.'},
         'eff_prio_duration_scatter': {'func': plot_eff_prio_duration_scatter,
                                       'desc': 'Scatterplot with (prio x duration) on y-axis and duration on x-axis'},
+        'pct_sched_eff_prio_hist': {'func': plot_pct_sched_bin_eff_prio,
+                                    'desc': 'Histogram with (prio x duration) on x-axis and percentage scheduled by bin'},
     }
 
     description = 'Plotting functions for airmass optimization experiment.'
@@ -311,12 +373,15 @@ if __name__ == '__main__':
     args = parser.parse_args()
     global displayonly
     displayonly = args.displayonly
+    plotnames = list(plots.keys())
 
+    plots_to_show = plotnames if args.plot_name == ['all'] else args.plot_name
     if args.list:
-        spacing = max([len(name) for name in plots.keys()]) + 4
+        spacing = max([len(name) for name in plots.keys()]) + 10
         print(f'{"NAME":{spacing}}DESCRIPTION')
         print(f'{"====":{spacing}}===========')
-        for name, details in plots.items():
+        for name in plots_to_show:
+            details = plots[name]
             print(f'{name:{spacing}}{details["desc"]}')
     else:
         plots_to_show = list(plots.keys()) if args.plot_name == ['all'] else args.plot_name

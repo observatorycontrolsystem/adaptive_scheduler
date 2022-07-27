@@ -37,8 +37,6 @@ def plot_barplot(ax, data, labels, binnames, barwidth=0.04):
     Args:
         ax (matplotlib.pyplot.Axes): An Axes object to modify.
         data: A list of lists. Each sub-list contains the y-axis data for a dataset.
-        colors: The list of colors to use for each dataset. Must contain enough colors
-            to cover all datasets.
         labels: The list of labels to associate with each dataset. Must contain a label for each dataset.
         binnames: A list of names of the bins for marking the x-axis.
         barwidth (float): The width of each bar.
