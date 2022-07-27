@@ -12,10 +12,8 @@ from requests.exceptions import RequestException, Timeout
 from rise_set import astrometry
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
+from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch, timeit
 from adaptive_scheduler.models import redis_instance
-
-
 log = logging.getLogger('adaptive_scheduler')
 
 DTFORMAT = '%Y-%m-%dT%H:%M'
@@ -190,16 +188,19 @@ class MetricCalculator():
             reservations = [res for res in comp_res.reservation_list if res not in self.combined_input_reservations]
             self.combined_input_reservations.extend(reservations)
 
+    @timeit
     def count_scheduled(self):
         scheduled_reservations = []
         for reservations in self.combined_schedule.values():
             scheduled_reservations.extend(reservations)
         return len(scheduled_reservations), len(self.combined_input_reservations)
 
+    @timeit
     def percent_reservations_scheduled(self):
         scheduled, total = self.count_scheduled()
         return percent_of(scheduled, total)
 
+    @timeit
     def total_scheduled_eff_priority(self):
         effective_priorities = []
         for reservations in self.combined_schedule.values():
@@ -230,6 +231,7 @@ class MetricCalculator():
         unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
         return sched_priorities, unsched_priorities
 
+    @timeit
     def total_available_seconds(self):
         """Aggregates the total available time, calculated from dark intervals.
 
@@ -252,6 +254,7 @@ class MetricCalculator():
                 total_available_time += available_time
         return total_available_time
 
+    @timeit
     def percent_time_utilization(self):
         scheduled_durations, _ = self.get_duration_data()
         return percent_of(sum(scheduled_durations), self.total_available_seconds())
@@ -317,6 +320,7 @@ class MetricCalculator():
             midpoint_airmasses[site] = airmasses[np.argmin(np.abs(times-midpoint_time))]
         return midpoint_airmasses
 
+    @timeit
     def airmass_metrics(self, schedule=None):
         """Generate the airmass metrics of all scheduled reservations for a single schedule.
 
@@ -355,6 +359,7 @@ class MetricCalculator():
                            }
         return airmass_metrics
 
+    @timeit
     def binned_tac_priority_metrics(self):
         """Bins metrics based on TAC priority."""
         bin_size = 45

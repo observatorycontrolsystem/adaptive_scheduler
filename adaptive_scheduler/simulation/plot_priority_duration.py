@@ -3,8 +3,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from opensearchpy import OpenSearch
 from plotutils import get_data_from_opensearch
-VARIABLE = ['no-duration-v2','no-duration-scaled-100-v2']
-            # 'with-duration-scaled-100','no-duration','no-duration-scaled-100',]
+VARIABLE = [
+            #'with-duration-v3',
+            'no-duration-v3',
+            #'with-duration-scaled-100-v3',
+            'no-duration-scaled-100-v3',]
 
 markers = ["o" , "," ,"v" , "^" , "<", ">"]
 colors = ['r','b','c','m', 'y', 'k']
@@ -18,7 +21,7 @@ def plot_sched_priority_duration_dotplot():
     fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
     for i, id in enumerate(VARIABLE):
         data = get_data_from_opensearch(f'1m0-optimize-airmass-{id}')
-        if id in ['no-duration-scaled-100-v2', 'with-duration-scaled-100-v2']:
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
             data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
         print(id, len(data['raw_scheduled_priorities']), len(data['raw_unscheduled_priorities']))
         ax1.scatter(rand_jitter(data['raw_scheduled_priorities']), rand_jitter(data['raw_scheduled_durations']), 
@@ -29,7 +32,7 @@ def plot_sched_priority_duration_dotplot():
     ax1.legend()
     for i, id in enumerate(VARIABLE):
         data = get_data_from_opensearch(f'1m0-optimize-airmass-{id}')
-        if id in ['no-duration-scaled-100-v2', 'with-duration-scaled-100-v2']:
+        if id in ['no-duration-scaled-100-v3', 'with-duration-scaled-100-v3']:
             data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
         ax2.scatter(rand_jitter(data['raw_unscheduled_priorities']), rand_jitter(data['raw_unscheduled_durations']),
                    c =colors[i], marker=markers[i],s=10, label = f'unscheduled requests {id}', alpha = 0.3)
@@ -41,6 +44,4 @@ def plot_sched_priority_duration_dotplot():
     plt.show()
 
 if __name__ == '__main__':
-    # plot_sched_priority_duration_dotplot()
-    data = get_data_from_opensearch(f'1m0-optimize-airmss-no-duration_scaled-100')
-    print(len(data['unscheduled_priority'][0]), len(data['scheduled_priority'][0]))
+    plot_sched_priority_duration_dotplot()
