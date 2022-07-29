@@ -1,6 +1,7 @@
 """
 Metric calculation functions for the scheduler simulator.
 """
+import copy
 import logging
 import pickle
 from datetime import datetime, timedelta
@@ -16,7 +17,7 @@ from adaptive_scheduler.observation_portal_connections import ObservationPortalC
 from adaptive_scheduler.utils import (time_in_capped_intervals,
                                       normalised_epoch_to_datetime,
                                       datetime_to_epoch, timeit)
-from adaptive_scheduler.models import redis_instance, ICRSTarget
+from adaptive_scheduler.models import redis_instance
 
 log = logging.getLogger('adaptive_scheduler')
 
@@ -374,13 +375,13 @@ class MetricCalculator():
         sched_priorities, unsched_priorities = self.get_priority_data()
         all_priorities = sched_priorities + unsched_priorities
         sched_histogram = bin_data(sched_priorities, bin_size=bin_size)
-        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size)
+        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size, aggregator=sum)
         full_histogram = bin_data(all_priorities, bin_size=bin_size)
-        bin_all_durations = bin_data(all_priorities, all_durations, bin_size)
+        bin_all_durations = bin_data(all_priorities, all_durations, bin_size, aggregator=sum)
         bin_percent_count = {bin_: percent_of(sched_histogram[bin_], full_histogram[bin_])
                              for bin_ in sched_histogram}
-        bin_percent_duration = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
-                                for bin_ in bin_sched_durations}
+        bin_percent_time = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
+                            for bin_ in bin_sched_durations}
 
         output_dict = {
             'sched_histogram': sched_histogram,
@@ -388,14 +389,15 @@ class MetricCalculator():
             'full_histogram': full_histogram,
             'all_durations': bin_all_durations,
             'percent_count': bin_percent_count,
-            'percent_duration': bin_percent_duration,
+            'percent_time': bin_percent_time
         }
         return output_dict
 
     def avg_slew_distance(self):
         semester_start = self.scheduler_runner.semester_details['start']
         slew_distances = []
-        for reservations in self.combined_schedule.values():
+        schedule_copy = copy.deepcopy(self.combined_schedule)
+        for reservations in schedule_copy.values():
             apparent_radecs = []
             reservations.sort(key=lambda r: r.scheduled_start)
             for res in reservations:
