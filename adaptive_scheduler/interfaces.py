@@ -4,10 +4,8 @@ import os
 import pickle
 import logging
 from datetime import datetime, timedelta
-from redis import Redis
 
-redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), socket_connect_timeout=15,
-              socket_timeout=30)
+from adaptive_scheduler.models import redis_instance
 
 logger = logging.getLogger(__name__)
 
@@ -138,14 +136,14 @@ class NetworkInterface(object):
         '''True if set of schedulable requests or observations have changed
         '''
         try:
-            last_changed_check = redis.get('scheduler_last_changed_check_time')
+            last_changed_check = redis_instance.get('scheduler_last_changed_check_time')
             if not last_changed_check:
                 last_changed_check = datetime.utcnow() - timedelta(days=365)
             else:
                 last_changed_check = pickle.loads(last_changed_check)
             now = datetime.utcnow()
             last_changed = self.observation_portal_interface.get_last_changed(telescope_classes)
-            redis.set('scheduler_last_changed_check_time', pickle.dumps(now))
+            redis_instance.set('scheduler_last_changed_check_time', pickle.dumps(now))
             if last_changed > last_changed_check:
                 return True
             else:

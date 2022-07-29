@@ -1,5 +1,6 @@
 #!/usr/bin/python
 from __future__ import division
+from pyparsing import Opt
 
 import pytest
 
@@ -19,7 +20,7 @@ except ImportError:
 
 from adaptive_scheduler.scheduler_input import SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.utils import get_reservation_datetimes, OptimizationType
 from adaptive_scheduler.models import AIRMASS_WEIGHTING_COEFFICIENT
 
 from mock import Mock, patch
@@ -278,13 +279,13 @@ class TestIntegration(object):
                                  windows=windows,
                                  request_id=1,
                                  duration=1750,
-                                 optimization_type='AIRMASS')
+                                 optimization_type=OptimizationType.AIRMASS)
 
         request_2 = Request(configurations=[self.configuration],
                                  windows=windows,
                                  request_id=2,
                                  duration=1750,
-                                 optimization_type='TIME')
+                                 optimization_type=OptimizationType.TIME)
         many_request_group_1 = RequestGroup(operator='many', requests=[request_1, request_2],
                                                  proposal=self.proposal, expires=datetime(2050, 1, 1),
                                                  rg_id=10, is_staff=False, observation_type='NORMAL',

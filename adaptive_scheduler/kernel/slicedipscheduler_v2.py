@@ -13,7 +13,7 @@ Author: Sotiria Lampoudi (slampoud@gmail.com)
 import math
 import numpy as np
 from adaptive_scheduler.kernel.scheduler import Scheduler
-
+from adaptive_scheduler.utils import OptimizationType
 
 class PossibleStart(object):
     def __init__(self, resource, slice_starts, internal_start, airmass_coefficient):
@@ -93,7 +93,7 @@ class SlicedIPScheduler_v2(Scheduler):
                     scheduled = 1
                 # now w_idx is the index into r.possible_starts, which have
                 # been reordered by time.
-                if r.request and r.request.optimization_type == 'AIRMASS':
+                if r.request and r.request.optimization_type == OptimizationType.AIRMASS:
                     # Apply the airmass coefficient into the priority
                     priority = r.priority + ps.airmass_coefficient
                 else:
@@ -170,7 +170,7 @@ class SlicedIPScheduler_v2(Scheduler):
                         internal_start = start
 
             # Get the airmass coefficients for the internal starts if the request should be optimized by airmass
-            if request and request.optimization_type == 'AIRMASS':
+            if request and request.optimization_type == OptimizationType.AIRMASS:
                 airmasses_at_times = request.get_airmasses_within_kernel_windows(resource)
                 # use numpy to interpolate airmass values for the internal_starts times
                 interpolated_airmasses = np.interp(internal_starts, airmasses_at_times['times'], airmasses_at_times['airmasses'])
