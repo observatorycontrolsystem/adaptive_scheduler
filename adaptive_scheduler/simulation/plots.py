@@ -21,11 +21,21 @@ airmass_experiment_ids = [
 
 plots = [
     Plot(plotfuncs.plot_airmass_difference_histogram,
-         '1m Network Airmass Score Distribution for Scheduled Requests',
+         '1m Network Airmass Difference Distribution for Scheduled Requests',
          *airmass_experiment_ids),
     Plot(plotfuncs.plot_pct_scheduled_airmass_binned_priority,
          '1m Network Airmass Experiment Percent of Requests Scheduled',
          *airmass_experiment_ids),
+    Plot(plotfuncs.plot_pct_time_scheduled_airmass_binned_priority,
+         '1m Network Airmass Experiment Percent of Requested Time Scheduled',
+         *airmass_experiment_ids),
+    Plot(plotfuncs.plot_midpoint_airmass_histograms,
+         '1m Network Airmass Experiment Midpoint Airmass Distributions',
+         *airmass_experiment_ids),
+    Plot(plotfuncs.plot_eff_priority_duration_scatter,
+         '1m Network Scatterplot of Effective Priority and Duration',
+         '1m0-optimize-airmass-with-duration-v2',
+         '1m0-optimize-airmass-with-duration-scaled-100-v2'),
 ]
 
 if __name__ == '__main__':
