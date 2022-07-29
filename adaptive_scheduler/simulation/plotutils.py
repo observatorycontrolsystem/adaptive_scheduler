@@ -22,12 +22,17 @@ data_cache = {}
 
 class AutoCompleter(object):
     def __init__(self, options):
+        """Handles TAB autocomplete in the command line.
+
+        Args:
+            options [str]: A list of possible autocomplete options.
+        """
         self.options = sorted(options)
 
     def complete(self, text, state):
         if state == 0:
             if text:
-                self.matches = [s for s in self.options if s and s.startswith(text)]
+                self.matches = [s for s in self.options if s and text in s]
             else:
                 self.matches = self.options[:]
 
