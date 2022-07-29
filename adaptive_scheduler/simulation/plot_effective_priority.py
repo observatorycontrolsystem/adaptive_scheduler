@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from opensearchpy import OpenSearch
-from plotutils import get_data_from_opensearch, plot_barplot, default_colors
+from plotutils import get_data_from_opensearch, plot_barplot
 
 EFF_PRI_CALC= ['airmass','airmass-with-duration-scaled-100','airmass-no-duration','airmass-no-duration-scaled-100',]
   
@@ -18,7 +18,7 @@ def plot_percent_sched_duration_bin_by_priority():
         bardata.append(list(priority_data[0].values()))
 
     priorities = ['low priority', 'mid priority', 'high priority']
-    plot_barplot(ax, bardata, default_colors, EFF_PRI_CALC, priorities)
+    plot_barplot(ax, bardata, EFF_PRI_CALC, priorities)
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent Scheduled Time')
     fig.legend()
@@ -37,7 +37,7 @@ def plot_percent_sched_numbers_bin_by_priority():
         bardata.append(list(priority_data[0].values()))
 
     priorities = ['low priority', 'mid priority', 'high priority']
-    plot_barplot(ax, bardata, default_colors, EFF_PRI_CALC, priorities)
+    plot_barplot(ax, bardata, EFF_PRI_CALC, priorities)
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent Scheduled Count')
     fig.legend()
