@@ -20,9 +20,11 @@ except ImportError:
 from adaptive_scheduler.scheduler_input import SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
 from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.models import AIRMASS_WEIGHTING_COEFFICIENT
 
 from mock import Mock, patch
 import fakeredis
+import json
 
 
 fakeredis_instance = fakeredis.FakeStrictRedis()
@@ -303,6 +305,13 @@ class TestIntegration(object):
         assert scheduled_rgs[10][2].scheduled_start < scheduled_rgs[10][1].scheduled_start
         time_gap = scheduled_rgs[10][2].duration + 600  # 10 minutes beyond end of first observation
         assert (scheduled_rgs[10][2].scheduled_start + time_gap) < scheduled_rgs[10][1].scheduled_start
+
+        cache_key = f'{request_1.id}_{self.resource_3}_airmass_at_times'
+        airmasses_at_times = json.loads(fakeredis_instance.get(cache_key))
+        # This verifies that the airmass optimized request is scheduled at best airmass
+        for i, airmass in enumerate(airmasses_at_times['airmasses']):
+            if airmass == AIRMASS_WEIGHTING_COEFFICIENT:
+                assert airmasses_at_times['times'][i] == scheduled_rgs[10][1].scheduled_start
 
     def test_competing_many_and_requests(self):
         normal_request_list = [self.and_request_group_1, self.many_request_group_2]
