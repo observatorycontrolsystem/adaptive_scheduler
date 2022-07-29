@@ -153,7 +153,7 @@ def export_to_image(fname, fig):
     print(f'Plot exported to {fpath}')
 
 
-def plot_barplot(ax, data, labels, binnames, barwidth):
+def plot_barplot(ax, data, labels, binnames, barwidth=0.04):
     """Generates a barplot for multiple datasets.
 
     Args:
@@ -165,7 +165,7 @@ def plot_barplot(ax, data, labels, binnames, barwidth):
     """
     ticks = np.arange(len(data[0]))
     for i, datavalues in enumerate(data):
-        ax.bar(ticks+barwidth*i, datavalues, barwidth, label=labels[i], alpha=0.8)
+        ax.bar(ticks+barwidth*i, datavalues, barwidth, label=labels[i])
     ax.set_xticks(ticks+barwidth*i/2, binnames)
 
 
