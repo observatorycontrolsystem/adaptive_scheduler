@@ -2,7 +2,8 @@
 Plotting utility functions
 """
 import os
-import logging
+import argparse
+import readline
 from datetime import datetime
 
 import numpy as np
@@ -10,44 +11,121 @@ import matplotlib.pyplot as plt
 import opensearchpy
 from opensearchpy import OpenSearch
 
-PLOTEXPORT_DIR = os.getenv('PLOTEXPORT_DIR', 'adaptive_scheduler/simulation/plot_output')
-PLOTEXPORT_FORMATS = ['jpg', 'pdf']
+DEFAULT_DIR = 'adaptive_scheduler/simulation/plot_output'
 
 OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', 'https://logs.lco.global/')
 OPENSEARCH_INDEX = os.getenv('OPENSEARCH_INDEX', 'scheduler-simulations')
 opensearch_client = OpenSearch(OPENSEARCH_URL)
 
-log = logging.getLogger(__name__)
-log.setLevel(logging.DEBUG)
+data_cache = {}
+
+
+class AutoCompleter(object):
+    def __init__(self, options):
+        self.options = sorted(options)
+
+    def complete(self, text, state):
+        if state == 0:
+            if text:
+                self.matches = [s for s in self.options if s and s.startswith(text)]
+            else:
+                self.matches = self.options[:]
+
+        try:
+            return self.matches[state]
+        except IndexError:
+            return None
+
+
+def run_user_interface(plots):
+    """Handles user interaction in the command line.
+
+    Args:
+        plots [Plot]: A list of Plot objects.
+    """
+    description = 'Plotting functions for scheduler simulator data visualization'
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-s', '--save', help='Save the plot(s) to a file', action='store_true')
+    parser.add_argument('-f', '--format', help='The file format to save as', default='jpg')
+    parser.add_argument('-o', '--outputdir', help='The output directory to save to', default=DEFAULT_DIR)
+    args = parser.parse_args()
+    global export_dir
+    global export_format
+    export_dir = args.outputdir
+    export_format = args.format
+
+    plot_dict = {plot.name: plot for plot in plots}
+    plot_names = list(plot_dict.keys())
+    spacing = max([len(name) for name in plot_names]) + 10
+    print('\nAvailable plots:')
+    print(f'\n{"Name":{spacing}}Description')
+    print(f'{"====":{spacing}}===========')
+    for plot in plots:
+        print(f'{plot.name:{spacing}}{plot.description}')
+
+    completer = AutoCompleter(plot_names)
+    readline.set_completer(completer.complete)
+    readline.parse_and_bind('tab: complete')
+    while True:
+        showplot = input('\nShow plot (default all): ')
+        if showplot == '':
+            for plot in plots:
+                plot.generate()
+                if args.save:
+                    plot.save()
+                plt.show()
+                break
+        else:
+            try:
+                plot = plot_dict[showplot]
+                plt.close('all')
+                plot.generate()
+                if args.save:
+                    plot.save()
+                plot.fig.show()
+                plt.show()
+                break
+            except KeyError:
+                print('Plot name not found.')
 
 
 class Plot:
-    def __init__(self, plotfunc, *sim_ids):
+    def __init__(self, plotfunc, description, *sim_ids, **kwargs):
         """A wrapper class for plotting. The user specifies the plotting function to use
         and the simulation ID(s) or search keywords. The data is passed to the plotting
         function as a list of datasets, each set corresponding to an OpenSearch index.
-        The plotting function is responsible for accessing the right data keys.
+        The plotting function is responsible for accessing the right data keys. Data is cached
+        within the same run but not between runs.
 
         Args:
-            plotfunc: The plotting function to use.
-            sim_ids: The simulation IDs to look for on OpenSearch.
+            plotfunc (func): The plotting function to use.
+            description (str): The description of the plot. Will be used as the plot title in matplotlib.
+            sim_ids [str]: The simulation IDs to look for on OpenSearch.
+            kwargs: Optional arguments to pass to the plotting function.
         """
         self.plotfunc = plotfunc
+        self.description = description
         # expects plotting functions to be called 'plot_some_plot_name'
         self.name = plotfunc.__name__.replace('plot_', '')
-        self.data = []
-        for sim_id in sim_ids:
-            self.data.append(get_opensearch_data(sim_id))
+        self.sim_ids = sim_ids
+        self.kwargs = kwargs
 
-        self.fig, self.description = plotfunc(self.data)
+    def generate(self):
+        self.data = []
+        for sim_id in self.sim_ids:
+            global data_cache
+            try:
+                self.data.append(data_cache[sim_id])
+            except KeyError:
+                data_cache[sim_id] = get_opensearch_data(sim_id)
+                self.data.append(data_cache[sim_id])
+
+        self.fig = self.plotfunc(self.data, self.description, **self.kwargs)
 
     def save(self):
         timestamp = datetime.utcnow().isoformat(timespec='seconds')
         savename = f'{self.name}_{timestamp}'
         export_to_image(savename, self.fig)
-
-    def show(self):
-        plt.show()
 
 
 def export_to_image(fname, fig):
@@ -58,15 +136,16 @@ def export_to_image(fname, fig):
         fname (str): The filename to save the file as.
         fig (matplotlib.pyplot.Figure): The figure to save.
     """
+    global export_dir
+    global export_format
     try:
-        os.mkdir(PLOTEXPORT_DIR)
-        log.info(f'Directory "{PLOTEXPORT_DIR}" created')
+        os.mkdir(export_dir)
+        print(f'Directory "{export_dir}" created')
     except FileExistsError:
         pass
-    for imgformat in PLOTEXPORT_FORMATS:
-        fpath = os.path.join(PLOTEXPORT_DIR, f'{fname}.{imgformat}')
-        fig.savefig(fpath, format=imgformat)
-        log.info(f'Plot exported to {fpath}')
+    fpath = os.path.join(export_dir, f'{fname}.{export_format}')
+    fig.savefig(fpath, format=export_format)
+    print(f'Plot exported to {fpath}')
 
 
 def plot_barplot(ax, data, labels, binnames, barwidth):
@@ -99,9 +178,7 @@ def get_opensearch_data(query):
     try:
         response = opensearch_client.get(OPENSEARCH_INDEX, query)
         source_data = response['_source']
-        log.debug(f'Got data for id: {source_data["simulation_id"]}')
     except opensearchpy.exceptions.NotFoundError:
-        log.info(f'Index matching id:{query} not found, trying keyword search')
         query = {
             'query': {
                 'wildcard': {'simulation_id.keyword': query}
@@ -114,7 +191,6 @@ def get_opensearch_data(query):
         try:
             result = response['hits']['hits'][0]
             source_data = result['_source']
-            log.debug(f'Got data for id: {source_data["simulation_id"]}')
         except IndexError:
             # give up
             raise opensearchpy.exceptions.NotFoundError(f'No data found for {query}')

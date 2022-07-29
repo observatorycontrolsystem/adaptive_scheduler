@@ -19,24 +19,25 @@ matplotlib.rcParams['figure.subplot.hspace'] = 0.2  # vertical spacing for subpl
 matplotlib.rcParams['figure.subplot.top'] = 0.9  # spacing between plot and title
 
 
-def plot_normed_airmass_histogram(airmass_datasets):
-    """Plots the distribution of airmass scores. The score is obtained by normalizing the
-    scheduled airmass, with 0 being the worst and 1 being the best.
+def plot_airmass_difference_histogram(airmass_datasets, plot_title, normalize=False):
+    """Plots the difference of airmass from ideal. If normalize is turned on, then it scores
+    the airmasses with 0 being the worst (closest to bad airmass) and 1 being the best.
 
     Args:
-        airmass_data (list): Should be a list of datasets, each dataset corresponding
+        airmass_data [dict]: Should be a list of datasets, each dataset corresponding
             to a different airmass weighting coefficient. Assumes the first dataset passed
-            is the control dataset (airmass optimization turned off)
+            is the control dataset (airmass optimization turned off).
+        plot_title (str): The title of the plot.
+        normalize (bool): Determines if the airmass score is normalized.
 
     Returns:
         fig (matplotlib.pyplot.Figure): The output figure object.
     """
-    plot_title = '1m Network Airmass Score Distribution for Scheduled Requests'
     fig, ax = plt.subplots()
     fig.suptitle(plot_title)
 
     numbins = 10
-    normed = []
+    data = []
     labels = ['optimize by earliest']
     for dataset in airmass_datasets:
         airmass_data = dataset['airmass_metrics']['raw_airmass_data']
@@ -44,32 +45,46 @@ def plot_normed_airmass_histogram(airmass_datasets):
         mp = np.array(airmass_data[0]['midpoint_airmasses'])
         a_min = np.array(airmass_data[1]['min_poss_airmasses'])
         a_max = np.array(airmass_data[2]['max_poss_airmasses'])
-        print(len(np.where(a_min == a_max)[0]))
-        # normalize = 1 - (mp-a_min)/(a_max-a_min)
-        # normed.append(normalize[np.where((normalize != 0) & (normalize != 1))])
-        normed.append(mp-a_min)
+        if normalize:
+            normed = 1 - (mp-a_min)/(a_max-a_min)
+            data.append(normed[np.where((normed != 0) & (normed != 1))])
+        else:
+            data.append(mp-a_min)
         # the first dataset is the control dataset
         if dataset is not airmass_datasets[0]:
             labels.append(airmass_coeff)
-    print(normed)
-    ax.hist(normed, bins=numbins, label=labels)
+    ax.hist(data, bins=numbins, label=labels)
 
-    ax.set_xlabel('Airmass Score (0 is worst, 1 is ideal)')
+    if normalize:
+        ax.set_xlabel('Airmass Score (0 is worst, 1 is ideal)')
+    else:
+        ax.set_xlabel('Difference from Ideal Airmass (0 is ideal)')
     ax.set_ylabel('Number of Scheduled Requests')
     ax.legend(title='Airmass Coefficient')
-    return fig, plot_title
+    return fig
 
 
-def plot_pct_count_airmass_prio_bins(airmass_datasets):
-    plot_title = '1m Network Airmass Experiment Percent of Requests Scheduled'
+def plot_pct_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
+    """Plots the the percentage of requests scheduled for different airmass coefficients
+    binned into priority levels.
+
+    Args:
+        airmass_data [dict]: Should be a list of datasets, each dataset corresponding
+            to a different airmass weighting coefficient. Assumes the first dataset passed
+            is the control dataset (airmass optimization turned off).
+        plot_title (str): The title of the plot.
+
+    Returns:
+        fig (matplotlib.pyplot.Figure): The output figure object.
+    """
     fig, ax = plt.subplots()
     fig.suptitle(plot_title)
 
-    barwidth = 0.4
+    barwidth = 0.04
     bardata = []
     labels = ['optimize by earliest']
     # get the bin names from the first dataset, the bins should be consistent across datasets
-    binnames = airmass_datasets[0]['percent_sched_by_priority'].keys()
+    binnames = airmass_datasets[0]['percent_sched_by_priority'][0].keys()
     for dataset in airmass_datasets:
         priority_data = dataset['percent_sched_by_priority'][0]
         airmass_coeff = dataset['airmass_weighting_coefficient']
@@ -83,5 +98,4 @@ def plot_pct_count_airmass_prio_bins(airmass_datasets):
     ax.set_ylabel('Percent of Requests Scheduled')
     ax.set_ylim(0, 100)
     ax.legend(title='Airmass Coefficient')
-    return fig, plot_title
-
+    return fig

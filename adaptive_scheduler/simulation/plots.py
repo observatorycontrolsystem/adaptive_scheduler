@@ -2,8 +2,6 @@
 The interface for producing plots. To create plots, add plots to the list of plots,
 modifying the parameters to Plot as necessary.
 """
-import matplotlib.pyplot as plt
-
 import adaptive_scheduler.simulation.plotfuncs as plotfuncs
 import adaptive_scheduler.simulation.plotutils as plotutils
 from adaptive_scheduler.simulation.plotutils import Plot
@@ -22,22 +20,13 @@ airmass_experiment_ids = [
 ]
 
 plots = [
-    Plot(plotfuncs.plot_normed_airmass_histogram, *airmass_experiment_ids),
+    Plot(plotfuncs.plot_airmass_difference_histogram,
+         '1m Network Airmass Score Distribution for Scheduled Requests',
+         *airmass_experiment_ids),
+    Plot(plotfuncs.plot_pct_scheduled_airmass_binned_priority,
+         '1m Network Airmass Experiment Percent of Requests Scheduled',
+         *airmass_experiment_ids),
 ]
 
 if __name__ == '__main__':
-    spacing = max([len(plot.name) for plot in plots]) + 10
-    print('Available plots:')
-    print(f'{"Name":{spacing}}Description')
-    print(f'{"====":{spacing}}===========')
-
-    for plot in plots:
-        print(f'{plot.name:{spacing}}{plot.description}')
-    showplot = input('Show plot (default all): ')
-    if showplot == '':
-        for plot in plots:
-            plt.show()
-    else:
-        plt.close('all')
-        plot.fig.show()
-        plt.show()
+    plotutils.run_user_interface(plots)
