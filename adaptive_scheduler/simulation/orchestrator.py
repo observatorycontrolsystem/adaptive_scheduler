@@ -130,7 +130,7 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'total_req_by_priority': [binned_tac_priority_metrics['full_histogram']],
         'total_seconds_by_priority': [binned_tac_priority_metrics['all_durations']],
         'percent_sched_by_priority': [binned_tac_priority_metrics['percent_count']],
-        'percent_duration_by_priority': [binned_tac_priority_metrics['percent_duration']],
+        'percent_duration_by_priority': [binned_tac_priority_metrics['percent_time']],
         'raw_scheduled_durations': sched_durations,
         'raw_unscheduled_durations': unsched_durations,
         'raw_scheduled_priorities': sched_priorities,
