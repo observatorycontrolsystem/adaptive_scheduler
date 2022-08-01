@@ -50,9 +50,9 @@ def run_user_interface(plots):
     """
     description = 'Plotting functions for scheduler simulator data visualization'
     parser = argparse.ArgumentParser(description=description)
-    parser.add_argument('-s', '--save', help='Save the plot(s) to a file', action='store_true')
-    parser.add_argument('-f', '--format', help='The file format to save as', default='jpg')
-    parser.add_argument('-o', '--outputdir', help='The output directory to save to', default=DEFAULT_DIR)
+    parser.add_argument('-s', '--save', help='save the plot(s) to a file', action='store_true')
+    parser.add_argument('-f', '--format', help='the file format to save as', default='jpg')
+    parser.add_argument('-o', '--outputdir', help='the output directory to save to', default=DEFAULT_DIR)
     args = parser.parse_args()
     global export_dir
     global export_format
@@ -72,14 +72,14 @@ def run_user_interface(plots):
     readline.set_completer(completer.complete)
     readline.parse_and_bind('tab: complete')
     while True:
-        showplot = input('\nShow plot (default all): ')
+        showplot = input('\nShow plot (default all): ').strip()
         if showplot == '':
             for plot in plots:
                 plot.generate()
                 if args.save:
                     plot.save()
                 plt.show()
-                break
+            break
         else:
             try:
                 plot = plot_dict[showplot]
