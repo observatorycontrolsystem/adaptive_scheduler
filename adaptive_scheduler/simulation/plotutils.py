@@ -90,8 +90,8 @@ def run_user_interface(plots):
                 plot.fig.show()
                 plt.show()
                 break
-            except KeyError:
-                print('Plot name not found.')
+            except KeyError as e:
+                print(f'Plot name not found: {e}')
 
 
 class Plot:
@@ -153,7 +153,7 @@ def export_to_image(fname, fig):
     print(f'Plot exported to {fpath}')
 
 
-def plot_barplot(ax, data, labels, binnames, barwidth=0.04):
+def plot_multi_barplot(ax, data, labels, binnames, barwidth=0.04):
     """Generates a barplot for multiple datasets.
 
     Args:
