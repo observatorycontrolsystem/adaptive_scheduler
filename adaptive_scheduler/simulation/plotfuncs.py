@@ -66,7 +66,7 @@ def plot_airmass_difference_histogram(airmass_datasets, plot_title, normalize=Fa
 
 
 def plot_pct_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
-    """Plots the percentage of requests scheduled for different airmass coefficients
+    """Plots a barplot of the percentage of requests scheduled for different airmass coefficients
     binned into priority levels.
 
     Args:
@@ -137,6 +137,117 @@ def plot_pct_time_scheduled_airmass_binned_priority(airmass_datasets, plot_title
     return fig
 
 
+def plot_pct_scheduled_airmass_lineplot(airmass_datasets, plot_title):
+    """Plots a line chart with percent of requests scheduled on the y-axis and airmass
+    coefficient on the x-axis. The priority bins are highlighted in different colors.
+
+    Args:
+        airmass_data [dict]: Should be a list of datasets, each dataset corresponding
+            to a different airmass weighting coefficient. Assumes the first dataset passed
+            is the control dataset (airmass optimization turned off).
+        plot_title (str): The title of the plot.
+
+    Returns:
+        fig (matplotlib.pyplot.Figure): The output figure object.
+    """
+    fig, ax = plt.subplots()
+    fig.suptitle(plot_title)
+
+    prio_names = list(airmass_datasets[0]['percent_sched_by_priority'][0].keys())
+    airmass_coeffs = []
+    pct_scheduled = []
+    # exclude the control dataset
+    for dataset in airmass_datasets[1:]:
+        data_by_priority = dataset['percent_sched_by_priority'][0]
+        airmass_coeffs.append(dataset['airmass_weighting_coefficient'])
+        pct_scheduled.append(list(data_by_priority.values()))
+    data_by_airmass = np.array(pct_scheduled).transpose()
+    for i, data in enumerate(data_by_airmass):
+        ax.plot(airmass_coeffs, data, label=prio_names[i])
+    ax.set_xlabel('Airmass Coefficient')
+    ax.set_ylabel('Percent of Requests Scheduled')
+    ax.set_ylim(0, 100)
+    ax.legend(title='Priority')
+    return fig
+
+
+def plot_pct_time_scheduled_airmass_lineplot(airmass_datasets, plot_title):
+    """Plots a line chart with percent of requested time scheduled on the y-axis and airmass
+    coefficient on the x-axis. The priority bins are highlighted in different colors.
+
+    Args:
+        airmass_data [dict]: Should be a list of datasets, each dataset corresponding
+            to a different airmass weighting coefficient. Assumes the first dataset passed
+            is the control dataset (airmass optimization turned off).
+        plot_title (str): The title of the plot.
+
+    Returns:
+        fig (matplotlib.pyplot.Figure): The output figure object.
+    """
+    fig, ax = plt.subplots()
+    fig.suptitle(plot_title)
+
+    prio_names = list(airmass_datasets[0]['percent_duration_by_priority'][0].keys())
+    prio_names.append('all')
+    airmass_coeffs = []
+    pct_scheduled = []
+    # exclude the control dataset
+    for dataset in airmass_datasets[1:]:
+        sched_by_priority = np.array(list(dataset['scheduled_seconds_by_priority'][0].values()))
+        total_by_priority = np.array(list(dataset['total_seconds_by_priority'][0].values()))
+        airmass_coeffs.append(dataset['airmass_weighting_coefficient'])
+        pct_by_priority = sched_by_priority/total_by_priority * 100
+        pct_cumulative = np.sum(sched_by_priority)/np.sum(total_by_priority) * 100
+        pct_scheduled.append(np.append(pct_by_priority, pct_cumulative))
+    data_by_airmass = np.array(pct_scheduled).transpose()
+    for i, data in enumerate(data_by_airmass):
+        ax.plot(airmass_coeffs, data, label=prio_names[i])
+    ax.set_xlabel('Airmass Coefficient')
+    ax.set_ylabel('Percent of Requested Time Scheduled')
+    ax.set_ylim(0, 100)
+    ax.legend(title='Priority')
+    return fig
+
+
+def plot_pct_time_scheduled_out_of_available(airmass_datasets, plot_title):
+    """Plots a line chart with percent of requested time scheduled out of all availabel time
+    on the y-axis and airmass coefficient on the x-axis. The priority bins are highlighted
+    in different colors.
+
+    Args:
+        airmass_data [dict]: Should be a list of datasets, each dataset corresponding
+            to a different airmass weighting coefficient. Assumes the first dataset passed
+            is the control dataset (airmass optimization turned off).
+        plot_title (str): The title of the plot.
+
+    Returns:
+        fig (matplotlib.pyplot.Figure): The output figure object.
+    """
+    fig, ax = plt.subplots()
+    fig.suptitle(plot_title)
+
+    prio_names = list(airmass_datasets[0]['percent_duration_by_priority'][0].keys())
+    prio_names.append('all')
+    airmass_coeffs = []
+    pct_scheduled = []
+    # exclude the control dataset
+    for dataset in airmass_datasets[1:]:
+        sched_by_priority = np.array(list(dataset['scheduled_seconds_by_priority'][0].values()))
+        available_time = dataset['total_available_seconds']
+        airmass_coeffs.append(dataset['airmass_weighting_coefficient'])
+        pct_by_priority = sched_by_priority/available_time * 100
+        pct_cumulative = np.sum(sched_by_priority)/available_time * 100
+        pct_scheduled.append(np.append(pct_by_priority, pct_cumulative))
+    data_by_airmass = np.array(pct_scheduled).transpose()
+    for i, data in enumerate(data_by_airmass):
+        ax.plot(airmass_coeffs, data, label=prio_names[i])
+    ax.set_xlabel('Airmass Coefficient')
+    ax.set_ylabel('Percent of Requested Time Scheduled')
+    ax.set_ylim(0, 100)
+    ax.legend(title='Priority')
+    return fig
+
+
 def plot_midpoint_airmass_histograms(airmass_datasets, plot_title):
     """Plots a distribution of midpoint airmasses for each different airmass coefficient.
 
@@ -195,4 +306,28 @@ def plot_eff_priority_duration_scatter(datasets, plot_title):
         ax.set_xlabel('Duration [min]')
         ax.set_title(f'Optimize by Airmass, With Duration, {labels[i]}')
         ax.legend(title=labels[i])
+    return fig
+
+
+def plot_duration_by_window_duration_scatter(data, plot_title):
+    """Plots a scatterplot with observation duration on the y-axis and maximum window length per
+    observation on the x-axis.
+
+    Args:
+        data (dict): The dataset for this metric. Expects one dataset.
+        plot_title (str): The title of the plot.
+
+    Returns:
+        fig (matplotlib.pyploy.Figure): The output Figure object.
+    """
+    fig, ax = plt.subplots()
+    fig.suptitle(plot_title)
+    data = data[0]
+    sec_to_min = 1/60
+    window_dur = np.array(data['raw_window_durations']) * sec_to_min
+    sched_dur = np.array(data['raw_scheduled_durations']) * sec_to_min
+    ax.scatter(window_dur, sched_dur, s=4)
+    ax.set_ylabel('Request Duration [min]')
+    ax.set_xlabel('Longest Possible Window Duration [min]')
+
     return fig
