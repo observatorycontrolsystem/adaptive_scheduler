@@ -92,7 +92,7 @@ def plot_pct_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
         # the first dataset is the control dataset
         if dataset is not airmass_datasets[0]:
             labels.append(airmass_coeff)
-    plotutils.plot_barplot(ax, bardata, labels, binnames)
+    plotutils.plot_multi_barplot(ax, bardata, labels, binnames)
 
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent of Requests Scheduled')
@@ -128,7 +128,7 @@ def plot_pct_time_scheduled_airmass_binned_priority(airmass_datasets, plot_title
         # the first dataset is the control dataset
         if dataset is not airmass_datasets[0]:
             labels.append(airmass_coeff)
-    plotutils.plot_barplot(ax, bardata, labels, binnames)
+    plotutils.plot_multi_barplot(ax, bardata, labels, binnames)
 
     ax.set_xlabel('Priority')
     ax.set_ylabel('Percent of Requested Time Scheduled')
@@ -330,4 +330,27 @@ def plot_duration_by_window_duration_scatter(data, plot_title):
     ax.set_ylabel('Request Duration [min]')
     ax.set_xlabel('Longest Possible Window Duration [min]')
 
+    return fig
+
+
+def plot_input_duration_binned_priority(dataset, plot_title):
+    fig, ax = plt.subplots()
+    fig.suptitle(plot_title)
+    bardata = []
+    input_durations = dataset[0]['raw_scheduled_durations'] + dataset[0]['raw_unscheduled_durations']
+    input_priorities = dataset[0]['raw_scheduled_priorities'] + dataset[0]['raw_unscheduled_priorities']
+    input_bins = metrics.bin_data(input_priorities, input_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    duration_bins = {
+        bin_key: metrics.bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | metrics.bin_data(bin_values, bin_size=10000, bin_range=(1500, 10000))
+        for bin_key, bin_values in input_bins.items()
+    } 
+    labels = ['10-19', '20-29', '30']
+    for values in duration_bins.values():
+        bardata.append(list(values.values()))
+    binnames = ['0-5','5-10','10-15', '15-20', '20-25', '25&up']
+    plotutils.plot_multi_barplot(ax, bardata, labels, binnames)
+    ax.set_xlabel('Duration (minutes)')
+    ax.set_ylabel('Input reservation counts')
+    ax.set_ylim(0, 600)
+    ax.legend(title='Priority')
     return fig

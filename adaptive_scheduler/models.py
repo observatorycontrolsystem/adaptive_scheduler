@@ -439,7 +439,7 @@ class Request(EqualityMixin):
         self.telescope_class = telescope_class
         self.req_duration = duration
         self.configuration_repeats = configuration_repeats
-        self.optimization_type = optimization_type
+        self.optimization_type = 'AIRMASS'
         self.scheduled_reservation = scheduled_reservation
 
     def get_duration(self):
