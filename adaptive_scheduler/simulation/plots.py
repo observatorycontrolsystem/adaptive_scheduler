@@ -52,7 +52,7 @@ plots = [
           '1m Network Histogram of Input Reservation duration binned by priority',
           '1m0-optimize-airmass-no-duration-v3'),
      Plot(plotfuncs.plot_subplots_input_duration,
-          '1m Network Subplots differnt priorities Input Reservation binned by duration',
+          '1m Network Scheduled/Unscheduled Requests Length Distribution',
           '1m0-optimize-airmass-no-duration-v3'),
 ]
 

@@ -357,17 +357,29 @@ def plot_input_duration_binned_priority(dataset, plot_title):
 
 
 def plot_subplots_input_duration(dataset, plot_title):
-    fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(28,10))
     fig.suptitle(plot_title)
-    input_durations = dataset[0]['raw_scheduled_durations'] + dataset[0]['raw_unscheduled_durations']
-    input_priorities = dataset[0]['raw_scheduled_priorities'] + dataset[0]['raw_unscheduled_priorities']
+    sched_durations = dataset[0]['raw_scheduled_durations']
+    unsched_durations = dataset[0]['raw_unscheduled_durations']
+    sched_priorities = dataset[0]['raw_scheduled_priorities']
+    unsched_priorities = dataset[0]['raw_unscheduled_priorities']
+
+    input_durations = sched_durations + unsched_durations
+    input_priorities = sched_priorities + unsched_priorities
     input_bins = metrics.bin_data(input_priorities, input_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
     labels = ['10-19', '20-29', '30']
     axis = [ax1, ax2, ax3]
-    for i, values in enumerate(input_bins.values()):
-        axis[i].hist(values, bins = np.arange(0, 4000, 120))
+    for i, values in enumerate(sched_bins.values()):
+        bars = ['Scheduled', 'Unscheduled']
+        # axis[i].hist(values, bins = np.arange(0, 4000, 120))
+        axis[i].hist([values,list(unsched_bins.values())[i]], bins = np.arange(0, 4000, 120), 
+                      stacked = True, label = bars)
+        # axis[i].hist(list(unsched_bins.values())[i], bins = np.arange(0, 4000, 120))
         axis[i].set_xlabel('Duration (seconds)')
         axis[i].set_ylabel('Input reservation counts')
         axis[i].set_ylim(0, 300)
         axis[i].set_title(f'{labels[i]} Priority binned by duration')
+        axis[i].legend()
     return fig
