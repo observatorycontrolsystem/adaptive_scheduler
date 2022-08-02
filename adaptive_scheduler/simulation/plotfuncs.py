@@ -348,9 +348,26 @@ def plot_input_duration_binned_priority(dataset, plot_title):
     for values in duration_bins.values():
         bardata.append(list(values.values()))
     binnames = ['0-5','5-10','10-15', '15-20', '20-25', '25&up']
-    plotutils.plot_multi_barplot(ax, bardata, labels, binnames)
+    plotutils.plot_multi_barplot(ax, bardata, labels, binnames, barwidth=0.1)
     ax.set_xlabel('Duration (minutes)')
     ax.set_ylabel('Input reservation counts')
-    ax.set_ylim(0, 600)
+    ax.set_ylim(0, 300)
     ax.legend(title='Priority')
+    return fig
+
+
+def plot_subplots_input_duration(dataset, plot_title):
+    fig, (ax1, ax2, ax3) = plt.subplots(1,3)
+    fig.suptitle(plot_title)
+    input_durations = dataset[0]['raw_scheduled_durations'] + dataset[0]['raw_unscheduled_durations']
+    input_priorities = dataset[0]['raw_scheduled_priorities'] + dataset[0]['raw_unscheduled_priorities']
+    input_bins = metrics.bin_data(input_priorities, input_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    labels = ['10-19', '20-29', '30']
+    axis = [ax1, ax2, ax3]
+    for i, values in enumerate(input_bins.values()):
+        axis[i].hist(values, bins = np.arange(0, 4000, 120))
+        axis[i].set_xlabel('Duration (seconds)')
+        axis[i].set_ylabel('Input reservation counts')
+        axis[i].set_ylim(0, 300)
+        axis[i].set_title(f'{labels[i]} Priority binned by duration')
     return fig

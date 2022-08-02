@@ -51,6 +51,9 @@ plots = [
      Plot(plotfuncs.plot_input_duration_binned_priority,
           '1m Network Histogram of Input Reservation duration binned by priority',
           '1m0-optimize-airmass-no-duration-v3'),
+     Plot(plotfuncs.plot_subplots_input_duration,
+          '1m Network Subplots differnt priorities Input Reservation binned by duration',
+          '1m0-optimize-airmass-no-duration-v3'),
 ]
 
 if __name__ == '__main__':
