@@ -21,7 +21,6 @@ Author: Eric Saunders
 March 2012
 '''
 
-from pyparsing import Opt
 from rise_set.angle import Angle
 from rise_set.visibility import Visibility
 from rise_set.utils import is_static_target
