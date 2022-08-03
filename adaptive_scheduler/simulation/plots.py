@@ -18,6 +18,14 @@ airmass_experiment_ids = [
     'airmass-1000000-w-duration-no-scaling',
 ]
 
+effective_priority_experiment_ids = [ 
+    '1m0-optimize-airmass-with-duration-v3',
+    '1m0-optimize-airmass-no-duration-v3',
+    '1m0-optimize-airmass-with-duration-scaled-100-v3',
+    '1m0-optimize-airmass-no-duration-scaled-100-v3',
+]
+
+
 plots = [
      Plot(plotfuncs.plot_airmass_difference_histogram,
           '1m Network Airmass Difference Distribution for Scheduled Requests',
@@ -50,6 +58,19 @@ plots = [
      Plot(plotfuncs.plot_input_duration_binned_priority,
           '1m Network Histogram of Input Reservation duration binned by priority',
           '1m0-optimize-airmass-no-duration-v3'),
+     Plot(plotfuncs.plot_subplots_input_duration,
+          '1m Network Scheduled/Unscheduled Requests Length Distribution',
+          '1m0-optimize-airmass-no-duration-v3'),
+     Plot(plotfuncs.plot_percent_sched_requests_bin_by_priority,
+          '1m0 Network Scheduler Metrics Binned by Priority',
+          *effective_priority_experiment_ids),
+     Plot(plotfuncs.plot_sched_priority_duration_dotplot,
+          '1m0 Distribution of Priority and Duration With Airmass Optimization',
+          *effective_priority_experiment_ids),
+     Plot(plotfuncs.plot_heat_map_priority_duration,
+          '1m0 Network Requests Heatmap With Airmass Optimization',
+          effective_priority_experiment_ids),
+
 ]
 
 if __name__ == '__main__':

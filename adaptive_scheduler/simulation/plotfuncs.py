@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import matplotlib.style as style
 
 import adaptive_scheduler.simulation.plotutils as plotutils
+from adaptive_scheduler.simulation.metrics import bin_data
 import adaptive_scheduler.simulation.metrics as metrics
 
 # change default parameters for matplotlib here
@@ -101,6 +102,121 @@ def plot_pct_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
     return fig
 
 
+def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 12))
+    fig.suptitle(plot_title)
+    fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
+    bardata1 = []
+    labels1 = []
+    for dataset in eff_pri_datasets:
+        bardata1.append(list(dataset['percent_duration_by_priority'][0].values()))
+        labels1.append(dataset['simulation_id'][21:-3])
+    priorities = ['low priority', 'mid priority', 'high priority']
+    plotutils.plot_barplot(ax1, bardata1, labels1, priorities)
+    ax1.set_xlabel('Priority')
+    ax1.set_ylabel('Percent Scheduled Time')
+    ax1.set_title('Percent Duration Scheduled')
+    ax1.legend()
+    bardata2 = []
+    labels2 = []
+    for dataset in eff_pri_datasets:
+        bardata2.append(list(dataset['percent_sched_by_priority'][0].values()))
+        labels2.append(dataset['simulation_id'][21:])
+    priorities = ['low priority', 'mid priority', 'high priority']
+    plotutils.plot_barplot(ax2, bardata2, labels2, priorities)
+    ax2.set_xlabel('Priority')
+    ax2.set_ylabel('Percent Scheduled Count')
+    ax2.set_title('Percent Number Scheduled')
+    ax2.legend()
+    plt.show()
+    
+
+def rand_jitter(arr):
+    stdev = .01 * (max(arr) - min(arr))
+    return arr + np.random.randn(len(arr)) * stdev
+    
+def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
+    markers = ["o" , "," ,"v" , "^" , "<", ">"]
+    colors = ['r','b','c','m', 'y', 'k']
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(28, 12))
+    fig.suptitle(plot_title)
+    fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
+    for i, data in enumerate(eff_pri_datasets):
+        id = data['simulation_id'][21:]
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
+            data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
+        ax1.scatter(rand_jitter(data['raw_scheduled_priorities']), rand_jitter(data['raw_scheduled_durations']), 
+                   marker = markers[i],c = colors[i], s = 10, label = f'scheduled requests {id}',alpha = 0.3) 
+    ax1.set_ylim(top=11000)
+    ax1.set_xlabel('Priority')
+    ax1.set_ylabel('Request Duration')
+    ax1.legend()
+    for i, data in enumerate(eff_pri_datasets):
+        id = data['simulation_id'][21:]
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
+            data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
+        ax2.scatter(rand_jitter(data['raw_unscheduled_priorities']), rand_jitter(data['raw_unscheduled_durations']),
+                   c =colors[i], marker=markers[i],s=10, label = f'unscheduled requests {id}', alpha = 0.3)
+    ax2.set_ylim(top=11000)
+    ax2.set_xlabel('Priority')
+    ax2.set_ylabel('Request Duration')
+    ax2.legend()
+    plt.show(block = False)
+    plt.show()
+
+
+def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
+    fig, axs= plt.subplots(2, 2, figsize=(13, 12))
+    fig.suptitle(plot_title)
+    fig.subplots_adjust(wspace=0.01, hspace=0.01, top=0.9)
+    ax_list = [axs[0,0],axs[0,1],axs[1,0], axs[1,1]]
+    for i, data in enumerate(eff_pri_datasets):
+        id = data['simulation_id'][21:]
+        if id in ['with-duration-scaled-100-v3', 'no-duration-scaled-100-v3']:
+            data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
+            data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
+        sched_priorities = data['raw_scheduled_priorities']
+        sched_durations = data['raw_scheduled_durations']
+        unsched_priorities = data['raw_unscheduled_priorities']
+        unsched_durations = data['raw_unscheduled_durations']
+        level_1_bins = bin_data(sched_priorities, sched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_2_bins = {
+            bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
+            for bin_key, bin_values in level_1_bins.items()
+        } 
+        level_1_bins_unsched = bin_data(unsched_priorities, unsched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_2_bins_unsched = {
+            bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
+            for bin_key, bin_values in level_1_bins_unsched.items()
+        }   
+        heat_map_elements = []
+        heat_map_elements_unsched = []
+        for values in level_2_bins.values():
+            heat_map_elements.append(list(values.values()))
+        for values in level_2_bins_unsched.values():
+            heat_map_elements_unsched.append(list(values.values()))  
+        priority_bins = list(level_2_bins.keys())
+        duration_bins = ['0-5','5-10','10-15', '15-20', '20-25', '25&up']
+        heat_map_elements = np.array(heat_map_elements)
+        heat_map_elements_unsched = np.array(heat_map_elements_unsched)
+        axis = ax_list[i]
+        cmap=plt.get_cmap('coolwarm')
+        cmap2 = plt.get_cmap('gray')
+        heatplot = axis.imshow(heat_map_elements,cmap=cmap)
+        axis.set_ylabel('Priority')
+        axis.set_xlabel('Duration (minutes)')
+        axis.set_xticks(np.arange(len(duration_bins)), labels=duration_bins)
+        axis.set_yticks(np.arange(len(priority_bins)), labels=priority_bins)
+        plt.setp(axis.get_xticklabels(), rotation=45, ha="right",
+            rotation_mode="anchor")
+        for i in range(len(priority_bins)):
+            for j in range(len(duration_bins)):
+                value = heat_map_elements[i, j]
+                text1 = axis.text(j, i, f'{heat_map_elements[i, j]}|{ heat_map_elements_unsched[i, j]}',
+                            ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
+        axis.set_title(f'{id} (sched|unsched)', fontweight='semibold')
+    fig.tight_layout()
+    plt.show()
 def plot_pct_time_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
     """Plots the percentage of requested time scheduled for different airmass coefficients
     binned into priority levels.
@@ -348,9 +464,38 @@ def plot_input_duration_binned_priority(dataset, plot_title):
     for values in duration_bins.values():
         bardata.append(list(values.values()))
     binnames = ['0-5','5-10','10-15', '15-20', '20-25', '25&up']
-    plotutils.plot_multi_barplot(ax, bardata, labels, binnames)
+    plotutils.plot_multi_barplot(ax, bardata, labels, binnames, barwidth=0.1)
     ax.set_xlabel('Duration (minutes)')
     ax.set_ylabel('Input reservation counts')
-    ax.set_ylim(0, 600)
+    ax.set_ylim(0, 300)
     ax.legend(title='Priority')
+    return fig
+
+
+def plot_subplots_input_duration(dataset, plot_title):
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(28,10))
+    fig.suptitle(plot_title)
+    sched_durations = dataset[0]['raw_scheduled_durations']
+    unsched_durations = dataset[0]['raw_unscheduled_durations']
+    sched_priorities = dataset[0]['raw_scheduled_priorities']
+    unsched_priorities = dataset[0]['raw_unscheduled_priorities']
+
+    input_durations = sched_durations + unsched_durations
+    input_priorities = sched_priorities + unsched_priorities
+    input_bins = metrics.bin_data(input_priorities, input_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    labels = ['10-19', '20-29', '30']
+    axis = [ax1, ax2, ax3]
+    for i, values in enumerate(sched_bins.values()):
+        bars = ['Scheduled', 'Unscheduled']
+        # axis[i].hist(values, bins = np.arange(0, 4000, 120))
+        axis[i].hist([values,list(unsched_bins.values())[i]], bins = np.arange(0, 4000, 120), 
+                      stacked = True, label = bars)
+        # axis[i].hist(list(unsched_bins.values())[i], bins = np.arange(0, 4000, 120))
+        axis[i].set_xlabel('Duration (seconds)')
+        axis[i].set_ylabel('Input reservation counts')
+        axis[i].set_ylim(0, 300)
+        axis[i].set_title(f'{labels[i]} Priority binned by duration')
+        axis[i].legend()
     return fig
