@@ -14,9 +14,7 @@ from requests.exceptions import RequestException, Timeout
 from rise_set import astrometry
 
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
-from adaptive_scheduler.utils import (time_in_capped_intervals,
-                                      normalised_epoch_to_datetime,
-                                      datetime_to_epoch, timeit)
+from adaptive_scheduler.utils import time_in_capped_intervals, normalised_epoch_to_datetime, datetime_to_epoch
 from adaptive_scheduler.models import redis_instance
 
 log = logging.getLogger('adaptive_scheduler')
@@ -193,19 +191,16 @@ class MetricCalculator():
             reservations = [res for res in comp_res.reservation_list if res not in self.combined_input_reservations]
             self.combined_input_reservations.extend(reservations)
 
-    @timeit
     def count_scheduled(self):
         scheduled_reservations = []
         for reservations in self.combined_schedule.values():
             scheduled_reservations.extend(reservations)
         return len(scheduled_reservations), len(self.combined_input_reservations)
 
-    @timeit
     def percent_reservations_scheduled(self):
         scheduled, total = self.count_scheduled()
         return percent_of(scheduled, total)
 
-    @timeit
     def total_scheduled_eff_priority(self):
         effective_priorities = []
         for reservations in self.combined_schedule.values():
@@ -231,12 +226,25 @@ class MetricCalculator():
         sched_priorities = [priorities_by_rg_id[rg_id] for rg_id in sched_rg_ids]
         unsched_priorities = [priorities_by_rg_id[rg_id] for rg_id in unsched_rg_ids]
         # uncomment to remap the priorities
-        scale = (100, 10, 30, 10)
-        sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
-        unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
+        # note: adjust bin size accordingly
+        # scale = (100, 10, 30, 10)
+        # sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
+        # unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
         return sched_priorities, unsched_priorities
 
-    @timeit
+    def get_window_duration_data(self):
+        sched_window_durations = []
+        for res in self.combined_input_reservations:
+            if res.scheduled:
+                windows = res.request.windows
+                # get the data format to a list, each element is a list corresponding to a resource
+                windows_list = list(windows.windows_for_resource.values())
+                window_durations = []
+                for loc in windows_list:
+                    window_durations.extend([(w.end-w.start).total_seconds() for w in loc])
+                sched_window_durations.append(max(window_durations))
+        return sched_window_durations
+
     def total_available_seconds(self):
         """Aggregates the total available time, calculated from dark intervals.
 
@@ -259,7 +267,6 @@ class MetricCalculator():
                 total_available_time += available_time
         return total_available_time
 
-    @timeit
     def percent_time_utilization(self):
         scheduled_durations, _ = self.get_duration_data()
         return percent_of(sum(scheduled_durations), self.total_available_seconds())
@@ -325,7 +332,6 @@ class MetricCalculator():
             midpoint_airmasses[site] = airmasses[np.argmin(np.abs(times-midpoint_time))]
         return midpoint_airmasses
 
-    @timeit
     def airmass_metrics(self, schedule=None):
         """Generate the airmass metrics of all scheduled reservations for a single schedule.
 
@@ -364,10 +370,9 @@ class MetricCalculator():
                            }
         return airmass_metrics
 
-    @timeit
     def binned_tac_priority_metrics(self):
         """Bins metrics based on TAC priority."""
-        bin_size = 45
+        bin_size = 10
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
