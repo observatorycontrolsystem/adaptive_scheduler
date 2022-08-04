@@ -18,7 +18,7 @@ airmass_experiment_ids = [
     'airmass-1000000-w-duration-no-scaling',
 ]
 
-effective_priority_experiment_ids = [ 
+effective_priority_experiment_ids = [
     'airmass-0.1-w-duration-no-scaling',
     'airmass-0.1-no-duration-no-scaling',
     'airmass-0.1-w-duration-w-scaling',
@@ -62,15 +62,16 @@ plots = [
           '1m Network Scheduled/Unscheduled Requests Length Distribution',
           'no-airmass-w-duration-no-scaling'),
      Plot(plotfuncs.plot_percent_sched_requests_bin_by_priority,
-          '1m0 Network Scheduler Metrics Binned by Priority',
+          '1m Network Scheduler Metrics Binned by Priority',
           *effective_priority_experiment_ids),
      Plot(plotfuncs.plot_sched_priority_duration_dotplot,
-          '1m0 Distribution of Priority and Duration With Airmass Optimization',
+          '1m Distribution of Priority and Duration With Airmass Optimization',
           *effective_priority_experiment_ids),
      Plot(plotfuncs.plot_heat_map_priority_duration,
-          '1m0 Network Requests Heatmap With Airmass Optimization',
+          '1m Network Requests Heatmap With Airmass Optimization',
           *effective_priority_experiment_ids),
 ]
+
 
 if __name__ == '__main__':
     plotutils.run_user_interface(plots)

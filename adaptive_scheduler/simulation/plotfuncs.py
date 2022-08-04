@@ -16,6 +16,8 @@ import adaptive_scheduler.simulation.metrics as metrics
 style.use('tableau-colorblind10')
 matplotlib.rcParams['figure.figsize'] = (20, 10)
 matplotlib.rcParams['figure.titlesize'] = 20
+matplotlib.rcParams['axes.titlesize'] = 16
+matplotlib.rcParams['axes.labelsize'] = 14
 matplotlib.rcParams['figure.subplot.wspace'] = 0.2  # horizontal spacing for subplots
 matplotlib.rcParams['figure.subplot.hspace'] = 0.2  # vertical spacing for subplots
 matplotlib.rcParams['figure.subplot.top'] = 0.9  # spacing between plot and title
@@ -220,8 +222,8 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         axis.set_title(f'{labels[i]} (sched|unsched)', fontweight='semibold')
     fig.tight_layout()
     return fig
-    
-    
+
+
 def plot_pct_time_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
     """Plots the percentage of requested time scheduled for different airmass coefficients
     binned into priority levels.
