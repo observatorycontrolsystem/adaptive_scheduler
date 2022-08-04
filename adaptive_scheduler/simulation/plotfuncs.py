@@ -126,8 +126,8 @@ def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
     ax2.set_ylabel('Scheduled Requests/Total Requests (%)')
     ax2.set_title('Percent of requests Scheduled')
     ax2.legend(title='Effective Priority Algorithms')
-    plt.show()
-    
+    return fig
+
     
 def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
     def rand_jitter(arr):
@@ -164,8 +164,7 @@ def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
     ax2.set_ylabel('Request Duration (minutes)')
     ax2.set_title('Unscheduled Reservations distribution')
     ax2.legend(title='Effective Priority Algorithms')
-    plt.show(block = False)
-    plt.show()
+    return fig
 
 
 def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
@@ -220,7 +219,7 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
                             ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
         axis.set_title(f'{labels[i]} (sched|unsched)', fontweight='semibold')
     fig.tight_layout()
-    plt.show()
+    return fig
     
     
 def plot_pct_time_scheduled_airmass_binned_priority(airmass_datasets, plot_title):
@@ -479,16 +478,14 @@ def plot_input_duration_binned_priority(dataset, plot_title):
 
 
 def plot_subplots_input_duration(dataset, plot_title):
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(28,10))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
     fig.suptitle(plot_title)
     sched_durations = dataset[0]['raw_scheduled_durations']
+    sched_durations = [d/60 for d in sched_durations]
     unsched_durations = dataset[0]['raw_unscheduled_durations']
+    unsched_durations = [d/60 for d in unsched_durations]
     sched_priorities = dataset[0]['raw_scheduled_priorities']
     unsched_priorities = dataset[0]['raw_unscheduled_priorities']
-
-    input_durations = sched_durations + unsched_durations
-    input_priorities = sched_priorities + unsched_priorities
-    input_bins = metrics.bin_data(input_priorities, input_durations, bin_size=10, bin_range=(10,30),aggregator=None)
     sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
     unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
     labels = ['10-19', '20-29', '30']
@@ -496,10 +493,10 @@ def plot_subplots_input_duration(dataset, plot_title):
     for i, values in enumerate(sched_bins.values()):
         bars = ['Scheduled', 'Unscheduled']
         # axis[i].hist(values, bins = np.arange(0, 4000, 120))
-        axis[i].hist([values,list(unsched_bins.values())[i]], bins = np.arange(0, 4000, 120), 
+        axis[i].hist([values,list(unsched_bins.values())[i]], bins = np.arange(0, 70, 2), 
                       stacked = True, label = bars)
         # axis[i].hist(list(unsched_bins.values())[i], bins = np.arange(0, 4000, 120))
-        axis[i].set_xlabel('Duration (seconds)')
+        axis[i].set_xlabel('Duration (Minutes)')
         axis[i].set_ylabel('Input reservation counts')
         axis[i].set_ylim(0, 300)
         axis[i].set_title(f'{labels[i]} Priority binned by duration')
