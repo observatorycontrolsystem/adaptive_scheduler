@@ -149,7 +149,7 @@ def export_to_image(fname, fig):
     except FileExistsError:
         pass
     fpath = os.path.join(export_dir, f'{fname}.{export_format}')
-    fig.savefig(fpath, format=export_format)
+    fig.savefig(fpath, dpi=300, format=export_format)
     print(f'Plot exported to {fpath}')
 
 
