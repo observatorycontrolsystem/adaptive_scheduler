@@ -288,7 +288,11 @@ def plot_pct_scheduled_airmass_lineplot(airmass_datasets, plot_title):
         pct_scheduled.append(list(data_by_priority.values()))
     data_by_airmass = np.array(pct_scheduled).transpose()
     for i, data in enumerate(data_by_airmass):
-        ax.plot(airmass_coeffs, data, label=prio_names[i])
+        ax.plot(airmass_coeffs, data, marker='.', ms=8, label=prio_names[i])
+        for j, k in zip(airmass_coeffs, data):
+            annotation = f'{k:.2f}%'
+            ax.annotate(annotation, xy=(j, k), xytext=(-15, 10), textcoords='offset points')
+
     ax.set_xlabel('Airmass Coefficient')
     ax.set_ylabel('Percent of Requests Scheduled')
     ax.set_ylim(0, 100)
@@ -326,7 +330,19 @@ def plot_pct_time_scheduled_airmass_lineplot(airmass_datasets, plot_title):
         pct_scheduled.append(np.append(pct_by_priority, pct_cumulative))
     data_by_airmass = np.array(pct_scheduled).transpose()
     for i, data in enumerate(data_by_airmass):
-        ax.plot(airmass_coeffs, data, label=prio_names[i])
+        ax.plot(airmass_coeffs, data, marker='.', ms=8, label=prio_names[i])
+        for j, k in zip(airmass_coeffs, data):
+            annotation = f'{k:.2f}%'
+            # manually fix an overlapping annotation, THIS IS SPECIFIC TO A CERTAIN DATASET
+            # specifically, some of the points at the 6th airmass coeff are overlapping
+            # if this happens a lot, look into offsetting text automatically
+            if i == 3 and j == airmass_coeffs[6]:
+                ax.annotate(annotation, xy=(j, k), xytext=(-15, 6), c='#595959', textcoords='offset points')
+            elif i == 1 and j == airmass_coeffs[6]:
+                ax.annotate(annotation, xy=(j, k), xytext=(-15, -13), c='#FF800E', textcoords='offset points')
+            else:
+                ax.annotate(annotation, xy=(j, k), xytext=(-15, -13), textcoords='offset points')
+
     ax.set_xlabel('Airmass Coefficient')
     ax.set_ylabel('Percent of Requested Time Scheduled')
     ax.set_ylim(0, 100)
@@ -365,7 +381,10 @@ def plot_pct_time_scheduled_out_of_available(airmass_datasets, plot_title):
         pct_scheduled.append(np.append(pct_by_priority, pct_cumulative))
     data_by_airmass = np.array(pct_scheduled).transpose()
     for i, data in enumerate(data_by_airmass):
-        ax.plot(airmass_coeffs, data, label=prio_names[i])
+        ax.plot(airmass_coeffs, data, marker='.', ms=8, label=prio_names[i])
+        for j, k in zip(airmass_coeffs, data):
+            annotation = f'{k:.2f}%'
+            ax.annotate(annotation, xy=(j, k), xytext=(5, 5), textcoords='offset points')
     ax.set_xlabel('Airmass Coefficient')
     ax.set_ylabel('Percent of Requested Time Scheduled')
     ax.set_ylim(0, 100)
@@ -388,12 +407,15 @@ def plot_midpoint_airmass_histograms(airmass_datasets, plot_title):
     fig = plt.figure(figsize=(16, 16))
     fig.suptitle(plot_title)
     fig.subplots_adjust(wspace=0.3, hspace=0.3, top=0.92)
-    for i, dataset in enumerate(airmass_datasets[1:]):
+    for i, dataset in enumerate(airmass_datasets):
         ax = fig.add_subplot(3, 3, i+1)
         midpoint_airmasses = dataset['airmass_metrics']['raw_airmass_data'][0]['midpoint_airmasses']
         airmass_coeff = dataset['airmass_weighting_coefficient']
         ax.hist(midpoint_airmasses, bins=50)
-        ax.set_title(f'Airmass Coefficient: {airmass_coeff}')
+        if i == 0:
+            ax.set_title('Optimize Earliest')
+        else:
+            ax.set_title(f'Airmass Coefficient: {airmass_coeff}')
         ax.set_xlabel('Midpoint Airmass')
         ax.set_ylabel('Count')
         ax.set_xlim(1.0, 2.0)
