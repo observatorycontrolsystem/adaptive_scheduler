@@ -95,7 +95,7 @@ def run_user_interface(plots):
 
 
 class Plot:
-    def __init__(self, plotfunc, description, *sim_ids, **kwargs):
+    def __init__(self, plotfunc, description, sim_ids, **kwargs):
         """A wrapper class for plotting. The user specifies the plotting function to use
         and the simulation ID(s) or search keywords. The data is passed to the plotting
         function as a list of datasets, each set corresponding to an OpenSearch index.
@@ -112,7 +112,7 @@ class Plot:
         self.description = description
         # expects plotting functions to be called 'plot_some_plot_name'
         self.name = plotfunc.__name__.replace('plot_', '')
-        self.sim_ids = sim_ids
+        self.sim_ids = sim_ids if type(sim_ids) is list else [sim_ids]
         self.kwargs = kwargs
 
     def generate(self):
@@ -124,6 +124,8 @@ class Plot:
             except KeyError:
                 data_cache[sim_id] = get_opensearch_data(sim_id)
                 self.data.append(data_cache[sim_id])
+        if len(self.data) == 1:
+            self.data = self.data[0]
 
         self.fig = self.plotfunc(self.data, self.description, **self.kwargs)
 

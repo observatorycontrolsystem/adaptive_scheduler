@@ -474,7 +474,6 @@ def plot_duration_by_window_duration_scatter(data, plot_title):
     """
     fig, ax = plt.subplots()
     fig.suptitle(plot_title)
-    data = data[0]
     sec_to_min = 1/60
     window_dur = np.array(data['raw_window_durations']) * sec_to_min
     sched_dur = np.array(data['raw_scheduled_durations']) * sec_to_min
