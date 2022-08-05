@@ -68,7 +68,7 @@ plots = [
           '1m Distribution of Priority and Duration With Airmass Optimization',
           *effective_priority_experiment_ids),
      Plot(plotfuncs.plot_heat_map_priority_duration,
-          '1m Network Requests Heatmap With Airmass Optimization',
+          '1m Network Requests Heatmap With Airmass Optimization (sched|unsched)',
           *effective_priority_experiment_ids),
 ]
 

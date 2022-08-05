@@ -16,8 +16,8 @@ import adaptive_scheduler.simulation.metrics as metrics
 style.use('tableau-colorblind10')
 matplotlib.rcParams['figure.figsize'] = (20, 10)
 matplotlib.rcParams['figure.titlesize'] = 20
-matplotlib.rcParams['axes.titlesize'] = 16
-matplotlib.rcParams['axes.labelsize'] = 14
+matplotlib.rcParams['axes.titlesize'] = 14
+matplotlib.rcParams['axes.labelsize'] = 12
 matplotlib.rcParams['xtick.labelsize'] = 12
 matplotlib.rcParams['ytick.labelsize'] = 12
 matplotlib.rcParams['figure.subplot.wspace'] = 0.2  # horizontal spacing for subplots
@@ -124,7 +124,7 @@ def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
     bardata2 = []
     for dataset in eff_pri_datasets:
         bardata2.append(list(dataset['percent_sched_by_priority'][0].values()))
-    priorities = ['low priority', 'mid priority', 'high priority']
+    priorities = ['low priority(10-19)', 'mid priority(20-29)', 'high priority(30)']
     plotutils.plot_multi_barplot(ax2, bardata2, labels, priorities)
     ax2.set_xlabel('Priority')
     ax2.set_ylabel('Scheduled Requests/Total Requests (%)')
@@ -207,7 +207,7 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         heat_map_elements = np.array(heat_map_elements)
         heat_map_elements_unsched = np.array(heat_map_elements_unsched)
         axis = ax_list[i]
-        cmap=plt.get_cmap('coolwarm')
+        cmap = plt.get_cmap('coolwarm')
         cmap2 = plt.get_cmap('gray')
         heatplot = axis.imshow(heat_map_elements,cmap=cmap)
         axis.set_ylabel('Priority')
@@ -221,7 +221,9 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
                 value = heat_map_elements[j, k]
                 text1 = axis.text(k, j, f'{heat_map_elements[j, k]}|{ heat_map_elements_unsched[j, k]}',
                             ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
-        axis.set_title(f'{labels[i]} (sched|unsched)', fontweight='semibold')
+        time_proportion = sum(data['scheduled_seconds_by_priority'][0].values()) / sum(data['total_seconds_by_priority'][0].values()) * 100
+        percent_time_utilization = data['percent_time_utilization']
+        axis.set_title(f'{labels[i]} ({percent_time_utilization:.1f}% time utilized)', fontweight='semibold')
     fig.tight_layout()
     return fig
 
@@ -492,6 +494,7 @@ def plot_subplots_input_duration(dataset, plot_title):
     unsched_priorities = dataset[0]['raw_unscheduled_priorities']
     sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
     unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=10, bin_range=(10,30),aggregator=None)
+    totals_by_priorities = list(dataset[0]['total_req_by_priority'][0].values())
     labels = ['10-19', '20-29', '30']
     axis = [ax1, ax2, ax3]
     for i, values in enumerate(sched_bins.values()):
@@ -503,6 +506,6 @@ def plot_subplots_input_duration(dataset, plot_title):
         axis[i].set_xlabel('Duration (Minutes)')
         axis[i].set_ylabel('Input reservation counts')
         axis[i].set_ylim(0, 300)
-        axis[i].set_title(f'{labels[i]} Priority binned by duration')
+        axis[i].set_title(f'{labels[i]} Priority ({totals_by_priorities[i]} requests)')
         axis[i].legend()
     return fig
