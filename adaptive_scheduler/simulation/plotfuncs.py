@@ -114,7 +114,7 @@ def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
     labels = ['with duration', 'no duration', 'with duration scaled 100', 'no duration scaled 100']
     for dataset in eff_pri_datasets:
         bardata1.append(list(dataset['percent_duration_by_priority'][0].values()))
-        
+
     priorities = ['low priority(10-19)', 'mid priority(20-29)', 'high priority(30)']
     plotutils.plot_multi_barplot(ax1, bardata1, labels, priorities)
     ax1.set_xlabel('Priority')
@@ -132,25 +132,26 @@ def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
     ax2.legend(title='Effective Priority Algorithms')
     return fig
 
-    
+
 def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
     def rand_jitter(arr):
         stdev = .01 * (max(arr) - min(arr))
         return arr + np.random.randn(len(arr)) * stdev
-    
-    markers = ["o" , "," ,"v" , "^" , "<", ">"]
-    colors = ['r','b','c','m', 'y', 'k']
+
+    markers = ['o', ',', 'v', '^', '<', '>']
+    colors = ['r', 'b', 'c', 'm', 'y', 'k']
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(28, 12))
     fig.suptitle(plot_title)
     fig.subplots_adjust(wspace=0.2, hspace=0.2, top=0.9)
     labels = ['with duration', 'no duration', 'with duration scaled 100', 'no duration scaled 100']
     for i, data in enumerate(eff_pri_datasets):
         id = data['simulation_id']
-        if id in ['airmass-0.1-w-duration-w-scaling','airmass-0.1-no-duration-w-scaling']:
-            data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]   
-        data['raw_scheduled_durations'] = [d/60 for d in data['raw_scheduled_durations']]                                
-        ax1.scatter(rand_jitter(data['raw_scheduled_priorities']), rand_jitter(data['raw_scheduled_durations']), 
-                   marker = markers[i],c = colors[i], s=10, label=labels[i], alpha=0.3) 
+        # un-scale the priorities
+        if id in ['airmass-0.1-w-duration-w-scaling', 'airmass-0.1-no-duration-w-scaling']:
+            data['raw_scheduled_priorities'] = [(p+35)/4.5 for p in data['raw_scheduled_priorities']]
+        data['raw_scheduled_durations'] = [d/60 for d in data['raw_scheduled_durations']]                    
+        ax1.scatter(rand_jitter(data['raw_scheduled_priorities']), rand_jitter(data['raw_scheduled_durations']),
+                    marker=markers[i], c=colors[i], s=10, label=labels[i], alpha=0.3)
     ax1.set_ylim(top=100)
     ax1.set_xlabel('Priority')
     ax1.set_ylabel('Request Duration (minutes)')
@@ -158,11 +159,12 @@ def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
     ax1.legend(title='Effective Priority Algorithms')
     for i, data in enumerate(eff_pri_datasets):
         id = data['simulation_id']
+        # un-scale the priorities
         if id in ['airmass-0.1-w-duration-w-scaling', 'airmass-0.1-no-duration-w-scaling']:
             data['raw_unscheduled_priorities'] = [(p+35)/4.5 for p in data['raw_unscheduled_priorities']]
         data['raw_unscheduled_durations'] = [d/60 for d in data['raw_unscheduled_durations']]
         ax2.scatter(rand_jitter(data['raw_unscheduled_priorities']), rand_jitter(data['raw_unscheduled_durations']),
-                   c=colors[i], marker=markers[i],s=10, label=labels[i], alpha=0.3)
+                    c=colors[i], marker=markers[i], s=10, label=labels[i], alpha=0.3)
     ax2.set_ylim(top=100)
     ax2.set_xlabel('Priority')
     ax2.set_ylabel('Request Duration (minutes)')
@@ -172,10 +174,10 @@ def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
 
 
 def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
-    fig, axs= plt.subplots(2, 2, figsize=(13, 12))
+    fig, axs = plt.subplots(2, 2, figsize=(13, 12))
     fig.suptitle(plot_title)
     fig.subplots_adjust(wspace=0.01, hspace=0.01, top=0.9)
-    ax_list = [axs[0,0],axs[0,1],axs[1,0], axs[1,1]]
+    ax_list = [axs[0, 0], axs[0, 1], axs[1, 0], axs[1, 1]]
     labels = ['with duration', 'no duration', 'with duration scaled 100', 'no duration scaled 100']
     for i, data in enumerate(eff_pri_datasets):
         id = data['simulation_id']
@@ -186,16 +188,17 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         sched_durations = data['raw_scheduled_durations']
         unsched_priorities = data['raw_unscheduled_priorities']
         unsched_durations = data['raw_unscheduled_durations']
-        level_1_bins = bin_data(sched_priorities, sched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_1_bins = bin_data(sched_priorities, sched_durations, bin_size=4, bin_range=(10, 30), aggregator=None)
+        # set the duration bins (in seconds) here
         level_2_bins = {
             bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
             for bin_key, bin_values in level_1_bins.items()
-        } 
+        }
         level_1_bins_unsched = bin_data(unsched_priorities, unsched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
         level_2_bins_unsched = {
             bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
             for bin_key, bin_values in level_1_bins_unsched.items()
-        }   
+        }
         heat_map_elements = []
         heat_map_elements_unsched = []
         for values in level_2_bins.values():
@@ -203,25 +206,25 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         for values in level_2_bins_unsched.values():
             heat_map_elements_unsched.append(list(values.values()))  
         priority_bins = list(level_2_bins.keys())
-        duration_bins = ['0-5','5-10','10-15', '15-20', '20-25', '25&up']
+        duration_bins = ['0-5', '5-10', '10-15', '15-20', '20-25', '25&up']
         heat_map_elements = np.array(heat_map_elements)
         heat_map_elements_unsched = np.array(heat_map_elements_unsched)
         axis = ax_list[i]
         cmap = plt.get_cmap('coolwarm')
         cmap2 = plt.get_cmap('gray')
-        heatplot = axis.imshow(heat_map_elements,cmap=cmap)
+        heatplot = axis.imshow(heat_map_elements, cmap=cmap)
         axis.set_ylabel('Priority')
         axis.set_xlabel('Duration (minutes)')
         axis.set_xticks(np.arange(len(duration_bins)), labels=duration_bins)
         axis.set_yticks(np.arange(len(priority_bins)), labels=priority_bins)
         plt.setp(axis.get_xticklabels(), rotation=45, ha="right",
-            rotation_mode="anchor")
+                 rotation_mode="anchor")
         for j in range(len(priority_bins)):
             for k in range(len(duration_bins)):
                 value = heat_map_elements[j, k]
                 text1 = axis.text(k, j, f'{heat_map_elements[j, k]}|{ heat_map_elements_unsched[j, k]}',
-                            ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
-        time_proportion = sum(data['scheduled_seconds_by_priority'][0].values()) / sum(data['total_seconds_by_priority'][0].values()) * 100
+                                  ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
+        # time_proportion = sum(data['scheduled_seconds_by_priority'][0].values()) / sum(data['total_seconds_by_priority'][0].values()) * 100
         percent_time_utilization = data['percent_time_utilization']
         axis.set_title(f'{labels[i]} ({percent_time_utilization:.1f}% time utilized)', fontweight='semibold')
     fig.tight_layout()
