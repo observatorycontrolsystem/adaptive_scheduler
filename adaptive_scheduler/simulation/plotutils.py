@@ -13,8 +13,8 @@ from opensearchpy import OpenSearch
 
 DEFAULT_DIR = 'adaptive_scheduler/simulation/plot_output'
 
-OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', 'https://logs.lco.global/')
-OPENSEARCH_INDEX = os.getenv('OPENSEARCH_INDEX', 'scheduler-simulations')
+OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', '')
+OPENSEARCH_INDEX = os.getenv('SIMULATION_OPENSEARCH_INDEX', 'scheduler-simulations')
 opensearch_client = OpenSearch(OPENSEARCH_URL)
 
 data_cache = {}
@@ -73,7 +73,7 @@ def run_user_interface(plots):
     readline.parse_and_bind('tab: complete')
     while True:
         showplot = input('\nShow plot (default all): ').strip()
-        if showplot == '':
+        if showplot == '' or showplot.lower() == 'all':
             for plot in plots:
                 plot.generate()
                 if args.save:
