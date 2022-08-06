@@ -4,6 +4,7 @@ Plotting utility functions
 import os
 import argparse
 import readline
+from copy import deepcopy
 from datetime import datetime
 
 import numpy as np
@@ -127,7 +128,7 @@ class Plot:
         if len(self.data) == 1:
             self.data = self.data[0]
 
-        self.fig = self.plotfunc(self.data, self.description, **self.kwargs)
+        self.fig = self.plotfunc(deepcopy(self.data), self.description, **self.kwargs)
 
     def save(self):
         timestamp = datetime.utcnow().isoformat(timespec='seconds')
