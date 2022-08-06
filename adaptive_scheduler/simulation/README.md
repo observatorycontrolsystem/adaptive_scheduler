@@ -1,7 +1,7 @@
 # Adaptive Scheduler Simulator Orchestrator
 
 The orchestrator allows for running the adaptive scheduler in a simulated environment in order to facilitate testing.
-It allows the user to dump input request data to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
+It allows the user to dump input request data to the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal)
 which is then passed to the scheduler. The orchestrator runs the scheduler and passes off the scheduler result to a
 metric calculation file, which calculates metrics to send to an OpenSearch database. Work is still being done to enable the
 orchestrator to step through a time range and run the scheduler repeatedly on different points of the input data.
@@ -13,8 +13,9 @@ the data structures, inspect the raw JSON in OpenSearch directly.
 
 ## Prerequisites
 * Python 3.9
-* A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
-* A running OpenSearch with index for scheduler simulations
+* A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb) with instruments
+* A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) with requests
+* A running OpenSearch with index created to store scheduler simulation results
 
 ## Environment Variables
 Consult the adaptive scheduler README for general environment variables related to the scheduler. Additional environment
@@ -23,15 +24,15 @@ variables specific to the orchestrator are as follows:
 |----------------------------------|---------------------------------------------------------------------------------------------|-------------------------|
 | `SIMULATION_RUN_ID`              | The run ID of the scheduler. This will be saved as `simulation_id` in OpenSearch            | `1`                     |
 | `SIMULATION_START_TIME`          | The simulation start time, which allows the orchestrator to step through a time range (WIP) | `2022-06-23`            |
-| `SIMULATION_END_TIME`            | The end time of the time range (WIP)                                                        | `2022-07-07`            |
+| `SIMULATION_END_TIME`            | The end time of the time range. This should match the start time if only a single run is desired.                                                        | `2022-06-23`            |
 | `SIMULATION_TIME_STEP_MINUTES`   | The time step in minutes for the time range (WIP)                                           | `60`                    |
 | `SIMULATION_AIRMASS_COEFFICIENT` | The airmass optimization weighting value                                                    | `0.1`                   |
-| `SIMULATION_OPENSEARCH_INDEX`    | The index to save OpenSearch metrics to                                                     | `scheduler-simulations` |
+| `SIMULATION_OPENSEARCH_INDEX`    | The OpenSearch index where metrics will be saved to                                                     | `scheduler-simulations` |
 
 ## How to Run
 When running in a Docker container, the entry point can be modified to point to the orchestrator instead of the scheduler,
 e.g. `sh -c "sleep 20s; simulation-orchestrator"`. The twenty second wait time is to ensure all the relevant services (configdb, redis, etc.) are
-spun up and available. Otherwise, run the orchestrator on a machine as you would run the scheduler. 
+spun up and available. Otherwise, run the orchestrator locally on a machine with `poetry run simulation-orchestrator`
 
 ## Simulation Process
 The general workflow for running a scheduler simulation is as follows:
@@ -43,7 +44,7 @@ The general workflow for running a scheduler simulation is as follows:
 ## Plotting
 Plotting utilities and functions are included with the orchestrator to plot data. Data is pulled from OpenSearch, so the
 plotting framework can be run standalone from the orchestrator. Note that the environment variable `OPENSEARCH_URL` must be set
-on whatever machine you are running the plots from. To use the plotting interface, run `python -m adaptive_scheduler.simulation.plots`
+in the environment you are running the plot scripts from. To use the plotting interface, run `python -m adaptive_scheduler.simulation.plots`
 (`-h` to show the available command line arguments).
 
 ## Creating Your Own Plots
