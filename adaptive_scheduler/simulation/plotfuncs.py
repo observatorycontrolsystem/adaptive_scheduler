@@ -1,7 +1,6 @@
 """
 Plotting functions to use with the adaptive simulator plotting wrapper.
 To write your own plotting functions, follow the format of the example functions.
-The data passed in should be in list format.
 """
 import matplotlib
 import numpy as np
@@ -114,9 +113,9 @@ def plot_percent_sched_requests_bin_by_priority(eff_pri_datasets, plot_title):
         eff_pri_datasets [dict]: a list of datasets, each dataset corresponding
             to a different effective priority calculation.
         plot_title (str): The title of the plot.
-    
+
     Returns:
-        fig (matplotlib.pyplot.Figure): The output figure object. 
+        fig (matplotlib.pyplot.Figure): The output figure object.
     """
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(25, 12))
     fig.suptitle(plot_title)
@@ -152,9 +151,9 @@ def plot_sched_priority_duration_dotplot(eff_pri_datasets, plot_title):
             eff_pri_datasets [dict]: a list of datasets, each dataset corresponding
                 to a different effective priority calculation.
             plot_title (str): The title of the plot.
-        
+
         Returns:
-            fig (matplotlib.pyplot.Figure): The output figure object. 
+            fig (matplotlib.pyplot.Figure): The output figure object.
     """
     def rand_jitter(arr):
         stdev = .01 * (max(arr) - min(arr))
@@ -203,9 +202,9 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         eff_pri_datasets [dict]: a list of datasets, each dataset corresponding
             to a different effective priority calculation.
         plot_title (str): The title of the plot.
-    
+
     Returns:
-        fig (matplotlib.pyplot.Figure): The output figure object. 
+        fig (matplotlib.pyplot.Figure): The output figure object.
     """
     fig, axs = plt.subplots(2, 2, figsize=(13, 12))
     fig.suptitle(plot_title)
@@ -227,7 +226,7 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
             bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
             for bin_key, bin_values in level_1_bins.items()
         }
-        level_1_bins_unsched = bin_data(unsched_priorities, unsched_durations, bin_size=4, bin_range=(10,30),aggregator=None)
+        level_1_bins_unsched = bin_data(unsched_priorities, unsched_durations, bin_size=4, bin_range=(10, 30), aggregator=None)
         level_2_bins_unsched = {
             bin_key: bin_data(bin_values, bin_size=300, bin_range=(0, 1499)) | bin_data(bin_values, bin_size=3000, bin_range=(1500, 4000))
             for bin_key, bin_values in level_1_bins_unsched.items()
@@ -237,7 +236,7 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         for values in level_2_bins.values():
             heat_map_elements.append(list(values.values()))
         for values in level_2_bins_unsched.values():
-            heat_map_elements_unsched.append(list(values.values()))  
+            heat_map_elements_unsched.append(list(values.values()))
         priority_bins = list(level_2_bins.keys())
         duration_bins = ['0-5', '5-10', '10-15', '15-20', '20-25', '25&up']
         heat_map_elements = np.array(heat_map_elements)
@@ -245,7 +244,7 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         axis = ax_list[i]
         cmap = plt.get_cmap('coolwarm')
         cmap2 = plt.get_cmap('gray')
-        heatplot = axis.imshow(heat_map_elements, cmap=cmap)
+        axis.imshow(heat_map_elements, cmap=cmap)
         axis.set_ylabel('Priority')
         axis.set_xlabel('Duration (minutes)')
         axis.set_xticks(np.arange(len(duration_bins)), labels=duration_bins)
@@ -255,8 +254,8 @@ def plot_heat_map_priority_duration(eff_pri_datasets, plot_title):
         for j in range(len(priority_bins)):
             for k in range(len(duration_bins)):
                 value = heat_map_elements[j, k]
-                text1 = axis.text(k, j, f'{heat_map_elements[j, k]}|{ heat_map_elements_unsched[j, k]}',
-                                  ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
+                axis.text(k, j, f'{heat_map_elements[j, k]}|{ heat_map_elements_unsched[j, k]}',
+                          ha="center", va="center", fontsize='large', fontweight='semibold', color=cmap2(0.001/value))
         percent_time_utilization = data['percent_time_utilization']
         axis.set_title(f'{labels[i]} ({percent_time_utilization:.1f}% time utilized)', fontweight='semibold')
     fig.tight_layout()
@@ -520,13 +519,13 @@ def plot_subplots_input_duration(data, plot_title):
     """Plots histograms of the input request durations in minutes for different priorities.
 
     Args:
-        data (dict): The data for this metric. Expects one data.
+        data (dict): The data for this metric. Expects one dataset.
         plot_title (str): The title of the plot.
 
     Returns:
         fig (matplotlib.pyploy.Figure): The output Figure object.
     """
-    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20,10))
+    fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(20, 10))
     fig.suptitle(plot_title)
     sched_durations = data['raw_scheduled_durations']
     sched_durations = [d/60 for d in sched_durations]
@@ -541,8 +540,8 @@ def plot_subplots_input_duration(data, plot_title):
     axis = [ax1, ax2, ax3]
     for i, values in enumerate(sched_bins.values()):
         bars = ['Scheduled', 'Unscheduled']
-        axis[i].hist([values,list(unsched_bins.values())[i]], bins = np.arange(0, 70, 2), 
-                      stacked = True, label = bars)
+        axis[i].hist([values, list(unsched_bins.values())[i]], bins=np.arange(0, 70, 2),
+                     stacked=True, label=bars)
         axis[i].set_xlabel('Duration (Minutes)')
         axis[i].set_ylabel('Input reservation counts')
         axis[i].set_ylim(0, 300)
