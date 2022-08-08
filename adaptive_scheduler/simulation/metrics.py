@@ -162,6 +162,7 @@ class MetricCalculator():
         else:
             self.combined_schedule = self.normal_schedule
             self.combined_resources_scheduled = self.normal_scheduler_result.resources_scheduled()
+            self.combined_resources_scheduled = [site for site in self.normal_schedule.keys() if self.normal_schedule[site]]
             for comp_res in self.normal_input_reservations:
                 self.combined_input_reservations.extend(comp_res.reservation_list)
 
@@ -174,6 +175,8 @@ class MetricCalculator():
     def _combine_resources_scheduled(self):
         normal_resources = self.normal_scheduler_result.resources_scheduled()
         rr_resources = self.rr_scheduler_result.resources_scheduled()
+        normal_resources = [site for site in self.normal_schedule.keys() if self.normal_schedule[site]]
+        rr_resources = [site for site in self.rr_schedule.keys() if self.rr_schedule[site]]
         self.combined_resources_scheduled = list(set(normal_resources + rr_resources))
 
     def _combine_normal_rr_schedules(self):
