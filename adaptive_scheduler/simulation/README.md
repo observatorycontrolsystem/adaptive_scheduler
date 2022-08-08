@@ -19,16 +19,16 @@ the data structures, inspect the raw JSON in OpenSearch directly.
 ## Environment Variables
 Consult the adaptive scheduler README for general environment variables related to the scheduler. Additional environment
 variables specific to the orchestrator are as follows:
-| Variable                         | Description                                                                                          | Default                 |
-|----------------------------------|------------------------------------------------------------------------------------------------------|-------------------------|
-| `SIMULATION_RUN_ID`              | The run ID of the scheduler. This will be saved as `simulation_id` in OpenSearch                     | `1`                     |
-| `SIMULATION_START_TIME`          | The simulation start time, which allows the orchestrator to step through a time range (WIP)          | `2022-06-23`            |
-| `SIMULATION_END_TIME`            | The end time of the time range (WIP)                                                                 | `2022-07-07`            |
-| `SIMULATION_TIME_STEP_MINUTES`   | The time step in minutes for the time range (WIP)                                                    | `60`                    |
-| `SIMULATION_AIRMASS_COEFFICIENT` | The airmass optimization weighting value                                                             | `0.1`                   |
-| `SIMULATION_OPENSEARCH_INDEX`    | The index to save OpenSearch metrics to                                                              | `scheduler-simulations` |
-| `OPENSEARCH_URL`                 | Needed for the plotting interface. Set this locally, and not just in the Docker container (if using) | _`Empty_string`_        |
-|                                  |                                                                                                      |                         |
+| Variable                         | Description                                                                                 | Default                 |
+|----------------------------------|---------------------------------------------------------------------------------------------|-------------------------|
+| `SIMULATION_RUN_ID`              | The run ID of the scheduler. This will be saved as `simulation_id` in OpenSearch            | `1`                     |
+| `SIMULATION_START_TIME`          | The simulation start time, which allows the orchestrator to step through a time range (WIP) | `2022-06-23`            |
+| `SIMULATION_END_TIME`            | The end time of the time range (WIP)                                                        | `2022-07-07`            |
+| `SIMULATION_TIME_STEP_MINUTES`   | The time step in minutes for the time range (WIP)                                           | `60`                    |
+| `SIMULATION_AIRMASS_COEFFICIENT` | The airmass optimization weighting value                                                    | `0.1`                   |
+| `SIMULATION_OPENSEARCH_INDEX`    | The index to save OpenSearch metrics to                                                     | `scheduler-simulations` |
+| `OPENSEARCH_URL`                 | OpenSearch endpoint (needed for the plotting interface)                                     | _`Empty_string`_        |
+|                                  |                                                                                             |                         |
 
 ## How to Run
 When running in a Docker container, the entry point can be modified to point to the orchestrator instead of the scheduler,
