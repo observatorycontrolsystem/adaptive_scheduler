@@ -2,8 +2,10 @@
 Plotting utility functions
 """
 import os
+import sys
 import argparse
 import readline
+import logging
 from copy import deepcopy
 from datetime import datetime
 
@@ -16,7 +18,15 @@ DEFAULT_DIR = 'adaptive_scheduler/simulation/plot_output'
 
 OPENSEARCH_URL = os.getenv('OPENSEARCH_URL', '')
 OPENSEARCH_INDEX = os.getenv('SIMULATION_OPENSEARCH_INDEX', 'scheduler-simulations')
-opensearch_client = OpenSearch(OPENSEARCH_URL)
+try:
+    opensearch_client = OpenSearch(OPENSEARCH_URL)
+except TypeError:
+    print('Invalid OpenSearch endpoint. Please set `OPENSEARCH_URL` environment variable.')
+    sys.exit(1)
+
+# mask logging messages from OpenSearchPy
+# they use the root logger, unfortunately
+logging.getLogger().setLevel(logging.CRITICAL)
 
 data_cache = {}
 
@@ -106,7 +116,7 @@ class Plot:
         Args:
             plotfunc (func): The plotting function to use.
             description (str): The description of the plot. Will be used as the plot title in matplotlib.
-            sim_ids [str]: The simulation IDs to look for on OpenSearch.
+            sim_ids: The simulation IDs to look for on OpenSearch. Can be either a list or a single string.
             kwargs: Optional arguments to pass to the plotting function.
         """
         self.plotfunc = plotfunc

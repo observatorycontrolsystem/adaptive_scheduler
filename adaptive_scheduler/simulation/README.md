@@ -27,7 +27,9 @@ variables specific to the orchestrator are as follows:
 | `SIMULATION_END_TIME`            | The end time of the time range. This should match the start time if only a single run is desired.                                                        | `2022-06-23`            |
 | `SIMULATION_TIME_STEP_MINUTES`   | The time step in minutes for the time range (WIP)                                           | `60`                    |
 | `SIMULATION_AIRMASS_COEFFICIENT` | The airmass optimization weighting value                                                    | `0.1`                   |
-| `SIMULATION_OPENSEARCH_INDEX`    | The OpenSearch index where metrics will be saved to                                                     | `scheduler-simulations` |
+| `SIMULATION_OPENSEARCH_INDEX`    | The OpenSearch index where metrics will be saved to to                                                     | `scheduler-simulations` |
+| `OPENSEARCH_URL`                 | OpenSearch endpoint (needed for the plotting interface)                                     | _`Empty_string`_        |
+|                                  |                                                                                             |                         |
 
 ## How to Run
 When running in a Docker container, the entry point can be modified to point to the orchestrator instead of the scheduler,
@@ -37,24 +39,25 @@ spun up and available. Otherwise, run the orchestrator locally on a machine with
 ## Simulation Process
 The general workflow for running a scheduler simulation is as follows:
 1. Make changes to the adaptive scheduler. If running with Docker, build the image using the suggested build command in the adaptive scheduler README.
-2. If necessary, adjust the `metrics.py` file to conform with the tests you are running, e.g. adjusting binning for priority values.
-3. Modify environment variables accordingly, particularly setting the run ID.
+2. If necessary, adjust the `metrics.py` file to conform with the tests you are running, such as adjusting binning for priority values.
+3. Modify environment variables accordingly, making sure to set and verify the run ID.
 4. Run the orchestrator.
 
 ## Plotting
-Plotting utilities and functions are included with the orchestrator to plot data. Data is pulled from OpenSearch, so the
-plotting framework can be run standalone from the orchestrator. Note that the environment variable `OPENSEARCH_URL` must be set
-in the environment you are running the plot scripts from. To use the plotting interface, run `python -m adaptive_scheduler.simulation.plots`
+A plotting interface is included with the simulator to facilitate data visualization. The interface features OpenSearch searching by
+either OpenSearch ID or `simulation_id`, the ability to save plots in various formats, and zsh-style TAB autocompletion. 
+Note that the environment variable `OPENSEARCH_URL` must be set on whatever machine you are running the plots from.
+To use the plotting interface, run `python -m adaptive_scheduler.simulation.plots`
 (`-h` to show the available command line arguments).
 
 ## Creating Your Own Plots
 The plotting framework provides a `Plot` class defined in `plotutils.py` to help initialize plots and get data from OpenSearch. 
 `Plot` is initialized with a user-defined plotting function to generate the plot, the plot title, and either a single string or a list
-of strings. It searches the `simulation_id` field in OpenSearch for the strings and plots the data. To write your own plotting
+of strings. It searches the `_id` or `simulation_id` field in OpenSearch for the strings and plots the data. To write your own plotting
 functions, follow the example functions in `plotfuncs.py`. Plotting functions should take in either a list of datasets
-or a single dataset (to match the initialization in `plots.py`. The plot title should be passed into the plotting function as well. 
+or a single dataset (to match the initialization in `plots.py`). The plot title should be passed into the plotting function as well. 
 This title is used to generate the descriptions for the command-line interface of the plotting framework.
 
 The plot creation process is as simple as:
 1. Creating a function (e.g. `plot_my_plot`) in `plotfuncs.py`
-2. Adding the plot to the list of plots in `plots.py` (e.g. `Plot(plotfuncs.plot_my_plot, 'My Plot Title', 'some-data-id')`)
+2. Adding the plot to the list of plots in `plots.py`, e.g. `Plot(plotfuncs.plot_my_plot, 'My Plot Title', 'some-data-id')`
