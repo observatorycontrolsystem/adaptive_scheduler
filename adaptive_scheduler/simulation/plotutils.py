@@ -116,7 +116,7 @@ class Plot:
         Args:
             plotfunc (func): The plotting function to use.
             description (str): The description of the plot. Will be used as the plot title in matplotlib.
-            sim_ids [str]: The simulation IDs to look for on OpenSearch.
+            sim_ids: The simulation IDs to look for on OpenSearch. Can be either a list or a single string.
             kwargs: Optional arguments to pass to the plotting function.
         """
         self.plotfunc = plotfunc

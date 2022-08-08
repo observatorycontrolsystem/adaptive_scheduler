@@ -137,7 +137,7 @@ class MetricCalculator():
             as follows:
                 {scheduled_resource, [reservations]}
         rr_scheduler_result (SchedulerResult): The rapid-response schedule output of the scheduler.
-        scheduler (LCOGTNetworkScheduler): The instance of the scheduler used by the simulator.
+        scheduler (Scheduler): The instance of the scheduler used by the simulator.
         scheduler_runner (SchedulerRunner): The instance of the scheduler runner used by the simulator.
     """
     def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
@@ -240,7 +240,7 @@ class MetricCalculator():
         for res in self.combined_input_reservations:
             if res.scheduled:
                 windows = res.request.windows
-                # get the data format to a list, each element is a list corresponding to a resource
+                # format the data to a list, each element is a list corresponding to a resource
                 windows_list = list(windows.windows_for_resource.values())
                 window_durations = []
                 for loc in windows_list:
@@ -250,12 +250,6 @@ class MetricCalculator():
 
     def total_available_seconds(self):
         """Aggregates the total available time, calculated from dark intervals.
-
-        Args:
-            resources_scheduled (list): The list of sites scheduled, if nothing is passed then use the
-                list generated when MetricCalculators is initialized.
-            horizon_days (float): The number of days to cap, basically an effective horizon. If nothing
-                is passed then use the value in sched_params.
 
         Returns:
             total_available_time (float): The dark intervals capped by the horizon.
@@ -275,7 +269,7 @@ class MetricCalculator():
         return percent_of(sum(scheduled_durations), self.total_available_seconds())
 
     def _get_airmass_data_for_request(self, request_id):
-        """Pulls airmass data from the Observation Portal, cache it in our local directory.
+        """Pulls airmass data from the Observation Portal, cache it in redis.
 
         Args:
             request_id (str): The request id.
@@ -374,7 +368,7 @@ class MetricCalculator():
         return airmass_metrics
 
     def binned_tac_priority_metrics(self):
-        """Bins metrics based on TAC priority."""
+        """Bins metrics based on TAC priority. Priority bins should be changed to match the data."""
         bin_size = 10
 
         sched_durations, unsched_durations = self.get_duration_data()
