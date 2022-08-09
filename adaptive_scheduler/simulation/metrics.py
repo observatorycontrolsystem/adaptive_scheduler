@@ -76,7 +76,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=[], aggregator=le
         bin_range: A tuple of numbers to override the bin ranges. Otherwise, use the min/max of the data.
         fill: The data value(s) to fill with if the bin is empty. An iterable may be passed, in which case it is
             casted to a list. If None is passed, then empty bins are removed. The aggregator will be applied
-            to fill values as well.
+            to fill values as well. Default is empty list to work with the default aggregator len().
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
             If None is passed, then the raw values are stored in a list.
 
@@ -369,17 +369,17 @@ class MetricCalculator():
 
     def binned_tac_priority_metrics(self):
         """Bins metrics based on TAC priority. Priority bins should be changed to match the data."""
-        bin_size = 10
+        bin_size = 5
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
 
         sched_priorities, unsched_priorities = self.get_priority_data()
         all_priorities = sched_priorities + unsched_priorities
-        sched_histogram = bin_data(sched_priorities, bin_size=bin_size)
-        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size, aggregator=sum)
-        full_histogram = bin_data(all_priorities, bin_size=bin_size)
-        bin_all_durations = bin_data(all_priorities, all_durations, bin_size, aggregator=sum)
+        sched_histogram = bin_data(sched_priorities, bin_size=bin_size, fill=None)
+        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size, fill=None, aggregator=sum)
+        full_histogram = bin_data(all_priorities, bin_size=bin_size, fill=None)
+        bin_all_durations = bin_data(all_priorities, all_durations, bin_size, fill=None, aggregator=sum)
         bin_percent_count = {bin_: percent_of(sched_histogram[bin_], full_histogram[bin_])
                              for bin_ in sched_histogram}
         bin_percent_time = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
