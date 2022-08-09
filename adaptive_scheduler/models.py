@@ -495,7 +495,7 @@ class Request(EqualityMixin):
                 if len(airmass_by_targets) == 1:
                     airmasses = list(airmass_by_targets.values())[0]
                 else:
-                    numpy_airmasses = np.array(airmass_by_targets.values())
+                    numpy_airmasses = np.array(list(airmass_by_targets.values()))
                     airmasses = np.mean(numpy_airmasses, axis=0).tolist()
                 # Now normalize the airmass values between the minimum and maximum airmass so that the weighting
                 # is similar for all requests
