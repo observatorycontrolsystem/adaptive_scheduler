@@ -9,6 +9,7 @@ March 2012
 import calendar
 from datetime import datetime, timedelta
 import time
+import enum
 from math import cos, radians
 import logging
 from unidecode import unidecode
@@ -300,3 +301,7 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
                                      minimum_runtime)
 
     return new_estimated_runtime
+
+class OptimizationType(str, enum.Enum):
+    AIRMASS = "AIRMASS"
+    TIME = "TIME"

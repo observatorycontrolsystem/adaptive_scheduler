@@ -30,7 +30,7 @@ from time_intervals.intervals import Intervals
 from adaptive_scheduler.kernel.reservation import Reservation
 from adaptive_scheduler.kernel.reservation import CompoundReservation
 
-from adaptive_scheduler.utils import (normalise_datetime_intervals, timeit, metric_timer)
+from adaptive_scheduler.utils import (normalise_datetime_intervals, timeit, metric_timer, OptimizationType)
 from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.models import (Window, Windows, filter_compounds_by_type, RequestGroup, redis_instance)
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
@@ -144,7 +144,7 @@ def construct_compound_reservation(request_group, semester_start, network_model)
         kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
 
         # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
-        if request.optimization_type == 'AIRMASS':
+        if request.optimization_type == OptimizationType.AIRMASS:
             request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
 
         # Construct the kernel Reservation
@@ -164,7 +164,7 @@ def construct_many_compound_reservation(request_group, request_index, semester_s
     kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
 
     # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
-    if request.optimization_type == 'AIRMASS':
+    if request.optimization_type == OptimizationType.AIRMASS:
         request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
 
     # Construct the kernel Reservation

@@ -23,7 +23,7 @@ from rise_set.angle import Angle
 from rise_set.exceptions import InvalidAngleError, AngleConfigError, RatesConfigError
 from rise_set.rates import ProperMotion
 from adaptive_scheduler.utils import (iso_string_to_datetime, convert_proper_motion, datetime_to_normalised_epoch,
-                                      EqualityMixin, safe_unidecode, normalise_datetime_intervals)
+                                      EqualityMixin, safe_unidecode, normalise_datetime_intervals, OptimizationType)
 from adaptive_scheduler.printing import plural_str as pl
 from adaptive_scheduler.kernel.reservation import CompoundReservation
 from adaptive_scheduler.feedback import UserFeedbackLogger
@@ -370,7 +370,7 @@ class Windows(EqualityMixin):
         return Intervals(intervals)
 
     def to_kernel_intervals(self, semester_start):
-        '''Convert windows for resources into kernel intervals for resources. This shouldn't be called until the windows have been paired down
+        '''Convert windows for resources into kernel intervals for resources. This shouldn't be called until the windows have been pared down
         to only those available for scheduling within.
         '''
         window_intervals = self.to_window_intervals()
@@ -431,7 +431,7 @@ class Request(EqualityMixin):
     '''
 
     def __init__(self, configurations, windows, request_id, state='PENDING', telescope_class='',
-                 duration=0, configuration_repeats=1, optimization_type='TIME', scheduled_reservation=None):
+                 duration=0, configuration_repeats=1, optimization_type=OptimizationType.TIME, scheduled_reservation=None):
         self.configurations = configurations
         self.windows = windows
         self.id = request_id
@@ -439,7 +439,7 @@ class Request(EqualityMixin):
         self.telescope_class = telescope_class
         self.req_duration = duration
         self.configuration_repeats = configuration_repeats
-        self.optimization_type = 'AIRMASS'
+        self.optimization_type = optimization_type
         self.scheduled_reservation = scheduled_reservation
 
     def get_duration(self):
@@ -456,7 +456,7 @@ class Request(EqualityMixin):
         Intervals will be cached, and should only be generated if they are required for an airmass optimization type.
         Also caches the "best" and "worst" airmass points, to use for normalization within the kernel.
 
-        This should only be called after the windows of this request have already been paired down within kernel_mappings.
+        This should only be called after the windows of this request have already been pared down within kernel_mappings.
         '''
         for resource in kernel_intervals_for_resources.keys():
             cache_key = f'{self.id}_{resource}_airmass_at_times'
@@ -804,7 +804,7 @@ class ModelBuilder(object):
 
     def build_requests(self, ur_dict, scheduled_requests=None, is_staff=False):
         '''Returns tuple where first element is the list of validated request
-        models and the second is a list of invalid request dicts  paired with
+        models and the second is a list of invalid request dicts paired with
         validation errors
             ([validated_request_model1,
               valicated_request_model2,
@@ -884,7 +884,7 @@ class ModelBuilder(object):
             telescope_class=req_dict['location'].get('telescope_class', ''),
             duration=req_dict['duration'],
             configuration_repeats=req_dict.get('configuration_repeats', 1),
-            optimization_type=req_dict.get('optimization_type', 'TIME'),
+            optimization_type=req_dict.get('optimization_type', OptimizationType.TIME),
             scheduled_reservation=scheduled_reservation
         )
 
