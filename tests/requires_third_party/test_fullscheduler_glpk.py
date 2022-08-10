@@ -14,7 +14,7 @@ try:
 except ImportError:
     pytest.skip('ORToolkit is not properly installed, skipping these tests.', allow_module_level=True)
 
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
+from adaptive_scheduler.kernel.reservation import Reservation, CompoundReservation
 
 from .fullscheduler_ortoolkit_helper  import Fullscheduler_ortoolkit_helper
 
@@ -99,11 +99,11 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
                         {'time': 114484, 'type': 'end'},
                         {'time': 180058, 'type': 'start'},
                         {'time': 200648, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1})
+        r1 = Reservation(1, 30, {'foo': s1})
         s2 = copy.copy(s1)
-        r2 = Reservation_v3(1, 30, {'goo': s2})
+        r2 = Reservation(1, 30, {'goo': s2})
 
-        cr = CompoundReservation_v2([r1, r2], 'oneof')
+        cr = CompoundReservation([r1, r2], 'oneof')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
@@ -121,8 +121,8 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
     def test_schedule_order_dependent_resources(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -134,8 +134,8 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -147,8 +147,8 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -160,8 +160,8 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -174,8 +174,8 @@ class TestFullScheduler_glpk(Fullscheduler_ortoolkit_helper):
     def test_schedule_no_available_windows(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
 

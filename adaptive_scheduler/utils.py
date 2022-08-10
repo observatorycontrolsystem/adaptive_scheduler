@@ -9,9 +9,11 @@ March 2012
 import calendar
 from datetime import datetime, timedelta
 import time
+import enum
 from math import cos, radians
 import logging
 from unidecode import unidecode
+from time_intervals.intervals import Intervals
 from opentsdb_python_metrics import metric_wrappers
 from opentsdb_python_metrics.metric_wrappers import metric_wrapper, SendMetricMixin, metric_timer
 
@@ -197,6 +199,18 @@ def normalised_epoch_to_datetime(epoch_time, epoch_start):
     return epoch_to_datetime(unnormed_epoch)
 
 
+def normalise_datetime_intervals(intervals, earliest_datetime):
+    '''Convert datetime Intervals into normalised kernel Intervals.'''
+    epoch_earliest = datetime_to_epoch(earliest_datetime)
+
+    epoch_timepoints = []
+    for tp in intervals.toDictList():
+        epoch_time = normalise(datetime_to_epoch(tp['time']), epoch_earliest)
+        epoch_timepoints.append({'time': epoch_time, 'type': tp['type']})
+
+    return Intervals(epoch_timepoints)
+
+
 def normalise(value, start):
     '''Normalise any value to a positive range, starting at zero.'''
     return value - start
@@ -287,3 +301,7 @@ def estimate_runtime(estimated_runtime, actual_runtime, backoff_rate=2.0, pad_pe
                                      minimum_runtime)
 
     return new_estimated_runtime
+
+class OptimizationType(str, enum.Enum):
+    AIRMASS = "AIRMASS"
+    TIME = "TIME"

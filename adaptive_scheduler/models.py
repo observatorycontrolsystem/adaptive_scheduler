@@ -11,33 +11,45 @@ July 2012
 # Required for true (non-integer) division
 from __future__ import division
 
+from time_intervals.intervals import Intervals
 from rise_set.sky_coordinates import RightAscension, Declination
 from rise_set.astrometry import (make_ra_dec_target,
                                  make_minor_planet_target,
                                  make_major_planet_target,
                                  make_comet_target,
-                                 make_satellite_target)
+                                 make_satellite_target,
+                                 calculate_airmass_at_times)
 from rise_set.angle import Angle
 from rise_set.exceptions import InvalidAngleError, AngleConfigError, RatesConfigError
 from rise_set.rates import ProperMotion
-from adaptive_scheduler.utils import (iso_string_to_datetime, convert_proper_motion,
-                                      EqualityMixin, safe_unidecode)
+from adaptive_scheduler.utils import (iso_string_to_datetime, convert_proper_motion, datetime_to_normalised_epoch,
+                                      EqualityMixin, safe_unidecode, normalise_datetime_intervals, OptimizationType)
 from adaptive_scheduler.printing import plural_str as pl
-from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation import CompoundReservation
 from adaptive_scheduler.feedback import UserFeedbackLogger
 from adaptive_scheduler.eventbus import get_eventbus
 from adaptive_scheduler.moving_object_utils import required_fields_from_scheme
 from adaptive_scheduler.observation_portal_connections import ObservationPortalConnectionError
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
+import numpy as np
 import ast
+import os
+import json
 import logging
 import random
+from redis import Redis
 
 log = logging.getLogger(__name__)
 
 event_bus = get_eventbus()
+
+redis_instance = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), socket_connect_timeout=15,
+              socket_timeout=30)
+
+
+AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
 
 
 def n_requests(request_groups):
@@ -341,6 +353,42 @@ class Windows(EqualityMixin):
     def has_windows(self):
         return self.size() > 0
 
+    def to_window_intervals(self):
+        '''Convert windows for resources into intervals for resources. This shouldn't be called until the windows have been pared down
+        to only those available for scheduling within.
+        '''
+        return {resource: Windows.request_window_to_kernel_intervals(windows) for resource, windows in self.windows_for_resource.items()}
+
+    @staticmethod
+    def request_window_to_kernel_intervals(windows):
+        '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
+        kernel Intervals (an object that stores Timepoints).'''
+        intervals = []
+        for window in windows:
+            intervals.append((window.start, window.end))
+
+        return Intervals(intervals)
+
+    def to_kernel_intervals(self, semester_start):
+        '''Convert windows for resources into kernel intervals for resources. This shouldn't be called until the windows have been pared down
+        to only those available for scheduling within.
+        '''
+        window_intervals = self.to_window_intervals()
+        window_dict = {}
+
+        # Build the normalised Windows data structure for the kernel
+        for resource_name, dark_up_intervals in window_intervals.items():
+            # Convert timepoints into normalised epoch time
+            epoch_intervals = normalise_datetime_intervals(dark_up_intervals, semester_start)
+
+            # Construct Reservations
+            # Priority comes from the parent CompoundRequest
+            # Each Reservation represents the set of available windows of opportunity
+            # The resource is governed by the timepoint.resource attribute
+            window_dict[resource_name] = epoch_intervals
+
+        return window_dict
+
     def size(self):
         all_windows_size = 0
         for windows in self.windows_for_resource.values():
@@ -383,7 +431,7 @@ class Request(EqualityMixin):
     '''
 
     def __init__(self, configurations, windows, request_id, state='PENDING', telescope_class='',
-                 duration=0, configuration_repeats=1, scheduled_reservation=None):
+                 duration=0, configuration_repeats=1, optimization_type=OptimizationType.TIME, scheduled_reservation=None):
         self.configurations = configurations
         self.windows = windows
         self.id = request_id
@@ -391,6 +439,7 @@ class Request(EqualityMixin):
         self.telescope_class = telescope_class
         self.req_duration = duration
         self.configuration_repeats = configuration_repeats
+        self.optimization_type = optimization_type
         self.scheduled_reservation = scheduled_reservation
 
     def get_duration(self):
@@ -401,6 +450,77 @@ class Request(EqualityMixin):
 
     def n_windows(self):
         return self.windows.size()
+
+    def cache_airmasses_within_kernel_windows(self, kernel_intervals_for_resources, network_model, semester_start, interval_size=30*60):
+        '''Get airmass values for a specific resource at interval spacing within the windows at that resource.
+        Intervals will be cached, and should only be generated if they are required for an airmass optimization type.
+        Also caches the "best" and "worst" airmass points, to use for normalization within the kernel.
+
+        This should only be called after the windows of this request have already been pared down within kernel_mappings.
+        '''
+        for resource in kernel_intervals_for_resources.keys():
+            cache_key = f'{self.id}_{resource}_airmass_at_times'
+            if not redis_instance.exists(cache_key):
+                # Need to calculate the airmass values here
+                resource_info = network_model[resource]
+                datetimes = []
+                times = []
+                obs_latitude = Angle(degrees=resource_info['latitude'])
+                obs_longitude = Angle(degrees=resource_info['longitude'])
+                obs_height = resource_info['elevation']
+                visibility_intervals = Windows.request_window_to_kernel_intervals(self.windows.at(resource_info["name"]))
+                for (start, end) in visibility_intervals.toTupleList():
+                    current_datetime = start
+                    current_time = datetime_to_normalised_epoch(start, semester_start)
+                    # Add the start point, and then a timepoint at interval_size spacing until you reach the end
+                    while current_datetime < end:
+                        datetimes.append(current_datetime)
+                        current_datetime += timedelta(seconds=interval_size)
+                        times.append(current_time)
+                        current_time += interval_size
+                    # Add the end point on so we have a complete set of airmasses spanning the interval
+                    datetimes.append(end)
+                    times.append(datetime_to_normalised_epoch(end, semester_start))
+                if not datetimes:
+                    continue
+                # Now that we have a full set of datetimes and unix/kernel times, calculate the airmass values within those times
+                # Calculate the airmasses for each target in the configuration and attempt to merge them all... This could be improved upon
+                rs_targets = [configuration.target.in_rise_set_format() for configuration in self.configurations]
+                airmass_by_targets = {}
+                for rs_target in rs_targets:
+                    rs_target_key = f"{rs_target.items()}"
+                    if rs_target_key not in airmass_by_targets:
+                        airmass_by_targets[rs_target_key] = calculate_airmass_at_times(datetimes, rs_target, obs_latitude, obs_longitude, obs_height)
+
+                if len(airmass_by_targets) == 1:
+                    airmasses = list(airmass_by_targets.values())[0]
+                else:
+                    numpy_airmasses = np.array(list(airmass_by_targets.values()))
+                    airmasses = np.mean(numpy_airmasses, axis=0).tolist()
+                # Now normalize the airmass values between the minimum and maximum airmass so that the weighting
+                # is similar for all requests
+                best_airmass = min(airmasses)
+                worst_airmass = max(airmasses)
+                # This should give us something ranging from 0 to AIRMASS_WEIGHTING_COEFFICIENT to add to the effective priority
+                airmasses = [float(AIRMASS_WEIGHTING_COEFFICIENT) * (1 - (airmass - best_airmass) / (worst_airmass - best_airmass)) for airmass in airmasses]
+                # Now store the airmasses and times in the redis cache
+                airmass_at_times = {
+                    'airmasses': airmasses,
+                    'times': times
+                }
+                redis_instance.set(cache_key, json.dumps(airmass_at_times))
+
+    def get_airmasses_within_kernel_windows(self, resource_name):
+        '''Attempts to return a previously cached set of airmasses, or an empty dict if none are cached.
+        This should be called after calling cache_airmasses_within_kernel.
+        '''
+        cache_key = f'{self.id}_{resource_name}_airmass_at_times'
+        try:
+            airmass_at_times = json.loads(redis_instance.get(cache_key))
+            return airmass_at_times
+        except Exception:
+            return {}
+
 
     duration = property(get_duration)
 
@@ -684,7 +804,7 @@ class ModelBuilder(object):
 
     def build_requests(self, ur_dict, scheduled_requests=None, is_staff=False):
         '''Returns tuple where first element is the list of validated request
-        models and the second is a list of invalid request dicts  paired with
+        models and the second is a list of invalid request dicts paired with
         validation errors
             ([validated_request_model1,
               valicated_request_model2,
@@ -761,9 +881,10 @@ class ModelBuilder(object):
             windows=windows,
             request_id=int(req_dict['id']),
             state=req_dict['state'],
-            telescope_class=req_dict['location']['telescope_class'] if 'telescope_class' in req_dict['location'] else '',
+            telescope_class=req_dict['location'].get('telescope_class', ''),
             duration=req_dict['duration'],
-            configuration_repeats=req_dict['configuration_repeats'] if 'configuration_repeats' in req_dict else 1,
+            configuration_repeats=req_dict.get('configuration_repeats', 1),
+            optimization_type=req_dict.get('optimization_type', OptimizationType.TIME),
             scheduled_reservation=scheduled_reservation
         )
 
