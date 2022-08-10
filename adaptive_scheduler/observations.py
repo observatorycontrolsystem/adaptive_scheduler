@@ -353,21 +353,21 @@ def log_info_dry_run(msg, dry_run):
     log.info(msg)
 
 
-def resolve_instrument(instrument_type, site, obs, tel, configdb_interface):
+def resolve_instrument(instrument_type, site, enc, tel, configdb_interface):
     """Determine the specific camera name for a given site.
 
     If a non-generic name is provided, we just pass it through and assume it's ok.
     """
     try:
-        specific_camera = configdb_interface.get_specific_instrument(instrument_type, site, obs, tel)
+        specific_camera = configdb_interface.get_specific_instrument(instrument_type, site, enc, tel)
     except ConfigDBError:
-        msg = "Couldn't find any instrument for '{}' at {}.{}.{}".format(instrument_type, tel, obs, site)
+        msg = "Couldn't find any instrument for '{}' at {}.{}.{}".format(instrument_type, tel, enc, site)
         raise InstrumentResolutionError(msg)
 
     return specific_camera
 
 
-def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_interface):
+def resolve_autoguider(self_guide, instrument_code, site, enc, tel, configdb_interface):
     """Determine the specific autoguider for a given site.
 
     If a specific name is provided, pass through and return it.
@@ -376,9 +376,9 @@ def resolve_autoguider(self_guide, instrument_name, site, enc, tel, configdb_int
     """
 
     try:
-        ag_match = configdb_interface.get_autoguider_for_instrument(instrument_name, self_guide)
+        ag_match = configdb_interface.get_autoguider_for_instrument(instrument_code, self_guide, site, enc, tel)
     except ConfigDBError:
-        msg = "Couldn't find any autoguider for '{}' at {}.{}.{}".format(instrument_name, tel, enc, site)
+        msg = "Couldn't find any autoguider for '{}' at {}.{}.{}".format(instrument_code, tel, enc, site)
         raise InstrumentResolutionError(msg)
 
     return ag_match

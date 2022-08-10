@@ -89,36 +89,36 @@ class TestObservations(object):
 
     def test_scicam_instrument_resolves_to_a_specific_camera(self):
         instrument_type = '1M0-SCICAM-SINISTRO'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_instrument(instrument_type, site, enc, tel, self.configdb_interface)
         assert received == 'fl15'
 
     def test_no_matching_instrument_raises_an_exception(self):
         with pytest.raises(InstrumentResolutionError):
             instrument_type = '1M0-SCICAM-SINISTRO'
-            site, obs, tel = ('looloo', 'doma', '1m0a')
-            resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
+            site, enc, tel = ('looloo', 'doma', '1m0a')
+            resolve_instrument(instrument_type, site, enc, tel, self.configdb_interface)
 
     def test_scicam_autoguider_resolves_to_primary_instrument(self):
         self_guide = True
-        specific_inst_name = 'fl15'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_autoguider(self_guide, specific_inst_name, site, obs, tel, self.configdb_interface)
+        specific_inst_code = 'fl15'
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
         assert received == 'fl15'
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
         self_guide = False
-        inst_name = 'fl15'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
+        specific_inst_code = 'fl15'
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
         assert received == 'ef06'
 
     def test_no_matching_autoguider_raises_an_exception(self):
         with pytest.raises(InstrumentResolutionError):
             self_guide = True
-            inst_name = 'abcd'
-            site, obs, tel = ('looloo', 'doma', '1m0a')
-            resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
+            specific_inst_code = 'abcd'
+            site, enc, tel = ('looloo', 'doma', '1m0a')
+            resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
 
 
 class TestObservationInteractions(object):
