@@ -24,7 +24,13 @@ DTFORMAT = '%Y-%m-%dT%H:%M'
 
 def percent_of(x, y):
     """Returns x/y as a percentage."""
-    return x / y * 100.
+    try:
+        return x / y * 100.
+    except ZeroDivisionError as e:
+        if y == 0:
+            return 0
+        else:
+            raise e
 
 
 def percent_diff(x, y):
@@ -76,7 +82,7 @@ def bin_data(bin_by, data=[], bin_size=1, bin_range=None, fill=[], aggregator=le
         bin_range: A tuple of numbers to override the bin ranges. Otherwise, use the min/max of the data.
         fill: The data value(s) to fill with if the bin is empty. An iterable may be passed, in which case it is
             casted to a list. If None is passed, then empty bins are removed. The aggregator will be applied
-            to fill values as well.
+            to fill values as well. Default is empty list to work with the default aggregator len().
         aggregator (func): The aggregation function to apply over the list of data. Must be callable on an array.
             If None is passed, then the raw values are stored in a list.
 
@@ -137,7 +143,7 @@ class MetricCalculator():
             as follows:
                 {scheduled_resource, [reservations]}
         rr_scheduler_result (SchedulerResult): The rapid-response schedule output of the scheduler.
-        scheduler (LCOGTNetworkScheduler): The instance of the scheduler used by the simulator.
+        scheduler (Scheduler): The instance of the scheduler used by the simulator.
         scheduler_runner (SchedulerRunner): The instance of the scheduler runner used by the simulator.
     """
     def __init__(self, normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
@@ -162,6 +168,7 @@ class MetricCalculator():
         else:
             self.combined_schedule = self.normal_schedule
             self.combined_resources_scheduled = self.normal_scheduler_result.resources_scheduled()
+            self.combined_resources_scheduled = [site for site in self.normal_schedule.keys() if self.normal_schedule[site]]
             for comp_res in self.normal_input_reservations:
                 self.combined_input_reservations.extend(comp_res.reservation_list)
 
@@ -174,6 +181,8 @@ class MetricCalculator():
     def _combine_resources_scheduled(self):
         normal_resources = self.normal_scheduler_result.resources_scheduled()
         rr_resources = self.rr_scheduler_result.resources_scheduled()
+        normal_resources = [site for site in self.normal_schedule.keys() if self.normal_schedule[site]]
+        rr_resources = [site for site in self.rr_schedule.keys() if self.rr_schedule[site]]
         self.combined_resources_scheduled = list(set(normal_resources + rr_resources))
 
     def _combine_normal_rr_schedules(self):
@@ -237,7 +246,7 @@ class MetricCalculator():
         for res in self.combined_input_reservations:
             if res.scheduled:
                 windows = res.request.windows
-                # get the data format to a list, each element is a list corresponding to a resource
+                # format the data to a list, each element is a list corresponding to a resource
                 windows_list = list(windows.windows_for_resource.values())
                 window_durations = []
                 for loc in windows_list:
@@ -247,12 +256,6 @@ class MetricCalculator():
 
     def total_available_seconds(self):
         """Aggregates the total available time, calculated from dark intervals.
-
-        Args:
-            resources_scheduled (list): The list of sites scheduled, if nothing is passed then use the
-                list generated when MetricCalculators is initialized.
-            horizon_days (float): The number of days to cap, basically an effective horizon. If nothing
-                is passed then use the value in sched_params.
 
         Returns:
             total_available_time (float): The dark intervals capped by the horizon.
@@ -272,7 +275,7 @@ class MetricCalculator():
         return percent_of(sum(scheduled_durations), self.total_available_seconds())
 
     def _get_airmass_data_for_request(self, request_id):
-        """Pulls airmass data from the Observation Portal, cache it in our local directory.
+        """Pulls airmass data from the Observation Portal, cache it in redis.
 
         Args:
             request_id (str): The request id.
@@ -371,19 +374,38 @@ class MetricCalculator():
         return airmass_metrics
 
     def binned_tac_priority_metrics(self):
-        """Bins metrics based on TAC priority."""
-        bin_size = 10
+        """Bins metrics based on TAC priority. Priority bins should be changed to match the data."""
+        bin_size = 5
+        bin_range = (10, 30)
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
 
         sched_priorities, unsched_priorities = self.get_priority_data()
         all_priorities = sched_priorities + unsched_priorities
-        sched_histogram = bin_data(sched_priorities, bin_size=bin_size)
-        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size, aggregator=sum)
-        full_histogram = bin_data(all_priorities, bin_size=bin_size)
-        bin_all_durations = bin_data(all_priorities, all_durations, bin_size, aggregator=sum)
-        bin_percent_count = {bin_: percent_of(sched_histogram[bin_], full_histogram[bin_])
+        sched_histogram = bin_data(sched_priorities, bin_size=bin_size, bin_range=bin_range, fill=None)
+        bin_sched_durations = bin_data(sched_priorities, sched_durations,
+                                       bin_size, bin_range, fill=None, aggregator=sum)
+        combined_histogram = bin_data(all_priorities, bin_size=bin_size, bin_range=bin_range, fill=None)
+        bin_all_durations = bin_data(all_priorities, all_durations,
+                                     bin_size, bin_range, fill=None, aggregator=sum)
+        # capture the upper range with one large bin (e.g. priority 31&up) and merge with the other binned dict
+        # this is a workaround to make nonuniform bins, since the binning function is intended for uniform bins
+        # comment this block to just bin within bin_range
+        max_prio = max(all_priorities)
+        lower = bin_range[-1] + 1  # assumes discrete values, but should be modified for float values
+        upper_sched_histogram = bin_data(sched_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+        upper_sched_durations = bin_data(sched_priorities, sched_durations, bin_size=max_prio,
+                                         bin_range=(lower, max_prio), fill=None, aggregator=sum)
+        upper_combined_histogram = bin_data(all_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+        upper_all_durations = bin_data(all_priorities, all_durations, bin_size=max_prio,
+                                       bin_range=(lower, max_prio), fill=None, aggregator=sum)
+        sched_histogram = sched_histogram | upper_sched_histogram
+        bin_sched_durations = bin_sched_durations | upper_sched_durations
+        combined_histogram = combined_histogram | upper_combined_histogram
+        bin_all_durations = bin_all_durations | upper_all_durations
+
+        bin_percent_count = {bin_: percent_of(sched_histogram[bin_], combined_histogram[bin_])
                              for bin_ in sched_histogram}
         bin_percent_time = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
                             for bin_ in bin_sched_durations}
@@ -391,7 +413,7 @@ class MetricCalculator():
         output_dict = {
             'sched_histogram': sched_histogram,
             'sched_durations': bin_sched_durations,
-            'full_histogram': full_histogram,
+            'full_histogram': combined_histogram,
             'all_durations': bin_all_durations,
             'percent_count': bin_percent_count,
             'percent_time': bin_percent_time

@@ -39,7 +39,7 @@ log = logging.getLogger('adaptive_scheduler')
 # Some Environment Variable settings for the simulation
 RUN_ID = os.getenv("SIMULATION_RUN_ID", "1")
 START_TIME = parse(os.getenv("SIMULATION_START_TIME", "2022-06-23"))
-END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-07-07"))
+END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-06-23"))
 TIME_STEP = float(os.getenv("SIMULATION_TIME_STEP_MINUTES", "60"))
 AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
 
