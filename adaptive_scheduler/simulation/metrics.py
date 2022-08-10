@@ -391,7 +391,7 @@ class MetricCalculator():
                                      bin_size, bin_range, fill=None, aggregator=sum)
         # capture the upper range with one large bin (e.g. priority 31&up) and merge with the other binned dict
         # this is a workaround to make nonuniform bins, since the binning function is intended for uniform bins
-        # comment this block to just schedule within the lower range
+        # comment this block to just bin within bin_range
         max_prio = max(all_priorities)
         lower = bin_range[-1] + 1  # assumes discrete values, but should be modified for float values
         upper_sched_histogram = bin_data(sched_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
