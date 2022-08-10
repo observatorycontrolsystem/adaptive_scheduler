@@ -24,7 +24,13 @@ DTFORMAT = '%Y-%m-%dT%H:%M'
 
 def percent_of(x, y):
     """Returns x/y as a percentage."""
-    return x / y * 100.
+    try:
+        return x / y * 100.
+    except ZeroDivisionError as e:
+        if y == 0:
+            return 0
+        else:
+            raise e
 
 
 def percent_diff(x, y):
@@ -370,17 +376,36 @@ class MetricCalculator():
     def binned_tac_priority_metrics(self):
         """Bins metrics based on TAC priority. Priority bins should be changed to match the data."""
         bin_size = 5
+        bin_range = (10, 30)
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
 
         sched_priorities, unsched_priorities = self.get_priority_data()
         all_priorities = sched_priorities + unsched_priorities
-        sched_histogram = bin_data(sched_priorities, bin_size=bin_size, fill=None)
-        bin_sched_durations = bin_data(sched_priorities, sched_durations, bin_size, fill=None, aggregator=sum)
-        full_histogram = bin_data(all_priorities, bin_size=bin_size, fill=None)
-        bin_all_durations = bin_data(all_priorities, all_durations, bin_size, fill=None, aggregator=sum)
-        bin_percent_count = {bin_: percent_of(sched_histogram[bin_], full_histogram[bin_])
+        sched_histogram = bin_data(sched_priorities, bin_size=bin_size, bin_range=bin_range, fill=None)
+        bin_sched_durations = bin_data(sched_priorities, sched_durations,
+                                       bin_size, bin_range, fill=None, aggregator=sum)
+        combined_histogram = bin_data(all_priorities, bin_size=bin_size, bin_range=bin_range, fill=None)
+        bin_all_durations = bin_data(all_priorities, all_durations,
+                                     bin_size, bin_range, fill=None, aggregator=sum)
+        # capture the upper range with one large bin (e.g. priority 31&up) and merge with the other binned dict
+        # this is a workaround to make nonuniform bins, since the binning function is intended for uniform bins
+        # comment this block to just schedule within the lower range
+        max_prio = max(all_priorities)
+        lower = bin_range[-1] + 1  # assumes discrete values, but should be modified for float values
+        upper_sched_histogram = bin_data(sched_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+        upper_sched_durations = bin_data(sched_priorities, sched_durations, bin_size=max_prio,
+                                         bin_range=(lower, max_prio), fill=None, aggregator=sum)
+        upper_combined_histogram = bin_data(all_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+        upper_all_durations = bin_data(all_priorities, all_durations, bin_size=max_prio,
+                                       bin_range=(lower, max_prio), fill=None, aggregator=sum)
+        sched_histogram = sched_histogram | upper_sched_histogram
+        bin_sched_durations = bin_sched_durations | upper_sched_durations
+        combined_histogram = combined_histogram | upper_combined_histogram
+        bin_all_durations = bin_all_durations | upper_all_durations
+
+        bin_percent_count = {bin_: percent_of(sched_histogram[bin_], combined_histogram[bin_])
                              for bin_ in sched_histogram}
         bin_percent_time = {bin_: percent_of(bin_sched_durations[bin_], bin_all_durations[bin_])
                             for bin_ in bin_sched_durations}
@@ -388,7 +413,7 @@ class MetricCalculator():
         output_dict = {
             'sched_histogram': sched_histogram,
             'sched_durations': bin_sched_durations,
-            'full_histogram': full_histogram,
+            'full_histogram': combined_histogram,
             'all_durations': bin_all_durations,
             'percent_count': bin_percent_count,
             'percent_time': bin_percent_time
