@@ -65,10 +65,6 @@ def run_user_interface(plots):
     parser.add_argument('-f', '--format', help='the file format to save as', default='jpg')
     parser.add_argument('-o', '--outputdir', help='the output directory to save to', default=DEFAULT_DIR)
     args = parser.parse_args()
-    global export_dir
-    global export_format
-    export_dir = args.outputdir
-    export_format = args.format
 
     plot_dict = {plot.name: plot for plot in plots}
     plot_names = list(plot_dict.keys())
@@ -77,6 +73,8 @@ def run_user_interface(plots):
     print(f'\n{"Name":{spacing}}Description')
     print(f'{"====":{spacing}}===========')
     for plot in plots:
+        plot.export_dir = args.outputdir
+        plot.export_format = args.format
         print(f'{plot.name:{spacing}}{plot.description}')
 
     completer = AutoCompleter(plot_names)
@@ -143,10 +141,10 @@ class Plot:
     def save(self):
         timestamp = datetime.utcnow().isoformat(timespec='seconds')
         savename = f'{self.name}_{timestamp}'
-        export_to_image(savename, self.fig)
+        export_to_image(savename, self.fig, self.export_dir, self.export_format)
 
 
-def export_to_image(fname, fig):
+def export_to_image(fname, fig, export_dir=DEFAULT_DIR, export_format='jpg'):
     """Takes a matplotlib Figure object and saves the figure. If the output
     directory doesn't already exist, creates one for the user.
 
@@ -154,8 +152,6 @@ def export_to_image(fname, fig):
         fname (str): The filename to save the file as.
         fig (matplotlib.pyplot.Figure): The figure to save.
     """
-    global export_dir
-    global export_format
     try:
         os.mkdir(export_dir)
         print(f'Directory "{export_dir}" created')
