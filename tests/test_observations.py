@@ -7,7 +7,7 @@ from adaptive_scheduler.observations import (InstrumentResolutionError, build_ob
 from adaptive_scheduler.models import (Proposal, ICRSTarget, Request, RequestGroup)
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
 from adaptive_scheduler.scheduler import ScheduleException
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
+from adaptive_scheduler.kernel.reservation import Reservation
 
 from datetime import datetime
 import responses
@@ -89,36 +89,36 @@ class TestObservations(object):
 
     def test_scicam_instrument_resolves_to_a_specific_camera(self):
         instrument_type = '1M0-SCICAM-SINISTRO'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_instrument(instrument_type, site, enc, tel, self.configdb_interface)
         assert received == 'fl15'
 
     def test_no_matching_instrument_raises_an_exception(self):
         with pytest.raises(InstrumentResolutionError):
             instrument_type = '1M0-SCICAM-SINISTRO'
-            site, obs, tel = ('looloo', 'doma', '1m0a')
-            resolve_instrument(instrument_type, site, obs, tel, self.configdb_interface)
+            site, enc, tel = ('looloo', 'doma', '1m0a')
+            resolve_instrument(instrument_type, site, enc, tel, self.configdb_interface)
 
     def test_scicam_autoguider_resolves_to_primary_instrument(self):
         self_guide = True
-        specific_inst_name = 'fl15'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_autoguider(self_guide, specific_inst_name, site, obs, tel, self.configdb_interface)
+        specific_inst_code = 'fl15'
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
         assert received == 'fl15'
 
     def test_no_autoguider_resolves_to_preferred_autoguider(self):
         self_guide = False
-        inst_name = 'fl15'
-        site, obs, tel = ('lsc', 'doma', '1m0a')
-        received = resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
+        specific_inst_code = 'fl15'
+        site, enc, tel = ('lsc', 'doma', '1m0a')
+        received = resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
         assert received == 'ef06'
 
     def test_no_matching_autoguider_raises_an_exception(self):
         with pytest.raises(InstrumentResolutionError):
             self_guide = True
-            inst_name = 'abcd'
-            site, obs, tel = ('looloo', 'doma', '1m0a')
-            resolve_autoguider(self_guide, inst_name, site, obs, tel, self.configdb_interface)
+            specific_inst_code = 'abcd'
+            site, enc, tel = ('looloo', 'doma', '1m0a')
+            resolve_autoguider(self_guide, specific_inst_code, site, enc, tel, self.configdb_interface)
 
 
 class TestObservationInteractions(object):
@@ -192,14 +192,6 @@ class TestObservationInteractions(object):
         assert n_submitted_total == 3
 
     def test_build_normal_block(self):
-        reservation = Reservation(
-            priority=None,
-            duration=10,
-            possible_windows_dict={}
-        )
-        reservation.scheduled_start = 0
-        reservation.scheduled_resource = '1m0a.doma.bpl'
-
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
@@ -230,8 +222,16 @@ class TestObservationInteractions(object):
             request_id=22222
         )
 
-        reservation.request = request
-        reservation.request_group = request_group
+        reservation = Reservation(
+            priority=None,
+            duration=10,
+            possible_windows_dict={},
+            request=request,
+            request_group_id=request_group.id
+        )
+        reservation.scheduled_start = 0
+        reservation.scheduled_resource = '1m0a.doma.bpl'
+
         configdb_interface = Mock()
         configdb_interface.get_specific_instrument.return_value='xx01'
         received = build_observation(reservation, self.start, configdb_interface)
@@ -244,14 +244,6 @@ class TestObservationInteractions(object):
         assert received['configuration_statuses'][0]['instrument_name'] == 'xx01'
 
     def test_build_rr_observation(self):
-        reservation = Reservation(
-            priority=None,
-            duration=10,
-            possible_windows_dict={}
-        )
-        reservation.scheduled_start = 0
-        reservation.scheduled_resource = '1m0a.doma.bpl'
-
         proposal = Proposal({'id': 'testPro', 'tag': 'tagPro', 'tac_priority': 39, 'pi': 'me'})
         target = ICRSTarget({'name': 'test', 'ra': 23.3, 'dec': 22.2})
 
@@ -282,8 +274,16 @@ class TestObservationInteractions(object):
             request_id=22223,
         )
 
-        reservation.request = request
-        reservation.request_group = request_group
+        reservation = Reservation(
+            priority=None,
+            duration=10,
+            possible_windows_dict={},
+            request=request,
+            request_group_id=request_group.id
+        )
+        reservation.scheduled_start = 0
+        reservation.scheduled_resource = '1m0a.doma.bpl'
+
         configdb_interface = Mock()
         configdb_interface.get_specific_instrument.return_value = 'xx03'
         configdb_interface.get_autoguider_for_instrument.return_value='xx04'

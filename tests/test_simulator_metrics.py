@@ -3,9 +3,13 @@ from adaptive_scheduler.simulation.metrics import (MetricCalculator,
 
 import os
 import json
+import calendar
 from datetime import datetime, timedelta
-import numpy as np
 from mock import Mock
+from rise_set import astrometry
+from rise_set.sky_coordinates import RightAscension, Declination
+from rise_set.angle import Angle
+import numpy as np
 
 
 class TestMetrics():
@@ -26,6 +30,7 @@ class TestMetrics():
         self.mock_scheduler = Mock(estimated_scheduler_end=self.scheduler_run_time)
         self.mock_scheduler_runner = Mock(semester_details={'start': self.start})
         self.mock_scheduler_runner.sched_params.horizon_days = 5
+        self.mock_scheduler_runner.sched_params.simulate_now = self.scheduler_run_time
 
         self.mock_scheduler_result.schedule = fake_schedule
 
@@ -67,31 +72,26 @@ class TestMetrics():
         assert same_schedule.combined_schedule == fake_schedule1
 
     def test_percent_scheduled(self):
+        assert self.metrics.percent_reservations_scheduled() == 60.
+
         scheduled_reservation = Mock(scheduled=True)
         unscheduled_reservation = Mock(scheduled=False)
-
         mock_schedule = {'bpl': [scheduled_reservation], 'coj': [scheduled_reservation, scheduled_reservation]}
         mock_scheduler_input = [unscheduled_reservation, scheduled_reservation, scheduled_reservation, scheduled_reservation]
+        metrics2 = MetricCalculator(self.mock_scheduler_result,
+                                    None,
+                                    self.mock_scheduler,
+                                    self.mock_scheduler_runner)
+        metrics2.combined_schedule = mock_schedule
+        metrics2.combined_input_reservations = mock_scheduler_input
 
-        assert self.metrics.percent_reservations_scheduled(mock_scheduler_input, mock_schedule) == 75.
-        assert self.metrics.percent_reservations_scheduled() == 60.
+        assert metrics2.percent_reservations_scheduled() == 75.
 
     def test_total_time_aggregators(self):
         seconds_in_day = 86400
 
-        assert sum(self.metrics.get_scheduled_durations(self.mock_scheduler_result.schedule)) == 60
-        assert sum(self.metrics.get_scheduled_durations()) == 60
-        assert self.metrics.total_available_seconds(['bpl', 'coj'], 0) == 0
-        assert self.metrics.total_available_seconds(['bpl', 'coj'], 1) == 2*seconds_in_day
-        assert self.metrics.total_available_seconds(['bpl', 'coj'], 5) == 4*seconds_in_day
-        assert self.metrics.total_available_seconds(['bpl'], 1) == seconds_in_day
-        assert self.metrics.total_available_seconds([], 1) == 0
+        assert sum(self.metrics.get_duration_data()[0]) == 60
         assert self.metrics.total_available_seconds() == 4*seconds_in_day
-
-    def test_percent_time_utilization(self):
-        test_schedule = {'bpl': [Mock(duration=86400)]}
-        assert self.metrics.percent_time_utilization(test_schedule, ['bpl'], 1) == 100.
-        assert self.metrics.percent_time_utilization() == 60/(86400*4)*100
 
     def test_bin_data(self):
         bin_by    = [1, 3, 4, 2, 6, 5, 3, 2, 3, 4, 7, 9, 3, 8, 6, 4]
@@ -108,13 +108,13 @@ class TestMetrics():
         sumdata = {'1-3': 36, '4-6': 27, '7-9': 17}
         mindata = {'1-3': 1, '4-6': 2, '7-9': 4}
 
-        assert bin_data(bin_by, bin_size=3, bin_range=bin_range) == allparams
-        assert bin_data(bin_by) == defaults
-        assert bin_data(bin_by, bin_size=2) == unevenbins
-        assert bin_data(bin_by, bin_size=2.5, bin_range=(0, 9)) == floatbinsize
-        assert bin_data(bin_by_float) == floats
-        assert bin_data(bin_by_float, bin_range=(0, 4)) == capped_floats
-        assert bin_data(bin_by, bin_data_, bin_size=3) == sumdata
+        assert bin_data(bin_by, bin_size=3, bin_range=bin_range, fill=None) == allparams
+        assert bin_data(bin_by, fill=None) == defaults
+        assert bin_data(bin_by, bin_size=2, fill=None) == unevenbins
+        assert bin_data(bin_by, bin_size=2.5, bin_range=(0, 9), fill=None) == floatbinsize
+        assert bin_data(bin_by_float, fill=None) == floats
+        assert bin_data(bin_by_float, bin_range=(0, 4), fill=None) == capped_floats
+        assert bin_data(bin_by, bin_data_, bin_size=3, fill=None, aggregator=sum) == sumdata
         assert bin_data(bin_by, bin_data_, bin_size=3, aggregator=min) == mindata
 
     def test_airmass_functions(self):
@@ -128,23 +128,73 @@ class TestMetrics():
         self.metrics._get_airmass_data_for_request = Mock(side_effect=[airmass_data_1, airmass_data_2])
         request_1 = Mock(id=1)
         mock_reservation_1 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.tfn',
-                                  request=request_1, duration=5400)
+                                  request=request_1, duration=2400)
         request_2 = Mock(id=2)
         mock_reservation_2 = Mock(scheduled_start=0, scheduled_resource='1m0a.doma.egg',
-                                  request=request_2, duration=5400)
+                                  request=request_2, duration=2400)
         scheduled_reservations = [mock_reservation_1, mock_reservation_2]
         schedule = {'reservations': scheduled_reservations}
+        midpoint_time = self.start + timedelta(seconds=mock_reservation_1.duration/2)
+        midpoint_duration = timedelta(seconds=mock_reservation_1.duration/2)
 
-        assert self.metrics._get_midpoint_airmasses_by_site(airmass_data_1, self.start, self.end) == {'tfn': 7, 'egg': 3}
-        assert self.metrics._get_ideal_airmass(airmass_data_1) == 1
+        assert self.metrics._get_midpoint_airmasses_by_site(airmass_data_1, midpoint_time) == {'tfn': 5, 'egg': 4}
+        assert self.metrics._get_minmax_airmass(airmass_data_1, midpoint_duration) == (1, 20)
 
         airmass_metrics = self.metrics.airmass_metrics(schedule)
-        midpoint_airmasses = [7, 3]
+        midpoint_airmasses = [5, 3]
         assert type(airmass_metrics) is dict
-        assert list(airmass_metrics.keys()) == ['raw_airmass_data', 'avg_midpoint_airmass',
-                                                'avg_ideal_airmass', 'ci_midpoint_airmass']
-        assert airmass_metrics['avg_midpoint_airmass'] == 5
-        assert airmass_metrics['avg_ideal_airmass'] == 2
+        assert airmass_metrics['avg_midpoint_airmass'] == 4
+        assert airmass_metrics['avg_min_poss_airmass'] == 1
         assert airmass_metrics['raw_airmass_data'][0]['midpoint_airmasses'] == midpoint_airmasses
-        assert airmass_metrics['ci_midpoint_airmass'] == [[np.percentile(midpoint_airmasses, 2.5),
-                                                           np.percentile(midpoint_airmasses, 97.5)]]
+
+    def test_avg_slew_distance(self):
+        conf1 = Mock()
+        conf1.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=35), 'dec': Angle(degrees=0)})
+        conf2 = Mock()
+        conf2.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=35), 'dec': Angle(degrees=15)})
+        conf3 = Mock()
+        conf3.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=10), 'dec': Angle(degrees=15)})
+        conf4 = Mock()
+        conf4.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=60), 'dec': Angle(degrees=10)})
+        conf5 = Mock()
+        conf5.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=80), 'dec': Angle(degrees=10)})
+        conf6 = Mock()
+        conf6.target.in_rise_set_format = Mock(return_value={'ra': Angle(degrees=80), 'dec': Angle(degrees=-10)})
+
+        res1 = Mock(scheduled_start=10)
+        res2 = Mock(scheduled_start=20)
+        res3 = Mock(scheduled_start=10)
+        res4 = Mock(scheduled_start=20)
+        res5 = Mock(scheduled_start=30)
+        res1.request.configurations = [conf1, conf2]
+        res2.request.configurations = [conf3]
+        res3.request.configurations = [conf4]
+        res4.request.configurations = [conf5, conf5, conf5]
+        res5.request.configurations = [conf6]
+        fake_schedule1 = {'bpl': [res1, res2], 'coj': [res5, res4, res3]}
+
+        d = timedelta(seconds=10)
+        radec1 = astrometry.mean_to_apparent({'ra': Angle(degrees=35), 'dec': Angle(degrees=0)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+d))
+        radec2 = astrometry.mean_to_apparent({'ra': Angle(degrees=35), 'dec': Angle(degrees=15)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+d))
+        radec3 = astrometry.mean_to_apparent({'ra': Angle(degrees=10), 'dec': Angle(degrees=15)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+2*d))
+        radec4 = astrometry.mean_to_apparent({'ra': Angle(degrees=60), 'dec': Angle(degrees=10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+3*d))
+        radec5 = astrometry.mean_to_apparent({'ra': Angle(degrees=80), 'dec': Angle(degrees=10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+4*d))
+        radec6 = astrometry.mean_to_apparent({'ra': Angle(degrees=80), 'dec': Angle(degrees=-10)},
+                                             astrometry.date_to_tdb(self.scheduler_run_time+5*d))
+        slewdists = [astrometry.angular_distance_between(*radec1, *radec2),
+                     astrometry.angular_distance_between(*radec2, *radec3),
+                     astrometry.angular_distance_between(*radec4, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec5),
+                     astrometry.angular_distance_between(*radec5, *radec6)]
+        slewdists = [a.in_degrees() for a in slewdists]
+        metrics = MetricCalculator(self.mock_scheduler_result, None, self.mock_scheduler, self.mock_scheduler_runner)
+        metrics.combined_schedule = fake_schedule1
+        metrics.scheduler_runner.semester_details['start'] = self.scheduler_run_time
+
+        assert np.isclose(metrics.avg_slew_distance(), np.mean(slewdists))

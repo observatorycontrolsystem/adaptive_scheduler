@@ -9,9 +9,10 @@ August 2013
 '''
 
 from adaptive_scheduler.event_utils import report_scheduling_outcome
-from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation import CompoundReservation
+from adaptive_scheduler.models import RequestGroup
 
-from mock import Mock
+from mock import patch
 
 
 class TestReportOutcome(object):
@@ -19,21 +20,19 @@ class TestReportOutcome(object):
     def setup(self):
         pass
 
-    def test_report_scheduling_outcome(self):
+    @patch.object(RequestGroup, 'emit_request_group_feedback')
+    def test_report_scheduling_outcome(self, mock_emit):
         class Request(object):
             def __init__(self, request_id):
                 self.id = request_id
 
         class Reservation(object):
-            def __init__(self, request, mock_rg):
+            def __init__(self, request, request_group_id):
                 self.request = request
-                self.request_group = mock_rg
+                self.request_group_id = request_group_id
 
-        mock_cr1 = Mock()
-        mock_cr2 = Mock()
-
-        res1 = Reservation(Request(1), mock_cr1)
-        res2 = Reservation(Request(2), mock_cr2)
+        res1 = Reservation(Request(1), 10)
+        res2 = Reservation(Request(2), 20)
         reservation_list1 = [res1, res2]
         compound_reservation1 = CompoundReservation(reservation_list1, cr_type='and')
         to_schedule = [compound_reservation1]
@@ -42,6 +41,6 @@ class TestReportOutcome(object):
 
         report_scheduling_outcome(to_schedule, scheduled_reservations)
 
-        mock_cr1.emit_rg_feedback.assert_called_with('This Request (request id=1) was not scheduled (it clashed)',
-                                                     'WasNotScheduled')
-        mock_cr2.emit_rg_feedback.assert_called_with('This Request (request id=2) was scheduled', 'WasScheduled')
+        mock_emit.assert_any_call(10, 'This Request (request id=1) was not scheduled (it clashed)',
+                                                                 'WasNotScheduled')
+        mock_emit.assert_any_call(20, 'This Request (request id=2) was scheduled', 'WasScheduled')

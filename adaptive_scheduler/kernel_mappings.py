@@ -27,13 +27,12 @@ from rise_set.utils import is_static_target
 from rise_set.exceptions import MovingViolation
 
 from time_intervals.intervals import Intervals
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3 as Reservation
-from adaptive_scheduler.kernel.reservation_v3 import CompoundReservation_v2 as CompoundReservation
+from adaptive_scheduler.kernel.reservation import Reservation
+from adaptive_scheduler.kernel.reservation import CompoundReservation
 
-from adaptive_scheduler.utils import (datetime_to_epoch, normalise,
-                                      timeit, metric_timer)
+from adaptive_scheduler.utils import (normalise_datetime_intervals, timeit, metric_timer, OptimizationType)
 from adaptive_scheduler.printing import plural_str as pl
-from adaptive_scheduler.models import Window, Windows, filter_compounds_by_type, RequestGroup
+from adaptive_scheduler.models import (Window, Windows, filter_compounds_by_type, RequestGroup, redis_instance)
 from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_type,
                                                 truncate_upper_crossing_windows,
                                                 filter_out_future_windows,
@@ -42,9 +41,7 @@ from adaptive_scheduler.request_filters import (filter_on_duration, filter_on_ty
 from adaptive_scheduler.log import RequestGroupLogger
 
 from multiprocessing import cpu_count, current_process, TimeoutError, get_context
-from redis import Redis
 import pickle
-import os
 
 # Set up and configure a module scope logger
 import logging
@@ -53,9 +50,6 @@ log = logging.getLogger(__name__)
 
 multi_rg_log = logging.getLogger('rg_logger')
 rg_log = RequestGroupLogger(multi_rg_log)
-
-redis = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), socket_connect_timeout=15,
-              socket_timeout=30)
 
 local_cache = {}
 
@@ -79,36 +73,6 @@ def rise_set_to_kernel_intervals(intervals):
     return Intervals(intervals)
 
 
-def req_windows_to_kernel_intervals(windows_for_resource):
-    '''Convert windows for resources into kernel intervals for resources
-    '''
-    return {resource: req_window_to_kernel_intervals(windows) for resource, windows in windows_for_resource.items()}
-
-
-def req_window_to_kernel_intervals(windows):
-    '''Convert rise_set intervals (a list of (start, end) datetime tuples) to
-       kernel Intervals (an object that stores Timepoints).'''
-
-    intervals = []
-    for window in windows:
-        intervals.append((window.start, window.end))
-
-    return Intervals(intervals)
-
-
-def normalise_dt_intervals(dt_intervals, dt_earliest):
-    '''Convert datetime Intervals into normalised kernel Intervals.'''
-
-    epoch_earliest = datetime_to_epoch(dt_earliest)
-
-    epoch_timepoints = []
-    for tp in dt_intervals.toDictList():
-        epoch_time = normalise(datetime_to_epoch(tp['time']), epoch_earliest)
-        epoch_timepoints.append({'time': epoch_time, 'type': tp['type']})
-
-    return Intervals(epoch_timepoints)
-
-
 def cache_rise_set_timepoint_intervals(args):
     '''Calculates the rise set timepoint interval of a target and attempts to put the result in redis. If it fails and
         throws an exception, the calling code should catch this and fall back to compute rise sets synchronously
@@ -118,7 +82,7 @@ def cache_rise_set_timepoint_intervals(args):
         (resource, rise_set_target, visibility, max_airmass, min_lunar_distance, max_lunar_phase) = args
         intervals = get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, min_lunar_distance, max_lunar_phase)
         cache_key = make_cache_key(resource, rise_set_target, max_airmass, min_lunar_distance, max_lunar_phase)
-        redis.set(cache_key, pickle.dumps(intervals))
+        redis_instance.set(cache_key, pickle.dumps(intervals))
         log.info('process {} finished calculating rise set'.format(current_process().pid))
     except Exception as e:
         log.warn('received an error when trying to cache rise set value {}'.format(repr(e)))
@@ -170,25 +134,22 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     return dark_intervals
 
 
-def construct_compound_reservation(request_group, semester_start):
+def construct_compound_reservation(request_group, semester_start, network_model):
     '''Convert a RequestGroup into a CompoundReservation, translating datetimes
        to kernel epoch times. The Request windows were already translated into visible windows during the 
        filter_on_visibility step.
     '''
     reservations = []
     for index, request in enumerate(request_group.requests):
-        visibility_intervals_for_resources = req_windows_to_kernel_intervals(request.windows.windows_for_resource)
-        kernel_intervals_for_resources = translate_request_windows_to_kernel_windows(visibility_intervals_for_resources,
-                                                                                     semester_start)
+        kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
+
+        # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
+        if request.optimization_type == OptimizationType.AIRMASS:
+            request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
 
         # Construct the kernel Reservation
         res = Reservation(request_group.get_effective_priority(index), request.duration, kernel_intervals_for_resources,
-                          previous_solution_reservation=request.scheduled_reservation)
-        # Store the original requests for recovery after scheduling
-        # TODO: Do this with a field provided for this purpose, not this hack
-        res.request_group = request_group
-        res.request = request
-
+                          previous_solution_reservation=request.scheduled_reservation, request=request, request_group_id=request_group.id)
         reservations.append(res)
 
     # Combine Reservations into CompoundReservations
@@ -198,40 +159,23 @@ def construct_compound_reservation(request_group, semester_start):
     return compound_res
 
 
-def construct_many_compound_reservation(request_group, request_index, semester_start):
+def construct_many_compound_reservation(request_group, request_index, semester_start, network_model):
     request = request_group.requests[request_index]
-    visibility_intervals_for_resources = req_windows_to_kernel_intervals(request.windows.windows_for_resource)
-    kernel_intervals_for_resources = translate_request_windows_to_kernel_windows(visibility_intervals_for_resources,
-                                                                                 semester_start)
+    kernel_intervals_for_resources = request.windows.to_kernel_intervals(semester_start)
+
+    # If the request has an optimization type of AIRMASS, pre-calculate and cache the airmasses at epoch values here.
+    if request.optimization_type == OptimizationType.AIRMASS:
+        request.cache_airmasses_within_kernel_windows(kernel_intervals_for_resources, network_model, semester_start)
+
     # Construct the kernel Reservation
     res = Reservation(request_group.get_effective_priority(request_index), request.duration,
-                      kernel_intervals_for_resources, previous_solution_reservation=request.scheduled_reservation)
-    # Store the original requests for recovery after scheduling
-    # TODO: Do this with a field provided for this purpose, not this hack
-    res.request_group = request_group
-    res.request = request
+                      kernel_intervals_for_resources, previous_solution_reservation=request.scheduled_reservation,
+                      request=request, request_group_id=request_group.id)
 
     # Create a CR of type 'single' for kernel scheduling
     compound_res = CompoundReservation([res], 'single')
 
     return compound_res
-
-
-def translate_request_windows_to_kernel_windows(intersection_dict, sem_start):
-    window_dict = {}
-
-    # Build the normalised Windows data structure for the kernel
-    for resource_name, dark_up_intervals in intersection_dict.items():
-        # Convert timepoints into normalised epoch time
-        epoch_intervals = normalise_dt_intervals(dark_up_intervals, sem_start)
-
-        # Construct Reservations
-        # Priority comes from the parent CompoundRequest
-        # Each Reservation represents the set of available windows of opportunity
-        # The resource is governed by the timepoint.resource attribute
-        window_dict[resource_name] = epoch_intervals
-
-    return window_dict
 
 
 @timeit
@@ -310,7 +254,7 @@ def make_cache_key(resource, rs_target, max_airmass, min_lunar_distance, max_lun
 def update_cached_semester(semester_start, semester_end):
     if 'current_semester' not in local_cache:
         try:
-            current_semester = redis.get('current_semester')
+            current_semester = redis_instance.get('current_semester')
             local_cache['current_semester'] = current_semester
         except Exception:
             current_semester = ''
@@ -326,8 +270,8 @@ def update_cached_semester(semester_start, semester_end):
         current_semester = '{}_{}'.format(semester_start, semester_end)
         local_cache['current_semester'] = current_semester
         try:
-            redis.flushdb()
-            redis.set('current_semester', current_semester)
+            redis_instance.flushdb()
+            redis_instance.set('current_semester', current_semester)
         except Exception:
             log.error(
                 "Redis is down, and the current semester has rolled over. Please manually delete the redis cache file and restart redis.")
@@ -347,7 +291,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                     if cache_key not in local_cache:
                         try:
                             # put intersections from the redis cache into the local cache for use later
-                            local_cache[cache_key] = pickle.loads(redis.get(cache_key))
+                            local_cache[cache_key] = pickle.loads(redis_instance.get(cache_key))
                         except Exception:
                             # need to compute the rise_set for this target/resource/airmass/lunar_distance/lunar_phase combo
                             rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
@@ -376,7 +320,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
             log.info("finished closing thread pool")
         for cache_key in rise_sets_to_compute_later.keys():
             try:
-                local_cache[cache_key] = pickle.loads(redis.get(cache_key))
+                local_cache[cache_key] = pickle.loads(redis_instance.get(cache_key))
             except Exception:
                 # failed to load this cache_key from redis, maybe redis is down. Will run synchronously.
                 (resource, rise_set_target, visibility, max_airmass, min_lunar_distance,
@@ -385,7 +329,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, semes
                                                                           min_lunar_distance, max_lunar_phase)
                 # save the newly calculated rise-set values into the redis cache for next restart
                 try:
-                    redis.set(cache_key, pickle.dumps(local_cache[cache_key]))
+                    redis_instance.set(cache_key, pickle.dumps(local_cache[cache_key]))
                 except Exception:
                     log.warn(
                     'Failed to save rise_set intervals into redis. Please check that redis is online.')
@@ -429,7 +373,7 @@ def compute_request_availability(request, target_intervals_by_resource, downtime
     for resource, target_intervals in target_intervals_by_resource.items():
         # Intersect with any window provided in the user request
         user_windows = request.windows.at(resource)
-        user_intervals = req_window_to_kernel_intervals(user_windows)
+        user_intervals = Windows.request_window_to_kernel_intervals(user_windows)
         intervals_for_resource[resource] = target_intervals.intersect([user_intervals])
         if resource in downtime_intervals:
             for instrument_type, intervals in downtime_intervals[resource].items():
@@ -461,20 +405,20 @@ def intervals_to_windows(req, intersections_for_resource):
 
 @timeit
 @metric_timer('make_compound_reservations', num_requests=len)
-def make_compound_reservations(request_groups, semester_start):
+def make_compound_reservations(request_groups, semester_start, network_model):
     '''Parse a list of CompoundRequests, and produce a corresponding list of
        CompoundReservations.'''
     to_schedule = []
     for rg in request_groups:
         # Make and store the CompoundReservation
-        compound_res = construct_compound_reservation(rg, semester_start)
+        compound_res = construct_compound_reservation(rg, semester_start, network_model)
         to_schedule.append(compound_res)
 
     return to_schedule
 
 
 @timeit
-def make_many_type_compound_reservations(many_request_groups, semester_start):
+def make_many_type_compound_reservations(many_request_groups, semester_start, network_model):
     '''Parse a list of CompoundRequests of type 'many', and produce a corresponding
        list of CompoundReservations. Each 'many' will produce one CompoundReservation
        per Request child.'''
@@ -484,7 +428,7 @@ def make_many_type_compound_reservations(many_request_groups, semester_start):
         # We do this because the kernel knows nothing about 'many', and will treat
         # the scheduling of the children as completely independent
         for request_index, _ in enumerate(many_rg.requests):
-            compound_res = construct_many_compound_reservation(many_rg, request_index, semester_start)
+            compound_res = construct_many_compound_reservation(many_rg, request_index, semester_start, network_model)
             to_schedule.append(compound_res)
 
     return to_schedule
@@ -499,7 +443,7 @@ def construct_resource_windows(visibility_for_resource, semester_start, availabi
         if tel_name in availabile_resources:
             rs_dark_intervals = visibility.get_dark_intervals()
             dark_intervals = rise_set_to_kernel_intervals(rs_dark_intervals)
-            ep_dark_intervals = normalise_dt_intervals(dark_intervals, semester_start)
+            ep_dark_intervals = normalise_datetime_intervals(dark_intervals, semester_start)
             resource_windows[tel_name] = ep_dark_intervals
 
     return resource_windows
@@ -530,7 +474,7 @@ def construct_global_availability(resource_interval_mask, semester_start, resour
        { 'resource_name' : Intervals() }
     '''
     for resource_name, masked_intervals in resource_interval_mask.items():
-        norm_masked_interval = normalise_dt_intervals(masked_intervals, semester_start)
+        norm_masked_interval = normalise_datetime_intervals(masked_intervals, semester_start)
         resource_windows[resource_name] = resource_windows[resource_name].subtract(norm_masked_interval)
 
     return resource_windows

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "adaptive_scheduler"
-version = "1.4.0"
+version = "1.4.1"
 description = ""
 authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
@@ -36,6 +36,7 @@ boto3 = "^1"
 mock = "<=3.1.0"
 responses = "<=0.17.0"
 pytest = "7.0.1"
+fakeredis = "1.8.2"
 coverage = "^6.4.1"
 
 [build-system]

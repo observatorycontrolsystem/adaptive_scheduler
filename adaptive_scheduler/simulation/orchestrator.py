@@ -10,6 +10,7 @@ advancing time and input when simulating over a period of time.
 import logging
 import sys
 import os
+import json
 from urllib.parse import urljoin
 
 import requests
@@ -30,6 +31,7 @@ from adaptive_scheduler.scheduler_input import (
   SchedulingInputFactory, SchedulingInputProvider, SchedulerParameters
 )
 from adaptive_scheduler.simulation.metrics import MetricCalculator
+from adaptive_scheduler.utils import timeit
 
 
 log = logging.getLogger('adaptive_scheduler')
@@ -37,8 +39,9 @@ log = logging.getLogger('adaptive_scheduler')
 # Some Environment Variable settings for the simulation
 RUN_ID = os.getenv("SIMULATION_RUN_ID", "1")
 START_TIME = parse(os.getenv("SIMULATION_START_TIME", "2022-06-23"))
-END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-07-07"))
+END_TIME = parse(os.getenv("SIMULATION_END_TIME", "2022-06-23"))
 TIME_STEP = float(os.getenv("SIMULATION_TIME_STEP_MINUTES", "60"))
+AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
 
 
 def setup_logging():
@@ -60,16 +63,16 @@ def setup_input(current_time):
     # source based on the current timestamp of the scheduling run. For configdb, this involves playing the records
     # backwards until the time is reached. For the observation portal, it involves pulling over all requests
     # created and PENDING at a certain point in time for the semester, which should be doable by looking at the created
-    # and modified timestamps and state. 
+    # and modified timestamps and state.
     log.info(f"Placeholder for setting up input for time {current_time.isoformat}")
     pass
 
 
 def increment_input(current_time, time_step):
-    # This will eventually call endpoints in configdb and the observation portal to increment the state of them forward 
+    # This will eventually call endpoints in configdb and the observation portal to increment the state of them forward
     # by the time step specified. Incrementing time forward is slightly different then the initial setup of a starting time.
     # This will be called as you step forward in time to make sure these data sources contain the right input data.
-    # For configdb, this involves moving the records back forwards a bit. For the observation portal, it involves pulling 
+    # For configdb, this involves moving the records back forwards a bit. For the observation portal, it involves pulling
     # down newer requests as well as cleaning up the state of old ones between time steps (completing/expiring as appropriate).
     # This also means that we should complete and fail the right percentages of observations that should have ended within the last
     # time_step, and set ones that are in progress to ATTEMPTED state.
@@ -77,6 +80,7 @@ def increment_input(current_time, time_step):
     pass
 
 
+@timeit
 def send_to_opensearch(os_url, os_index, metrics):
     # Send the json metrics to the opensearch index
     if os_url and os_index:
@@ -92,13 +96,15 @@ def send_to_opensearch(os_url, os_index, metrics):
     else:
         log.warning("Not configured to save metrics in opensearch. Please set OPENSEARCH_URL and SIMULATION_OPENSEARCH_INDEX.")
 
-
+@timeit
 def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner):
     log.info("Recording metrics for scheduler simulation run")
 
     metrics = MetricCalculator(normal_scheduler_result, rr_scheduler_result, scheduler, scheduler_runner)
     sched_params = scheduler_runner.sched_params
     airmass_metrics = metrics.airmass_metrics()
+    sched_priorities, unsched_priorities = metrics.get_priority_data()
+    sched_durations, unsched_durations = metrics.get_duration_data()
     binned_tac_priority_metrics = metrics.binned_tac_priority_metrics()
 
     metrics = {
@@ -109,12 +115,13 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'kernel': sched_params.kernel,
         'mip_gap': sched_params.mip_gap,
         'record_time': datetime.utcnow().isoformat(),
+        'airmass_weighting_coefficient': AIRMASS_WEIGHTING_COEFFICIENT,
 
         'total_effective_priority': metrics.total_scheduled_eff_priority()[0],
         'total_scheduled_count': metrics.count_scheduled()[0],
         'total_request_count': metrics.count_scheduled()[1],
         'percent_requests_scheduled': metrics.percent_reservations_scheduled(),
-        'total_scheduled_seconds': sum(metrics.get_scheduled_durations()),
+        'total_scheduled_seconds': sum(sched_durations),
         'total_available_seconds': metrics.total_available_seconds(),
         'percent_time_utilization': metrics.percent_time_utilization(),
         'airmass_metrics': airmass_metrics,
@@ -123,9 +130,14 @@ def record_metrics(normal_scheduler_result, rr_scheduler_result, scheduler, sche
         'total_req_by_priority': [binned_tac_priority_metrics['full_histogram']],
         'total_seconds_by_priority': [binned_tac_priority_metrics['all_durations']],
         'percent_sched_by_priority': [binned_tac_priority_metrics['percent_count']],
-        'percent_duration_by_priority': [binned_tac_priority_metrics['percent_duration']],
+        'percent_duration_by_priority': [binned_tac_priority_metrics['percent_time']],
+        'raw_window_durations': metrics.get_window_duration_data(),
+        'raw_scheduled_durations': sched_durations,
+        'raw_unscheduled_durations': unsched_durations,
+        'raw_scheduled_priorities': sched_priorities,
+        'raw_unscheduled_priorities': unsched_priorities,
+        'average_slew_distance': metrics.avg_slew_distance(),
     }
-    log.info(metrics)
     send_to_opensearch(sched_params.opensearch_url, sched_params.simulation_opensearch_index, metrics)
 
 
@@ -144,7 +156,11 @@ def main(argv=None):
     schedule_interface = ObservationScheduleInterface(host=sched_params.observation_portal_url)
     observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url)
     # TODO: If there is a configuration override file detected then incorporate that into the configdb_interface
-    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes)
+    overrides = None
+    if os.path.exists('/app/data/simulation_overrides.json'):
+        with open('/app/data/simulation_overrides.json', 'r') as fp:
+            overrides = json.load(fp)
+    configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes, overrides=overrides)
     network_state_interface = Network(configdb_interface, sched_params)
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
                                          configdb_interface)

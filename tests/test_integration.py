@@ -19,9 +19,15 @@ except ImportError:
 
 from adaptive_scheduler.scheduler_input import SchedulerParameters
 from adaptive_scheduler.scheduler import LCOGTNetworkScheduler, SchedulerRunner
-from adaptive_scheduler.utils import get_reservation_datetimes
+from adaptive_scheduler.utils import get_reservation_datetimes, OptimizationType
+from adaptive_scheduler.models import AIRMASS_WEIGHTING_COEFFICIENT
 
-from mock import Mock
+from mock import Mock, patch
+import fakeredis
+import json
+
+
+fakeredis_instance = fakeredis.FakeStrictRedis()
 
 
 class TestIntegration(object):
@@ -44,7 +50,8 @@ class TestIntegration(object):
             status='online',
             ha_limit_neg=-4.6,
             ha_limit_pos=4.6,
-            zenith_blind_spot=0.0
+            zenith_blind_spot=0.0,
+            elevation=3065
         )
         self.telescopes = {'1m0a.doma.ogg': self.telescope}
 
@@ -259,6 +266,52 @@ class TestIntegration(object):
             assert 3 not in scheduled_rgs[4]
         else:
             assert 2 not in scheduled_rgs[3]
+
+    @patch('adaptive_scheduler.kernel_mappings.redis_instance', new=fakeredis_instance)
+    @patch('adaptive_scheduler.models.redis_instance', new=fakeredis_instance)
+    def test_airmass_optimization(self):
+        window = Window({'start': self.base_time,
+                                'end': self.base_time + timedelta(hours=5, minutes=0)}, self.resource_3)
+        windows = Windows()
+        windows.append(window)
+        request_1 = Request(configurations=[self.configuration],
+                                 windows=windows,
+                                 request_id=1,
+                                 duration=1750,
+                                 optimization_type=OptimizationType.AIRMASS)
+
+        request_2 = Request(configurations=[self.configuration],
+                                 windows=windows,
+                                 request_id=2,
+                                 duration=1750,
+                                 optimization_type=OptimizationType.TIME)
+        many_request_group_1 = RequestGroup(operator='many', requests=[request_1, request_2],
+                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                 rg_id=10, is_staff=False, observation_type='NORMAL',
+                                                 ipp_value=1.5, name='ur 3', submitter='')
+        # The two requests are identical except for optimization type. The optimal airmass is ~90 minutes into the night.
+        result = self._schedule_requests([], [many_request_group_1],
+                                         self.base_time - timedelta(hours=10))
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+
+        # assert that user request 3 request 1 and user request 4 request 4 were scheduled ,
+        # along with one of either 3-2 or 4-3.
+        assert 10 in scheduled_rgs
+        assert 1 in scheduled_rgs[10]
+        assert 2 in scheduled_rgs[10]
+        # These two assertions together should prove airmass optimization is doing something
+        # These show the time optimized version is scheduled earlier, and that the airmass optimized
+        # version is scheduled AFTER the end of the time optimized version + a gap
+        assert scheduled_rgs[10][2].scheduled_start < scheduled_rgs[10][1].scheduled_start
+        time_gap = scheduled_rgs[10][2].duration + 600  # 10 minutes beyond end of first observation
+        assert (scheduled_rgs[10][2].scheduled_start + time_gap) < scheduled_rgs[10][1].scheduled_start
+
+        cache_key = f'{request_1.id}_{self.resource_3}_airmass_at_times'
+        airmasses_at_times = json.loads(fakeredis_instance.get(cache_key))
+        # This verifies that the airmass optimized request is scheduled at best airmass
+        for i, airmass in enumerate(airmasses_at_times['airmasses']):
+            if airmass == AIRMASS_WEIGHTING_COEFFICIENT:
+                assert airmasses_at_times['times'][i] == scheduled_rgs[10][1].scheduled_start
 
     def test_competing_many_and_requests(self):
         normal_request_list = [self.and_request_group_1, self.many_request_group_2]

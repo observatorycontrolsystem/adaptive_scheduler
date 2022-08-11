@@ -22,7 +22,7 @@ try:
 except ImportError:
     pytest.skip('ORToolkit is not properly installed, skipping these tests.', allow_module_level=True)
 
-from adaptive_scheduler.kernel.reservation_v3 import Reservation_v3, CompoundReservation_v2
+from adaptive_scheduler.kernel.reservation import Reservation, CompoundReservation
 
 
 def test_gurobi_create_solver():
@@ -51,54 +51,54 @@ class TestFullScheduler_gurobi(object):
         s13 = copy.copy(s10)
 
         # Priority, Duration, possible_windows_dict
-        self.r1 = Reservation_v3(1, 1, {'foo': s1})
-        self.r2 = Reservation_v3(2, 2, {'bar': s2})
-        self.r3 = Reservation_v3(1, 1, {'foo': s3})
-        self.r4 = Reservation_v3(1, 1, {'foo': s4})
-        self.r5 = Reservation_v3(2, 2, {'bar': s5})
-        self.r6 = Reservation_v3(1, 2, {'bar': s5})
-        self.r7 = Reservation_v3(1, 1, {'bar': s6, 'foo': s5})
-        self.r8 = Reservation_v3(1, 1, {'foo': s6, 'bar': s7})
-        self.r9 = Reservation_v3(1, 1, {'foo': s8})
-        self.r10 = Reservation_v3(2, 2, {'bar': s9})
-        self.r11 = Reservation_v3(1, 1, {'bar': s10})
-        self.r12 = Reservation_v3(1, 1, {'bar': s11})
-        self.r13 = Reservation_v3(1, 1, {'bar': s12})
-        self.r14 = Reservation_v3(1, 1, {'bar': s13})
+        self.r1 = Reservation(1, 1, {'foo': s1})
+        self.r2 = Reservation(2, 2, {'bar': s2})
+        self.r3 = Reservation(1, 1, {'foo': s3})
+        self.r4 = Reservation(1, 1, {'foo': s4})
+        self.r5 = Reservation(2, 2, {'bar': s5})
+        self.r6 = Reservation(1, 2, {'bar': s5})
+        self.r7 = Reservation(1, 1, {'bar': s6, 'foo': s5})
+        self.r8 = Reservation(1, 1, {'foo': s6, 'bar': s7})
+        self.r9 = Reservation(1, 1, {'foo': s8})
+        self.r10 = Reservation(2, 2, {'bar': s9})
+        self.r11 = Reservation(1, 1, {'bar': s10})
+        self.r12 = Reservation(1, 1, {'bar': s11})
+        self.r13 = Reservation(1, 1, {'bar': s12})
+        self.r14 = Reservation(1, 1, {'bar': s13})
 
-        self.r15 = Reservation_v3(1, 9, {'bar': s13})
-        self.r16 = Reservation_v3(1, 9, {'foo': s13})
-        self.r17 = Reservation_v3(2, 9, {'bar': s13})
-        self.r18 = Reservation_v3(2, 9, {'foo': s13})
+        self.r15 = Reservation(1, 9, {'bar': s13})
+        self.r16 = Reservation(1, 9, {'foo': s13})
+        self.r17 = Reservation(2, 9, {'bar': s13})
+        self.r18 = Reservation(2, 9, {'foo': s13})
 
-        self.r19 = Reservation_v3(1, 1, {'bar': s10})
-        self.r20 = Reservation_v3(1, 1, {'bar': s10})
-        self.r21 = Reservation_v3(1, 1, {'bar': s10})
+        self.r19 = Reservation(1, 1, {'bar': s10})
+        self.r20 = Reservation(1, 1, {'bar': s10})
+        self.r21 = Reservation(1, 1, {'bar': s10})
 
-        self.cr1 = CompoundReservation_v2([self.r1])
-        self.cr2 = CompoundReservation_v2([self.r3, self.r2], 'and')
-        self.cr3 = CompoundReservation_v2([self.r4])
-        self.cr4 = CompoundReservation_v2([self.r5])
-        self.cr5 = CompoundReservation_v2([self.r4, self.r5], 'oneof')
-        self.cr6 = CompoundReservation_v2([self.r3])
-        self.cr7 = CompoundReservation_v2([self.r2])
-        self.cr8 = CompoundReservation_v2([self.r4, self.r6], 'oneof')
-        self.cr9 = CompoundReservation_v2([self.r4, self.r1, self.r3], 'oneof')
-        self.cr10 = CompoundReservation_v2([self.r7])
-        self.cr11 = CompoundReservation_v2([self.r8])
-        self.cr12 = CompoundReservation_v2([self.r9, self.r10], 'oneof')
-        self.cr13 = CompoundReservation_v2([self.r11])
-        self.cr14 = CompoundReservation_v2([self.r12])
-        self.cr15 = CompoundReservation_v2([self.r13])
-        self.cr16 = CompoundReservation_v2([self.r14])
+        self.cr1 = CompoundReservation([self.r1])
+        self.cr2 = CompoundReservation([self.r3, self.r2], 'and')
+        self.cr3 = CompoundReservation([self.r4])
+        self.cr4 = CompoundReservation([self.r5])
+        self.cr5 = CompoundReservation([self.r4, self.r5], 'oneof')
+        self.cr6 = CompoundReservation([self.r3])
+        self.cr7 = CompoundReservation([self.r2])
+        self.cr8 = CompoundReservation([self.r4, self.r6], 'oneof')
+        self.cr9 = CompoundReservation([self.r4, self.r1, self.r3], 'oneof')
+        self.cr10 = CompoundReservation([self.r7])
+        self.cr11 = CompoundReservation([self.r8])
+        self.cr12 = CompoundReservation([self.r9, self.r10], 'oneof')
+        self.cr13 = CompoundReservation([self.r11])
+        self.cr14 = CompoundReservation([self.r12])
+        self.cr15 = CompoundReservation([self.r13])
+        self.cr16 = CompoundReservation([self.r14])
 
-        self.cr17 = CompoundReservation_v2([self.r15, self.r16], 'and')
-        self.cr18 = CompoundReservation_v2([self.r17])
-        self.cr19 = CompoundReservation_v2([self.r18])
+        self.cr17 = CompoundReservation([self.r15, self.r16], 'and')
+        self.cr18 = CompoundReservation([self.r17])
+        self.cr19 = CompoundReservation([self.r18])
 
-        self.cr20 = CompoundReservation_v2([self.r19])
-        self.cr21 = CompoundReservation_v2([self.r20])
-        self.cr22 = CompoundReservation_v2([self.r21])
+        self.cr20 = CompoundReservation([self.r19])
+        self.cr21 = CompoundReservation([self.r20])
+        self.cr22 = CompoundReservation([self.r21])
 
         self.gpw2 = {}
         self.gpw2['foo'] = Intervals([{'time': 1, 'type': 'start'}, {'time': 10, 'type': 'end'}], 'free')
@@ -212,11 +212,11 @@ class TestFullScheduler_gurobi(object):
                         {'time': 114484, 'type': 'end'},
                         {'time': 180058, 'type': 'start'},
                         {'time': 200648, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1})
+        r1 = Reservation(1, 30, {'foo': s1})
         s2 = copy.copy(s1)
-        r2 = Reservation_v3(1, 30, {'goo': s2})
+        r2 = Reservation(1, 30, {'goo': s2})
 
-        cr = CompoundReservation_v2([r1, r2], 'oneof')
+        cr = CompoundReservation([r1, r2], 'oneof')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 90000, 'type': 'start'},
                                 {'time': 201000, 'type': 'end'}])
@@ -234,8 +234,8 @@ class TestFullScheduler_gurobi(object):
     def test_schedule_order_dependent_resources(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([])  # [{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -247,8 +247,8 @@ class TestFullScheduler_gurobi(object):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['foo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -260,8 +260,8 @@ class TestFullScheduler_gurobi(object):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -273,8 +273,8 @@ class TestFullScheduler_gurobi(object):
 
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['foo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
         gpw['goo'] = Intervals([{'time': 1500, 'type': 'start'}, {'time': 2000, 'type': 'end'}])
@@ -287,8 +287,8 @@ class TestFullScheduler_gurobi(object):
     def test_schedule_no_available_windows(self):
         s1 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
         s2 = Intervals([{'time': 0, 'type': 'start'}, {'time': 1000, 'type': 'end'}])
-        r1 = Reservation_v3(1, 30, {'foo': s1, 'goo': s2})
-        cr = CompoundReservation_v2([r1], 'single')
+        r1 = Reservation(1, 30, {'foo': s1, 'goo': s2})
+        cr = CompoundReservation([r1], 'single')
         gpw = {}
         gpw['goo'] = Intervals([{'time': 250, 'type': 'start'}, {'time': 750, 'type': 'end'}])
 
