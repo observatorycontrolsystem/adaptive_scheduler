@@ -234,11 +234,6 @@ class MetricCalculator():
         priorities_by_rg_id = {rg.id: rg.proposal.tac_priority for rg in self.request_groups}
         sched_priorities = [priorities_by_rg_id[rg_id] for rg_id in sched_rg_ids]
         unsched_priorities = [priorities_by_rg_id[rg_id] for rg_id in unsched_rg_ids]
-        # uncomment to remap the priorities
-        # note: adjust bin size accordingly
-        # scale = (100, 10, 30, 10)
-        # sched_priorities = [scalefunc(p, *scale) for p in sched_priorities]
-        # unsched_priorities = [scalefunc(p, *scale) for p in unsched_priorities]
         return sched_priorities, unsched_priorities
 
     def get_window_duration_data(self):
@@ -284,20 +279,16 @@ class MetricCalculator():
             airmass_data (dict): The airmass data returned from the API or the cache.
         """
         airmass_url = f'{self.observation_portal_interface.obs_portal_url}/api/requests/{request_id}/airmass/'
-        try:
-            cached_airmass_data = pickle.loads(redis_instance.get('airmass_data_by_request_id'))
-            cached_airmass_data[request_id]
-            self.airmass_data_by_request_id[request_id] = cached_airmass_data[request_id]
-            return cached_airmass_data[request_id]
-        except Exception:
-            # the request has not been cached yet, get the data from the portal
-            pass
+        cached_airmass_data = redis_instance.get(f'airmass_data_{request_id}')
+        if cached_airmass_data:
+            self.airmass_data_by_request_id[request_id] = pickle.loads(cached_airmass_data)
+            return pickle.loads(cached_airmass_data)
         try:
             response = requests.get(airmass_url, headers=self.observation_portal_interface.headers, timeout=180)
             response.raise_for_status()
             airmass_data_for_request = response.json()['airmass_data']
             self.airmass_data_by_request_id[request_id] = airmass_data_for_request
-            redis_instance.set('airmass_data_by_request_id', pickle.dumps(dict(self.airmass_data_by_request_id)))
+            redis_instance.set(f'airmass_data_{request_id}', pickle.dumps(airmass_data_for_request))
             return airmass_data_for_request
         except (RequestException, ValueError, Timeout) as e:
             raise ObservationPortalConnectionError("get_airmass_data failed: {}".format(repr(e)))
@@ -377,6 +368,7 @@ class MetricCalculator():
         """Bins metrics based on TAC priority. Priority bins should be changed to match the data."""
         bin_size = 5
         bin_range = (10, 30)
+        collect_upper_range = True
 
         sched_durations, unsched_durations = self.get_duration_data()
         all_durations = sched_durations + unsched_durations
@@ -389,21 +381,22 @@ class MetricCalculator():
         combined_histogram = bin_data(all_priorities, bin_size=bin_size, bin_range=bin_range, fill=None)
         bin_all_durations = bin_data(all_priorities, all_durations,
                                      bin_size, bin_range, fill=None, aggregator=sum)
-        # capture the upper range with one large bin (e.g. priority 31&up) and merge with the other binned dict
-        # this is a workaround to make nonuniform bins, since the binning function is intended for uniform bins
-        # comment this block to just bin within bin_range
-        max_prio = max(all_priorities)
-        lower = bin_range[-1] + 1  # assumes discrete values, but should be modified for float values
-        upper_sched_histogram = bin_data(sched_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
-        upper_sched_durations = bin_data(sched_priorities, sched_durations, bin_size=max_prio,
-                                         bin_range=(lower, max_prio), fill=None, aggregator=sum)
-        upper_combined_histogram = bin_data(all_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
-        upper_all_durations = bin_data(all_priorities, all_durations, bin_size=max_prio,
-                                       bin_range=(lower, max_prio), fill=None, aggregator=sum)
-        sched_histogram = sched_histogram | upper_sched_histogram
-        bin_sched_durations = bin_sched_durations | upper_sched_durations
-        combined_histogram = combined_histogram | upper_combined_histogram
-        bin_all_durations = bin_all_durations | upper_all_durations
+
+        # collects things above maximum bin range into one large bin
+        # e.g. bin 10-19, 20-29, 30, 31&up
+        if collect_upper_range:
+            max_prio = max(all_priorities)
+            lower = bin_range[-1] + 1  # assumes discrete priority values
+            upper_sched_histogram = bin_data(sched_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+            upper_sched_durations = bin_data(sched_priorities, sched_durations, bin_size=max_prio,
+                                             bin_range=(lower, max_prio), fill=None, aggregator=sum)
+            upper_combined_histogram = bin_data(all_priorities, bin_size=max_prio, bin_range=(lower, max_prio), fill=None)
+            upper_all_durations = bin_data(all_priorities, all_durations, bin_size=max_prio,
+                                           bin_range=(lower, max_prio), fill=None, aggregator=sum)
+            sched_histogram = sched_histogram | upper_sched_histogram
+            bin_sched_durations = bin_sched_durations | upper_sched_durations
+            combined_histogram = combined_histogram | upper_combined_histogram
+            bin_all_durations = bin_all_durations | upper_all_durations
 
         bin_percent_count = {bin_: percent_of(sched_histogram[bin_], combined_histogram[bin_])
                              for bin_ in sched_histogram}
