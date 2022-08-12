@@ -7,7 +7,7 @@ import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
 
-import numpy as np
+import numpy
 import requests
 import rise_set
 from requests.exceptions import RequestException, Timeout
@@ -50,9 +50,9 @@ def generate_bin_names(bin_size, bin_range):
     """Creates labels for the bins."""
     start, end = bin_range
     bin_names = []
-    bin_start = np.arange(start, end+1, bin_size)
+    bin_start = numpy.arange(start, end+1, bin_size)
     for start_num in bin_start:
-        if np.issubdtype(bin_start.dtype, np.integer):
+        if numpy.issubdtype(bin_start.dtype, numpy.integer):
             end_num = start_num + bin_size - 1
             end_num = end_num if end_num < end else end
         else:
@@ -299,7 +299,7 @@ class MetricCalculator():
         min_airmass = 1000
         for site in airmass_data.values():
             _, airmasses = site.values()
-            airmasses = np.array(airmasses)
+            airmasses = numpy.array(airmasses)
             min_airmass = min(min(airmasses), min_airmass)
             max_airmass = max(max(airmasses), max_airmass)
         return min_airmass, max_airmass
@@ -321,9 +321,9 @@ class MetricCalculator():
         for site, details in airmass_data.items():
             details = list(details.values())
             times, airmasses = details
-            airmasses = np.array(airmasses)
-            times = np.array([datetime.strptime(time, DTFORMAT) for time in times])
-            midpoint_airmasses[site] = airmasses[np.argmin(np.abs(times-midpoint_time))]
+            airmasses = numpy.array(airmasses)
+            times = numpy.array([datetime.strptime(time, DTFORMAT) for time in times])
+            midpoint_airmasses[site] = airmasses[numpy.argmin(numpy.abs(times-midpoint_time))]
         return midpoint_airmasses
 
     def airmass_metrics(self, schedule=None):
@@ -438,4 +438,4 @@ class MetricCalculator():
                 except IndexError:
                     break
 
-        return np.mean(slew_distances)
+        return numpy.mean(slew_distances)

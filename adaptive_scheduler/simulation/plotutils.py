@@ -9,8 +9,8 @@ import logging
 from copy import deepcopy
 from datetime import datetime
 
-import numpy as np
-import matplotlib.pyplot as plt
+import numpy
+import matplotlib.pyplot as pyplot
 import opensearchpy
 from opensearchpy import OpenSearch
 
@@ -87,17 +87,17 @@ def run_user_interface(plots):
                 plot.generate()
                 if args.save:
                     plot.save()
-                plt.show()
+                pyplot.show()
             break
         else:
             try:
                 plot = plot_dict[showplot]
-                plt.close('all')
+                pyplot.close('all')
                 plot.generate()
                 if args.save:
                     plot.save()
                 plot.fig.show()
-                plt.show()
+                pyplot.show()
                 break
             except KeyError as e:
                 print(f'Plot name not found: {e}')
@@ -172,7 +172,7 @@ def plot_multi_barplot(ax, data, labels, binnames, barwidth=0.04):
         binnames: A list of names of the bins for marking the x-axis.
         barwidth (float): The width of each bar.
     """
-    ticks = np.arange(len(data[0]))
+    ticks = numpy.arange(len(data[0]))
     for i, datavalues in enumerate(data):
         ax.bar(ticks+barwidth*i, datavalues, barwidth, label=labels[i])
     ax.set_xticks(ticks+barwidth*i/2, binnames)
