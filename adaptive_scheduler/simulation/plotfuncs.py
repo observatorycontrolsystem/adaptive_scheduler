@@ -525,7 +525,7 @@ def plot_subplots_input_duration(data, plot_title):
     Returns:
         fig (matplotlib.pyploy.Figure): The output Figure object.
     """
-    fig, (ax1, ax2, ax3) = pyplot.subplots(1, 3, figsize=(20, 10))
+    fig, axs = pyplot.subplots(3,2, figsize=(22, 15))
     fig.suptitle(plot_title)
     sched_durations = data['raw_scheduled_durations']
     sched_durations = [d/60 for d in sched_durations]
@@ -533,14 +533,21 @@ def plot_subplots_input_duration(data, plot_title):
     unsched_durations = [d/60 for d in unsched_durations]
     sched_priorities = data['raw_scheduled_priorities']
     unsched_priorities = data['raw_unscheduled_priorities']
-    sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=10, bin_range=(10, 30), aggregator=None)
-    unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=10, bin_range=(10, 30), aggregator=None)
+    sched_bins = metrics.bin_data(sched_priorities, sched_durations, bin_size=5, bin_range=(10, 30), aggregator=None) | metrics.bin_data(sched_priorities, sched_durations, bin_size=3000, bin_range=(31, 3000),aggregator=None)
+    unsched_bins = metrics.bin_data(unsched_priorities, unsched_durations, bin_size=5, bin_range=(10, 30), aggregator=None) | metrics.bin_data(unsched_priorities, unsched_durations, bin_size=3000, bin_range=(31, 3000),aggregator=None)
+    max_duration = 0
+    all_durations = sched_durations + unsched_durations
+    for i in all_durations:
+        if i > max_duration:
+            max_duration = i
+        else:
+            continue
     totals_by_priorities = list(data['total_req_by_priority'][0].values())
-    labels = ['10-19', '20-29', '30']
-    axis = [ax1, ax2, ax3]
+    labels = ['10-14', '15-20', '20-24', '25-29', '30', '31-2000']
+    axis = [axs[0][0], axs[0][1], axs[1][0], axs[1][1], axs[2][0], axs[2][1]]
     for i, values in enumerate(sched_bins.values()):
         bars = ['Scheduled', 'Unscheduled']
-        axis[i].hist([values, list(unsched_bins.values())[i]], bins=np.arange(0, 70, 2),
+        axis[i].hist([values, list(unsched_bins.values())[i]], bins=np.arange(0, 100, 2),
                      stacked=True, label=bars)
         axis[i].set_xlabel('Duration (Minutes)')
         axis[i].set_ylabel('Input reservation counts')

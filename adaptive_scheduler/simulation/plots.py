@@ -30,7 +30,7 @@ plots = [
     # General Use
     Plot(plotfuncs.plot_subplots_input_duration,
          '1m Network Scheduled/Unscheduled Requests Length Distribution',
-         'no-airmass-w-duration-no-scaling'),
+         'test-new-dataset'),
     Plot(plotfuncs.plot_duration_by_window_duration_scatter,
          '1m Network Scatterplot of Duration and Window Duration',
          'window-duration'),
