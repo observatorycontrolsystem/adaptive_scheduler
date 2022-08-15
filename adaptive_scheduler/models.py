@@ -49,7 +49,7 @@ redis_instance = Redis.from_url(url=os.getenv('REDIS_URL', 'redis://redis'), soc
               socket_timeout=30)
 
 
-AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("SIMULATION_AIRMASS_COEFFICIENT", 0.1)
+AIRMASS_WEIGHTING_COEFFICIENT = os.getenv("AIRMASS_WEIGHTING_COEFFICIENT", 0.1)
 
 
 def n_requests(request_groups):
