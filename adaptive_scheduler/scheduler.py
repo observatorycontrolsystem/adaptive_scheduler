@@ -36,12 +36,13 @@ from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInter
 
 class Scheduler(SendMetricMixin):
 
-    def __init__(self, kernel_class, sched_params, event_bus):
+    def __init__(self, kernel_class, sched_params, event_bus, network_model):
         self.kernel_class = kernel_class
         self.visibility_cache = {}
         self.saved_semester = {'start': None, 'end': None}
         self.sched_params = sched_params
         self.event_bus = event_bus
+        self.network_model = network_model
         self.log = logging.getLogger(__name__)
         if self.sched_params.simulate_now:
             self.estimated_scheduler_end = iso_string_to_datetime(self.sched_params.simulate_now)
@@ -427,12 +428,11 @@ class Scheduler(SendMetricMixin):
 
 class LCOGTNetworkScheduler(Scheduler):
     def __init__(self, kernel_class, sched_params, event_bus, network_model):
-        super().__init__(kernel_class, sched_params, event_bus)
+        super().__init__(kernel_class, sched_params, event_bus, network_model)
 
         self.visibility_cache = {}
         self.date_fmt = '%Y-%m-%d'
         self.date_time_fmt = '%Y-%m-%d %H:%M:%S'
-        self.network_model = network_model
 
     def _log_scheduler_start_details(self, estimated_scheduler_end, semester_details):
         self.log.info("Scheduling for semester %s (%s to %s)", semester_details['id'],
@@ -502,8 +502,8 @@ class LCOGTNetworkScheduler(Scheduler):
         semester_start = semester_details['start']
 
         many_rgs, other_rgs = differentiate_by_type('many', window_adjusted_rgs)
-        many_compound_reservations = make_many_type_compound_reservations(many_rgs, semester_start)
-        other_compound_reservations = make_compound_reservations(other_rgs, semester_start)
+        many_compound_reservations = make_many_type_compound_reservations(many_rgs, semester_start, self.network_model)
+        other_compound_reservations = make_compound_reservations(other_rgs, semester_start, self.network_model)
         all_compound_reservations = many_compound_reservations + other_compound_reservations
 
         return all_compound_reservations
@@ -591,7 +591,7 @@ class SchedulerResult(object):
         for reservations in self.schedule.values():
             for reservation in reservations:
                 request_id = reservation.request.id
-                request_group_id = reservation.request_group.id
+                request_group_id = reservation.request_group_id
                 if not request_group_id in scheduled_requests_by_request_group_id:
                     scheduled_requests_by_request_group_id[request_group_id] = {}
                 scheduled_requests_by_request_group_id[request_group_id][request_id] = DataContainer(
@@ -691,8 +691,9 @@ class SchedulerRunner(object):
         return self.semester_details
 
     def run(self):
+        rerun_required = True
         while self.run_flag:
-            self.run_once()
+            rerun_required = self.run_once(rerun_required)
             self.first_run = False
             if self.sched_params.run_once:
                 self.run_flag = False
@@ -702,28 +703,28 @@ class SchedulerRunner(object):
 
     @timeit
     @metric_timer('total_scheduling_cycle')
-    def run_once(self):
+    def run_once(self, rerun_required):
         if self.sched_params.no_weather:
             self.log.info("Weather monitoring disabled on the command line")
         else:
             self.update_network_model()
 
         # Always run the scheduler on the first run
-        rerun_required = False
+        should_rerun = False
         scheduler_run_start = self.input_factory.input_provider.get_scheduler_now()
         try:
             self.semester_details = self.get_semester_details(scheduler_run_start)
             self.network_interface.configdb_interface.update_configdb_structures()
             if self.scheduler_rerun_required() or self.first_run or rerun_required:
-                rerun_required = False
                 self.create_new_schedule(scheduler_run_start)
                 # Reset the warm starts flag back to the input setting at the end of each run
                 self.sched_params.warm_starts = self.warm_starts_setting
         except (ObservationPortalConnectionError, ScheduleException, EstimateExceededException) as eee:
             # Estimated run time was exceeded so exception was raised, or web resource failed
             # We should force a rerun in any case in case the network events and requests haven't changed
-            rerun_required = True
+            should_rerun = True
             self.log.warning("Skipping Scheduling Run: {}".format(repr(eee)))
+        return should_rerun
 
     def call_scheduler(self, scheduler_input, estimated_scheduler_end):
         self.log.info("Using a 'now' of %s", scheduler_input.scheduler_now)

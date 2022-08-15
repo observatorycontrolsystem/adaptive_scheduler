@@ -406,7 +406,7 @@ def build_observation(reservation, semester_start, configdb_interface):
             configuration_status['guide_camera_name'] = specific_ag
             msg = "Autoguider resolved as {}".format(specific_ag)
             log.debug(msg)
-            rg_log.debug(msg, reservation.request_group.id)
+            rg_log.debug(msg, reservation.request_group_id)
         configuration_statuses.append(configuration_status)
 
     all_configuration_statuses = []
