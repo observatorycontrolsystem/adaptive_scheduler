@@ -60,7 +60,7 @@ class Network(object):
         technical issues), and determine when that state changes.
     '''
 
-    def __init__(self, configdb_interface, scheduling_input=None, monitors=None):
+    def __init__(self, configdb_interface, scheduler_params=None, monitors=None):
         '''
             monitors (optional) - The list of specific monitors to check for
                                   Events.
@@ -72,12 +72,12 @@ class Network(object):
             self.monitors = [
                 OfflineResourceMonitor(configdb_interface),
             ]
-            if scheduling_input.opensearch_url and scheduling_input.opensearch_index:
+            if scheduler_params.opensearch_url and scheduler_params.opensearch_index:
                 self.monitors.append(AvailableForScheduling(
                     configdb_interface,
-                    scheduling_input.opensearch_url,
-                    scheduling_input.opensearch_index,
-                    scheduling_input.opensearch_excluded_observatories
+                    scheduler_params.opensearch_url,
+                    scheduler_params.opensearch_index,
+                    scheduler_params.opensearch_excluded_observatories
                 ))
 
         self.current_events = {}

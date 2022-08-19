@@ -5,6 +5,7 @@ import copy
 
 from adaptive_scheduler.models import (ICRSTarget, Request, Proposal,
                                        RequestGroup, Window, Windows, Configuration)
+from adaptive_scheduler.monitoring.seeing import DummySeeingMonitor
 from adaptive_scheduler.utils import (datetime_to_epoch, normalise_datetime_intervals,
                                       normalised_epoch_to_datetime)
 from time_intervals.intervals import Intervals
@@ -92,6 +93,8 @@ class TestKernelMappings(object):
                 constraints=self.constraints
             )
         )
+
+        self.seeing_monitor = DummySeeingMonitor()
 
     def make_constrained_request(self, airmass=None, max_lunar_phase=1.0,
                                  start=datetime(2011, 11, 1, 6, 0, 0),
@@ -189,13 +192,13 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
         # Lunar phase goes above 40 at ~16:30 on 11/1, so it should eliminate the second window
         constrainted_request = self.make_constrained_request(max_lunar_phase=0.4)
         intervals_for_resource = self.make_rise_set_intervals(constrainted_request, visibilities)
-        compute_request_availability(constrainted_request, intervals_for_resource, {})
+        compute_request_availability(constrainted_request, intervals_for_resource, {}, self.seeing_monitor)
 
         assert len(base_windows[resource]) == 2
         assert constrainted_request.windows.size() == 1
@@ -209,10 +212,10 @@ class TestKernelMappings(object):
         downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
-        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 1
         assert request.windows.at(resource)[0] == base_windows[resource][1]
@@ -224,10 +227,10 @@ class TestKernelMappings(object):
         downtime_intervals = {resource: {'all': [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
-        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 0
 
@@ -239,10 +242,10 @@ class TestKernelMappings(object):
         downtime_intervals = {resource: {instrument_type: [(datetime(2011, 11, 1, 5), datetime(2011, 11, 1, 8)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
-        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 1
         assert request.windows.at(resource)[0] == base_windows[resource][1]
@@ -258,10 +261,10 @@ class TestKernelMappings(object):
         }}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
-        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 0
 
@@ -272,10 +275,10 @@ class TestKernelMappings(object):
         downtime_intervals = {resource: {'not_my_inst': [(datetime(2011, 11, 1), datetime(2011, 11, 3)), ]}}
 
         intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
-        compute_request_availability(request, intervals_for_resource, {})
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor)
         base_windows = request.windows.windows_for_resource.copy()
 
-        compute_request_availability(request, intervals_for_resource, downtime_intervals)
+        compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 2
 
@@ -442,7 +445,7 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
-        compute_request_availability(req, intervals_for_resource, {})
+        compute_request_availability(req, intervals_for_resource, {}, self.seeing_monitor)
         received = req.windows.to_window_intervals()
 
         date_format = '%Y-%m-%d %H:%M:%S.%f'
@@ -490,7 +493,7 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
-        compute_request_availability(req, intervals_for_resource, {})
+        compute_request_availability(req, intervals_for_resource, {}, self.seeing_monitor)
         received = req.windows.to_window_intervals()
 
         # The user windows constrain the available observing windows (compare to
@@ -535,7 +538,7 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
-        compute_request_availability(req, intervals_for_resource, {})
+        compute_request_availability(req, intervals_for_resource, {}, self.seeing_monitor)
         received = req.windows.to_window_intervals()
 
         # The user windows constrain the available observing windows (compare to
@@ -600,7 +603,7 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(tels, sem_start, sem_end)
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
-        compute_request_availability(req, intervals_for_resource, {})
+        compute_request_availability(req, intervals_for_resource, {}, self.seeing_monitor)
         received = req.windows.to_window_intervals()
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -667,7 +670,7 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(tels, sem_start, sem_end)
 
         intervals_for_resource = self.make_rise_set_intervals(req, visibilities)
-        compute_request_availability(req, intervals_for_resource, {})
+        compute_request_availability(req, intervals_for_resource, {}, self.seeing_monitor)
         received = req.windows.to_window_intervals()
 
         # Hour angle not violated independently confirmed by hand-cranking through SLALIB
@@ -740,12 +743,12 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
-        compute_request_availability(req_no_airmass, intervals_for_resource, {})
+        compute_request_availability(req_no_airmass, intervals_for_resource, {}, self.seeing_monitor)
         received_no_airmass = req_no_airmass.windows.to_window_intervals()
         timepoints_no_airmass = received_no_airmass['1m0a.doma.bpl'].toDictList()
 
         intervals_for_resource = self.make_rise_set_intervals(req_airmass3, visibilities)
-        compute_request_availability(req_airmass3, intervals_for_resource, {})
+        compute_request_availability(req_airmass3, intervals_for_resource, {}, self.seeing_monitor)
         received_airmass3 = req_airmass3.windows.to_window_intervals()
         timepoints_airmass3 = received_airmass3['1m0a.doma.bpl'].toDictList()
 
@@ -759,11 +762,11 @@ class TestKernelMappings(object):
         visibilities = construct_visibilities(self.tels, self.start, self.end)
 
         intervals_for_resource = self.make_rise_set_intervals(req_no_airmass, visibilities)
-        compute_request_availability(req_no_airmass, intervals_for_resource, {})
+        compute_request_availability(req_no_airmass, intervals_for_resource, {}, self.seeing_monitor)
         received_no_airmass = req_no_airmass.windows.to_window_intervals()
 
         intervals_for_resource = self.make_rise_set_intervals(req_airmass1, visibilities)
-        compute_request_availability(req_airmass1, intervals_for_resource, {})
+        compute_request_availability(req_airmass1, intervals_for_resource, {}, self.seeing_monitor)
         received_airmass1 = req_airmass1.windows.to_window_intervals()
 
         assert received_airmass1 != received_no_airmass

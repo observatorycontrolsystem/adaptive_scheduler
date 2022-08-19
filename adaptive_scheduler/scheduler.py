@@ -36,13 +36,14 @@ from adaptive_scheduler.downtime_connections import DowntimeError, DowntimeInter
 
 class Scheduler(SendMetricMixin):
 
-    def __init__(self, kernel_class, sched_params, event_bus, network_model):
+    def __init__(self, kernel_class, sched_params, event_bus, network_model, seeing_monitor):
         self.kernel_class = kernel_class
         self.visibility_cache = {}
         self.saved_semester = {'start': None, 'end': None}
         self.sched_params = sched_params
         self.event_bus = event_bus
         self.network_model = network_model
+        self.seeing_monitor = seeing_monitor
         self.log = logging.getLogger(__name__)
         if self.sched_params.simulate_now:
             self.estimated_scheduler_end = iso_string_to_datetime(self.sched_params.simulate_now)
@@ -427,8 +428,8 @@ class Scheduler(SendMetricMixin):
 
 
 class LCOGTNetworkScheduler(Scheduler):
-    def __init__(self, kernel_class, sched_params, event_bus, network_model):
-        super().__init__(kernel_class, sched_params, event_bus, network_model)
+    def __init__(self, kernel_class, sched_params, event_bus, network_model, seeing_monitor):
+        super().__init__(kernel_class, sched_params, event_bus, network_model, seeing_monitor)
 
         self.visibility_cache = {}
         self.date_fmt = '%Y-%m-%d'
@@ -489,7 +490,7 @@ class LCOGTNetworkScheduler(Scheduler):
 
         combined_downtime_intervals = merge_downtime_dicts(downtime_intervals, extra_downtime_by_resource)
         filtered_window_request_groups = filter_for_kernel(request_groups, self.visibility_cache,
-                                                           combined_downtime_intervals,
+                                                           combined_downtime_intervals, self.seeing_monitor,
                                                            semester_details['start'], semester_end,
                                                            self.scheduling_horizon(estimated_scheduler_end))
 
@@ -660,7 +661,10 @@ class SchedulerRunner(object):
             # Skipping weather checking or doing a dry run forces network/request update
             request_set_changed = self.network_interface.schedulable_request_set_has_changed(self.sched_params.telescope_classes)
 
-        return network_has_changed or request_set_changed
+        # This will return True if the seeing values have changed on the network.
+        seeing_changed = self.network_interface.update_current_seeing()
+
+        return network_has_changed or request_set_changed or seeing_changed
 
     @timeit
     @metric_timer('update_network_model')

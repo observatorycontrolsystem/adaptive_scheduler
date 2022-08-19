@@ -116,11 +116,12 @@ class ResourceUsageSnapshot(object):
 
 class NetworkInterface(object):
 
-    def __init__(self, schedule_interface, observation_portal_interface, network_state_interface, configdb_interface):
+    def __init__(self, schedule_interface, observation_portal_interface, network_state_interface, configdb_interface, seeing_monitor):
         self.network_schedule_interface = schedule_interface
         self.observation_portal_interface = observation_portal_interface
         self.configdb_interface = configdb_interface
         self.network_state_interface = network_state_interface
+        self.seeing_monitor = seeing_monitor
 
     def _running_request_groups_by_id(self):
         ''' Return RunningRequestGroup objects indexed by tracking number
@@ -174,6 +175,16 @@ class NetworkInterface(object):
         '''
         return self.network_schedule_interface.save(schedule, semester_start, self.configdb_interface, dry_run)
 
+    def update_current_seeing(self):
+        ''' Update the current seeing values per resource from the data source
+        '''
+        return self.seeing_monitor.update_data()
+
+    def get_current_seeing(self):
+        ''' Get the current seeing values on the network
+        '''
+        return self.seeing_monitor.retrieve_data()
+
     def get_current_events(self):
         ''' Get the current network events
         '''
@@ -201,6 +212,7 @@ class CachedInputNetworkInterface(object):
         input_file = open(self.input_file_name, 'rb')
         input_data = pickle.load(input_file, encoding='latin1')
         input_file.close()
+        self.seeing_values = input_data.get('seeing_values', {})
         self.json_request_group_list = input_data['json_request_group_list']
         self.resource_usage_snapshot_data = input_data['resource_usage_snapshot']
 
@@ -243,6 +255,16 @@ class CachedInputNetworkInterface(object):
         Return the number of submitted requests
         '''
         return 0
+
+    def update_current_seeing(self):
+        ''' Update the current seeing values per resource from the data source
+        '''
+        return True
+
+    def get_current_seeing(self):
+        ''' Get the current seeing values on the network
+        '''
+        return self.seeing_values
 
     def get_current_events(self):
         ''' Get the current network events

@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.models import (ICRSTarget, Proposal, Configuration,
                                        Request, RequestGroup,
                                        Windows, Window)
+from adaptive_scheduler.monitoring.seeing import DummySeeingMonitor
 
 from .test_scheduler import create_scheduler_input_factory, create_running_request_group
 
@@ -179,7 +180,8 @@ class TestIntegration(object):
             semester_details = {}
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
+        seeing_monitor = DummySeeingMonitor()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes, seeing_monitor)
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
@@ -208,7 +210,8 @@ class TestIntegration(object):
         scheduler_time = self.base_time - timedelta(hours=10)
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
+        seeing_monitor = DummySeeingMonitor()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes, seeing_monitor)
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
