@@ -17,8 +17,9 @@ from adaptive_scheduler.kernel_mappings import (construct_visibilities,
                                                 compute_request_availability,
                                                 get_rise_set_timepoint_intervals,
                                                 make_cache_key)
-from datetime import datetime
+from datetime import datetime, timedelta
 
+from mock import Mock
 import pytest
 
 
@@ -96,7 +97,7 @@ class TestKernelMappings(object):
 
         self.seeing_monitor = DummySeeingMonitor()
 
-    def make_constrained_request(self, airmass=None, max_lunar_phase=1.0,
+    def make_constrained_request(self, airmass=None, max_lunar_phase=1.0, max_seeing=2.5,
                                  start=datetime(2011, 11, 1, 6, 0, 0),
                                  end=datetime(2011, 11, 2, 6, 0, 0)):
         # A one day user supplied window
@@ -114,6 +115,7 @@ class TestKernelMappings(object):
         configuration = copy.deepcopy(self.configuration)
         configuration.constraints['max_airmass'] = airmass
         configuration.constraints['max_lunar_phase'] = max_lunar_phase
+        configuration.constraints['max_seeing'] = max_seeing
 
         req = Request(
             configurations=[configuration],
@@ -281,6 +283,108 @@ class TestKernelMappings(object):
         compute_request_availability(request, intervals_for_resource, downtime_intervals, self.seeing_monitor)
         assert len(base_windows[resource]) == 2
         assert request.windows.size() == 2
+
+    def test_compute_request_availability_full_seeing_constraint_violated(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        estimated_scheduler_end = datetime(2011, 11, 1, 6)
+        seeing_monitor = Mock()
+        seeing_monitor.seeing_valid_time_period = 20.0
+        seeing_data = {
+            '1m0a.doma.bpl': {
+                'time': estimated_scheduler_end,
+                'seeing': 7.5
+            }
+        }
+        seeing_monitor.retrieve_data = Mock(return_value=seeing_data)
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor, estimated_scheduler_end)
+        base_windows = request.windows.windows_for_resource.copy()
+        compute_request_availability(request, intervals_for_resource, {}, seeing_monitor, estimated_scheduler_end)
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 2
+        # Verify second window is unchanged by the seeing constraint being applied
+        assert request.windows.at(resource)[1] == base_windows[resource][1]
+        # Verify that in this case, the full "seeing_valid_time_period" is blocked out from the estimated_end_time
+        assert request.windows.at(resource)[0].start == base_windows[resource][0].start + timedelta(minutes=seeing_monitor.seeing_valid_time_period)
+
+    def test_compute_request_availability_half_seeing_constraint_violated(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        estimated_scheduler_end = datetime(2011, 11, 1, 6)
+        seeing_monitor = Mock()
+        seeing_monitor.seeing_valid_time_period = 20.0
+        seeing_data = {
+            '1m0a.doma.bpl': {
+                'time': estimated_scheduler_end - timedelta(minutes=(seeing_monitor.seeing_valid_time_period / 2.0)),
+                'seeing': 7.5
+            }
+        }
+        seeing_monitor.retrieve_data = Mock(return_value=seeing_data)
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor, estimated_scheduler_end)
+        base_windows = request.windows.windows_for_resource.copy()
+        compute_request_availability(request, intervals_for_resource, {}, seeing_monitor, estimated_scheduler_end)
+        assert len(base_windows[resource]) == 2
+        assert request.windows.size() == 2
+        # Verify second window is unchanged by the seeing constraint being applied
+        assert request.windows.at(resource)[1] == base_windows[resource][1]
+        # Verify that in this case, the full "seeing_valid_time_period" is blocked out from the estimated_end_time - 10 minutes
+        assert request.windows.at(resource)[0].start == base_windows[resource][0].start + timedelta(minutes=(seeing_monitor.seeing_valid_time_period/2.0))
+
+    def test_compute_request_availability_seeing_constraint_not_violated(self):
+        # Seeing in the request defaults to 2.5
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        estimated_scheduler_end = datetime(2011, 11, 1, 6)
+        seeing_monitor = Mock()
+        seeing_monitor.seeing_valid_time_period = 20.0
+        seeing_data = {
+            '1m0a.doma.bpl': {
+                'time': estimated_scheduler_end - timedelta(minutes=(seeing_monitor.seeing_valid_time_period / 2.0)),
+                'seeing': 1.5
+            }
+        }
+        seeing_monitor.retrieve_data = Mock(return_value=seeing_data)
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor, estimated_scheduler_end)
+        base_windows = request.windows.windows_for_resource.copy()
+        compute_request_availability(request, intervals_for_resource, {}, seeing_monitor, estimated_scheduler_end)
+        assert len(base_windows[resource]) == request.windows.size()
+        # Verify both windows are unchanged by the seeing constraint since it is not violated
+        assert request.windows.at(resource)[0] == base_windows[resource][0]
+        assert request.windows.at(resource)[1] == base_windows[resource][1]
+
+    def test_compute_request_availability_seeing_constraint_outside_range_doesnt_matter(self):
+        request = self.make_constrained_request()
+        resource = '1m0a.doma.bpl'
+        visibilities = construct_visibilities(self.tels, self.start, self.end)
+        estimated_scheduler_end = datetime(2011, 11, 1, 5)
+        seeing_monitor = Mock()
+        seeing_monitor.seeing_valid_time_period = 20.0
+        seeing_data = {
+            '1m0a.doma.bpl': {
+                'time': estimated_scheduler_end - timedelta(minutes=(seeing_monitor.seeing_valid_time_period / 2.0)),
+                'seeing': 7.5
+            }
+        }
+        seeing_monitor.retrieve_data = Mock(return_value=seeing_data)
+
+        intervals_for_resource = self.make_rise_set_intervals(request, visibilities)
+        compute_request_availability(request, intervals_for_resource, {}, self.seeing_monitor, estimated_scheduler_end)
+        base_windows = request.windows.windows_for_resource.copy()
+        compute_request_availability(request, intervals_for_resource, {}, seeing_monitor, estimated_scheduler_end)
+        assert len(base_windows[resource]) == request.windows.size()
+        # Verify both windows are unchanged by the seeing constraint since the request window starts at
+        # 06:00 and the scheduler end time is at 05:00, so seeing constraint is outside its 20 minute range
+        assert request.windows.at(resource)[0] == base_windows[resource][0]
+        assert request.windows.at(resource)[1] == base_windows[resource][1]
 
     def test_construct_compound_reservation(self):
         request = self.make_constrained_request()
@@ -737,7 +841,7 @@ class TestKernelMappings(object):
 
     def test_airmass_is_honoured_high_airmass(self):
         airmass = 3.0
-        req_airmass3 = self.make_constrained_request(airmass)
+        req_airmass3 = self.make_constrained_request(airmass=airmass)
         req_no_airmass = self.make_constrained_request()
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)
@@ -756,7 +860,7 @@ class TestKernelMappings(object):
 
     def test_airmass_is_honoured_low_airmass(self):
         airmass = 1.0
-        req_airmass1 = self.make_constrained_request(airmass)
+        req_airmass1 = self.make_constrained_request(airmass=airmass)
         req_no_airmass = self.make_constrained_request()
 
         visibilities = construct_visibilities(self.tels, self.start, self.end)

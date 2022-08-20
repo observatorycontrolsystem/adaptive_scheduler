@@ -226,7 +226,7 @@ def filter_on_scheduling_horizon(request_groups, scheduling_horizon):
 
 @timeit
 def filter_for_kernel(request_groups, visibility_for_resource, downtime_intervals, seeing_monitor,
-                      semester_start, semester_end, scheduling_horizon):
+                      semester_start, semester_end, estimated_scheduler_end, scheduling_horizon):
     '''After throwing out and marking RGs as UNSCHEDULABLE, reduce windows by
        considering dark time and target visibility. Remove any RGs that are now too
        small to hold their duration after this consideration, so they are not passed
@@ -239,7 +239,7 @@ def filter_for_kernel(request_groups, visibility_for_resource, downtime_interval
     rgs = filter_on_scheduling_horizon(request_groups, scheduling_horizon)
 
     # Filter on rise_set/airmass/downtime intervals
-    rgs = filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seeing_monitor, semester_start, semester_end)
+    rgs = filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seeing_monitor, semester_start, semester_end, estimated_scheduler_end)
 
     # Clean up now impossible Requests
     rgs = filter_on_duration(rgs)
@@ -280,7 +280,7 @@ def update_cached_semester(semester_start, semester_end):
 
 
 @log_windows
-def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seeing_monitor, semester_start, semester_end):
+def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seeing_monitor, semester_start, semester_end, estimated_scheduler_end):
     update_cached_semester(semester_start, semester_end)
     rise_sets_to_compute_later = {}
     for rg in rgs:
@@ -352,13 +352,13 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seein
                         intervals_by_resource[resource] = intervals_by_resource[resource].intersect([target_intervals])
                     else:
                         intervals_by_resource[resource] = target_intervals
-            process_request_visibility(rg.id, r, intervals_by_resource, downtime_intervals, seeing_monitor)
+            process_request_visibility(rg.id, r, intervals_by_resource, downtime_intervals, seeing_monitor, estimated_scheduler_end)
 
     return rgs
 
 
-def process_request_visibility(request_group_id, request, target_intervals, downtime_intervals, seeing_monitor):
-    request = compute_request_availability(request, target_intervals, downtime_intervals, seeing_monitor)
+def process_request_visibility(request_group_id, request, target_intervals, downtime_intervals, seeing_monitor, estimated_scheduler_end):
+    request = compute_request_availability(request, target_intervals, downtime_intervals, seeing_monitor, estimated_scheduler_end)
     if request.has_windows():
         tag = 'RequestIsVisible'
         msg = 'Request {} (RG {}) is visible ({} windows remaining)'.format(request.id, request_group_id,
@@ -370,9 +370,8 @@ def process_request_visibility(request_group_id, request, target_intervals, down
     RequestGroup.emit_request_group_feedback(request_group_id, msg, tag)
 
 
-def compute_request_availability(request, target_intervals_by_resource, downtime_intervals, seeing_monitor):
+def compute_request_availability(request, target_intervals_by_resource, downtime_intervals, seeing_monitor, estimated_scheduler_end=datetime.utcnow()):
     intervals_for_resource = {}
-    now = datetime.utcnow()
     seeing_by_resources = seeing_monitor.retrieve_data()
     for resource, target_intervals in target_intervals_by_resource.items():
         # Intersect with any window provided in the user request
@@ -388,8 +387,8 @@ def compute_request_availability(request, target_intervals_by_resource, downtime
             for conf in request.configurations:
                 if 'max_seeing' in conf.constraints and conf.constraints['max_seeing'] <= seeing_by_resources[resource]['seeing']:
                     blockoff_until = seeing_by_resources[resource]['time'] + timedelta(minutes=seeing_monitor.seeing_valid_time_period)
-                    if blockoff_until > now:
-                        blockoff_seeing_interval = rise_set_to_kernel_intervals([(now, blockoff_until)])
+                    if blockoff_until > estimated_scheduler_end:
+                        blockoff_seeing_interval = rise_set_to_kernel_intervals([(estimated_scheduler_end, blockoff_until)])
                         intervals_for_resource[resource] = intervals_for_resource[resource].subtract(blockoff_seeing_interval)
                     # We've already blocked off time for the seeing constraint being violated, so no need to check any more configurations
                     break

@@ -1461,9 +1461,11 @@ class TestSchedulerRunnerUseOfRunTimes(object):
 
     def setup(self):
         self.sched_params = SchedulerParameters()
+        self.sched_params.no_weather = False
         self.scheduler = Mock()
         self.scheduler.run_scheduler = Mock(return_value=SchedulerResult())
         self.network_interface = Mock()
+        self.network_interface.update_current_seeing = Mock(return_value=False)
         self.network_interface.cancel = Mock(return_value=0)
         self.network_interface.save = Mock(return_value=0)
         self.observation_portal_interface_mock = Mock()
