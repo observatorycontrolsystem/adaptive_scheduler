@@ -111,7 +111,7 @@ python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolve
 python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('GLPK')"
 
 # assumption: if it's trying to read the licence, it's probably linked properly
-strace -e openat python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('GUROBI')" 2>&1 | grep -q gurobi.lic
+# strace -e openat python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('GUROBI')" 2>&1 | grep -q gurobi.lic
 EOT
 
 USER app

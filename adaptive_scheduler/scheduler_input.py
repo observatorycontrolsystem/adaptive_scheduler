@@ -49,7 +49,8 @@ class SchedulerParameters(object):
                  ignore_ipp=to_bool(os.getenv('IGNORE_IPP_VALUES', 'False')),
                  avg_reservation_save_time_seconds=float(os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05)),
                  normal_runtime_seconds=float(os.getenv('INITIAL_NORMAL_RUNTIME', 360.0)),
-                 rr_runtime_seconds=float(os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0))):
+                 rr_runtime_seconds=float(os.getenv('INITIAL_RAPID_RESPONSE_RUNTIME', 120.0)),
+                 simulation_opensearch_index=os.getenv('SIMULATION_OPENSEARCH_INDEX', '')):
         self.dry_run = dry_run
         self.no_weather = no_weather
         self.no_singles = no_singles
@@ -92,6 +93,7 @@ class SchedulerParameters(object):
             self.opensearch_excluded_observatories = opensearch_excluded_observatories.split(',')
         else:
             self.opensearch_excluded_observatories = []
+        self.simulation_opensearch_index = simulation_opensearch_index
 
 
 class SchedulingInputFactory(object):
