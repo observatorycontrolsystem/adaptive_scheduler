@@ -20,7 +20,7 @@ Author: Martin Norbury
 May 2013
 '''
 from adaptive_scheduler.monitoring.monitors import OfflineResourceMonitor, AvailableForScheduling
-from adaptive_scheduler.monitoring.opensearch_telemetry import ConnectionError
+from adaptive_scheduler.monitoring.opensearch_telemetry import OSConnectionError
 
 import logging
 
@@ -92,7 +92,7 @@ class Network(object):
 
         try:
             self.current_events = self._status()
-        except ConnectionError as e:
+        except OSConnectionError as e:
             msg = "Unable to retrieve current network status: %s" % e
             log.warn(msg)
 

@@ -593,7 +593,7 @@ class SchedulerResult(object):
             for reservation in reservations:
                 request_id = reservation.request.id
                 request_group_id = reservation.request_group_id
-                if not request_group_id in scheduled_requests_by_request_group_id:
+                if request_group_id not in scheduled_requests_by_request_group_id:
                     scheduled_requests_by_request_group_id[request_group_id] = {}
                 scheduled_requests_by_request_group_id[request_group_id][request_id] = DataContainer(
                     duration=reservation.duration,

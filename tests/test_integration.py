@@ -1,7 +1,4 @@
 #!/usr/bin/python
-from __future__ import division
-from copy import deepcopy
-
 import pytest
 
 from datetime import datetime, timedelta
@@ -479,7 +476,7 @@ class TestIntegration(object):
                                          rapid_response_ids=[rapid_response_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure no RR was scheduled because the running request group was over it's time
-        assert not 5 in scheduled_rgs
+        assert 5 not in scheduled_rgs
         assert scheduled_rgs == {}
 
     def test_rr_requests_do_schedule_over_running_normal(self):
@@ -548,8 +545,8 @@ class TestIntegration(object):
                                          rapid_response_ids=[rr_request_group_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
-        assert not 4 in scheduled_rgs
-        assert not 3 in scheduled_rgs
+        assert 4 not in scheduled_rgs
+        assert 3 not in scheduled_rgs
         assert scheduled_rgs == {}
 
     def test_normal_requests_can_schedule_after_rr(self):
@@ -593,7 +590,7 @@ class TestIntegration(object):
         # Ensure request 4 is after the RR running request in its window, and request 3 is blocked by the running RR
         assert 4 in scheduled_rgs
         assert 4 in scheduled_rgs[4]
-        assert not 3 in scheduled_rgs[4]
+        assert 3 not in scheduled_rgs[4]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
         assert dt_start == self.base_time + timedelta(hours=1, minutes=0, seconds=30)

@@ -1,6 +1,5 @@
 from time_intervals.intervals import Intervals
 
-import os
 import pickle
 import logging
 from datetime import datetime, timedelta
@@ -90,7 +89,7 @@ class ResourceUsageSnapshot(object):
         running_rgs = self.running_request_groups_by_resource.get(resource, [])
         for running_rg in running_rgs:
             for running_r in running_rg.running_requests:
-                # Only consider the interval running if the request should continue running 
+                # Only consider the interval running if the request should continue running
                 if running_r.should_continue():
                     intervals_list.append((running_r.start, running_r.end))
         intervals = Intervals(intervals_list)

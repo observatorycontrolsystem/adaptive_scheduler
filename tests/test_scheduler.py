@@ -39,7 +39,7 @@ def build_rg_list(*request_group_ids):
 
 
 def is_scheduled(request_id, schedule):
-    for resource, reservations in schedule.items():
+    for _, reservations in schedule.items():
         for reservation in reservations:
             if reservation.request.id == request_id:
                 return True

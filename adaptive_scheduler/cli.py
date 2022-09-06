@@ -198,7 +198,10 @@ def main(argv=None):
     network_state_interface = Network(configdb_interface, sched_params)
 
     if sched_params.opensearch_url and sched_params.opensearch_seeing_index:
-        seeing_monitor = OpenSearchSeeingMonitor(sched_params.seeing_valid_time_period, configdb_interface, sched_params.opensearch_url, sched_params.opensearch_seeing_index, sched_params.opensearch_excluded_observatories)
+        seeing_monitor = OpenSearchSeeingMonitor(
+            sched_params.seeing_valid_time_period, configdb_interface, sched_params.opensearch_url,
+            sched_params.opensearch_seeing_index, sched_params.opensearch_excluded_observatories
+        )
     else:
         seeing_monitor = DummySeeingMonitor()
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
