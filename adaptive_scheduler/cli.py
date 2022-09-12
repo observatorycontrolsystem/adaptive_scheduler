@@ -122,7 +122,7 @@ def parse_args(argv):
                             default=defaults.ignore_ipp)
 
     # Handle command line arguments
-    args, unknown = arg_parser.parse_known_args(argv)
+    args, _ = arg_parser.parse_known_args(argv)
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")

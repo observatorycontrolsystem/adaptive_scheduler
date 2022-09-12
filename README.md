@@ -73,7 +73,7 @@ Install using Poetry:
 
 `$ poetry install`
 
-There are a large number of input arguments, with defaults defined in the *SchedulerParameters* class in **adaptive_scheduler/scheduler_input.py**.
+There are a large number of input arguments, with defaults defined in the _SchedulerParameters_ class in **adaptive_scheduler/scheduler_input.py**.
 
 `$ poetry run adaptive-scheduler --help`
 
