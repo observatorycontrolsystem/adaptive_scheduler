@@ -44,7 +44,9 @@ class SchedulerParameters(object):
                  opensearch_url=os.getenv('OPENSEARCH_URL', ''),
                  telescope_classes=os.getenv('TELESCOPE_CLASSES', ''),
                  opensearch_index=os.getenv('OPENSEARCH_INDEX', 'live-telemetry'),
+                 opensearch_seeing_index=os.getenv('OPENSEARCH_SEEING_INDEX', ''),
                  opensearch_excluded_observatories=os.getenv('OPENSEARCH_EXCLUDED_OBSERVATORIES', ''),
+                 seeing_valid_time_period=float(os.getenv('SEEING_VALID_TIME_PERIOD', 20.0)),
                  profiling_enabled=to_bool(os.getenv('CPROFILE_ENABLED', 'False')),
                  ignore_ipp=to_bool(os.getenv('IGNORE_IPP_VALUES', 'False')),
                  avg_reservation_save_time_seconds=float(os.getenv('INITIAL_PER_RESERVATION_SAVE_TIME', 0.05)),
@@ -88,10 +90,12 @@ class SchedulerParameters(object):
         self.downtime_url = downtime_url
         self.opensearch_url = opensearch_url
         self.opensearch_index = opensearch_index
+        self.opensearch_seeing_index = opensearch_seeing_index
         if opensearch_excluded_observatories:
             self.opensearch_excluded_observatories = opensearch_excluded_observatories.split(',')
         else:
             self.opensearch_excluded_observatories = []
+        self.seeing_valid_time_period = seeing_valid_time_period
 
 
 class SchedulingInputFactory(object):
@@ -265,6 +269,7 @@ class SchedulingInputUtils(SendMetricMixin):
             },
             'json_request_group_list': normal_input_provider.json_request_group_list,
             'available_resources': normal_input_provider.available_resources,
+            'seeing_values': normal_input_provider.network_interface.get_current_seeing(),
             'proposals_by_id': model_builder.proposals_by_id,
             'semester_details': model_builder.semester_details
         }

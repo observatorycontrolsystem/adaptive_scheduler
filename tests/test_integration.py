@@ -1,6 +1,4 @@
 #!/usr/bin/python
-from __future__ import division
-
 import pytest
 
 from datetime import datetime, timedelta
@@ -9,6 +7,7 @@ from datetime import datetime, timedelta
 from adaptive_scheduler.models import (ICRSTarget, Proposal, Configuration,
                                        Request, RequestGroup,
                                        Windows, Window)
+from adaptive_scheduler.monitoring.seeing import DummySeeingMonitor
 
 from .test_scheduler import create_scheduler_input_factory, create_running_request_group
 
@@ -168,7 +167,7 @@ class TestIntegration(object):
 
     def _schedule_requests(self, rr_rg_list, normal_rg_list, scheduler_time, rr_loop=False,
                            block_schedule_by_resource=None, running_request_groups=None, rapid_response_ids=None,
-                           semester_details=None):
+                           semester_details=None, seeing_monitor=None):
         if block_schedule_by_resource is None:
             block_schedule_by_resource = {}
         if running_request_groups is None:
@@ -179,7 +178,9 @@ class TestIntegration(object):
             semester_details = {}
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
+        if not seeing_monitor:
+            seeing_monitor = DummySeeingMonitor()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes, seeing_monitor)
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
@@ -208,7 +209,8 @@ class TestIntegration(object):
         scheduler_time = self.base_time - timedelta(hours=10)
         sched_params = SchedulerParameters(run_once=True, dry_run=True, timelimit_seconds=30)
         event_bus_mock = Mock()
-        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes)
+        seeing_monitor = DummySeeingMonitor()
+        scheduler = LCOGTNetworkScheduler(FullScheduler_ortoolkit, sched_params, event_bus_mock, self.telescopes, seeing_monitor)
         network_interface_mock = Mock()
         network_interface_mock.cancel = Mock(return_value=0)
         network_interface_mock.save = Mock(return_value=0)
@@ -266,6 +268,90 @@ class TestIntegration(object):
             assert 3 not in scheduled_rgs[4]
         else:
             assert 2 not in scheduled_rgs[3]
+
+
+    def test_seeing_constraint(self):
+        window = Window({'start': self.base_time - timedelta(hours=1),
+                                'end': self.base_time + timedelta(hours=5, minutes=0)}, self.resource_3)
+        windows = Windows()
+        windows.append(window)
+        request_1 = Request(configurations=[self.configuration],
+                                 windows=windows,
+                                 request_id=1,
+                                 duration=300,
+                                 optimization_type=OptimizationType.TIME)
+        request_2 = Request(configurations=[self.configuration],
+                                 windows=windows,
+                                 request_id=2,
+                                 duration=300,
+                                 optimization_type=OptimizationType.TIME)
+        seeing_constrained_constraints = {'max_airmass': None,
+                            'min_lunar_distance': 0,
+                            'max_lunar_phase': 1.0,
+                            'max_seeing': 2.5}
+        seeing_constrained_configuration = Configuration(**dict(
+            id=6,
+            target=self.target,
+            type='expose',
+            instrument_type='1M0-SCICAM-SBIG',
+            priority=1,
+            instrument_configs=[self.instrument_config],
+            acquisition_config=self.acquisition_config,
+            guiding_config=self.guiding_config,
+            constraints=seeing_constrained_constraints
+        ))
+        request_3 = Request(configurations=[seeing_constrained_configuration],
+                                 windows=windows,
+                                 request_id=3,
+                                 duration=300,
+                                 optimization_type=OptimizationType.TIME)
+
+        normal_request_group_1 = RequestGroup(operator='many', requests=[request_1],
+                                                 proposal=self.proposal, expires=datetime(2050, 1, 1),
+                                                 rg_id=11, is_staff=False, observation_type='NORMAL',
+                                                 ipp_value=1.5, name='ur 11', submitter='')
+        high_priority_proposal = Proposal(
+            id='LCOSchedulerTest',
+            pi='No One',
+            tag='admin',
+            tac_priority=1000
+        )
+        tc_request_group_2 = RequestGroup(operator='many', requests=[request_2, request_3],
+                                                 proposal=high_priority_proposal, expires=datetime(2050, 1, 1),
+                                                 rg_id=12, is_staff=False, observation_type='NORMAL',
+                                                 ipp_value=1.5, name='ur 12', submitter='')
+        scheduler_start = self.base_time - timedelta(hours=1)
+        scheduled_end_time = scheduler_start + timedelta(minutes=15)
+        semester_start = scheduler_start - timedelta(days=150)
+
+        seeing_monitor = Mock()
+        seeing_monitor.seeing_valid_time_period = 60.0
+        seeing_data = {
+            '1m0a.doma.ogg': {
+                'time': scheduled_end_time,
+                'seeing': 7.5
+            }
+        }
+        seeing_monitor.retrieve_data = Mock(return_value=seeing_data)
+
+        result = self._schedule_requests([], [tc_request_group_2, normal_request_group_1],
+                                         scheduler_start, seeing_monitor=seeing_monitor)
+        scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
+        assert 11 in scheduled_rgs
+        assert 12 in scheduled_rgs
+        assert 1 in scheduled_rgs[11]
+        assert 2 in scheduled_rgs[12]
+        assert 3 in scheduled_rgs[12]
+        r1_start, _ = get_reservation_datetimes(scheduled_rgs[11][1], semester_start)
+        r2_start, _ = get_reservation_datetimes(scheduled_rgs[12][2], semester_start)
+        r3_start, _ = get_reservation_datetimes(scheduled_rgs[12][3], semester_start)
+
+        # There are three nearly identical requests, two of which are TC and one of the TC has a seeing constraint
+        # which is violated. This test should show that the unconstrained TC is scheduled first (r2), then the normal
+        # request (r1), and final the constrained TC request (r3) is last, after the seeing validity period is passed.
+        assert r2_start < r1_start
+        assert r1_start < r3_start
+        assert r3_start == scheduled_end_time + timedelta(minutes=seeing_monitor.seeing_valid_time_period)
 
     @patch('adaptive_scheduler.kernel_mappings.redis_instance', new=fakeredis_instance)
     @patch('adaptive_scheduler.models.redis_instance', new=fakeredis_instance)
@@ -390,7 +476,7 @@ class TestIntegration(object):
                                          rapid_response_ids=[rapid_response_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure no RR was scheduled because the running request group was over it's time
-        assert not 5 in scheduled_rgs
+        assert 5 not in scheduled_rgs
         assert scheduled_rgs == {}
 
     def test_rr_requests_do_schedule_over_running_normal(self):
@@ -459,8 +545,8 @@ class TestIntegration(object):
                                          rapid_response_ids=[rr_request_group_id, ])
         scheduled_rgs = result.get_scheduled_requests_by_request_group_id()
         # Ensure request 3 could be scheduled, but request 4 could not because it overlapped with the scheduled RR
-        assert not 4 in scheduled_rgs
-        assert not 3 in scheduled_rgs
+        assert 4 not in scheduled_rgs
+        assert 3 not in scheduled_rgs
         assert scheduled_rgs == {}
 
     def test_normal_requests_can_schedule_after_rr(self):
@@ -504,7 +590,7 @@ class TestIntegration(object):
         # Ensure request 4 is after the RR running request in its window, and request 3 is blocked by the running RR
         assert 4 in scheduled_rgs
         assert 4 in scheduled_rgs[4]
-        assert not 3 in scheduled_rgs[4]
+        assert 3 not in scheduled_rgs[4]
         semester_start = scheduler_start - timedelta(days=150)
         dt_start, dt_end = get_reservation_datetimes(scheduled_rgs[4][4], semester_start)
         assert dt_start == self.base_time + timedelta(hours=1, minutes=0, seconds=30)

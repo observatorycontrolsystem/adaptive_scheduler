@@ -9,6 +9,7 @@ from __future__ import division
 from adaptive_scheduler.eventbus import get_eventbus
 from adaptive_scheduler.feedback import UserFeedbackLogger, TimingLogger
 from adaptive_scheduler.interfaces import NetworkInterface
+from adaptive_scheduler.monitoring.seeing import DummySeeingMonitor, OpenSearchSeeingMonitor
 from adaptive_scheduler.observations import ObservationScheduleInterface
 from adaptive_scheduler.observation_portal_connections import ObservationPortalInterface
 from adaptive_scheduler.configdb_connections import ConfigDBInterface
@@ -97,10 +98,14 @@ def parse_args(argv):
                             help="OpenSearch telemetry endpoint url", default=defaults.opensearch_url)
     arg_parser.add_argument("--opensearch_index", type=str, dest='opensearch_index',
                             help="OpenSearch telemetry index name", default=defaults.opensearch_index)
+    arg_parser.add_argument("--opensearch_seeing_index", type=str, dest='opensearch_seeing_index',
+                            help="OpenSearch Seeing index name", default=defaults.opensearch_seeing_index)
     arg_parser.add_argument("--opensearch_excluded_observatories", type=str,
                             dest='opensearch_excluded_observatories',
                             help="OpenSearch telemetry observatories to exclude (comma delimited)",
                             default=','.join(defaults.opensearch_excluded_observatories))
+    arg_parser.add_argument("--seeing_valid_time_period", type=float, default=defaults.seeing_valid_time_period, dest='seeing_valid_time_period',
+                            help="The number of minutes in the future a seeing value should be used for to apply the seeing constraint on request windows")
     arg_parser.add_argument("--profiling_enabled", type=bool, dest='profiling_enabled',
                             help="Enable profiling output", default=defaults.profiling_enabled)
     arg_parser.add_argument("--reservation_save_time_seconds", type=float, dest='avg_reservation_save_time_seconds',
@@ -117,7 +122,7 @@ def parse_args(argv):
                             default=defaults.ignore_ipp)
 
     # Handle command line arguments
-    args, unknown = arg_parser.parse_known_args(argv)
+    args, _ = arg_parser.parse_known_args(argv)
 
     if args.dry_run:
         log.info("Running in simulation mode - no DB changes will be made")
@@ -191,12 +196,20 @@ def main(argv=None):
     observation_portal_interface = ObservationPortalInterface(sched_params.observation_portal_url)
     configdb_interface = ConfigDBInterface(configdb_url=sched_params.configdb_url, telescope_classes=sched_params.telescope_classes)
     network_state_interface = Network(configdb_interface, sched_params)
+
+    if sched_params.opensearch_url and sched_params.opensearch_seeing_index:
+        seeing_monitor = OpenSearchSeeingMonitor(
+            sched_params.seeing_valid_time_period, configdb_interface, sched_params.opensearch_url,
+            sched_params.opensearch_seeing_index, sched_params.opensearch_excluded_observatories
+        )
+    else:
+        seeing_monitor = DummySeeingMonitor()
     network_interface = NetworkInterface(schedule_interface, observation_portal_interface, network_state_interface,
-                                         configdb_interface)
+                                         configdb_interface, seeing_monitor)
 
     kernel_class = get_kernel_class(sched_params)
     network_model = configdb_interface.get_telescope_info()
-    scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model)
+    scheduler = LCOGTNetworkScheduler(kernel_class, sched_params, event_bus, network_model, seeing_monitor)
     if sched_params.input_file_name:
         input_provider = FileBasedSchedulingInputProvider(sched_params.input_file_name, network_interface,
                                                           is_rr_mode=True)

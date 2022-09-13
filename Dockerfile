@@ -65,7 +65,7 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
 apt-get install --no-install-recommends -y gfortran
 EOT
 
-RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgrade pip "poetry ~= 1.1"
+RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgrade pip "poetry == 1.1.15"
 
 
 WORKDIR /src

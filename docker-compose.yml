@@ -21,10 +21,6 @@ services:
       context: .
       target: dev
     image: adaptive-scheduler
-    deploy:
-      restart_policy:
-        condition: on-failure
-        window: 30s
     links:
       - redis:redis
     environment:
@@ -52,7 +48,7 @@ services:
       - ./data:/app/data/
       - ./logs:/app/logs/
     # This command can be uncommented to run the unit tests instead of the scheduler itself
-    command: pytest -rA
+    command: pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
     #command: adaptive-scheduler
 
     depends_on:

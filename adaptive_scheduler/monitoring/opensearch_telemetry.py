@@ -1,5 +1,6 @@
 from datetime import datetime
 import collections
+from retry import retry
 
 from opensearchpy import OpenSearch
 import logging
@@ -7,29 +8,33 @@ import logging
 log = logging.getLogger('adaptive_scheduler')
 
 
-class ConnectionError(Exception):
+class OSConnectionError(Exception):
     pass
 
 
 def get_datum(datum_name, opensearch_url, os_index, os_excluded_observatories, instance=None, originator=None):
     ''' Get data from live telemetry index in OS, ordered by timestamp ascending (i.e.
         newest value is last). '''
-    os = OpenSearch(opensearch_url, http_compress=True)
+    opensearch = OpenSearch(opensearch_url, http_compress=True)
 
     datum_query = _get_datum_query(datum_name, instance, originator)
 
     try:
-        results = os.search(index=os_index, request_timeout=60, body=datum_query, size=1000)
-    except Exception:
         # retry one time in case this was a momentary outage which happens occasionally
-        try:
-            results = os.search(index=os_index, request_timeout=60, body=datum_query, size=1000)
-        except Exception as ex:
-            raise ConnectionError(
-                "Failed to get datum {} from OpenSearch after 2 attempts: {}".format(datum_name, repr(ex)))
+        results = _get_datums(opensearch, index=os_index, query=datum_query)
+    except Exception as ex:
+        # retry one time in case this was a momentary outage which happens occasionally
+        raise OSConnectionError(
+            "Failed to get datum {} from OpenSearch after 2 attempts: {}".format(datum_name, repr(ex)))
 
     return [_convert_datum(dat['_source']) for dat in results['hits']['hits'] if
             dat['_source']['observatory'] not in os_excluded_observatories]
+
+
+@retry(tries=2)
+def _get_datums(opensearch, index, query, size=1000, timeout=60):
+    results = opensearch.search(index=index, request_timeout=timeout, body=query, size=size)
+    return results
 
 
 def _get_datum_query(datumname, datuminstance=None, originator=None):
