@@ -127,7 +127,7 @@ class ConfigDBInterface(SendMetricMixin):
         """
         fallback_instrument = ''
         for instrument in self.active_instruments:
-            if instrument['state'] != ['DISABLED']:
+            if instrument['state'] != 'DISABLED':
                 temp_instrument_type = instrument['instrument_type']['code']
                 if case_insensitive_equals(instrument_type_code, temp_instrument_type):
                     split_string = instrument['__str__'].split('.')
@@ -166,7 +166,7 @@ class ConfigDBInterface(SendMetricMixin):
         """
         fallback_instrument = ''
         for instrument in self.active_instruments:
-            if instrument['state'] != ['DISABLED']:
+            if instrument['state'] != 'DISABLED':
                 if case_insensitive_equals(instrument_code, instrument['code']):
                     split_string = instrument['__str__'].split('.')
                     temp_site, temp_enclosure, temp_telescope, _ = split_string
