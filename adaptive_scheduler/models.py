@@ -279,7 +279,7 @@ class SatelliteTarget(Target):
     '''
 
     def __init__(self, *initial_data, **kwargs):
-        required_fields = ('altitude', 'azimuth', 'diff_altitude_rate', 'diff_azimith_rate', 'diff_epoch',
+        required_fields = ('altitude', 'azimuth', 'diff_altitude_rate', 'diff_azimuth_rate', 'diff_epoch',
                            'diff_altitude_acceleration', 'diff_azimuth_acceleration')
         super().__init__(required_fields, *initial_data, **kwargs)
 
