@@ -279,14 +279,14 @@ class SatelliteTarget(Target):
     '''
 
     def __init__(self, *initial_data, **kwargs):
-        required_fields = ('altitude', 'azimuth', 'diff_pitch_rate', 'diff_roll_rate', 'diff_epoch_rate',
-                           'diff_roll_acceleration', 'diff_pitch_acceleration')
+        required_fields = ('altitude', 'azimuth', 'diff_altitude_rate', 'diff_azimuth_rate', 'diff_epoch',
+                           'diff_altitude_acceleration', 'diff_azimuth_acceleration')
         super().__init__(required_fields, *initial_data, **kwargs)
 
     def in_rise_set_format(self):
-        target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_pitch_rate, self.diff_roll_rate,
-                                            self.diff_pitch_acceleration, self.diff_roll_acceleration,
-                                            self.diff_epoch_rate)
+        target_dict = make_satellite_target(self.altitude, self.azimuth, self.diff_altitude_rate, self.diff_azimuth_rate,
+                                            self.diff_altitude_acceleration, self.diff_azimuth_acceleration,
+                                            self.diff_epoch)
 
         return target_dict
 
