@@ -6,13 +6,13 @@
 
 The adaptive scheduler works with the [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) to get the set of schedulable requests, and cancel and submit sets of observations on sites. It solves an optimization problem using a mixed integer programming solver to maximize the priority of scheduled observations. It supports the three types of observations within the Observation Portal (Normal, Rapid Request, and Time Critical). It has optional support to query OpenSearch to incorporate telescope telemetry into it's decision to schedule on a telescope. It connects to the [Configuration Database](https://github.com/observatorycontrolsystem/configdb) to get the set of schedulable instruments.
 
-[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the SCIP, CBC and GLPK free algorithms, and should support the latest GUROBI if you have a license. The docker-compose file is an example of how to run the container - the environment variables will need to be set to point to the proper services for it to function correctly. The default kernel algorithm is now SCIP, but CBC or GLPK can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
+[Google's OR-Tools](https://developers.google.com/optimization) is now used for the scheduling kernel. The Dockerfile is configured to support the SCIP, and CBC free algorithms, and should support the GUROBI (11.0.1) if you have a license. The docker-compose file is an example of how to run the container - the environment variables will need to be set to point to the proper services for it to function correctly. The default kernel algorithm is now SCIP, but CBC or GUROBI can be specified as well using the '-k {ALGORITHM}' argument when invoking the scheduler.
 
 ## Prerequisites
 
 Optional prerequisites can be skipped for reduced functionality.
 
--   Python 3.7, 3.8, 3.9
+-   Python 3.9, 3.10, 3.11
 -   A running [Configuration Database](https://github.com/observatorycontrolsystem/configdb)
 -   A running [Observation Portal](https://github.com/observatorycontrolsystem/observation-portal) 
 -   (Optional) A running [Downtime Database](https://github.com/observatorycontrolsystem/downtime)
@@ -36,8 +36,8 @@ Optional prerequisites can be skipped for reduced functionality.
 |                        | `OBSERVATION_PORTAL_URL`| The url to the observation portal                                   | `http://127.0.0.1:8000`                                 |
 |                        | `OBSERVATION_PORTAL_API_TOKEN`| The API Token for an admin of the observation-portal                                   | _`Empty string`_                                 |
 |                        | `REDIS_URL`             | The url of the redis cache (or the linked container name)           | `redis://redis`                                                 |
-| Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
-|                       | `KERNEL_FALLBACK_ALGORITHM`     | Fallback algorithm in case main choice fails or throws an exception. Options are `CBC`, `SCIP`, `GLPK`, and `GUROBI`      | `SCIP`                                                 |
+| Kernel Settings       | `KERNEL_ALGORITHM`     | Algorithm code for ORTools to use. Options are `CBC`, `SCIP`, and `GUROBI`      | `SCIP`                                                 |
+|                       | `KERNEL_FALLBACK_ALGORITHM`     | Fallback algorithm in case main choice fails or throws an exception. Options are `CBC`, `SCIP`, and `GUROBI`      | `SCIP`                                                 |
 |                       | `KERNEL_PARAMS`     | Set Kernel specific params within ORTools using it's SetSolverSpecificParametersAsString function. Only modify this if you know what you are doing as these values are heavily dependent on the underlying algorithm. An example of this would be `Threads 2\nMethod 3` for the GUROBI Kernel to set the number of threads it uses to 2 and the method to concurrent.    | _`Empty string`_                                                 |
 |                       | `KERNEL_TIMELIMIT`     | Max amount of time for the kernel to try to find an optimal solution      | _None_                                                 |
 |                       | `KERNEL_MIPGAP`     | MIP Gap tolerance for kernel to optimize to.      | 0.01                                                 |

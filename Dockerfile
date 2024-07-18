@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.4
 
 ARG PYTHON_IMAGE_TAG=3.9-slim
-ARG GUROBI_VERSION=9.1.2
+ARG GUROBI_VERSION=11.0.1
 
 
 FROM alpine as gurobi-src
@@ -22,6 +22,7 @@ EOT
 
 
 FROM python:${PYTHON_IMAGE_TAG} as base
+ARG GUROBI_VERSION
 
 RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/apt <<EOT
 #!/bin/bash -ex
@@ -49,8 +50,7 @@ cp -r /src/gurobi/linux64/lib /opt/gurobi/linux64/lib
 cp -r /src/gurobi/linux64/bin /opt/gurobi/linux64/bin
 rm -rf /opt/gurobi/linux64/{lib, bin}/python*
 
-cd /src/gurobi/linux64
-python setup.py install
+pip install "gurobipy==${GUROBI_VERSION}"
 
 EOT
 
@@ -65,7 +65,7 @@ RUN --mount=type=cache,target=/var/cache/apt --mount=type=cache,target=/var/lib/
 apt-get install --no-install-recommends -y gfortran
 EOT
 
-RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgrade pip "poetry == 1.1.15"
+RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgrade pip "poetry == 1.5.1"
 
 
 WORKDIR /src
@@ -108,7 +108,7 @@ RUN <<EOT
 #!/bin/bash -ex
 
 python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('SCIP')"
-python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('GLPK')"
+python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('CBC')"
 
 # assumption: if it's trying to read the licence, it's probably linked properly
 strace -e openat python -c "from ortools.linear_solver import pywraplp as p; p.Solver.CreateSolver('GUROBI')" 2>&1 | grep -q gurobi.lic
