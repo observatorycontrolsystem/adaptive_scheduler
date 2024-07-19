@@ -35,8 +35,6 @@ jobs:
     - name: Run tests
       run: poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
     - name: Generate and send coveralls report
-      run: |
-        pip install coveralls
-        coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel: true
