@@ -33,7 +33,9 @@ jobs:
         pip install "$(poetry export --without-hashes | grep numpy)" # pyslalib nastiness
         poetry install
     - name: Run tests
-      run: poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
+      run: |
+        poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
+        poetry run coverage xml
     - name: Generate and send coveralls report
       uses: coverallsapp/github-action@v2
       with:
