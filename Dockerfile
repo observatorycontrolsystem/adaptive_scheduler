@@ -50,8 +50,6 @@ cp -r /src/gurobi/linux64/lib /opt/gurobi/linux64/lib
 cp -r /src/gurobi/linux64/bin /opt/gurobi/linux64/bin
 rm -rf /opt/gurobi/linux64/{lib, bin}/python*
 
-pip install "gurobipy==${GUROBI_VERSION}"
-
 EOT
 
 # standard container friendly python env vars
