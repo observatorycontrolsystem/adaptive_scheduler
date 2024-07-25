@@ -1,25 +1,15 @@
 [tool.poetry]
 name = "adaptive_scheduler"
-version = "1.5.1"
+version = "1.6.0"
 description = ""
 authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
 
-[[tool.poetry.source]]
-name = "ocs"
-url = "https://observatorycontrolsystem.github.io/pypi-simple/"
-
 [tool.poetry.dependencies]
-python = "^3.7,<3.11"
-ortools = [
-  { version = "9.3.9999", markers = "python_version >= '3.7' and python_version < '3.10' and platform_machine == 'x86_64'", source = "ocs" },
-  { version = "9.3.9999", markers = "python_version >= '3.7' and python_version < '3.10' and platform_machine == 'aarch64'", source = "ocs" },
-  { version = "9.3.10497", markers = "python_version >= '3.10'"},
-  { version = "9.3.10497", markers = "sys_platform != 'linux'"},
-  { version = "9.3.10497", markers = "sys_platform == 'linux' and (platform_machine != 'x86_64' and platform_machine != 'aarch64')"},
-]
+python = "^3.8,<3.12"
+ortools = "^9.10"
 time-intervals = "^1"
-numpy = "^1"
+numpy = "1.23.5"
 ocs-rise-set = "0.5.2"
 requests = "^2"
 redis = "^3"
@@ -31,6 +21,12 @@ python-dateutil = "^2"
 unidecode = "<1.2.0"
 opensearch-py = "^1"
 boto3 = "^1"
+
+[tool.poetry.group.gurobi]
+optional = true
+
+[tool.poetry.group.gurobi.dependencies]
+gurobipy = "11.0.1"
 
 [tool.poetry.dev-dependencies]
 mock = "<=3.1.0"

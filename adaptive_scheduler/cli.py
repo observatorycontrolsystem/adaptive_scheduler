@@ -75,7 +75,7 @@ def parse_args(argv):
     arg_parser.add_argument("-o", "--run-once", type=bool, default=defaults.run_once,
                             help="Only run the scheduling loop once, then exit")
     arg_parser.add_argument("-k", "--kernel", type=str, default=defaults.kernel, choices=ALGORITHMS.keys(),
-                            help="Options are GUROBI, CBC, GLPK, or SCIP. Default is SCIP")
+                            help="Options are GUROBI, CBC, or SCIP. Default is SCIP")
     arg_parser.add_argument("--kernel_params", type=str, default=defaults.kernel_params,
                             help="Set kernel specific parameters within ORTools. Only set this if you know what you are doing")
     arg_parser.add_argument("-f", "--fromfile", type=str, dest='input_file_name', default=defaults.input_file_name,

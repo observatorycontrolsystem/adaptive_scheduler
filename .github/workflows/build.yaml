@@ -16,9 +16,10 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - "3.7"
           - "3.8"
           - "3.9"
+          - "3.10"
+          - "3.11"
     steps:
     - name: Check out repository
       uses: actions/checkout@v2
@@ -28,14 +29,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
       run: |
-        pip install --upgrade pip 'poetry>=1.1,<1.2'
+        pip install --upgrade pip 'poetry>=1.5,<1.9'
         pip install "$(poetry export --without-hashes | grep numpy)" # pyslalib nastiness
         poetry install
     - name: Run tests
-      run: poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
-    - name: Generate and send coveralls report
       run: |
-        pip install coveralls
-        coveralls --service=github
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        poetry run coverage run --source adaptive_scheduler -m pytest --ignore=tests/requires_third_party/test_fullscheduler_gurobi.py -rA
+        poetry run coverage xml
+    - name: Generate and send coveralls report
+      uses: coverallsapp/github-action@v2
+      with:
+        parallel: true
+        debug: true

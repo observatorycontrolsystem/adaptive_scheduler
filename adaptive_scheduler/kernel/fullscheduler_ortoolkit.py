@@ -8,7 +8,7 @@ information about how to generate the slices, so its signature has one
 more argument than usual.
 
 This implementation uses a SPARSE matrix representation and the ortoolkit solver
-which can be configured to use Gurobi, GLPK, or CBC algorithms.
+which can be configured to use Gurobi, SCIP, or CBC algorithms.
 
 Author: Jason Eastman (jeastman@lcogt.net)
 January 2014
@@ -29,7 +29,6 @@ logger = logging.getLogger(__name__)
 ALGORITHMS = {
     'CBC': 'CBC_MIXED_INTEGER_PROGRAMMING',
     'GUROBI': 'GUROBI_MIXED_INTEGER_PROGRAMMING',
-    'GLPK': 'GLPK_MIXED_INTEGER_PROGRAMMING',
     'SCIP': 'SCIP_MIXED_INTEGER_PROGRAMMING'
 }
 
@@ -122,17 +121,17 @@ class FullScheduler_ortoolkit(SlicedIPScheduler_v2, SendMetricMixin):
 
         # Instantiate the ORTools solver
         try:
-            solver = pywraplp.Solver_CreateSolver(self.algorithm)
+            solver = pywraplp.Solver.CreateSolver(self.algorithm)
             if not solver:
                 logger.warn(f"Failed to get a valid solver for {self.kernel}.")
                 logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
                 primary_algorithm_failed = 1
-                solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
+                solver = pywraplp.Solver.CreateSolver(FALLBACK_ALGORITHM)
         except Exception as e:
             logger.warn(f"Failed to create a valid solver for {self.kernel}: {repr(e)}")
             logger.warn(f"Defaulting to {FALLBACK_ALGORITHM} solver")
             primary_algorithm_failed = 1
-            solver = pywraplp.Solver_CreateSolver(FALLBACK_ALGORITHM)
+            solver = pywraplp.Solver.CreateSolver(FALLBACK_ALGORITHM)
 
         self.send_metric('primary_algorithm_failed.occurence', primary_algorithm_failed)
 
