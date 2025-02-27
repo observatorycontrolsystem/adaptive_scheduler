@@ -85,15 +85,20 @@ def _convert_datum(datum):
     return Datum(**new_datum)
 
 
+def _timestamp(value):
+    ''' Convert time (s) to datetime instance. '''
+    return parse(value).replace(tzinfo=None)
+
+
 NULL_CONVERSION = str
 MAPPING = {
     'datuminstance': ('instance', NULL_CONVERSION),
     'site': ('site', NULL_CONVERSION),
     'observatory': ('observatory', NULL_CONVERSION),
     'telescope': ('telescope', NULL_CONVERSION),
-    'timestamp': ('timestamp_changed', parse),
-    'timestampmeasured': ('timestamp_measured', parse),
-    '@timestamp': ('timestamp_recorded', parse),
+    'timestamp': ('timestamp_changed', _timestamp),
+    'timestampmeasured': ('timestamp_measured', _timestamp),
+    '@timestamp': ('timestamp_recorded', _timestamp),
     'value_string': ('value', NULL_CONVERSION)
 }
 
