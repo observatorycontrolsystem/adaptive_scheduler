@@ -1,6 +1,7 @@
 from datetime import datetime
 import collections
 from retry import retry
+from dateutil.parser import parse
 
 from opensearchpy import OpenSearch
 import logging
@@ -84,20 +85,15 @@ def _convert_datum(datum):
     return Datum(**new_datum)
 
 
-def _timestamp(value):
-    ''' Convert time (s) to datetime instance. '''
-    return datetime.strptime(value, '%Y-%m-%dT%H:%M:%S.%fZ')
-
-
 NULL_CONVERSION = str
 MAPPING = {
     'datuminstance': ('instance', NULL_CONVERSION),
     'site': ('site', NULL_CONVERSION),
     'observatory': ('observatory', NULL_CONVERSION),
     'telescope': ('telescope', NULL_CONVERSION),
-    'timestamp': ('timestamp_changed', _timestamp),
-    'timestampmeasured': ('timestamp_measured', _timestamp),
-    '@timestamp': ('timestamp_recorded', _timestamp),
+    'timestamp': ('timestamp_changed', parse),
+    'timestampmeasured': ('timestamp_measured', parse),
+    '@timestamp': ('timestamp_recorded', parse),
     'value_string': ('value', NULL_CONVERSION)
 }
 
