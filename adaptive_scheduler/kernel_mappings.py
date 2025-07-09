@@ -101,9 +101,9 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
     try:
         rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                           airmass=max_airmass)
-    except MovingViolation:
-        log.warn("rise-set failed on target")
-        log.warn(rise_set_target)
+    except MovingViolation as mv:
+        log.warning(f"Rise-set failed on target: {rise_set_target}, for site: {visibility.site}, for date range {visibility.start_date.isoformat()} to {visibility.end_date.isoformat()}, with error: {repr(mv)}")
+
 
     if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
@@ -288,6 +288,11 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seein
             for conf in r.configurations:
                 rise_set_target = conf.target.in_rise_set_format()
                 for resource in r.windows.windows_for_resource:
+                    # If the eccentricity is > 1.0, we cant do our normal semester long caching as the orbit may be unstable
+                    # over longer time horizons. Instead, just cache for this exact request only
+                    if rise_set_target.get('eccentricity', 0.0) >= 1.0:
+                        # Add the request id to the rise_set_target since that is part of its cache key
+                        rise_set_target['request_id'] = r.id
                     cache_key = make_cache_key(resource, rise_set_target, conf.constraints['max_airmass'],
                                                conf.constraints['min_lunar_distance'], conf.constraints['max_lunar_phase'])
                     if cache_key not in local_cache:
@@ -296,11 +301,21 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seein
                             local_cache[cache_key] = pickle.loads(redis_instance.get(cache_key))
                         except Exception:
                             # need to compute the rise_set for this target/resource/airmass/lunar_distance/lunar_phase combo
-                            rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
-                                                                      visibility_for_resource[resource],
-                                                                      conf.constraints['max_airmass'],
-                                                                      conf.constraints['min_lunar_distance'],
-                                                                      conf.constraints['max_lunar_phase']))
+                            # If it happens to have been something with eccentricity >= 1.0, then do not use the cached visibility_for_resource
+                            if 'request_id' in rise_set_target:
+                                windows_start, windows_end = windows_list_to_range(r.windows.windows_for_resource[resource])
+                                visibility = duplicate_visibility_with_new_window(visibility_for_resource[resource], windows_start, windows_end)
+                                rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
+                                                                          visibility,
+                                                                          conf.constraints['max_airmass'],
+                                                                          conf.constraints['min_lunar_distance'],
+                                                                          conf.constraints['max_lunar_phase']))
+                            else:
+                                rise_sets_to_compute_later[cache_key] = ((resource, rise_set_target,
+                                                                          visibility_for_resource[resource],
+                                                                          conf.constraints['max_airmass'],
+                                                                          conf.constraints['min_lunar_distance'],
+                                                                          conf.constraints['max_lunar_phase']))
 
     num_processes = cpu_count() - 1
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
@@ -343,7 +358,13 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seein
             intervals_by_resource = {}
             for conf in r.configurations:
                 for resource in r.windows.windows_for_resource:
-                    cache_key = make_cache_key(resource, conf.target.in_rise_set_format(),
+                    rise_set_target = conf.target.in_rise_set_format()
+                    # If the eccentricity is > 1.0, we cant do our normal semester long caching as the orbit may be unstable
+                    # over longer time horizons. Instead, just cache for this exact request only
+                    if rise_set_target.get('eccentricity', 0.0) >= 1.0:
+                        # Add the request id to the rise_set_target since that is part of its cache key
+                        rise_set_target['request_id'] = r.id
+                    cache_key = make_cache_key(resource, rise_set_target,
                                                conf.constraints['max_airmass'],
                                                conf.constraints['min_lunar_distance'],
                                                conf.constraints['max_lunar_phase'])
@@ -476,6 +497,30 @@ def construct_visibilities(tels, semester_start, semester_end, twilight='nautica
         visibility_for_resource[tel_name] = visibility
 
     return visibility_for_resource
+
+
+def duplicate_visibility_with_new_window(visibility, start, end, twilight='nautical'):
+    '''Construct Visibility objects for each telescope.'''
+    new_visibility = Visibility(visibility.site,
+                                start,
+                                end,
+                                visibility.horizon.in_degrees(),
+                                twilight,
+                                visibility.ha_limit_neg,
+                                visibility.ha_limit_pos,
+                                visibility.zenith_blind_spot.in_degrees())
+    return new_visibility
+
+
+def windows_list_to_range(windows_list):
+    start = None
+    end = None
+    for window in windows_list:
+        if start is None or window.start < start:
+            start = window.start
+        if end is None or window.end > end:
+            end = window.end
+    return start, end
 
 
 def construct_global_availability(resource_interval_mask, semester_start, resource_windows):

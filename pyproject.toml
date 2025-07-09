@@ -1,16 +1,15 @@
 [tool.poetry]
 name = "adaptive_scheduler"
-version = "1.6.1"
+version = "1.6.2"
 description = ""
 authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.12"
+python = ">=3.9,<3.12"
 ortools = "^9.10"
 time-intervals = "^1"
 numpy = "1.23.5"
-ocs-rise-set = "0.5.2"
 requests = "^2"
 redis = "^3"
 retry = "^0.9"
@@ -21,6 +20,7 @@ python-dateutil = "^2"
 unidecode = "<1.2.0"
 opensearch-py = "^1"
 boto3 = "^1"
+ocs-rise-set = "^0.6.4"
 
 [tool.poetry.group.gurobi]
 optional = true
