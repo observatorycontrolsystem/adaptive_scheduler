@@ -102,9 +102,8 @@ def get_rise_set_timepoint_intervals(rise_set_target, visibility, max_airmass, m
         rs_up_intervals = visibility.get_target_intervals(target=rise_set_target, up=True,
                                                           airmass=max_airmass)
     except MovingViolation as mv:
-        log.warning(repr(mv))
-        log.warning("rise-set failed on target")
-        log.warning(rise_set_target)
+        log.warning(f"Rise-set failed on target: {rise_set_target}, for site: {visibility.site}, for date range {visibility.start_date.isoformat()} to {visibility.end_date.isoformat()}, with error: {repr(mv)}")
+
 
     if not is_static_target(rise_set_target):
         # get the moon distance intervals using the target intervals and min_lunar_distance constraint
