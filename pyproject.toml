@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "adaptive_scheduler"
-version = "1.6.2"
+version = "1.6.3"
 description = ""
 authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
