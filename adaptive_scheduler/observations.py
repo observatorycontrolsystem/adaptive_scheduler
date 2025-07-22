@@ -339,8 +339,13 @@ class ObservationScheduleInterface(object):
         cutoff_dt = starts_before
         for observation in schedule:
             if observation['start'] < starts_before < observation['end']:
-                if observation['end'] > cutoff_dt and observation['state'] in ['PENDING', 'IN_PROGRESS']:
-                    cutoff_dt = observation['end']
+                if observation['end'] > cutoff_dt:
+                    if observation['state'] in ['PENDING', 'IN_PROGRESS']:
+                        cutoff_dt = observation['end']
+                    elif observation['state'] == 'COMPLETED':
+                        # If the observation is already completed, set its end time so we don't block
+                        # scheduling other observations using that end time as a reason
+                        observation['end'] = starts_before
 
         running = [b for b in schedule if b['start'] < cutoff_dt]
 
