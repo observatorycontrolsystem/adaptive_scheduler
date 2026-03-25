@@ -78,7 +78,7 @@ There are a large number of input arguments, with defaults defined in the _Sched
 `$ poetry run adaptive-scheduler --help`
 
 ### Docker Run
-
+ 
 You can build the **Dockerfile** locally with local changes and run it:
 
 ``shell
