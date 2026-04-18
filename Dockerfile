@@ -1,7 +1,7 @@
 # syntax = docker/dockerfile:1.4
 
-ARG PYTHON_IMAGE_TAG=3.9-slim
-ARG GUROBI_VERSION=11.0.1
+ARG PYTHON_IMAGE_TAG=3.12-slim
+ARG GUROBI_VERSION=12.0.2
 
 
 FROM alpine as gurobi-src
@@ -69,11 +69,9 @@ RUN --mount=type=cache,target=/root/.cache/pip /usr/local/bin/pip install --upgr
 WORKDIR /src
 
 COPY ./README.md ./pyproject.toml ./poetry.lock .
-
 # install python dependencies
 RUN --mount=type=cache,target=/root/.cache/pip <<EOT
 #!/bin/bash -ex
-pip install -r <(poetry export | grep "numpy")
 pip install -r <(poetry export)
 EOT
 
