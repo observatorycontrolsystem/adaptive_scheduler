@@ -317,7 +317,7 @@ def filter_on_visibility(rgs, visibility_for_resource, downtime_intervals, seein
                                                                           conf.constraints['min_lunar_distance'],
                                                                           conf.constraints['max_lunar_phase']))
 
-    num_processes = cpu_count() - 1
+    num_processes = max(cpu_count() - 1, 1)
     log.info("computing {} rise sets with {} processes".format(len(rise_sets_to_compute_later.keys()), num_processes))
     # now use a thread pool to compute the missing rise_set intervals for a resource and target
     if rise_sets_to_compute_later:

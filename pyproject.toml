@@ -6,12 +6,12 @@ authors = ["LCO <ocs@lco.global>"]
 license = "GPLv3"
 
 [tool.poetry.dependencies]
-python = ">=3.9,<3.12"
-ortools = "^9.10"
+python = ">=3.10,<3.13"
+ortools = "9.14.6206"
 time-intervals = "^1"
-numpy = "1.23.5"
+numpy = ">2.0.2,<2.4.3"
 requests = "^2"
-redis = "^3"
+redis = ">3,<4.4"
 retry = "^0.9"
 opentsdb-http-client = "^0.2"
 opentsdb-python-metrics = "^0.2"
@@ -26,7 +26,7 @@ ocs-rise-set = "^0.6.4"
 optional = true
 
 [tool.poetry.group.gurobi.dependencies]
-gurobipy = "11.0.1"
+gurobipy = "12.0.2"
 
 [tool.poetry.dev-dependencies]
 mock = "<=3.1.0"
@@ -36,7 +36,7 @@ fakeredis = "1.8.2"
 coverage = "^6.4.1"
 
 [build-system]
-requires = ["poetry-core>=1.0.0", "numpy ~= 1.0"]
+requires = ["poetry-core>=1.0.0", "numpy ~= 2.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
