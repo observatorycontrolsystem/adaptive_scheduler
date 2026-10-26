@@ -90,27 +90,23 @@ class ConfigDBInterface(SendMetricMixin):
         json_results = r.json()
         if 'results' not in json_results:
             raise ConfigDBError("get_all_active_instruments failed: ConfigDB returned no results")
-        # Filter out instruments in non-included telescope_classes if they are specified
-        if self.telescope_classes:
-            # non-empty telescope_classes means we have something to filter by
-            instruments = []
-            for instrument in json_results['results']:
-                split_string = instrument['__str__'].split('.')
-                # Need to reverse the ordering of the first parts of the instrument string to get resource
-                resource = '.'.join([split_string[2], split_string[1], split_string[0]])
-                # Telescope info is filled in before active instruments so this should always be available
-                telescope_class = self.telescope_info.get(resource, {}).get('tel_class', '')
-                if telescope_class in self.telescope_classes:
-                    instrument['telescope_details'] = ConfigDBInterface._generate_telescope_details(
-                        site=split_string[0],
-                        enclosure=split_string[1],
-                        telescope=split_string[2],
-                        telescope_class=telescope_class
-                    )
-                    instruments.append(instrument)
-            return instruments
-        else:
-            return json_results['results']
+
+        instruments = []
+        for instrument in json_results['results']:
+            split_string = instrument['__str__'].split('.')
+            # Need to reverse the ordering of the first parts of the instrument string to get resource
+            resource = '.'.join([split_string[2], split_string[1], split_string[0]])
+            # Telescope info is filled in before active instruments so this should always be available
+            telescope_class = self.telescope_info.get(resource, {}).get('tel_class', '')
+            if not self.telescope_classes or telescope_class in self.telescope_classes:
+                instrument['telescope_details'] = ConfigDBInterface._generate_telescope_details(
+                    site=split_string[0],
+                    enclosure=split_string[1],
+                    telescope=split_string[2],
+                    telescope_class=telescope_class
+                )
+                instruments.append(instrument)
+        return instruments
 
     def get_specific_instrument(self, instrument_type_code, site, enclosure, telescope):
         """Get the specific instrument code.
